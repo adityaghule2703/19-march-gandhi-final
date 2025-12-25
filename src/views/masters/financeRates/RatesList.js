@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -13,6 +12,16 @@ import {
   showError,
   axiosInstance
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -48,19 +57,57 @@ const RatesList = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'FINANCE_PROVIDER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'FINANCE_PROVIDER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'FINANCE_PROVIDER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Finance Rates page under Masters module
+  const hasFinanceRatesView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.FINANCE_RATES, 
+    ACTIONS.VIEW
+  );
+  
+  const hasFinanceRatesCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.FINANCE_RATES, 
+    ACTIONS.CREATE
+  );
+  
+  const hasFinanceRatesUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.FINANCE_RATES, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasFinanceRatesDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.FINANCE_RATES, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewFinanceRates = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCE_RATES);
+  const canCreateFinanceRates = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCE_RATES);
+  const canUpdateFinanceRates = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCE_RATES);
+  const canDeleteFinanceRates = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCE_RATES);
+  
+  const showActionColumn = canUpdateFinanceRates || canDeleteFinanceRates;
 
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const branchId = storedUser.branch?._id;
   const userRole = localStorage.getItem('userRole');
   
   useEffect(() => {
+    if (!canViewFinanceRates) {
+      showError('You do not have permission to view Finance Rates');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewFinanceRates]);
 
   const fetchData = async () => {
     try {
@@ -97,6 +144,11 @@ const RatesList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteFinanceRates) {
+      showError('You do not have permission to delete finance rates');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -118,11 +170,21 @@ const RatesList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateFinanceRates) {
+      showError('You do not have permission to add finance rates');
+      return;
+    }
+    
     setEditingRate(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (rate) => {
+    if (!canUpdateFinanceRates) {
+      showError('You do not have permission to edit finance rates');
+      return;
+    }
+    
     setEditingRate(rate);
     setShowModal(true);
   };
@@ -138,6 +200,14 @@ const RatesList = () => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
+
+  if (!canViewFinanceRates) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Finance Rates.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -169,7 +239,7 @@ const RatesList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateFinanceRates && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -242,7 +312,7 @@ const RatesList = () => {
                             open={menuId === rate.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateFinanceRates && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(rate)}
                                 style={{ color: 'black' }}
@@ -251,7 +321,7 @@ const RatesList = () => {
                                 Edit
                               </MenuItem>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteFinanceRates && (
                               <MenuItem onClick={() => handleDelete(rate.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

@@ -17,7 +17,16 @@ import {
   showSuccess
 } from '../../../utils/tableImports';
 import { useParams } from 'react-router-dom';
-import { hasPermission } from '../../../utils/permissionUtils';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -74,11 +83,47 @@ const ModelList = () => {
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
 
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'MODEL_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'MODEL_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'MODEL_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Vehicles page under Masters module
+  const hasVehiclesView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.VEHICLES, 
+    ACTIONS.VIEW
+  );
+  
+  const hasVehiclesCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.VEHICLES, 
+    ACTIONS.CREATE
+  );
+  
+  const hasVehiclesUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.VEHICLES, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasVehiclesDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.VEHICLES, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewVehicles = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES);
+  const canCreateVehicles = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES);
+  const canUpdateVehicles = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES);
+  const canDeleteVehicles = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES);
+  
+  // For import, you might need CREATE permission
+  const canImportVehicles = hasVehiclesCreate || canCreateVehicles;
+  
+  const showActionColumn = canUpdateVehicles || canDeleteVehicles;
 
   const availableTypes = ['EV', 'ICE'];
 
@@ -114,6 +159,11 @@ const ModelList = () => {
   const filteredHeaders = getFilteredHeaders();
 
   useEffect(() => {
+    if (!canViewVehicles) {
+      showError('You do not have permission to view Vehicles');
+      return;
+    }
+    
     fetchUserProfile();
     setSelectedType(availableTypes[0]);
     setTempSelectedType(availableTypes[0]);
@@ -122,10 +172,10 @@ const ModelList = () => {
   }, []);
 
   useEffect(() => {
-    if (userVerticleIds.length > 0) {
+    if (canViewVehicles && userVerticleIds.length > 0) {
       fetchData(null, null, availableTypes[0], null);
     }
-  }, [userVerticleIds]);
+  }, [canViewVehicles, userVerticleIds]);
 
   useEffect(() => {
     if (userVerticles.length > 0 && data.length > 0) {
@@ -242,6 +292,11 @@ const ModelList = () => {
   };
 
   const handleImportSuccess = () => {
+    if (!canImportVehicles) {
+      showError('You do not have permission to import vehicles');
+      return;
+    }
+    
     if (selectedSubdealer) {
       fetchData(null, selectedSubdealer, selectedType, selectedVerticle);
     } else {
@@ -322,6 +377,11 @@ const ModelList = () => {
   };
 
   const handleStatusUpdate = async (modelId, newStatus) => {
+    if (!canUpdateVehicles) {
+      showError('You do not have permission to update vehicle status');
+      return;
+    }
+    
     try {
       await axiosInstance.put(`/models/${modelId}/status`, {
         status: newStatus
@@ -338,6 +398,11 @@ const ModelList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteVehicles) {
+      showError('You do not have permission to delete vehicles');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -377,6 +442,14 @@ const ModelList = () => {
 
   const filteredCurrentRecords = currentRecords.filter(shouldShowModel);
 
+  if (!canViewVehicles) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Vehicles.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -400,7 +473,7 @@ const ModelList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateVehicles && (
               <Link to="/model/add-model">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Model
@@ -428,7 +501,13 @@ const ModelList = () => {
               </CButton>
             )}
 
-            <ImportCSV endpoint="/csv/import" onSuccess={handleImportSuccess} buttonText="Import Excel" />
+            {canImportVehicles && (
+              <ImportCSV 
+                endpoint="/csv/import" 
+                onSuccess={handleImportSuccess} 
+                buttonText="Import Excel" 
+              />
+            )}
           </div>
         </CCardHeader>             
         <CCardBody>
@@ -515,7 +594,7 @@ const ModelList = () => {
                             open={menuId === model._id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateVehicles && (
                               <Link
                                 className="Link"
                                 to={`/model/update-model/${model._id}?branch_id=${
@@ -529,7 +608,7 @@ const ModelList = () => {
                               </Link>
                             )}
 
-                            {hasEditPermission && (
+                            {canUpdateVehicles && (
                               model.status === 'active' ? (
                                 <MenuItem
                                   onClick={() => handleStatusUpdate(model._id, 'inactive')}
@@ -547,7 +626,7 @@ const ModelList = () => {
                               )
                             )}
 
-                            {hasDeletePermission && (
+                            {canDeleteVehicles && (
                               <MenuItem onClick={() => handleDelete(model._id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

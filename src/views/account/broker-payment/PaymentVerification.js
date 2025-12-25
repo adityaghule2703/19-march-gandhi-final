@@ -17,14 +17,27 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../../utils/tableImports';
 import '../../../css/invoice.css';
 import '../../../css/table.css';
 import { confirmVerify } from '../../../utils/sweetAlerts';
 import CIcon from '@coreui/icons-react';
-import {cilCheckCircle } from '@coreui/icons';
+import { cilCheckCircle } from '@coreui/icons';
+
+// Import the permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage 
+} from '../../../utils/modulePermissions';
+import { useAuth } from '../../../context/AuthContext';
 
 function PaymentVerification() {
   const [activeTab, setActiveTab] = useState(0);
@@ -33,6 +46,7 @@ function PaymentVerification() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
   const [pagination, setPagination] = useState({
     current: 1,
     total: 1,
@@ -40,10 +54,47 @@ function PaymentVerification() {
     totalRecords: 0
   });
 
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Payment Verification page under Account module
+  const hasPaymentVerificationView = hasSafePagePermission(
+    permissions, 
+    MODULES.ACCOUNT, 
+    PAGES.ACCOUNT.BROKER_PAYMENT_VERIFICATION, 
+    ACTIONS.VIEW
+  );
+  
+  // For verifying payments, use CREATE permission since we're creating a verification record
+  const hasPaymentVerificationCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.ACCOUNT, 
+    PAGES.ACCOUNT.BROKER_PAYMENT_VERIFICATION, 
+    ACTIONS.CREATE
+  );
+  
+  // Using convenience functions for cleaner code
+  const canViewPaymentVerification = canViewPage(
+    permissions, 
+    MODULES.ACCOUNT, 
+    PAGES.ACCOUNT.BROKER_PAYMENT_VERIFICATION
+  );
+  
+  // Use CREATE permission for verifying payments
+  const canCreatePaymentVerification = canCreateInPage(
+    permissions, 
+    MODULES.ACCOUNT, 
+    PAGES.ACCOUNT.BROKER_PAYMENT_VERIFICATION
+  );
+
   useEffect(() => {
+    if (!canViewPaymentVerification) {
+      showError('You do not have permission to view Payment Verification');
+      return;
+    }
+    
     fetchPendingPayments();
     fetchVerifiedPayments();
-  }, []);
+  }, [canViewPaymentVerification]);
 
   const fetchPendingPayments = async (page = 1) => {
     try {
@@ -62,9 +113,9 @@ function PaymentVerification() {
       console.log('Error fetching pending payments', error);
       setPendingPaymentsData([]);
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -114,6 +165,12 @@ function PaymentVerification() {
   const filteredVerifiedLedgerEntries = filterData(verifiedPaymentsData, searchTerm);
 
   const handleVerifyPayment = async (entry) => {
+    // Use CREATE permission for verification
+    if (!canCreatePaymentVerification) {
+      showError('You do not have permission to verify payments');
+      return;
+    }
+    
     try {
       const result = await confirmVerify({
         title: 'Confirm Payment Verification',
@@ -125,7 +182,8 @@ function PaymentVerification() {
         await axiosInstance.patch(`/broker-ledger/approve-on-account/${entry.broker._id}/${entry.branch._id}/${entry._id}`, {
           remark: ''
         });
-        await showSuccess('Payment verified successfully!');
+        setSuccessMessage('Payment verified successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
         fetchPendingPayments();
         fetchVerifiedPayments();
       }
@@ -162,13 +220,13 @@ function PaymentVerification() {
               <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
               <CTableHeaderCell scope="col">Date</CTableHeaderCell>
               <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              {canCreatePaymentVerification && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendingLedgerEntries.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="11" style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canCreatePaymentVerification ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
                   {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
                 </CTableDataCell>
               </CTableRow>
@@ -192,17 +250,19 @@ function PaymentVerification() {
                       PENDING
                     </CBadge>
                   </CTableDataCell>
-                  <CTableDataCell>
-                    <CButton 
-                      size="sm" 
-                      className="action-btn"
-                      onClick={() => handleVerifyPayment(entry)} 
-                      title="Verify Payment"
-                    >
-                      <CIcon icon={cilCheckCircle} className="me-1" />
-                      Verify
-                    </CButton>
-                  </CTableDataCell>
+                  {canCreatePaymentVerification && (
+                    <CTableDataCell>
+                      <CButton 
+                        size="sm" 
+                        className="action-btn"
+                        onClick={() => handleVerifyPayment(entry)} 
+                        title="Verify Payment"
+                      >
+                        <CIcon icon={cilCheckCircle} className="me-1" />
+                        Verify
+                      </CButton>
+                    </CTableDataCell>
+                  )}
                 </CTableRow>
               ))
             )}
@@ -285,6 +345,15 @@ function PaymentVerification() {
     );
   };
 
+  // Check if user has permission to view the page
+  if (!canViewPaymentVerification) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Payment Verification.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -296,7 +365,7 @@ function PaymentVerification() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-     {error}
+        {error}
       </div>
     );
   }
@@ -305,6 +374,12 @@ function PaymentVerification() {
     <div>
       <div className='title'>Payment Verification</div>
       
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
+    
       <CCard className='table-container mt-4'>
         <CCardBody>
           <CNav variant="tabs" className="mb-3 border-bottom">

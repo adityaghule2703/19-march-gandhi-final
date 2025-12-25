@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Spinner, Alert, Table, Badge, ProgressBar } from 'react-bootstrap';
-import { FiDollarSign, FiPieChart, FiTrendingUp, FiTrendingDown, FiUsers, FiCheckCircle } from 'react-icons/fi';
+import { FiDollarSign, FiPieChart, FiTrendingUp, FiTrendingDown, FiUsers, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import axiosInstance from '../../axiosInstance';
 import '../../css/dashboard.css';
+
+// Import permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 const AccountDashboard = () => {
   const [bookingData, setBookingData] = useState(null);
@@ -10,7 +20,16 @@ const AccountDashboard = () => {
   const [loading, setLoading] = useState({ bookings: true, financials: true });
   const [error, setError] = useState({ bookings: null, financials: null });
 
+  const { permissions } = useAuth();
+
+  // Page-level permission check for Account Dashboard under ACCOUNT module
+  const canViewAccountDashboard = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DASHBOARD);
+
   useEffect(() => {
+    if (!canViewAccountDashboard) {
+      return;
+    }
+    
     const fetchBookingCounts = async () => {
       try {
         const response = await axiosInstance.get('ledger/booking-counts');
@@ -27,9 +46,13 @@ const AccountDashboard = () => {
     };
 
     fetchBookingCounts();
-  }, []);
+  }, [canViewAccountDashboard]);
 
   useEffect(() => {
+    if (!canViewAccountDashboard) {
+      return;
+    }
+    
     const fetchFinancialSummary = async () => {
       try {
         const response = await axiosInstance.get('ledger/summary/branch');
@@ -46,22 +69,46 @@ const AccountDashboard = () => {
     };
 
     fetchFinancialSummary();
-  }, []);
+  }, [canViewAccountDashboard]);
 
   // Calculate completion rate
   const completionRate = bookingData ? (bookingData.completedBookings / bookingData.totalBookings) * 100 : 0;
 
-  if (loading.bookings || loading.financials) {
+  const isLoading = (key) => loading[key] && !error[key];
+  const hasError = (key) => error[key] && !loading[key];
+  const isOverallLoading = loading.bookings || loading.financials;
+  
+  if (!canViewAccountDashboard) {
     return (
-      <div className="text-center py-5">
-        <Spinner animation="border" variant="primary" size="lg" />
-        <p className="mt-3 text-muted">Loading dashboard data...</p>
+      <div className="account-dashboard">
+        <Row className="mb-4">
+          <Col md={12}>
+            <Alert variant="danger" className="my-3 border-0 shadow-sm">
+              <div className="d-flex align-items-center">
+                <FiAlertCircle className="me-2" />
+                <strong>Access Denied:</strong> You do not have permission to view the Account Dashboard.
+              </div>
+            </Alert>
+          </Col>
+        </Row>
       </div>
     );
   }
 
-  const isLoading = (key) => loading[key] && !error[key];
-  const hasError = (key) => error[key] && !loading[key];
+  if (isOverallLoading && (!bookingData && !financialData)) {
+    return (
+      <div className="account-dashboard">
+        <Row className="mb-4">
+          <Col md={12}>
+            <div className="text-center py-5">
+              <Spinner animation="border" variant="primary" size="lg" />
+              <p className="mt-3 text-muted">Loading dashboard data...</p>
+            </div>
+          </Col>
+        </Row>
+      </div>
+    );
+  }
 
   return (
     <div className="account-dashboard">
@@ -70,10 +117,17 @@ const AccountDashboard = () => {
           <div className="d-flex justify-content-between align-items-center">
             <div>
               <h2 className="fw-bold text-dark mb-1">PF/NPF Account Dashboard</h2>
+              <p className="text-muted mb-0">Financial overview and application status</p>
             </div>
+            {(!canViewAccountDashboard) && (
+              <Badge bg="warning" text="dark" className="px-3 py-2">
+                <FiAlertCircle className="me-1" /> Limited Access
+              </Badge>
+            )}
           </div>
         </Col>
       </Row>
+      
       {hasError('bookings') && (
         <Alert variant="danger" className="my-3 border-0 shadow-sm">
           <div className="d-flex align-items-center">
@@ -165,13 +219,21 @@ const AccountDashboard = () => {
                   <div>
                     <span className="text-muted small">Total Credit</span>
                     <div className="fw-bold text-success">
-                      ₹{(financialData?.allBranches?.totalCredit || 0).toLocaleString()}
+                      {isLoading('financials') ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        `₹${(financialData?.allBranches?.totalCredit || 0).toLocaleString()}`
+                      )}
                     </div>
                   </div>
                   <div className="text-end">
                     <span className="text-muted small">Total Debit</span>
                     <div className="fw-bold text-danger">
-                      ₹{(financialData?.allBranches?.totalDebit || 0).toLocaleString()}
+                      {isLoading('financials') ? (
+                        <Spinner animation="border" size="sm" />
+                      ) : (
+                        `₹${(financialData?.allBranches?.totalDebit || 0).toLocaleString()}`
+                      )}
                     </div>
                   </div>
                 </div>
@@ -232,7 +294,10 @@ const AccountDashboard = () => {
                     <span className="text-muted small">In Progress</span>
                   </div>
                   <Badge bg="success" className="px-2 py-1">
-                    {(bookingData?.totalBookings || 0) - (bookingData?.completedBookings || 0) - (bookingData?.draftBookings || 0) - (bookingData?.rejectedBookings || 0)}
+                    {((bookingData?.totalBookings || 0) - 
+                      (bookingData?.completedBookings || 0) - 
+                      (bookingData?.draftBookings || 0) - 
+                      (bookingData?.rejectedBookings || 0)).toLocaleString()}
                   </Badge>
                 </div>
               </div>
@@ -240,6 +305,7 @@ const AccountDashboard = () => {
           </Card>
         </Col>
       </Row>
+      
       {financialData?.byBranch?.length > 0 && (
         <Row>
           <Col md={12}>
@@ -264,11 +330,15 @@ const AccountDashboard = () => {
                     <tbody>
                       {financialData.byBranch.map((branch, index) => (
                         <tr key={index} className="border-bottom">
-                          <td className="ps-4 py-3 fw-semibold">{branch.branchName}</td>
-                          <td className="text-end text-danger fw-semibold">₹{branch.totalDebit.toLocaleString()}</td>
-                          <td className="text-end text-success fw-semibold">₹{branch.totalCredit.toLocaleString()}</td>
-                          <td className={`text-end pe-4 fw-bold ${branch.finalBalance >= 0 ? 'text-success' : 'text-danger'}`}>
-                            ₹{branch.finalBalance.toLocaleString()}
+                          <td className="ps-4 py-3 fw-semibold">{branch.branchName || 'Unnamed Branch'}</td>
+                          <td className="text-end text-danger fw-semibold">
+                            ₹{branch.totalDebit?.toLocaleString() || '0'}
+                          </td>
+                          <td className="text-end text-success fw-semibold">
+                            ₹{branch.totalCredit?.toLocaleString() || '0'}
+                          </td>
+                          <td className={`text-end pe-4 fw-bold ${(branch.finalBalance || 0) >= 0 ? 'text-success' : 'text-danger'}`}>
+                            ₹{(branch.finalBalance || 0).toLocaleString()}
                           </td>
                         </tr>
                       ))}
@@ -277,6 +347,22 @@ const AccountDashboard = () => {
                 </div>
               </Card.Body>
             </Card>
+          </Col>
+        </Row>
+      )}
+      
+      {(!bookingData && !financialData && !isOverallLoading) && (
+        <Row>
+          <Col md={12}>
+            <Alert variant="info" className="my-3 border-0 shadow-sm">
+              <div className="d-flex align-items-center">
+                <FiAlertCircle className="me-2" />
+                <div>
+                  <strong>No Data Available</strong>
+                  <p className="mb-0">No dashboard data is currently available. Data will appear once applications are processed.</p>
+                </div>
+              </div>
+            </Alert>
           </Col>
         </Row>
       )}

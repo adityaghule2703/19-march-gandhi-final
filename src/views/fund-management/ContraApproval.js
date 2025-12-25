@@ -22,7 +22,8 @@ import {
   CCard,
   CCardBody,
   CFormLabel,
-  CSpinner
+  CSpinner,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, Menu, MenuItem, showError, useTableFilter } from '../../utils/tableImports';
 import '../../css/invoice.css';
@@ -31,6 +32,19 @@ import '../../css/form.css';
 import Swal from 'sweetalert2';
 import CIcon from '@coreui/icons-react';
 import { cilSearch, cilZoomOut, cilSettings, cilCheckCircle, cilX } from '@coreui/icons';
+
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canDeleteInPage,
+  canUpdateInPage
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 function ContraApproval() {
   const [activeTab, setActiveTab] = useState(0);
@@ -43,6 +57,32 @@ function ContraApproval() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Contra Approval page under Fund Management module
+  const canViewContraApproval = canViewPage(
+    permissions, 
+    MODULES.FUND_MANAGEMENT, 
+    PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL
+  );
+  
+  // Approve action = CREATE permission (creating approval record)
+  const canApproveContra = canCreateInPage(
+    permissions, 
+    MODULES.FUND_MANAGEMENT, 
+    PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL
+  );
+  
+  // Reject action = DELETE permission (rejecting/removing approval)
+  const canRejectContra = canDeleteInPage(
+    permissions, 
+    MODULES.FUND_MANAGEMENT, 
+    PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL
+  );
+  
+  // Show action column if user can approve OR reject
+  const showActionColumn = canApproveContra || canRejectContra;
 
   const {
     data: pendingData,
@@ -67,6 +107,12 @@ function ContraApproval() {
   } = useTableFilter([]);
 
   const fetchData = async () => {
+    if (!canViewContraApproval) {
+      setError('Permission denied');
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/contra-vouchers/status/pending`);
@@ -83,6 +129,10 @@ function ContraApproval() {
   };
 
   const fetchCompleteData = async () => {
+    if (!canViewContraApproval) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/contra-vouchers/status/approved`);
       setApprovedData(response.data.data);
@@ -93,6 +143,10 @@ function ContraApproval() {
   };
 
   const fetchLaterData = async () => {
+    if (!canViewContraApproval) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/contra-vouchers/status/rejected`);
       setLaterData(response.data.data);
@@ -106,7 +160,7 @@ function ContraApproval() {
     fetchData();
     fetchCompleteData();
     fetchLaterData();
-  }, [refreshKey]);
+  }, [refreshKey, canViewContraApproval]);
 
   const handleClick = (event, id) => {
     setAnchorEl(event.currentTarget);
@@ -119,6 +173,12 @@ function ContraApproval() {
   };
 
   const handleOpenApprovalModal = (voucher) => {
+    // Check CREATE permission for approving
+    if (!canApproveContra) {
+      showError('You do not have permission to approve vouchers');
+      return;
+    }
+    
     setSelectedVoucher(voucher);
     setShowApprovalModal(true);
     handleClose();
@@ -129,6 +189,12 @@ function ContraApproval() {
   };
 
   const handleStatusUpdate = async (status) => {
+    // Check CREATE permission for approving
+    if (!canApproveContra) {
+      showError('You do not have permission to approve vouchers');
+      return;
+    }
+    
     try {
       const formData = new FormData();
       formData.append('status', status.toLowerCase());
@@ -160,6 +226,12 @@ function ContraApproval() {
   };
 
   const handleReject = async (voucherId) => {
+    // Check DELETE permission for rejecting
+    if (!canRejectContra) {
+      showError('You do not have permission to reject vouchers');
+      return;
+    }
+    
     try {
       const result = await Swal.fire({
         title: 'Are you sure?',
@@ -194,7 +266,6 @@ function ContraApproval() {
     setSearchTerm('');
   };
 
-
   const renderPendingTable = () => {
     return (
       <div className="responsive-table-wrapper">
@@ -211,13 +282,13 @@ function ContraApproval() {
               <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
               <CTableHeaderCell scope="col">Bank Location</CTableHeaderCell>
               <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              {showActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="11" style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={showActionColumn ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
                   No pending contra approval available
                 </CTableDataCell>
               </CTableRow>
@@ -238,24 +309,31 @@ function ContraApproval() {
                       {item.status}
                     </CBadge>
                   </CTableDataCell>
-                  <CTableDataCell>
-                    <CButton
-                      size="sm"
-                      className='option-button btn-sm'
-                      onClick={(event) => handleClick(event, item._id)}
-                    >
-                      <CIcon icon={cilSettings} />
-                      Options
-                    </CButton>
-                    <Menu id={`action-menu-${item._id}`} anchorEl={anchorEl} open={menuId === item._id} onClose={handleClose}>
-                      <MenuItem onClick={() => handleOpenApprovalModal(item)} style={{ color: 'black' }}>
-                        <CIcon icon={cilCheckCircle} className="me-2" /> Approve
-                      </MenuItem>
-                      <MenuItem onClick={() => handleReject(item._id)} style={{ color: 'black' }}>
-                        <CIcon icon={cilX} className="me-2" /> Reject
-                      </MenuItem>
-                    </Menu>
-                  </CTableDataCell>
+                  {showActionColumn && (
+                    <CTableDataCell>
+                      <CButton
+                        size="sm"
+                        className='option-button btn-sm'
+                        onClick={(event) => handleClick(event, item._id)}
+                        disabled={!canApproveContra && !canRejectContra}
+                      >
+                        <CIcon icon={cilSettings} />
+                        Options
+                      </CButton>
+                      <Menu id={`action-menu-${item._id}`} anchorEl={anchorEl} open={menuId === item._id} onClose={handleClose}>
+                        {canApproveContra && (
+                          <MenuItem onClick={() => handleOpenApprovalModal(item)} style={{ color: 'black' }}>
+                            <CIcon icon={cilCheckCircle} className="me-2" /> Approve
+                          </MenuItem>
+                        )}
+                        {canRejectContra && (
+                          <MenuItem onClick={() => handleReject(item._id)} style={{ color: 'black' }}>
+                            <CIcon icon={cilX} className="me-2" /> Reject
+                          </MenuItem>
+                        )}
+                      </Menu>
+                    </CTableDataCell>
+                  )}
                 </CTableRow>
               ))
             )}
@@ -367,6 +445,15 @@ function ContraApproval() {
     );
   };
 
+  // Check if user has permission to view the page
+  if (!canViewContraApproval) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Contra Voucher Approval.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -378,7 +465,7 @@ function ContraApproval() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-       {error}
+        {error}
       </div>
     );
   }
@@ -387,28 +474,13 @@ function ContraApproval() {
     <div>
       <div className='title'>Contra Voucher Approval</div>
       
+      {!showActionColumn && (
+        <CAlert color="warning" className="mb-3">
+          You have VIEW permission but cannot approve or reject vouchers.
+        </CAlert>
+      )}
+      
       <CCard className='table-container mt-4'>
-        {/* <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-          <div>
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-            >
-              <CIcon icon={cilSearch} className='icon' /> Search
-            </CButton>
-            {searchTerm && (
-              <CButton 
-                size="sm" 
-                color="secondary" 
-                className="action-btn me-1"
-                onClick={handleResetSearch}
-              >
-                <CIcon icon={cilZoomOut} className='icon' /> Reset Search
-              </CButton>
-            )}
-          </div>
-        </CCardHeader> */}
-        
         <CCardBody>
           <CNav variant="tabs" className="mb-3 border-bottom">
             <CNavItem>
@@ -488,7 +560,6 @@ function ContraApproval() {
         </CCardBody>
       </CCard>
 
-
       <CModal visible={showApprovalModal} onClose={() => setShowApprovalModal(false)}>
         <CModalHeader onClose={() => setShowApprovalModal(false)}>
           <CModalTitle>Approve Voucher</CModalTitle>
@@ -512,10 +583,6 @@ function ContraApproval() {
           <CButton color="secondary" onClick={() => setShowApprovalModal(false)}>
             Cancel
           </CButton>
-          {/* <CButton color="danger" onClick={() => handleReject(selectedVoucher?._id)}>
-            <CIcon icon={cilX} className="me-1" />
-            Reject
-          </CButton> */}
           <CButton color="primary" onClick={() => handleStatusUpdate('approved')}>
             <CIcon icon={cilCheckCircle} className="me-1" />
             Approve

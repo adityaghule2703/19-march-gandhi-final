@@ -7,6 +7,8 @@ import CIcon from '@coreui/icons-react';
 import { cilLocationPin, cilSearch } from '@coreui/icons';
 import { showFormSubmitError, showFormSubmitToast } from '../../utils/sweetAlerts';
 import axiosInstance from '../../axiosInstance';
+import { useAuth } from '../../context/AuthContext';
+import { canViewPage, MODULES, PAGES } from '../../utils/modulePermissions';
 
 function CashBook() {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -18,8 +20,17 @@ function CashBook() {
   const [errors, setErrors] = useState({});
   const [branches, setBranches] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { permissions } = useAuth();
+  
+  // Page-level permission check for Cash Book page under Fund Management module
+  const canViewCashBook = canViewPage(permissions, MODULES.FUND_MANAGEMENT, PAGES.FUND_MANAGEMENT.CASH_BOOK);
 
   useEffect(() => {
+    if (!canViewCashBook) {
+      showFormSubmitError('You do not have permission to view Cash Book');
+      return;
+    }
+    
     const fetchBranches = async () => {
       try {
         const response = await axiosInstance.get('/branches');
@@ -31,7 +42,7 @@ function CashBook() {
     };
 
     fetchBranches();
-  }, []);
+  }, [canViewCashBook]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -247,6 +258,14 @@ function CashBook() {
 
     await generateCashBook();
   };
+
+  if (!canViewCashBook) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Cash Book.
+      </div>
+    );
+  }
 
   return (
     <div className="form-container">

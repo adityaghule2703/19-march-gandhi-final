@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/invoice.css';
 import '../../css/form.css';
-import { CFormInput, CInputGroup, CInputGroupText, CButton } from '@coreui/react';
+import { CFormInput, CInputGroup, CInputGroupText, CButton, CAlert, CSpinner } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilCarAlt, cilPrint, cilReload } from '@coreui/icons';
 import axiosInstance from '../../axiosInstance';
+import { useNavigate } from 'react-router-dom';
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+import { showError } from '../../utils/sweetAlerts';
 
 function Invoice() {
   const [formData, setFormData] = useState({
@@ -15,14 +23,28 @@ function Invoice() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [typingTimeout, setTypingTimeout] = useState(null);
+  const navigate = useNavigate();
+
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth();
+
+  // Permission check for GST Invoice page under Sales module
+  const canViewGSTInvoice = canViewPage(permissions, MODULES.SALES, PAGES.SALES.GST_INVOICE);
 
   useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewGSTInvoice) {
+      showError('You do not have permission to view GST Invoice');
+      navigate('/dashboard');
+      return;
+    }
+    
     return () => {
       if (typingTimeout) {
         clearTimeout(typingTimeout);
       }
     };
-  }, [typingTimeout]);
+  }, [typingTimeout, canViewGSTInvoice, navigate]);
 
   const fetchInvoiceDetails = async (chassisNumber) => {
     if (!chassisNumber) {
@@ -471,15 +493,37 @@ function Invoice() {
       setError('Please fetch invoice details first');
       return;
     }
+
+    // Check VIEW permission before printing
+    if (!canViewGSTInvoice) {
+      showError('You do not have permission to print GST Invoice');
+      return;
+    }
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(generateInvoiceHTML(invoiceData));
     printWindow.document.close();
     printWindow.focus();
   };
 
+  // Check if user has permission to view this page
+  if (!canViewGSTInvoice) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view GST Invoice.
+      </div>
+    );
+  }
+
   return (
     <div className="invoice-container">
       <h4 className="mb-4">Invoice</h4>
+
+      {error && (
+        <CAlert color="danger" className="mb-3">
+          {error}
+        </CAlert>
+      )}
 
       <div className="p-3">
         <h5>Customer GST Invoice</h5>
@@ -496,17 +540,13 @@ function Invoice() {
           />
           {loading && (
             <CInputGroupText>
-              <div className="spinner-border spinner-border-sm" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
+              <CSpinner size="sm" color="primary" />
             </CInputGroupText>
           )}
         </CInputGroup>
 
-        {error && <div className="text-danger mb-3">{error}</div>}
-
         <div className="d-flex gap-2">
-          <CButton className='submit-button' onClick={handlePrint}>
+          <CButton className='submit-button' onClick={handlePrint} disabled={!invoiceData || loading}>
             <CIcon icon={cilPrint} className="me-2" />
             Print
           </CButton>

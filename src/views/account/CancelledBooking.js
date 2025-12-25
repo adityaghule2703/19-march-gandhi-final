@@ -33,6 +33,17 @@ import {
   CTabPane
 } from '@coreui/react';
 
+// Import permission utilities
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+
 const CancelledBooking = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [processRefundData, setProcessRefundData] = useState([]);
@@ -47,10 +58,26 @@ const CancelledBooking = () => {
     completedRefund: true
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Cancelled Booking under ACCOUNT module
+  const canViewCancelledBooking = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.CANCELLED_BOOKING);
+  const canCreateCancelledBooking = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.CANCELLED_BOOKING);
+  const canUpdateCancelledBooking = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.CANCELLED_BOOKING);
+  const canDeleteCancelledBooking = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.CANCELLED_BOOKING);
+  
+  // Check if user can process refunds (usually tied to CREATE or UPDATE permission)
+  const canProcessRefund = canCreateCancelledBooking || canUpdateCancelledBooking;
 
   useEffect(() => {
+    if (!canViewCancelledBooking) {
+      return;
+    }
+    
     fetchData();
-  }, [activeTab]);
+  }, [activeTab, canViewCancelledBooking]);
 
   const fetchData = async () => {
     try {
@@ -84,9 +111,9 @@ const CancelledBooking = () => {
       }
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       if (activeTab === 0) {
         setLoading(prev => ({ ...prev, processRefund: false }));
@@ -97,6 +124,11 @@ const CancelledBooking = () => {
   };
 
   const handleAddClick = (booking) => {
+    if (!canProcessRefund) {
+      showError('You do not have permission to process refunds');
+      return;
+    }
+    
     setSelectedBooking(booking);
     setShowModal(true);
   };
@@ -107,6 +139,10 @@ const CancelledBooking = () => {
   };
 
   const handleTabChange = (tab) => {
+    if (!canViewCancelledBooking) {
+      return;
+    }
+    
     setActiveTab(tab);
     setSearchTerm('');
     if (tab === 0) {
@@ -116,6 +152,12 @@ const CancelledBooking = () => {
       setData(completedRefundData);
       setFilteredData(completedRefundData);
     }
+  };
+
+  const handleRefundProcessed = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 3000);
+    fetchData();
   };
 
   const renderProcessRefundTable = () => {
@@ -152,13 +194,13 @@ const CancelledBooking = () => {
               <CTableHeaderCell>Total Amount</CTableHeaderCell>
               <CTableHeaderCell>Received</CTableHeaderCell>
               <CTableHeaderCell>Refund Amount</CTableHeaderCell>
-              <CTableHeaderCell>Action</CTableHeaderCell>
+              {canProcessRefund && <CTableHeaderCell>Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {currentRecords.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="11" className="text-center">
+                <CTableDataCell colSpan={canProcessRefund ? "11" : "10"} className="text-center">
                   {searchTerm ? 'No matching bookings found' : 'No pending refund bookings available'}
                 </CTableDataCell>
               </CTableRow>
@@ -166,27 +208,30 @@ const CancelledBooking = () => {
               currentRecords.map((booking, index) => (
                 <CTableRow key={booking._id || index}>
                   <CTableDataCell>{index + 1}</CTableDataCell>
-                  <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+                  <CTableDataCell>{booking.bookingNumber || 'N/A'}</CTableDataCell>
                   <CTableDataCell>{booking.vehicle?.model || 'N/A'}</CTableDataCell>
                   <CTableDataCell>
-                    {booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString('en-GB') : ''}
+                    {booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString('en-GB') : 'N/A'}
                   </CTableDataCell>
-                  <CTableDataCell>{booking.customer?.name || ''}</CTableDataCell>
-                  <CTableDataCell>{booking.customer?.phone || ''}</CTableDataCell>
+                  <CTableDataCell>{booking.customer?.name || 'N/A'}</CTableDataCell>
+                  <CTableDataCell>{booking.customer?.phone || 'N/A'}</CTableDataCell>
                   <CTableDataCell>₹{booking.financials?.cancellationCharges?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                   <CTableDataCell>₹{booking.financials?.total?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                   <CTableDataCell>₹{booking.financials?.received?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                   <CTableDataCell>₹{booking.financials?.refundAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-                  <CTableDataCell>
-                    <CButton
-                      size="sm"
-                      color="primary"
-                      className="action-btn"
-                      onClick={() => handleAddClick(booking)}
-                    >
-                      Process Refund
-                    </CButton>
-                  </CTableDataCell>
+                  {canProcessRefund && (
+                    <CTableDataCell>
+                      <CButton
+                        size="sm"
+                        color="primary"
+                        className="action-btn"
+                        onClick={() => handleAddClick(booking)}
+                        disabled={!canProcessRefund}
+                      >
+                        Process Refund
+                      </CButton>
+                    </CTableDataCell>
+                  )}
                 </CTableRow>
               ))
             )}
@@ -245,13 +290,13 @@ const CancelledBooking = () => {
               currentRecords.map((booking, index) => (
                 <CTableRow key={booking._id || index}>
                   <CTableDataCell>{index + 1}</CTableDataCell>
-                  <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+                  <CTableDataCell>{booking.bookingNumber || 'N/A'}</CTableDataCell>
                   <CTableDataCell>{booking.vehicle?.model || 'N/A'}</CTableDataCell>
                   <CTableDataCell>
-                    {booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString('en-GB') : ''}
+                    {booking.bookingDate ? new Date(booking.bookingDate).toLocaleDateString('en-GB') : 'N/A'}
                   </CTableDataCell>
-                  <CTableDataCell>{booking.customer?.name || ''}</CTableDataCell>
-                  <CTableDataCell>{booking.customer?.phone || ''}</CTableDataCell>
+                  <CTableDataCell>{booking.customer?.name || 'N/A'}</CTableDataCell>
+                  <CTableDataCell>{booking.customer?.phone || 'N/A'}</CTableDataCell>
                   <CTableDataCell>₹{booking.financials?.cancellationCharges?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                   <CTableDataCell>₹{booking.financials?.total?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                   <CTableDataCell>₹{booking.financials?.received?.toLocaleString('en-IN') || '0'}</CTableDataCell>
@@ -276,9 +321,23 @@ const CancelledBooking = () => {
     );
   };
 
+  if (!canViewCancelledBooking) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Cancelled Bookings.
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className='title'>Cancelled Bookings</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
     
       <CCard className='table-container mt-4'>
         <CCardBody>
@@ -293,6 +352,7 @@ const CancelledBooking = () => {
                   color: 'black',
                   borderBottom: 'none'
                 }}
+                disabled={!canViewCancelledBooking}
               >
                 Process Refund
               </CNavLink>
@@ -307,6 +367,7 @@ const CancelledBooking = () => {
                   borderBottom: 'none',
                   color: 'black'
                 }}
+                disabled={!canViewCancelledBooking}
               >
                 Completed Refund
               </CNavLink>
@@ -324,6 +385,7 @@ const CancelledBooking = () => {
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Search bookings..."
+                disabled={!canViewCancelledBooking}
               />
             </div>
           </div>
@@ -343,7 +405,8 @@ const CancelledBooking = () => {
         show={showModal} 
         onClose={() => setShowModal(false)} 
         bookingData={selectedBooking} 
-        onSuccess={fetchData} 
+        onSuccess={handleRefundProcessed}
+        canProcessRefund={canProcessRefund}
       />
     </div>
   );

@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/invoice.css';
-import { CFormInput, CInputGroup, CInputGroupText, CButton } from '@coreui/react';
+import { CFormInput, CInputGroup, CInputGroupText, CButton, CAlert, CSpinner } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilCarAlt, cilPrint, cilReload } from '@coreui/icons';
 import axiosInstance from '../../axiosInstance';
 import '../../css/form.css';
+import { useNavigate } from 'react-router-dom';
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+import { showError } from '../../utils/sweetAlerts';
+
 function DealForm() {
   const [formData, setFormData] = useState({
     chassisNumber: '',
@@ -15,8 +24,22 @@ function DealForm() {
   const [error, setError] = useState('');
   const [typingTimeout, setTypingTimeout] = useState(null);
   const [declarations, setDeclarations] = useState([]);
+  const navigate = useNavigate();
+
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth();
+
+  // Permission check for Deal Form page under Sales module
+  const canViewDealForm = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DEAL_FORM);
 
   useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewDealForm) {
+      showError('You do not have permission to view Deal Form');
+      navigate('/dashboard');
+      return;
+    }
+    
     const fetchDeclarations = async () => {
       try {
         const response = await axiosInstance.get('/declarations?formType=deal_form');
@@ -30,15 +53,13 @@ function DealForm() {
     };
 
     fetchDeclarations();
-  }, []);
 
-  useEffect(() => {
     return () => {
       if (typingTimeout) {
         clearTimeout(typingTimeout);
       }
     };
-  }, [typingTimeout]);
+  }, [typingTimeout, canViewDealForm, navigate]);
 
   const fetchInvoiceDetails = async (chassisNumber) => {
     if (!chassisNumber) {
@@ -567,9 +588,16 @@ function DealForm() {
 </html>
   `;
   };
+
   const handlePrint = () => {
     if (!invoiceData) {
       setError('Please fetch invoice details first');
+      return;
+    }
+
+    // Check VIEW permission before printing
+    if (!canViewDealForm) {
+      showError('You do not have permission to print Deal Form');
       return;
     }
 
@@ -579,9 +607,24 @@ function DealForm() {
     printWindow.focus();
   };
 
+  // Check if user has permission to view this page
+  if (!canViewDealForm) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Deal Form.
+      </div>
+    );
+  }
+
   return (
     <div className="invoice-container">
       <h4 className="mb-4">Deal Form</h4>
+
+      {error && (
+        <CAlert color="danger" className="mb-3">
+          {error}
+        </CAlert>
+      )}
 
       <div className="p-3">
         <h5>Customer Deal Form</h5>
@@ -598,17 +641,13 @@ function DealForm() {
           />
           {loading && (
             <CInputGroupText>
-              <div className="spinner-border spinner-border-sm" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
+              <CSpinner size="sm" color="primary" />
             </CInputGroupText>
           )}
         </CInputGroup>
 
-        {error && <div className="text-danger mb-3">{error}</div>}
-
         <div className="d-flex gap-2">
-          <CButton className='submit-button' onClick={handlePrint}>
+          <CButton className='submit-button' onClick={handlePrint} disabled={!invoiceData || loading}>
             <CIcon icon={cilPrint} className="me-2" />
             Print
           </CButton>
@@ -621,4 +660,5 @@ function DealForm() {
     </div>
   );
 }
+
 export default DealForm;

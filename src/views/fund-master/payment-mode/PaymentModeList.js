@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -31,6 +30,14 @@ import {
 import CIcon from '@coreui/icons-react';
 import { cilSettings, cilTrash, cilPlus } from '@coreui/icons';
 import { useAuth } from '../../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../../utils/modulePermissions';
 
 const PaymentModeList = ({ payments, onDelete, onEdit, onAddNew }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -38,7 +45,16 @@ const PaymentModeList = ({ payments, onDelete, onEdit, onAddNew }) => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData || []);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Payment Mode page under Fund Master module
+  const canViewPaymentMode = canViewPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.PAYMENT_MODE);
+  const canCreatePaymentMode = canCreateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.PAYMENT_MODE);
+  const canUpdatePaymentMode = canUpdateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.PAYMENT_MODE);
+  const canDeletePaymentMode = canDeleteInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.PAYMENT_MODE);
+  
+  const showActionColumn = canUpdatePaymentMode || canDeletePaymentMode;
+
   useEffect(() => {
     const paymentData = Array.isArray(payments) ? payments : [];
     setData(paymentData);
@@ -56,6 +72,11 @@ const PaymentModeList = ({ payments, onDelete, onEdit, onAddNew }) => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeletePaymentMode) {
+      showError('You do not have permission to delete payment mode');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -73,20 +94,24 @@ const PaymentModeList = ({ payments, onDelete, onEdit, onAddNew }) => {
     handleFilter(value, getDefaultSearchFields('payment_mode'));
   };
 
-  const hasCreatePermission = hasPermission(permissions,'BANK_SUB_PAYMENT_MODE_CREATE');
-  const hasEditPermission = hasPermission(permissions,'BANK_SUB_PAYMENT_MODE_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'BANK_SUB_PAYMENT_MODE_DELETE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  if (!canViewPaymentMode) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Payment Modes.
+      </div>
+    );
+  }
 
   return (
     <CCard className='table-container mt-4'>
       <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
         <div>
-          {hasCreatePermission && (
+          {canCreatePaymentMode && (
             <CButton 
               size="sm" 
               className="action-btn me-1"
               onClick={onAddNew}
+              disabled={!canCreatePaymentMode}
             >
               <CIcon icon={cilPlus} className='icon'/> New
             </CButton>
@@ -104,6 +129,7 @@ const PaymentModeList = ({ payments, onDelete, onEdit, onAddNew }) => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                disabled={!canViewPaymentMode}
               />
             </div>
           </div>
@@ -134,6 +160,7 @@ const PaymentModeList = ({ payments, onDelete, onEdit, onAddNew }) => {
                           size="sm"
                           className='option-button btn-sm'
                           onClick={(event) => handleClick(event, payment.id)}
+                          disabled={!canUpdatePaymentMode && !canDeletePaymentMode}
                         >
                           <CIcon icon={cilSettings} />
                           Options
@@ -144,7 +171,7 @@ const PaymentModeList = ({ payments, onDelete, onEdit, onAddNew }) => {
                           open={menuId === payment.id} 
                           onClose={handleClose}
                         >
-                          {/* {hasEditPermission && (
+                          {/* {canUpdatePaymentMode && (
                             <MenuItem 
                               onClick={() => {
                                 onEdit(payment);
@@ -156,7 +183,7 @@ const PaymentModeList = ({ payments, onDelete, onEdit, onAddNew }) => {
                               Edit
                             </MenuItem>
                           )} */}
-                          {hasDeletePermission && (
+                          {canDeletePaymentMode && (
                             <MenuItem onClick={() => handleDelete(payment.id)}>
                               <CIcon icon={cilTrash} className="me-2" />
                               Delete

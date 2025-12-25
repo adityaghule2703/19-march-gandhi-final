@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -15,6 +14,16 @@ import {
   showSuccess,
   axiosInstance,
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -44,15 +53,53 @@ const DeclarationList = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'DECLARATION_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'DECLARATION_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'DECLARATION_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Declaration page under Masters module
+  const hasDeclarationView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.DECLARATION, 
+    ACTIONS.VIEW
+  );
+  
+  const hasDeclarationCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.DECLARATION, 
+    ACTIONS.CREATE
+  );
+  
+  const hasDeclarationUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.DECLARATION, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasDeclarationDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.DECLARATION, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewDeclaration = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DECLARATION);
+  const canCreateDeclaration = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DECLARATION);
+  const canUpdateDeclaration = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DECLARATION);
+  const canDeleteDeclaration = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DECLARATION);
+  
+  const showActionColumn = canUpdateDeclaration || canDeleteDeclaration;
 
   useEffect(() => {
+    if (!canViewDeclaration) {
+      showError('You do not have permission to view Declarations');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewDeclaration]);
 
   const fetchData = async () => {
     try {
@@ -81,6 +128,11 @@ const DeclarationList = () => {
   };
 
   const handleToggleActive = async (declarationId, currentStatus) => {
+    if (!canUpdateDeclaration) {
+      showError('You do not have permission to update declaration status');
+      return;
+    }
+    
     try {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       await axiosInstance.patch(`/declarations/${declarationId}/status`, {
@@ -104,6 +156,11 @@ const DeclarationList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteDeclaration) {
+      showError('You do not have permission to delete declarations');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -122,6 +179,14 @@ const DeclarationList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('conditions'));
   };
+
+  if (!canViewDeclaration) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Declarations.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -146,7 +211,7 @@ const DeclarationList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateDeclaration && (
               <Link to="/add-declaration">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Declaration
@@ -234,7 +299,7 @@ const DeclarationList = () => {
                             open={menuId === declaration._id}
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateDeclaration && (
                               <Link className="Link" to={`/update-declaration/${declaration._id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />
@@ -242,13 +307,13 @@ const DeclarationList = () => {
                                 </MenuItem>
                               </Link>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteDeclaration && (
                               <MenuItem onClick={() => handleDelete(declaration._id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete
                               </MenuItem>
                             )}
-                            {hasEditPermission && (
+                            {canUpdateDeclaration && (
                               <MenuItem onClick={() => handleToggleActive(declaration._id, declaration.status)}>
                                 <CIcon icon={declaration.status === 'active' ? cilXCircle : cilCheckCircle} className="me-2" />
                                 {declaration.status === 'active' ? 'Deactivate' : 'Activate'}

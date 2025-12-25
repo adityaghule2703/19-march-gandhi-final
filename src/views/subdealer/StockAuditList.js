@@ -55,6 +55,15 @@ import {
   IconButton
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { useAuth } from '../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../utils/modulePermissions';
 
 const StockAuditList = () => {
   // Tab states
@@ -86,6 +95,19 @@ const StockAuditList = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   
+  // Permissions
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Subdealer Stock Audit page under Subdealer module
+  const canViewStockAudit = canViewPage(permissions, MODULES.SUBDEALER, PAGES.SUBDEALER.STOCK_AUDIT);
+  // Approve action = CREATE permission (creating approval record)
+  const canApproveStockAudit = canCreateInPage(permissions, MODULES.SUBDEALER, PAGES.SUBDEALER.STOCK_AUDIT);
+  // Reject action = DELETE permission (rejecting/removing audit)
+  const canRejectStockAudit = canDeleteInPage(permissions, MODULES.SUBDEALER, PAGES.SUBDEALER.STOCK_AUDIT);
+  
+  // Show action column if user can approve OR reject
+  const showActionColumn = canApproveStockAudit || canRejectStockAudit;
+
   // Data for different tabs
   const {
     data: pendingData,
@@ -112,8 +134,13 @@ const StockAuditList = () => {
   } = useTableFilter([]);
 
   useEffect(() => {
+    if (!canViewStockAudit) {
+      showError('You do not have permission to view Stock Audit List');
+      return;
+    }
+    
     fetchData();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, canViewStockAudit]);
 
   const fetchData = async () => {
     try {
@@ -188,6 +215,17 @@ const StockAuditList = () => {
   };
 
   const openReviewModal = (auditId, action) => {
+    // Check permissions based on action
+    if (action === 'approve' && !canApproveStockAudit) {
+      showError('You do not have permission to approve stock audits');
+      return;
+    }
+    
+    if (action === 'reject' && !canRejectStockAudit) {
+      showError('You do not have permission to reject stock audits');
+      return;
+    }
+    
     setSelectedAuditId(auditId);
     setReviewAction(action);
     setVerificationNotes('');
@@ -206,6 +244,17 @@ const StockAuditList = () => {
 
   const handleSubmitReview = async () => {
     if (!selectedAuditId) return;
+
+    // Check permissions based on action
+    if (reviewAction === 'approve' && !canApproveStockAudit) {
+      showError('You do not have permission to approve stock audits');
+      return;
+    }
+    
+    if (reviewAction === 'reject' && !canRejectStockAudit) {
+      showError('You do not have permission to reject stock audits');
+      return;
+    }
 
     try {
       setVerifyingId(selectedAuditId);
@@ -248,6 +297,11 @@ const StockAuditList = () => {
 
   // Photo viewer functions
   const openPhotoViewer = (audit) => {
+    if (!canViewStockAudit) {
+      showError('You do not have permission to view photos');
+      return;
+    }
+    
     const photos = audit.vehiclesPhotos || [];
     if (photos.length > 0) {
       setSelectedAuditPhotos(photos);
@@ -425,6 +479,7 @@ const StockAuditList = () => {
                           variant="outline"
                           onClick={() => openPhotoViewer(audit)}
                           className="d-flex align-items-center"
+                          disabled={!canViewStockAudit}
                         >
                           <CIcon icon={cilImage} className="me-1" />
                           View Photos ({audit.vehiclesPhotos.length})
@@ -448,7 +503,10 @@ const StockAuditList = () => {
                         <IconButton
                           size="small"
                           onClick={(event) => handleMenuClick(event, audit._id)}
-                          disabled={verifyingId === audit._id}
+                          disabled={
+                            verifyingId === audit._id || 
+                            (!canApproveStockAudit && !canRejectStockAudit)
+                          }
                         >
                           <MoreVertIcon />
                         </IconButton>
@@ -457,20 +515,24 @@ const StockAuditList = () => {
                           open={menuId === audit._id}
                           onClose={handleMenuClose}
                         >
-                          <MenuItem 
-                            onClick={() => openReviewModal(audit._id, 'approve')}
-                            disabled={verifyingId === audit._id}
-                          >
-                            <CIcon icon={cilCheckCircle} className="me-2 text-success" />
-                            {verifyingId === audit._id ? 'Approving...' : 'Approve'}
-                          </MenuItem>
-                          <MenuItem 
-                            onClick={() => openReviewModal(audit._id, 'reject')}
-                            disabled={verifyingId === audit._id}
-                          >
-                            <CIcon icon={cilXCircle} className="me-2 text-danger" />
-                            {verifyingId === audit._id ? 'Rejecting...' : 'Reject'}
-                          </MenuItem>
+                          {canApproveStockAudit && (
+                            <MenuItem 
+                              onClick={() => openReviewModal(audit._id, 'approve')}
+                              disabled={verifyingId === audit._id}
+                            >
+                              <CIcon icon={cilCheckCircle} className="me-2 text-success" />
+                              {verifyingId === audit._id ? 'Approving...' : 'Approve'}
+                            </MenuItem>
+                          )}
+                          {canRejectStockAudit && (
+                            <MenuItem 
+                              onClick={() => openReviewModal(audit._id, 'reject')}
+                              disabled={verifyingId === audit._id}
+                            >
+                              <CIcon icon={cilXCircle} className="me-2 text-danger" />
+                              {verifyingId === audit._id ? 'Rejecting...' : 'Reject'}
+                            </MenuItem>
+                          )}
                         </Menu>
                       </div>
                     </CTableDataCell>
@@ -492,6 +554,14 @@ const StockAuditList = () => {
       </div>
     );
   };
+
+  if (!canViewStockAudit) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Stock Audit List.
+      </div>
+    );
+  }
 
   if (loading && !refreshTrigger) {
     return (
@@ -542,6 +612,7 @@ const StockAuditList = () => {
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
               style={{ width: '250px' }}
+              disabled={!canViewStockAudit}
             />
           </div>
         </CCardHeader>
@@ -558,6 +629,13 @@ const StockAuditList = () => {
               >
                 Try Again
               </CButton>
+            </CAlert>
+          )}
+          
+          {/* Permissions Alert */}
+          {canViewStockAudit && !showActionColumn && (
+            <CAlert color="warning" className="mb-3">
+              You have VIEW permission but cannot approve or reject stock audits.
             </CAlert>
           )}
           

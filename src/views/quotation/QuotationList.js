@@ -32,10 +32,25 @@ import {
   CModalHeader,
   CModalTitle,
   CModalBody,
-  CModalFooter
+  CModalFooter,
+  CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilPrint, cilPlus, cilSettings, cilTrash } from '@coreui/icons';
+
+// Import permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  SafePagePermissionGuard 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 const CustomersList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -48,14 +63,31 @@ const CustomersList = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [openDateModal, setOpenDateModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
+  const { permissions } = useAuth();
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
 
+  // Page-level permission checks for Customers Quotation under QUOTATION module
+  // Note: Based on your module structure, Customers Quotation might be under QUOTATION module
+  // If it's under a different module, adjust MODULES and PAGES accordingly
+  const canViewCustomers = canViewPage(permissions, MODULES.QUOTATION, PAGES.QUOTATION.QUOTATION_LIST);
+  const canCreateCustomers = canCreateInPage(permissions, MODULES.QUOTATION, PAGES.QUOTATION.QUOTATION_LIST);
+  const canUpdateCustomers = canUpdateInPage(permissions, MODULES.QUOTATION, PAGES.QUOTATION.QUOTATION_LIST);
+  const canDeleteCustomers = canDeleteInPage(permissions, MODULES.QUOTATION, PAGES.QUOTATION.QUOTATION_LIST);
+  
+  const showActionColumn = canUpdateCustomers || canDeleteCustomers;
+
   useEffect(() => {
+    if (!canViewCustomers) {
+      showError('You do not have permission to view Customers Quotation');
+      return;
+    }
+    
     fetchBranches();
     fetchData();
-  }, []);
+  }, [canViewCustomers]);
 
   const fetchBranches = async () => {
     try {
@@ -77,15 +109,20 @@ const CustomersList = () => {
       setFilteredData(response.data.data.quotations);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleDownloadPdf = async (quotation) => {
+    if (!canViewCustomers) {
+      showError('You do not have permission to download quotations');
+      return;
+    }
+    
     try {
       Swal.fire({
         title: 'Preparing PDF',
@@ -107,14 +144,15 @@ const CustomersList = () => {
       document.body.removeChild(link);
 
       Swal.close();
-      showSuccess('Quotation downloaded successfully!');
+      setSuccessMessage('Quotation downloaded successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Error downloading PDF:', error);
       Swal.close();
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -129,6 +167,11 @@ const CustomersList = () => {
   };
 
   const handleOpenDateModal = () => {
+    if (!canViewCustomers) {
+      showError('You do not have permission to export data');
+      return;
+    }
+    
     setOpenDateModal(true);
   };
 
@@ -139,6 +182,11 @@ const CustomersList = () => {
   };
 
   const handleExcelExport = async (dateRange = false) => {
+    if (!canViewCustomers) {
+      showError('You do not have permission to export data');
+      return;
+    }
+    
     try {
       let url = '/quotations/export';
       let params = {};
@@ -198,13 +246,19 @@ const CustomersList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteCustomers) {
+      showError('You do not have permission to delete quotations');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
         await axiosInstance.delete(`/quotations/${id}`);
         setData(data.filter((customer) => customer.id !== id));
         fetchData();
-        showSuccess();
+        setSuccessMessage('Quotation deleted successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
       } catch (error) {
         console.log(error);
         showError(error);
@@ -217,6 +271,13 @@ const CustomersList = () => {
     handleFilter(value, getDefaultSearchFields('customers'));
   };
 
+  if (!canViewCustomers) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Customers Quotation.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -229,7 +290,7 @@ const CustomersList = () => {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-       {error}
+        {error}
       </div>
     );
   }
@@ -237,23 +298,39 @@ const CustomersList = () => {
   return (
     <div>
       <div className='title'>Customers Quotation</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
     
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            <Link to="/add-quotation">
-              <CButton 
-                size="sm" 
-                className="action-btn me-1"
-              >
-                <CIcon icon={cilPlus} className='icon' /> New
-              </CButton>
-            </Link>
+            {/* Only show New button if user has CREATE permission */}
+            <SafePagePermissionGuard
+              permissions={permissions}
+              module={MODULES.QUOTATION}
+              page={PAGES.QUOTATION.QUOTATION_LIST}
+              action={ACTIONS.CREATE}
+            >
+              <Link to="/add-quotation">
+                <CButton 
+                  size="sm" 
+                  className="action-btn me-1"
+                >
+                  <CIcon icon={cilPlus} className='icon' /> New
+                </CButton>
+              </Link>
+            </SafePagePermissionGuard>
+            
             <CButton 
               size="sm" 
               className="action-btn me-1"
               onClick={handleOpenDateModal}
               title="Excel Export"
+              disabled={!canViewCustomers}
             >
               <FontAwesomeIcon icon={faFileExcel} className='me-1' />
               Export Excel
@@ -271,6 +348,7 @@ const CustomersList = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                disabled={!canViewCustomers}
               />
             </div>
           </div>
@@ -286,13 +364,13 @@ const CustomersList = () => {
                   <CTableHeaderCell>District</CTableHeaderCell>
                   <CTableHeaderCell>Mobile Number</CTableHeaderCell>
                   <CTableHeaderCell>Quotation</CTableHeaderCell>
-                  <CTableHeaderCell>Action</CTableHeaderCell>
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {currentRecords.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan="8" className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "8" : "7"} className="text-center">
                       No quotation available
                     </CTableDataCell>
                   </CTableRow>
@@ -300,11 +378,11 @@ const CustomersList = () => {
                   currentRecords.map((customer, index) => (
                     <CTableRow key={customer.id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
-                      <CTableDataCell>{customer.customer.name}</CTableDataCell>
-                      <CTableDataCell>{customer.customer.address}</CTableDataCell>
-                      <CTableDataCell>{customer.customer.taluka}</CTableDataCell>
-                      <CTableDataCell>{customer.customer.district}</CTableDataCell>
-                      <CTableDataCell>{customer.customer.mobile1}</CTableDataCell>
+                      <CTableDataCell>{customer.customer?.name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{customer.customer?.address || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{customer.customer?.taluka || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{customer.customer?.district || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{customer.customer?.mobile1 || 'N/A'}</CTableDataCell>
                       <CTableDataCell>
                         <CButton
                           size="sm"
@@ -312,31 +390,37 @@ const CustomersList = () => {
                           variant="outline"
                           onClick={() => handleDownloadPdf(customer)}
                           title="Download Quotation PDF"
+                          disabled={!canViewCustomers}
                         >
                           <CIcon icon={cilPrint} />
                         </CButton>
                       </CTableDataCell>
-                      <CTableDataCell>
-                        <CButton
-                          size="sm"
-                          className='option-button btn-sm'
-                          onClick={(event) => handleClick(event, customer.id)}
-                        >
-                          <CIcon icon={cilSettings} />
-                          Options
-                        </CButton>
-                        <Menu 
-                          id={`action-menu-${customer.id}`} 
-                          anchorEl={anchorEl} 
-                          open={menuId === customer.id} 
-                          onClose={handleClose}
-                        >
-                          <MenuItem onClick={() => handleDelete(customer._id)}>
-                            <CIcon icon={cilTrash} className="me-2" />
-                            Delete
-                          </MenuItem>
-                        </Menu>
-                      </CTableDataCell>
+                      {showActionColumn && (
+                        <CTableDataCell>
+                          <CButton
+                            size="sm"
+                            className='option-button btn-sm'
+                            onClick={(event) => handleClick(event, customer.id)}
+                            disabled={!canUpdateCustomers && !canDeleteCustomers}
+                          >
+                            <CIcon icon={cilSettings} />
+                            Options
+                          </CButton>
+                          <Menu 
+                            id={`action-menu-${customer.id}`} 
+                            anchorEl={anchorEl} 
+                            open={menuId === customer.id} 
+                            onClose={handleClose}
+                          >
+                            {canDeleteCustomers && (
+                              <MenuItem onClick={() => handleDelete(customer._id)}>
+                                <CIcon icon={cilTrash} className="me-2" />
+                                Delete
+                              </MenuItem>
+                            )}
+                          </Menu>
+                        </CTableDataCell>
+                      )}
                     </CTableRow>
                   ))
                 )}
@@ -362,6 +446,7 @@ const CustomersList = () => {
                 value={startDate}
                 onChange={(newValue) => setStartDate(newValue)}
                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                disabled={!canViewCustomers}
               />
             </div>
             <div className="mb-3">
@@ -371,6 +456,7 @@ const CustomersList = () => {
                 onChange={(newValue) => setEndDate(newValue)}
                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
                 minDate={startDate}
+                disabled={!canViewCustomers}
               />
             </div>
           </LocalizationProvider>
@@ -381,6 +467,7 @@ const CustomersList = () => {
             fullWidth
             size="small"
             SelectProps={{ native: true }}
+            disabled={!canViewCustomers}
           >
             <option value="">-- Select Branch --</option>
             {branches.map((branch) => (
@@ -395,9 +482,9 @@ const CustomersList = () => {
             Cancel
           </CButton>
           <CButton 
-           className="submit-button"
+            className="submit-button"
             onClick={() => handleExcelExport(true)}
-            disabled={!startDate || !endDate || !selectedBranchId}
+            disabled={!startDate || !endDate || !selectedBranchId || !canViewCustomers}
           >
             Export
           </CButton>

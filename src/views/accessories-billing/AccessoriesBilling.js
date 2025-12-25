@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect} from 'react';
 import '../../css/form.css';
 import { CInputGroup, CInputGroupText, CFormSelect } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilBank, cilLocationPin, cilUser } from '@coreui/icons';
+import { cilBank, cilLocationPin, cilUser, cilMoney, cilDescription } from '@coreui/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { showError,showFormSubmitToast } from '../../utils/sweetAlerts';
 import axiosInstance from '../../axiosInstance';
@@ -14,7 +13,7 @@ import tvsLogo from '../../assets/images/logo.png';
 
 function AccessoriesBilling() {
   const [formData, setFormData] = useState({
-    billing_type: '',
+    customer_type: '',
     branch_id: '',
     booking_id: '',
     subdealer_id: '',
@@ -26,7 +25,10 @@ function AccessoriesBilling() {
     invoiceNumber: `INV-${Date.now()}`,
     date: new Date().toISOString().split('T')[0],
     customer_id: '',
-    customer_name: ''
+    customer_name: '',
+    sales_executive: '',
+    payment_type: '',
+    remark: ''
   });
   const [errors, setErrors] = useState({});
   const [accessories, setAccessories] = useState([]);
@@ -38,6 +40,7 @@ function AccessoriesBilling() {
   const [banks, setBanks] = useState([]);
   const [cashLocations, setCashLocations] = useState([]);
   const [submodes, setSubModes] = useState([]);
+  const [salesExecutives, setSalesExecutives] = useState([]);
   const [error, setError] = useState(null);
   const [savedInvoiceId, setSavedInvoiceId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -51,9 +54,9 @@ function AccessoriesBilling() {
         setAccessories(response.data.data.accessories || []);
       } catch (error) {
         const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+        if (message) {
+          setError(message);
+        }
         setAccessories([]);
       }
     };
@@ -69,7 +72,8 @@ function AccessoriesBilling() {
           fetchCustomers(),
           fetchBranches(),
           fetchPaymentSubmodes(),
-          fetchCashLocation()
+          fetchCashLocation(),
+          fetchSalesExecutives()
         ]);
       } catch (error) {
         console.error('Error initializing data:', error);
@@ -88,9 +92,9 @@ function AccessoriesBilling() {
       setCustomers(Array.isArray(customersData) ? customersData : []);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
       setCustomers([]);
     }
   };
@@ -130,10 +134,24 @@ function AccessoriesBilling() {
       setCashLocations(Array.isArray(cashLocationsData) ? cashLocationsData : []);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
       setCashLocations([]);
+    }
+  };
+
+  const fetchSalesExecutives = async () => {
+    try {
+      const response = await axiosInstance.get('/users');
+      const executivesData = response.data.data?.salesExecutives || response.data.salesExecutives || response.data.data || response.data || [];
+      setSalesExecutives(Array.isArray(executivesData) ? executivesData : []);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+      setSalesExecutives([]);
     }
   };
 
@@ -145,9 +163,9 @@ function AccessoriesBilling() {
         setBanks(Array.isArray(banksData) ? banksData : []);
       } catch (error) {
         const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+        if (message) {
+          setError(message);
+        }
         setBanks([]);
       }
     };
@@ -178,7 +196,38 @@ function AccessoriesBilling() {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
     setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
 
-    if (name === 'booking_id') {
+    if (name === 'customer_type') {
+      // Reset all fields when customer type changes
+      if (value === 'SUBDEALER') {
+        setFormData(prevData => ({
+          ...prevData,
+          customer_type: value,
+          branch_id: '',
+          booking_id: '',
+          customer_id: '',
+          customer_name: '',
+          sales_executive: '',
+          payment_type: '',
+          payment_mode: '',
+          cashLocation: '',
+          bankLocation: '',
+          subPaymentMode: ''
+        }));
+        setSelectedCustomer(null);
+      } else if (value === 'CUSTOMER') {
+        setFormData(prevData => ({
+          ...prevData,
+          customer_type: value,
+          subdealer_id: '',
+          payment_type: '',
+          payment_mode: '',
+          cashLocation: '',
+          bankLocation: '',
+          subPaymentMode: ''
+        }));
+        setSelectedSubdealer(null);
+      }
+    } else if (name === 'booking_id') {
       const customer = customers.find((c) => c._id === value);
       if (customer) {
         setSelectedCustomer(customer);
@@ -198,6 +247,23 @@ function AccessoriesBilling() {
     } else if (name === 'subdealer_id') {
       const subdealer = subdealers.find((s) => s._id === value);
       setSelectedSubdealer(subdealer || null);
+      if (subdealer) {
+        setFormData(prevData => ({
+          ...prevData,
+          customer_name: subdealer.name || ''
+        }));
+      }
+    } else if (name === 'payment_type') {
+      // Reset payment-related fields when payment type changes
+      if (value === 'PAY_LETTER') {
+        setFormData(prevData => ({
+          ...prevData,
+          payment_mode: '',
+          cashLocation: '',
+          bankLocation: '',
+          subPaymentMode: ''
+        }));
+      }
     }
   };
 
@@ -281,14 +347,14 @@ function AccessoriesBilling() {
             <div class="billed-to">
               <h5>Billed To:</h5>
               ${
-                formData.billing_type === 'B2C' && selectedCustomer
+                formData.customer_type === 'CUSTOMER' && selectedCustomer
                   ? `
                 <p>${selectedCustomer.name}</p>
                 <p>Customer ID: ${selectedCustomer.custId}</p>
                 <p>${selectedCustomer.address}</p>
                 <p>${selectedCustomer.mobile1}</p>
               `
-                  : formData.billing_type === 'B2B' && selectedSubdealer
+                  : formData.customer_type === 'SUBDEALER' && selectedSubdealer
                     ? `
                 <p>${selectedSubdealer.name}</p>
                 <p>${selectedSubdealer.address}</p>
@@ -297,6 +363,9 @@ function AccessoriesBilling() {
               `
                     : ''
               }
+              ${formData.remark ? `<p><strong>Remark:</strong> ${formData.remark}</p>` : ''}
+              ${formData.customer_type === 'CUSTOMER' && formData.payment_type ? `<p><strong>Payment Type:</strong> ${formData.payment_type === 'INSTANT_PAYMENT' ? 'Instant Payment' : 'Pay Letter'}</p>` : ''}
+              ${formData.customer_type === 'CUSTOMER' && formData.payment_mode ? `<p><strong>Payment Mode:</strong> ${formData.payment_mode}</p>` : ''}
             </div>
           </div>
 
@@ -513,9 +582,27 @@ function AccessoriesBilling() {
     e.preventDefault();
     let formErrors = {};
 
-    if (!formData.billing_type) formErrors.billing_type = 'Type is required';
-    if (formData.billing_type === 'B2C' && !formData.booking_id) formErrors.booking_id = 'Customer is required';
-    if (formData.billing_type === 'B2B' && !formData.subdealer_id) formErrors.subdealer_id = 'Subdealer is required';
+    if (!formData.customer_type) formErrors.customer_type = 'Type is required';
+    
+    if (formData.customer_type === 'CUSTOMER') {
+      if (!formData.booking_id) formErrors.booking_id = 'Customer is required';
+      if (!formData.branch_id) formErrors.branch_id = 'Branch is required';
+      if (!formData.sales_executive) formErrors.sales_executive = 'Sales Executive is required';
+      if (!formData.payment_type) formErrors.payment_type = 'Payment Type is required';
+      
+      if (formData.payment_type === 'INSTANT_PAYMENT') {
+        if (!formData.payment_mode) formErrors.payment_mode = 'Payment Mode is required';
+        if (formData.payment_mode === 'Cash' && !formData.cashLocation) formErrors.cashLocation = 'Cash Location is required';
+        if (formData.payment_mode === 'Bank') {
+          if (!formData.subPaymentMode) formErrors.subPaymentMode = 'Submode is required';
+          if (!formData.bankLocation) formErrors.bankLocation = 'Bank Location is required';
+        }
+      }
+    } else if (formData.customer_type === 'SUBDEALER') {
+      if (!formData.subdealer_id) formErrors.subdealer_id = 'Subdealer is required';
+      // No payment type or payment mode validation for SUBDEALER
+    }
+    
     if (formData.items.length === 0) formErrors.items = 'Please select at least one accessory';
 
     if (Object.keys(formErrors).length > 0) {
@@ -531,22 +618,47 @@ function AccessoriesBilling() {
 
   const handleSave = async () => {
     try {
-      const payload = {
-        billing_type: formData.billing_type,
-        branch_id: formData.branch_id,
-        booking_id: formData.booking_id,
-        subdealer_id: formData.subdealer_id,
-        customer_id: formData.customer_id,
-        customer_name: formData.customer_name,
+      // Prepare payload based on customer type
+      let payload = {
+        customer_type: formData.customer_type,
         items: formData.items.map((item) => ({
           accessory_id: item.accessory_id,
           quantity: item.quantity
         })),
-        payment_mode: formData.payment_mode,
-        bankLocation: formData.bankLocation,
-        subPaymentMode: formData.subPaymentMode,
-        cashLocation: formData.cashLocation
+        remark: formData.remark || ''
       };
+
+      // Add fields based on customer type
+      if (formData.customer_type === 'CUSTOMER') {
+        payload = {
+          ...payload,
+          branch_id: formData.branch_id,
+          booking_id: formData.booking_id,
+          customer_id: formData.customer_id,
+          customer_name: formData.customer_name,
+          sales_executive: formData.sales_executive,
+          payment_type: formData.payment_type
+        };
+
+        // Add payment details only for INSTANT_PAYMENT
+        if (formData.payment_type === 'INSTANT_PAYMENT') {
+          payload.payment_mode = formData.payment_mode;
+
+          if (formData.payment_mode === 'Cash') {
+            payload.cashLocation = formData.cashLocation;
+          } else if (formData.payment_mode === 'Bank') {
+            payload.subPaymentMode = formData.subPaymentMode;
+            payload.bankLocation = formData.bankLocation;
+          }
+        }
+        // For PAY_LETTER, no payment_mode, cashLocation, or bankLocation is included
+      } else if (formData.customer_type === 'SUBDEALER') {
+        payload = {
+          ...payload,
+          subdealer_id: formData.subdealer_id
+        };
+        // SUBDEALER doesn't include payment_type, payment_mode, or location fields
+      }
 
       const response = await axiosInstance.post('/accessory-billing', payload);
 
@@ -556,12 +668,10 @@ function AccessoriesBilling() {
       openInvoiceInNewTab();
     } catch (error) {
       console.error('Error saving invoice:', error);
-       
-   const message = showError(error);
-   if (message) {
-     setError(message);
-   }
-   
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -571,10 +681,11 @@ function AccessoriesBilling() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
+  
   return (
     <div className="form-container">
       <div className="title">Accessories Billing</div>
@@ -591,15 +702,16 @@ function AccessoriesBilling() {
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilUser} />
                   </CInputGroupText>
-                  <CFormSelect name="billing_type" value={formData.billing_type} onChange={handleChange}>
+                  <CFormSelect name="customer_type" value={formData.customer_type} onChange={handleChange}>
                     <option value="">-Select-</option>
-                    <option value="B2B">B2B</option>
-                    <option value="B2C">B2C</option>
+                    <option value="CUSTOMER">Customer</option>
+                    <option value="SUBDEALER">Subdealer</option>
                   </CFormSelect>
                 </CInputGroup>
-                {errors.billing_type && <p className="error">{errors.billing_type}</p>}
+                {errors.customer_type && <p className="error">{errors.customer_type}</p>}
               </div>
-              {formData.billing_type === 'B2C' && (
+
+              {formData.customer_type === 'CUSTOMER' && (
                 <>
                   <div className="input-box">
                     <div className="details-container">
@@ -621,6 +733,7 @@ function AccessoriesBilling() {
                     </CInputGroup>
                     {errors.branch_id && <p className="error">{errors.branch_id}</p>}
                   </div>
+                  
                   <div className="input-box">
                     <div className="details-container">
                       <span className="details">Customer</span>
@@ -628,7 +741,7 @@ function AccessoriesBilling() {
                     </div>
                     <CInputGroup>
                       <CInputGroupText className="input-icon">
-                        <CIcon icon={cilLocationPin} />
+                        <CIcon icon={cilUser} />
                       </CInputGroupText>
                       <CFormSelect name="booking_id" value={formData.booking_id} onChange={handleChange}>
                         <option value="">-Select-</option>
@@ -641,6 +754,141 @@ function AccessoriesBilling() {
                     </CInputGroup>
                     {errors.booking_id && <p className="error">{errors.booking_id}</p>}
                   </div>
+                  
+                  <div className="input-box">
+                    <div className="details-container">
+                      <span className="details">Sales Executive</span>
+                      <span className="required">*</span>
+                    </div>
+                    <CInputGroup>
+                      <CInputGroupText className="input-icon">
+                        <CIcon icon={cilUser} />
+                      </CInputGroupText>
+                      <CFormSelect name="sales_executive" value={formData.sales_executive} onChange={handleChange}>
+                        <option value="">-Select-</option>
+                        {Array.isArray(salesExecutives) && salesExecutives.map((executive) => (
+                          <option key={executive._id} value={executive._id}>
+                            {executive.name}
+                          </option>
+                        ))}
+                      </CFormSelect>
+                    </CInputGroup>
+                    {errors.sales_executive && <p className="error">{errors.sales_executive}</p>}
+                  </div>
+                  
+                  <div className="input-box">
+                    <div className="details-container">
+                      <span className="details">Payment Type</span>
+                      <span className="required">*</span>
+                    </div>
+                    <CInputGroup>
+                      <CInputGroupText className="input-icon">
+                        <CIcon icon={cilMoney} />
+                      </CInputGroupText>
+                      <CFormSelect name="payment_type" value={formData.payment_type} onChange={handleChange}>
+                        <option value="">-Select-</option>
+                        <option value="INSTANT_PAYMENT">Instant Payment</option>
+                        <option value="PAY_LETTER">Pay Letter</option>
+                      </CFormSelect>
+                    </CInputGroup>
+                    {errors.payment_type && <p className="error">{errors.payment_type}</p>}
+                  </div>
+
+                  {formData.payment_type === 'INSTANT_PAYMENT' && (
+                    <>
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Payment Mode</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon">
+                            <CIcon icon={cilMoney} />
+                          </CInputGroupText>
+                          <CFormSelect name="payment_mode" value={formData.payment_mode} onChange={handleChange}>
+                            <option value="">-Select-</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Bank">Bank</option>
+                          </CFormSelect>
+                        </CInputGroup>
+                        {errors.payment_mode && <p className="error">{errors.payment_mode}</p>}
+                      </div>
+
+                      {formData.payment_mode === 'Bank' && (
+                        <>
+                          <div className="input-box">
+                            <div className="details-container">
+                              <span className="details">Submode</span>
+                              <span className="required">*</span>
+                            </div>
+                            <CInputGroup>
+                              <CInputGroupText className="input-icon">
+                                <CIcon icon={cilBank} />
+                              </CInputGroupText>
+                              <CFormSelect name="subPaymentMode" value={formData.subPaymentMode} onChange={handleChange}>
+                                <option value="">-Select-</option>
+                                {Array.isArray(submodes) && submodes.map((submode) => (
+                                  <option key={submode._id} value={submode._id}>
+                                    {submode.payment_mode}
+                                  </option>
+                                ))}
+                              </CFormSelect>
+                            </CInputGroup>
+                            {errors.subPaymentMode && <p className="error">{errors.subPaymentMode}</p>}
+                          </div>
+                          <div className="input-box">
+                            <div className="details-container">
+                              <span className="details">Bank Location</span>
+                              <span className="required">*</span>
+                            </div>
+                            <CInputGroup>
+                              <CInputGroupText className="input-icon">
+                                <CIcon icon={cilBank} />
+                              </CInputGroupText>
+                              <CFormSelect
+                                name="bankLocation"
+                                value={formData.bankLocation}
+                                onChange={handleChange}
+                                invalid={!!errors.bankLocation}
+                              >
+                                <option value="">-Select-</option>
+                                {Array.isArray(banks) && banks.map((bank) => (
+                                  <option key={bank._id} value={bank._id}>
+                                    {bank.name}
+                                  </option>
+                                ))}
+                              </CFormSelect>
+                            </CInputGroup>
+                            {errors.bankLocation && <p className="error">{errors.bankLocation}</p>}
+                          </div>
+                        </>
+                      )}
+
+                      {formData.payment_mode === 'Cash' && (
+                        <div className="input-box">
+                          <div className="details-container">
+                            <span className="details">Cash Location</span>
+                            <span className="required">*</span>
+                          </div>
+                          <CInputGroup>
+                            <CInputGroupText className="input-icon">
+                              <CIcon icon={cilBank} />
+                            </CInputGroupText>
+                            <CFormSelect name="cashLocation" value={formData.cashLocation} onChange={handleChange} invalid={!!errors.cashLocation}>
+                              <option value="">-Select-</option>
+                              {Array.isArray(cashLocations) && cashLocations.map((cash) => (
+                                <option key={cash._id} value={cash._id}>
+                                  {cash.name}
+                                </option>
+                              ))}
+                            </CFormSelect>
+                          </CInputGroup>
+                          {errors.cashLocation && <p className="error">{errors.cashLocation}</p>}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  
                   {formData.customer_id && (
                     <div className="input-box">
                       <div className="details-container">
@@ -662,7 +910,8 @@ function AccessoriesBilling() {
                   )}
                 </>
               )}
-              {formData.billing_type === 'B2B' && (
+
+              {formData.customer_type === 'SUBDEALER' && (
                 <div className="input-box">
                   <div className="details-container">
                     <span className="details">Subdealer</span>
@@ -684,96 +933,25 @@ function AccessoriesBilling() {
                   {errors.subdealer_id && <p className="error">{errors.subdealer_id}</p>}
                 </div>
               )}
+
               <div className="input-box">
                 <div className="details-container">
-                  <span className="details">Payment Mode</span>
-                  <span className="required">*</span>
+                  <span className="details">Remark</span>
                 </div>
                 <CInputGroup>
                   <CInputGroupText className="input-icon">
-                    <CIcon icon={cilUser} />
+                    <CIcon icon={cilDescription} />
                   </CInputGroupText>
-                  <CFormSelect name="payment_mode" value={formData.payment_mode} onChange={handleChange}>
-                    <option value="">-Select-</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Bank">Bank</option>
-                  </CFormSelect>
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="remark"
+                    value={formData.remark}
+                    onChange={handleChange}
+                    placeholder="Enter any remarks"
+                  />
                 </CInputGroup>
-                {errors.payment_mode && <p className="error">{errors.payment_mode}</p>}
               </div>
-              {formData.payment_mode === 'Bank' && (
-                <>
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Submode</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon">
-                        <CIcon icon={cilBank} />
-                      </CInputGroupText>
-                      <CFormSelect name="subPaymentMode" value={formData.subPaymentMode} onChange={handleChange}>
-                        <option value="">-Select-</option>
-                        {Array.isArray(submodes) && submodes.map((submode) => (
-                          <option key={submode._id} value={submode._id}>
-                            {submode.payment_mode}
-                          </option>
-                        ))}
-                      </CFormSelect>
-                    </CInputGroup>
-                    {errors.subPaymentMode && <p className="error">{errors.subPaymentMode}</p>}
-                  </div>
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Bank Location</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon">
-                        <CIcon icon={cilBank} />
-                      </CInputGroupText>
-                      <CFormSelect
-                        name="bankLocation"
-                        value={formData.bankLocation}
-                        onChange={handleChange}
-                        invalid={!!errors.bankLocation}
-                      >
-                        <option value="">-Select-</option>
-                        {Array.isArray(banks) && banks.map((bank) => (
-                          <option key={bank._id} value={bank._id}>
-                            {bank.name}
-                          </option>
-                        ))}
-                      </CFormSelect>
-                    </CInputGroup>
-                    {errors.bankLocation && <p className="error">{errors.bankLocation}</p>}
-                  </div>
-                </>
-              )}
-              {formData.payment_mode === 'Cash' && (
-                <>
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Cash Location</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon">
-                        <CIcon icon={cilBank} />
-                      </CInputGroupText>
-                      <CFormSelect name="cashLocation" value={formData.cashLocation} onChange={handleChange} invalid={!!errors.cash}>
-                        <option value="">-Select-</option>
-                        {Array.isArray(cashLocations) && cashLocations.map((cash) => (
-                          <option key={cash._id} value={cash._id}>
-                            {cash.name}
-                          </option>
-                        ))}
-                      </CFormSelect>
-                    </CInputGroup>
-                    {errors.cashLocation && <p className="error">{errors.cashLocation}</p>}
-                  </div>
-                </>
-              )}
             </div>
 
             <div className="offer-container">

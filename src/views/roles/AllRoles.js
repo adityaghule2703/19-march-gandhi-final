@@ -21,7 +21,8 @@ import {
   CModalFooter,
   CBadge,
   CCol,
-  CRow
+  CRow,
+  CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
@@ -41,7 +42,16 @@ import {
   showSuccess,
   axiosInstance
 } from 'src/utils/tableImports.js';
-import { hasPermission } from 'src/utils/permissionUtils.js';
+import { 
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  hasSafePagePermission,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage
+} from 'src/utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 const AllRoles = () => {
@@ -54,23 +64,60 @@ const AllRoles = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'ROLE_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'ROLE_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'ROLE_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for All Role page under USER_MANAGEMENT module
+  const canViewAllRole = canViewPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,
+    PAGES.ROLES.ALL_ROLE
+  );
+  
+  const canCreateAllRole = canCreateInPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,
+    PAGES.ROLES.ALL_ROLE
+  );
+
+  const canUpdateAllRole = canUpdateInPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,
+    PAGES.ROLES.ALL_ROLE
+  );
+
+  const canDeleteAllRole = canDeleteInPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,
+    PAGES.ROLES.ALL_ROLE
+  );
+
+  const showActionColumn = canUpdateAllRole || canDeleteAllRole;
 
   useEffect(() => {
+    if (!canViewAllRole) {
+      showError('You do not have permission to view All Roles');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewAllRole]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/roles`);
-      const filteredRoles = response.data.data.filter((role) => role.name.toLowerCase() !== 'ad');
-      setData(filteredRoles);
-      setFilteredData(filteredRoles);
+      
+      // Check if response has success status and data array
+      if (response.data.status === 'success') {
+        // Filter out 'ad' role if needed
+        const filteredRoles = response.data.data.filter((role) => 
+          role.name.toLowerCase() !== 'ad'
+        );
+        setData(filteredRoles);
+        setFilteredData(filteredRoles);
+      } else {
+        throw new Error('Failed to fetch roles');
+      }
     } catch (error) {
       const message = showError(error);
       if (message) {
@@ -83,7 +130,7 @@ const AllRoles = () => {
 
   const handleSearch = (searchValue) => {
     setSearchTerm(searchValue);
-    const searchFields = getDefaultSearchFields('roles');
+    const searchFields = getDefaultSearchFields('roles') || ['name', 'description'];
     const filtered = data.filter(item =>
       searchFields.some(field => {
         const fieldValue = item[field]?.toString().toLowerCase() || '';
@@ -104,39 +151,83 @@ const AllRoles = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteAllRole) {
+      showError('You do not have permission to delete roles');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
         await axiosInstance.delete(`/roles/${id}`);
-        setData(data.filter((role) => role.id !== id));
-        setFilteredData(filteredData.filter((role) => role.id !== id));
+        setData(data.filter((role) => role._id !== id));
+        setFilteredData(filteredData.filter((role) => role._id !== id));
         showSuccess('Role deleted successfully!');
-        fetchData();
+        fetchData(); // Refresh data
         handleClose();
       } catch (error) {
-        console.log(error);
         showError(error);
       }
     }
   };
 
-  const groupPermissionsByModule = (permissions) => {
+  // Updated function to group permissions by module and page
+  const groupPermissions = (permissions) => {
     if (!permissions || !permissions.length) return {};
-
+    
     return permissions.reduce((acc, permission) => {
-      const module = permission.module || permission.resource;
+      const module = permission.module || 'Uncategorized';
+      const page = permission.page || 'General';
+      
       if (!acc[module]) {
-        acc[module] = [];
+        acc[module] = {};
       }
-      acc[module].push(permission.action);
+      
+      if (!acc[module][page]) {
+        acc[module][page] = [];
+      }
+      
+      acc[module][page].push(permission.action);
       return acc;
     }, {});
+  };
+
+  // Get unique modules from permissions
+  const getModuleCount = (role) => {
+    if (!role.permissions || !role.permissions.length) return 0;
+    const modules = new Set();
+    role.permissions.forEach(permission => {
+      if (permission.module) {
+        modules.add(permission.module);
+      }
+    });
+    return modules.size;
+  };
+
+  // Get page count from permissions
+  const getPageCount = (role) => {
+    if (!role.permissions || !role.permissions.length) return 0;
+    const pages = new Set();
+    role.permissions.forEach(permission => {
+      if (permission.page) {
+        pages.add(`${permission.module}-${permission.page}`);
+      }
+    });
+    return pages.size;
   };
 
   const showRoleDetails = (role) => {
     setSelectedRole(role);
     setModalVisible(true);
   };
+
+  if (!canViewAllRole) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view All Roles.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -161,13 +252,18 @@ const AllRoles = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateAllRole && (
               <Link to='/roles/create-role'>
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Role
                 </CButton>
               </Link>
             )}
+          </div>
+          <div className="d-flex align-items-center">
+            <CBadge color="primary" className="me-3">
+              Total: {data.length}
+            </CBadge>
           </div>
         </CCardHeader>
         
@@ -181,6 +277,7 @@ const AllRoles = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Search by name or description..."
               />
             </div>
           </div>
@@ -194,28 +291,30 @@ const AllRoles = () => {
                   <CTableHeaderCell>Description</CTableHeaderCell>
                   <CTableHeaderCell>Modules</CTableHeaderCell>
                   <CTableHeaderCell>Permissions</CTableHeaderCell>
+                  <CTableHeaderCell>Status</CTableHeaderCell>
                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {filteredData.length > 0 ? (
                   filteredData.map((role, index) => {
-                    const groupedPermissions = groupPermissionsByModule(role.permissions);
-                    const modules = Object.keys(groupedPermissions);
-                    const moduleCount = modules.length;
+                    const moduleCount = getModuleCount(role);
                     const permissionCount = role.permissions?.length || 0;
+                    const pageCount = getPageCount(role);
 
                     return (
-                      <CTableRow key={role._id || role.id} className="table-row">
+                      <CTableRow key={role._id} className="table-row">
                         <CTableDataCell>{index + 1}</CTableDataCell>
-                        <CTableDataCell>{role.name}</CTableDataCell>
                         <CTableDataCell>
-                          <div className="description-truncate">
+                          <strong>{role.name}</strong>
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          <div className="description-truncate" title={role.description}>
                             {role.description || '-'}
                           </div>
                         </CTableDataCell>
                         
-                        {/* Modules Cell - Clickable */}
+                        {/* Modules Cell */}
                         <CTableDataCell>
                           <div 
                             className="modules-cell clickable-cell"
@@ -237,7 +336,7 @@ const AllRoles = () => {
                           </div>
                         </CTableDataCell>
                         
-                        {/* Permissions Cell - Clickable */}
+                        {/* Permissions Cell */}
                         <CTableDataCell>
                           <div 
                             className="permissions-cell clickable-cell"
@@ -252,6 +351,9 @@ const AllRoles = () => {
                                 <span className="permissions-text">
                                   {permissionCount === 1 ? 'Permission' : 'Permissions'}
                                 </span>
+                                <small className="text-muted ms-2">
+                                  ({pageCount} pages)
+                                </small>
                               </div>
                             ) : (
                               <span className="text-muted">No permissions</span>
@@ -259,22 +361,30 @@ const AllRoles = () => {
                           </div>
                         </CTableDataCell>
                         
+                        {/* Status Cell */}
+                        <CTableDataCell>
+                          <CBadge color={role.is_active ? "success" : "danger"}>
+                            {role.is_active ? "Active" : "Inactive"}
+                          </CBadge>
+                        </CTableDataCell>
+                        
                         {showActionColumn && (
                           <CTableDataCell>
                             <div className="d-flex gap-1">
-                              {hasEditPermission && (
-                                <Link to={`/roles/update-role/${role._id || role.id}`}>
+                              {canUpdateAllRole && (
+                                <Link to={`/roles/update-role/${role._id}`}>
                                   <CButton size="sm" color="primary" variant="outline">
                                     <CIcon icon={cilPencil} />
                                   </CButton>
                                 </Link>
                               )}
-                              {hasDeletePermission && (
+                              {canDeleteAllRole && (
                                 <CButton 
                                   size="sm" 
                                   color="danger" 
                                   variant="outline"
-                                  onClick={() => handleDelete(role._id || role.id)}
+                                  onClick={() => handleDelete(role._id)}
+                                  disabled={!canDeleteAllRole}
                                 >
                                   <CIcon icon={cilTrash} />
                                 </CButton>
@@ -287,7 +397,7 @@ const AllRoles = () => {
                   })
                 ) : (
                   <CTableRow>
-                    <CTableDataCell colSpan={showActionColumn ? "6" : "5"} className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "7" : "6"} className="text-center">
                       {searchTerm ? 'No matching roles found' : 'No roles available'}
                     </CTableDataCell>
                   </CTableRow>
@@ -319,15 +429,23 @@ const AllRoles = () => {
               </div>
               
               <div className="mb-4">
-                <h6 className="mb-3">Modules & Permissions Summary</h6>
+                <h6 className="mb-3">Status & Statistics</h6>
                 <CRow>
-                  <CCol md={6}>
+                  <CCol md={4}>
+                    <div className="p-3 bg-light rounded text-center">
+                      <h6 className="mb-1">Status</h6>
+                      <CBadge color={selectedRole.is_active ? "success" : "danger"}>
+                        {selectedRole.is_active ? "Active" : "Inactive"}
+                      </CBadge>
+                    </div>
+                  </CCol>
+                  <CCol md={4}>
                     <div className="p-3 bg-primary bg-opacity-10 rounded text-center">
-                      <h2 className="text-primary">{Object.keys(groupPermissionsByModule(selectedRole.permissions)).length}</h2>
+                      <h2 className="text-primary">{getModuleCount(selectedRole)}</h2>
                       <p className="mb-0">Total Modules</p>
                     </div>
                   </CCol>
-                  <CCol md={6}>
+                  <CCol md={4}>
                     <div className="p-3 bg-info bg-opacity-10 rounded text-center">
                       <h2 className="text-info">{selectedRole.permissions?.length || 0}</h2>
                       <p className="mb-0">Total Permissions</p>
@@ -337,10 +455,28 @@ const AllRoles = () => {
               </div>
               
               <div className="mb-3">
-                <h6>Detailed Permissions</h6>
+                <h6>Module Access</h6>
+                {selectedRole.moduleAccess && Object.keys(selectedRole.moduleAccess).length > 0 ? (
+                  <div className="d-flex flex-wrap gap-2 mb-3">
+                    {Object.entries(selectedRole.moduleAccess).map(([module, hasAccess], idx) => (
+                      <CBadge key={idx} color={hasAccess ? "success" : "secondary"} className="px-3 py-2">
+                        <CIcon icon={hasAccess ? cilFolder : cilFolder} className="me-1" />
+                        {module}: {hasAccess ? 'Yes' : 'No'}
+                      </CBadge>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="alert alert-light text-center mb-3">
+                    No module access configured
+                  </div>
+                )}
+              </div>
+              
+              <div className="mb-3">
+                <h6>Detailed Permissions by Module & Page</h6>
                 {selectedRole.permissions && selectedRole.permissions.length > 0 ? (
                   <div className="permissions-details">
-                    {Object.entries(groupPermissionsByModule(selectedRole.permissions)).map(([module, actions], idx) => (
+                    {Object.entries(groupPermissions(selectedRole.permissions)).map(([module, pages], idx) => (
                       <div key={idx} className="permission-module mb-3 p-3 border rounded">
                         <div className="d-flex align-items-center mb-2">
                           <CBadge color="primary" className="me-2 px-3 py-2">
@@ -348,17 +484,28 @@ const AllRoles = () => {
                             {module}
                           </CBadge>
                           <span className="text-muted small">
-                            ({actions.length} {actions.length === 1 ? 'permission' : 'permissions'})
+                            ({Object.keys(pages).length} {Object.keys(pages).length === 1 ? 'page' : 'pages'})
                           </span>
                         </div>
-                        <div className="d-flex flex-wrap gap-2">
-                          {actions.map((action, actionIdx) => (
-                            <CBadge key={actionIdx} color="success" className="px-3 py-2">
-                              <CIcon icon={cilLockLocked} className="me-1" />
-                              {action}
-                            </CBadge>
-                          ))}
-                        </div>
+                        
+                        {Object.entries(pages).map(([page, actions], pageIdx) => (
+                          <div key={pageIdx} className="mb-2 p-2 bg-light rounded">
+                            <div className="d-flex align-items-center mb-1">
+                              <strong className="text-dark">{page}</strong>
+                              <span className="text-muted small ms-2">
+                                ({actions.length} {actions.length === 1 ? 'permission' : 'permissions'})
+                              </span>
+                            </div>
+                            <div className="d-flex flex-wrap gap-2">
+                              {actions.map((action, actionIdx) => (
+                                <CBadge key={actionIdx} color="success" className="px-3 py-2">
+                                  <CIcon icon={cilLockLocked} className="me-1" />
+                                  {action}
+                                </CBadge>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     ))}
                   </div>

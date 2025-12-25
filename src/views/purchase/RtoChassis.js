@@ -61,6 +61,19 @@ import {
   cilFilter
 } from '@coreui/icons';
 
+// Import permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+
 const RtoChassis = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuId, setMenuId] = useState(null);
@@ -95,9 +108,56 @@ const RtoChassis = () => {
   const [selectedBatch, setSelectedBatch] = useState('');
   const [isFilterApplied, setIsFilterApplied] = useState(false);
 
+  // Get user permissions from auth context
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for RTO Chassis page under Purchase module
+  const hasViewPermission = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.RTO_CHASSIS, 
+    ACTIONS.VIEW
+  );
+  
+  const hasCreatePermission = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.RTO_CHASSIS, 
+    ACTIONS.CREATE
+  );
+  
+  const hasUpdatePermission = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.RTO_CHASSIS, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasDeletePermission = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.RTO_CHASSIS, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewPageAccess = canViewPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.RTO_CHASSIS);
+  const canCreate = canCreateInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.RTO_CHASSIS);
+  const canUpdate = canUpdateInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.RTO_CHASSIS);
+  const canDelete = canDeleteInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.RTO_CHASSIS);
+  
+  // Determine if action column should be shown
+  const showActionColumn = canUpdate || canDelete;
+
   useEffect(() => {
+    // Check if user has permission to view the page
+    if (!canViewPageAccess) {
+      showError('You do not have permission to access RTO Chassis');
+      return;
+    }
+    
     fetchImports();
-  }, []);
+  }, [canViewPageAccess]);
 
   // Fetch imports from API
   const fetchImports = async () => {
@@ -129,6 +189,11 @@ const RtoChassis = () => {
 
   // Handle download template
   const handleDownloadTemplate = async () => {
+    if (!canViewPageAccess) {
+      showError('You do not have permission to download template');
+      return;
+    }
+    
     if (!rows || rows < 1) {
       showError('Number of rows must be at least 1');
       return;
@@ -179,6 +244,12 @@ const RtoChassis = () => {
 
   // Handle file selection
   const handleFileChange = (e) => {
+    if (!canCreate) {
+      showError('You do not have permission to upload files');
+      setFile(null);
+      return;
+    }
+    
     const selectedFile = e.target.files[0];
     if (selectedFile) {
       // Check file size (max 5MB)
@@ -209,6 +280,11 @@ const RtoChassis = () => {
 
   // Handle file upload
   const handleUpload = async () => {
+    if (!canCreate) {
+      showError('You do not have permission to upload files');
+      return;
+    }
+    
     if (!file) {
       showError('Please select a file to upload');
       return;
@@ -272,6 +348,11 @@ const RtoChassis = () => {
   };
 
   const handleClick = (event, importId) => {
+    if (!canUpdate && !canDelete && !canViewPageAccess) {
+      showError('You do not have permission to perform any actions');
+      return;
+    }
+    
     setAnchorEl(event.currentTarget);
     setMenuId(importId);
   };
@@ -282,6 +363,11 @@ const RtoChassis = () => {
   };
 
   const handleViewDetails = (importRecord) => {
+    if (!canViewPageAccess) {
+      showError('You do not have permission to view details');
+      return;
+    }
+    
     setSelectedImport(importRecord);
     setActiveTab('summary');
     setDetailsModalOpen(true);
@@ -289,6 +375,11 @@ const RtoChassis = () => {
   };
 
   const handleDelete = async (importId) => {
+    if (!canDelete) {
+      showError('You do not have permission to delete records');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -305,77 +396,82 @@ const RtoChassis = () => {
     }
   };
 
-  // Handle export CSV
- // Handle export to Excel (not CSV)
-const handleExportExcel = async (importId) => {
-  try {
-    setExportingId(importId);
-    setError(null);
-    
-    const response = await axiosInstance.get(
-      `/csvchassis/export-csv/${importId}`,
-      {
-        responseType: 'blob',
-        // Add headers if needed (depends on your backend)
-        // headers: {
-        //   'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        // }
-      }
-    );
-
-    // Check the content type from response
-    const contentType = response.headers['content-type'] || response.headers['Content-Type'];
-    
-    // Determine file type and extension based on content type or backend response
-    let fileType, extension;
-    
-    if (contentType?.includes('excel') || contentType?.includes('spreadsheetml')) {
-      // Excel format
-      fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      extension = 'xlsx';
-    } else if (contentType?.includes('vnd.ms-excel')) {
-      // Older Excel format
-      fileType = 'application/vnd.ms-excel';
-      extension = 'xls';
-    } else {
-      // Default to Excel format even if backend returns CSV
-      fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      extension = 'xlsx';
+  // Handle export to Excel
+  const handleExportExcel = async (importId) => {
+    if (!canViewPageAccess) {
+      showError('You do not have permission to export data');
+      return;
     }
+    
+    try {
+      setExportingId(importId);
+      setError(null);
+      
+      const response = await axiosInstance.get(
+        `/csvchassis/export-csv/${importId}`,
+        {
+          responseType: 'blob',
+        }
+      );
 
-    // Create a blob with the appropriate MIME type
-    const blob = new Blob([response.data], {
-      type: fileType
-    });
+      // Check the content type from response
+      const contentType = response.headers['content-type'] || response.headers['Content-Type'];
+      
+      // Determine file type and extension based on content type or backend response
+      let fileType, extension;
+      
+      if (contentType?.includes('excel') || contentType?.includes('spreadsheetml')) {
+        // Excel format
+        fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        extension = 'xlsx';
+      } else if (contentType?.includes('vnd.ms-excel')) {
+        // Older Excel format
+        fileType = 'application/vnd.ms-excel';
+        extension = 'xls';
+      } else {
+        // Default to Excel format even if backend returns CSV
+        fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        extension = 'xlsx';
+      }
 
-    // Create download link
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Exported_Data_${importId}_${new Date().toISOString().split('T')[0]}.${extension}`;
-    
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-    
-    // Cleanup
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    
-    showSuccess(`Excel file exported successfully!`);
-    handleClose();
-    
-  } catch (error) {
-    console.error('Error exporting Excel:', error);
-    const message = showError(error);
-    if (message) setError(message);
-  } finally {
-    setExportingId(null);
-  }
-};
+      // Create a blob with the appropriate MIME type
+      const blob = new Blob([response.data], {
+        type: fileType
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Exported_Data_${importId}_${new Date().toISOString().split('T')[0]}.${extension}`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showSuccess(`Excel file exported successfully!`);
+      handleClose();
+      
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      const message = showError(error);
+      if (message) setError(message);
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   // Apply batch filter
   const applyBatchFilter = () => {
+    if (!canViewPageAccess) {
+      showError('You do not have permission to filter data');
+      return;
+    }
+    
     if (selectedBatch) {
       const filtered = data.filter(item => item.batchName === selectedBatch);
       setFilteredData(filtered);
@@ -389,6 +485,11 @@ const handleExportExcel = async (importId) => {
 
   // Clear batch filter
   const clearBatchFilter = () => {
+    if (!canViewPageAccess) {
+      showError('You do not have permission to modify filters');
+      return;
+    }
+    
     setSelectedBatch('');
     setFilteredData(data);
     setIsFilterApplied(false);
@@ -402,6 +503,11 @@ const handleExportExcel = async (importId) => {
   };
 
   const handleSearch = (value) => {
+    if (!canViewPageAccess) {
+      showError('You do not have permission to search data');
+      return;
+    }
+    
     setSearchTerm(value);
     handleFilter(value, ['importedBy.name', 'importedBy.email', 'batchName']);
   };
@@ -469,6 +575,15 @@ const handleExportExcel = async (importId) => {
     return batchName;
   };
 
+  // Check if user has permission to view the page
+  if (!canViewPageAccess) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to access RTO Chassis.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -492,31 +607,41 @@ const handleExportExcel = async (importId) => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-              onClick={() => setDownloadModalOpen(true)}
-            >
-              <CIcon icon={cilCloudDownload} className='icon' /> Download Template
-            </CButton>
+            {/* Download Template button - Requires VIEW permission */}
+            {canViewPageAccess && (
+              <CButton 
+                size="sm" 
+                className="action-btn me-1"
+                onClick={() => setDownloadModalOpen(true)}
+              >
+                <CIcon icon={cilCloudDownload} className='icon' /> Download Template
+              </CButton>
+            )}
             
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-              onClick={() => setUploadModalOpen(true)}
-            >
-              <CIcon icon={cilCloudUpload} className='icon' /> Upload CSV
-            </CButton>
+            {/* Upload CSV button - Requires CREATE permission */}
+            {canCreate && (
+              <CButton 
+                size="sm" 
+                className="action-btn me-1"
+                onClick={() => setUploadModalOpen(true)}
+              >
+                <CIcon icon={cilCloudUpload} className='icon' /> Upload CSV
+              </CButton>
+            )}
 
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-              onClick={() => setFilterModalOpen(true)}
-            >
-              <CIcon icon={cilFilter} className='icon' /> Filter by Batch
-            </CButton>
+            {/* Filter by Batch button - Requires VIEW permission */}
+            {canViewPageAccess && (
+              <CButton 
+                size="sm" 
+                className="action-btn me-1"
+                onClick={() => setFilterModalOpen(true)}
+              >
+                <CIcon icon={cilFilter} className='icon' /> Filter by Batch
+              </CButton>
+            )}
 
-            {isFilterApplied && (
+            {/* Clear Filter button - Requires VIEW permission */}
+            {canViewPageAccess && isFilterApplied && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -532,14 +657,19 @@ const handleExportExcel = async (importId) => {
           <div className="d-flex justify-content-between mb-3">
             <div></div>
             <div className='d-flex'>
-              <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
-              <CFormInput
-                type="text"
-                className="d-inline-block square-search"
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search by imported by, batch name..."
-              />
+              {/* Search field - Requires VIEW permission */}
+              {canViewPageAccess && (
+                <>
+                  <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+                  <CFormInput
+                    type="text"
+                    className="d-inline-block square-search"
+                    value={searchTerm}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    placeholder="Search by imported by, batch name..."
+                  />
+                </>
+              )}
             </div>
           </div>
 
@@ -553,13 +683,13 @@ const handleExportExcel = async (importId) => {
                   <CTableHeaderCell>Import Date</CTableHeaderCell>
                   <CTableHeaderCell>Total Records</CTableHeaderCell>
                   <CTableHeaderCell>Status</CTableHeaderCell>
-                  <CTableHeaderCell>Action</CTableHeaderCell>
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {filteredData.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan="7" className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "7" : "6"} className="text-center">
                       No import history available. Upload a CSV file to see records.
                     </CTableDataCell>
                   </CTableRow>
@@ -594,35 +724,48 @@ const handleExportExcel = async (importId) => {
                           {importRecord.status || 'Unknown'}
                         </CBadge>
                       </CTableDataCell>
-                      <CTableDataCell>
-                        <CButton
-                          size="sm"
-                          className='option-button btn-sm'
-                          onClick={(event) => handleClick(event, importRecord.importId)}
-                        >
-                          <CIcon icon={cilSettings} />
-                          Options
-                        </CButton>
-                        <Menu 
-                          id={`action-menu-${importRecord.importId}`} 
-                          anchorEl={anchorEl} 
-                          open={menuId === importRecord.importId} 
-                          onClose={handleClose}
-                        >
-                          <MenuItem onClick={() => handleViewDetails(importRecord)}>
-                            View Details
-                          </MenuItem>
-                          
-                          <MenuItem onClick={() => handleExportExcel(importRecord.importId)}>
-  <CIcon icon={cilArrowCircleBottom} className="me-2" />
-  {exportingId === importRecord.importId ? 'Exporting...' : 'Export to Excel'}
-</MenuItem>
-                          
-                          <MenuItem onClick={() => handleDelete(importRecord.importId)}>
-                            <CIcon icon={cilTrash} className="me-2" />Delete
-                          </MenuItem>
-                        </Menu>
-                      </CTableDataCell>
+                      {showActionColumn && (
+                        <CTableDataCell>
+                          <CButton
+                            size="sm"
+                            className='option-button btn-sm'
+                            onClick={(event) => handleClick(event, importRecord.importId)}
+                            disabled={!canUpdate && !canDelete && !canViewPageAccess}
+                          >
+                            <CIcon icon={cilSettings} />
+                            Options
+                          </CButton>
+                          <Menu 
+                            id={`action-menu-${importRecord.importId}`} 
+                            anchorEl={anchorEl} 
+                            open={menuId === importRecord.importId} 
+                            onClose={handleClose}
+                          >
+                            {/* View Details - Requires VIEW permission */}
+                            {canViewPageAccess && (
+                              <MenuItem onClick={() => handleViewDetails(importRecord)}>
+                                <CIcon icon={cilInfo} className="me-2" />
+                                View Details
+                              </MenuItem>
+                            )}
+                            
+                            {/* Export to Excel - Requires VIEW permission */}
+                            {canViewPageAccess && (
+                              <MenuItem onClick={() => handleExportExcel(importRecord.importId)}>
+                                <CIcon icon={cilArrowCircleBottom} className="me-2" />
+                                {exportingId === importRecord.importId ? 'Exporting...' : 'Export to Excel'}
+                              </MenuItem>
+                            )}
+                            
+                            {/* Delete - Requires DELETE permission */}
+                            {canDelete && (
+                              <MenuItem onClick={() => handleDelete(importRecord.importId)}>
+                                <CIcon icon={cilTrash} className="me-2" />Delete
+                              </MenuItem>
+                            )}
+                          </Menu>
+                        </CTableDataCell>
+                      )}
                     </CTableRow>
                   ))
                 )}
@@ -632,571 +775,564 @@ const handleExportExcel = async (importId) => {
         </CCardBody>
       </CCard>
 
-      {/* Upload CSV Modal */}
-      <CModal visible={uploadModalOpen} onClose={resetUploadModal} size="lg">
-        <CModalHeader>
-          <CModalTitle>Upload CSV File</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <div className="mb-3">
-            <label className="form-label">Select CSV/Excel File<span className='required'>*</span></label>
-            <CFormInput
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              onChange={handleFileChange}
-              disabled={isUploading}
-            />
-            {file && (
+      {/* Upload CSV Modal - Requires CREATE permission */}
+      {canCreate && (
+        <CModal visible={uploadModalOpen} onClose={resetUploadModal} size="lg">
+          <CModalHeader>
+            <CModalTitle>Upload CSV File</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <div className="mb-3">
+              <label className="form-label">Select CSV/Excel File<span className='required'>*</span></label>
+              <CFormInput
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileChange}
+                disabled={isUploading}
+              />
+              {file && (
+                <div className="mt-2">
+                  <small>
+                    Selected: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(2)} KB)
+                  </small>
+                </div>
+              )}
               <div className="mt-2">
+                <small className="text-muted">
+                  • Max file size: 5MB<br/>
+                  • Supported formats: CSV, Excel (.xlsx, .xls)
+                </small>
+              </div>
+            </div>
+
+            {isUploading && (
+              <div className="mb-3">
+                <label className="form-label">Upload Progress</label>
+                <div className="progress-container">
+                  <CProgress 
+                    value={uploadProgress} 
+                    color={uploadProgress < 100 ? "info" : "success"}
+                    animated={uploadProgress < 100}
+                  />
+                  <div className="text-center mt-1">
+                    <small>{uploadProgress}% {uploadProgress < 100 ? 'Uploading...' : 'Complete!'}</small>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {uploadResult && (
+              <div className="alert alert-success">
+                <strong>Success!</strong> {uploadResult.message}
+                <br/>
                 <small>
-                  Selected: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(2)} KB)
+                  Processed: {uploadResult.processed} records | 
+                  Errors: {uploadResult.errors} | 
+                  Total: {uploadResult.data?.length || 0} records
                 </small>
               </div>
             )}
-            <div className="mt-2">
-              <small className="text-muted">
-                • Max file size: 5MB<br/>
-                • Supported formats: CSV, Excel (.xlsx, .xls)
-              </small>
-            </div>
-          </div>
-
-          {isUploading && (
-            <div className="mb-3">
-              <label className="form-label">Upload Progress</label>
-              <div className="progress-container">
-                <CProgress 
-                  value={uploadProgress} 
-                  color={uploadProgress < 100 ? "info" : "success"}
-                  animated={uploadProgress < 100}
-                />
-                <div className="text-center mt-1">
-                  <small>{uploadProgress}% {uploadProgress < 100 ? 'Uploading...' : 'Complete!'}</small>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {uploadResult && (
-            <div className="alert alert-success">
-              <strong>Success!</strong> {uploadResult.message}
-              <br/>
-              <small>
-                Processed: {uploadResult.processed} records | 
-                Errors: {uploadResult.errors} | 
-                Total: {uploadResult.data?.length || 0} records
-              </small>
-            </div>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <CButton 
-            color="secondary" 
-            onClick={resetUploadModal}
-            disabled={isUploading}
-          >
-            Cancel
-          </CButton>
-          <CButton 
-            className='submit-button'
-            onClick={handleUpload}
-            disabled={!file || isUploading}
-          >
-            {isUploading ? (
-              <>
-                <CSpinner size="sm" className="me-2" />
-                Uploading...
-              </>
-            ) : (
-              'Upload & Process'
-            )}
-          </CButton>
-        </CModalFooter>
-      </CModal>
-
-      {/* Download Template Modal */}
-      <CModal visible={downloadModalOpen} onClose={resetDownloadModal}>
-        <CModalHeader>
-          <CModalTitle>Download Template</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <div className="mb-3">
-            <label className="form-label">Number of Empty Rows<span className='required'>*</span></label>
-            <CFormInput
-              type="number"
-              min="1"
-              max="100"
-              value={rows}
-              onChange={(e) => setRows(e.target.value)}
-              disabled={isDownloading}
-            />
-          </div>
-          
-          <div className="alert alert-info">
-            <small>
-              <strong>Template includes headers:</strong><br/>
-              CHASSIS NUMBERS, DATE OF INWARD, DATE OF SALE, AGEING FROM INWARD TO SALE,<br/>
-              AGEING FROM INWARD TO REGISTRATION, SELLING DEALER LOCATION, SALES EXE,<br/>
-              CUSTOMER NAME, FINANCER NAME, LEDGER BALANCE
-            </small>
-          </div>
-        </CModalBody>
-        <CModalFooter>
-          <CButton 
-            color="secondary" 
-            onClick={resetDownloadModal}
-            disabled={isDownloading}
-          >
-            Cancel
-          </CButton>
-          <CButton 
-            className='submit-button'
-            onClick={handleDownloadTemplate}
-            disabled={isDownloading}
-          >
-            {isDownloading ? (
-              <>
-                <CSpinner size="sm" className="me-2" />
-                Downloading...
-              </>
-            ) : (
-              'Download Template'
-            )}
-          </CButton>
-        </CModalFooter>
-      </CModal>
-
-      {/* Batch Filter Modal */}
-      <CModal visible={filterModalOpen} onClose={resetFilterModal}>
-        <CModalHeader>
-          <CModalTitle>Filter by Batch Name</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <div className="mb-3">
-            <label className="form-label">Select Batch Name:</label>
-            <CFormSelect
-              value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
+          </CModalBody>
+          <CModalFooter>
+            <CButton 
+              color="secondary" 
+              onClick={resetUploadModal}
+              disabled={isUploading}
             >
-              <option value="">-- All Batches --</option>
-              {batchNames.map((batchName, index) => (
-                <option key={index} value={batchName}>
-                  {batchName}
-                </option>
-              ))}
-            </CFormSelect>
-          </div>
-          
-          {selectedBatch && (
+              Cancel
+            </CButton>
+            <CButton 
+              className='submit-button'
+              onClick={handleUpload}
+              disabled={!file || isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <CSpinner size="sm" className="me-2" />
+                  Uploading...
+                </>
+              ) : (
+                'Upload & Process'
+              )}
+            </CButton>
+          </CModalFooter>
+        </CModal>
+      )}
+
+      {/* Download Template Modal - Requires VIEW permission */}
+      {canViewPageAccess && (
+        <CModal visible={downloadModalOpen} onClose={resetDownloadModal}>
+          <CModalHeader>
+            <CModalTitle>Download Template</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <div className="mb-3">
+              <label className="form-label">Number of Empty Rows<span className='required'>*</span></label>
+              <CFormInput
+                type="number"
+                min="1"
+                max="100"
+                value={rows}
+                onChange={(e) => setRows(e.target.value)}
+                disabled={isDownloading}
+              />
+            </div>
+            
             <div className="alert alert-info">
               <small>
-                Selected: <strong>{selectedBatch}</strong><br/>
-                Showing imports from this batch only
+                <strong>Template includes headers:</strong><br/>
+                CHASSIS NUMBERS, DATE OF INWARD, DATE OF SALE, AGEING FROM INWARD TO SALE,<br/>
+                AGEING FROM INWARD TO REGISTRATION, SELLING DEALER LOCATION, SALES EXE,<br/>
+                CUSTOMER NAME, FINANCER NAME, LEDGER BALANCE
               </small>
             </div>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <CButton 
-            color="secondary" 
-            onClick={resetFilterModal}
-          >
-            Cancel
-          </CButton>
-          {selectedBatch && (
+          </CModalBody>
+          <CModalFooter>
             <CButton 
-              color="warning" 
-              onClick={clearBatchFilter}
+              color="secondary" 
+              onClick={resetDownloadModal}
+              disabled={isDownloading}
             >
-              Clear Filter
+              Cancel
             </CButton>
-          )}
-          <CButton 
-            className='submit-button'
-            onClick={applyBatchFilter}
-            disabled={!selectedBatch}
-          >
-            Apply Filter
-          </CButton>
-        </CModalFooter>
-      </CModal>
+            <CButton 
+              className='submit-button'
+              onClick={handleDownloadTemplate}
+              disabled={isDownloading}
+            >
+              {isDownloading ? (
+                <>
+                  <CSpinner size="sm" className="me-2" />
+                  Downloading...
+                </>
+              ) : (
+                'Download Template'
+              )}
+            </CButton>
+          </CModalFooter>
+        </CModal>
+      )}
 
-      {/* View Import Details Modal with Tabs */}
-      <CModal visible={detailsModalOpen} onClose={resetDetailsModal} size="xl" fullscreen="lg">
-        <CModalHeader>
-          <CModalTitle className="d-flex align-items-center">
-            <CIcon icon={cilInfo} className="me-2" />
-            Import Details
-          </CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {selectedImport && (
-            <div className="import-details-container">
-              {/* Import ID and Status Header */}
-              <div className="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
-                <div>
-                  <h6 className="mb-0 text-muted">Import ID</h6>
-                  <h5 className="mb-0 fw-bold">{selectedImport.importId || '-'}</h5>
-                  {selectedImport.batchName && (
-                    <div>
-                      <h6 className="mb-0 text-muted">Batch Name</h6>
-                      <h6 className="mb-0 fw-bold">{selectedImport.batchName}</h6>
-                    </div>
-                  )}
-                </div>
-                <div className="text-end">
-                  <h6 className="mb-0 text-muted">Status</h6>
-                  <CBadge color={getStatusBadge(selectedImport.status)} className="px-3 py-2">
-                    <CIcon icon={getStatusIcon(selectedImport.status)} className="me-1" />
-                    {selectedImport.status || 'Unknown'}
-                  </CBadge>
-                </div>
+      {/* Batch Filter Modal - Requires VIEW permission */}
+      {canViewPageAccess && (
+        <CModal visible={filterModalOpen} onClose={resetFilterModal}>
+          <CModalHeader>
+            <CModalTitle>Filter by Batch Name</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <div className="mb-3">
+              <label className="form-label">Select Batch Name:</label>
+              <CFormSelect
+                value={selectedBatch}
+                onChange={(e) => setSelectedBatch(e.target.value)}
+              >
+                <option value="">-- All Batches --</option>
+                {batchNames.map((batchName, index) => (
+                  <option key={index} value={batchName}>
+                    {batchName}
+                  </option>
+                ))}
+              </CFormSelect>
+            </div>
+            
+            {selectedBatch && (
+              <div className="alert alert-info">
+                <small>
+                  Selected: <strong>{selectedBatch}</strong><br/>
+                  Showing imports from this batch only
+                </small>
               </div>
+            )}
+          </CModalBody>
+          <CModalFooter>
+            <CButton 
+              color="secondary" 
+              onClick={resetFilterModal}
+            >
+              Cancel
+            </CButton>
+            {selectedBatch && (
+              <CButton 
+                color="warning" 
+                onClick={clearBatchFilter}
+              >
+                Clear Filter
+              </CButton>
+            )}
+            <CButton 
+              className='submit-button'
+              onClick={applyBatchFilter}
+              disabled={!selectedBatch}
+            >
+              Apply Filter
+            </CButton>
+          </CModalFooter>
+        </CModal>
+      )}
 
-              {/* Tabs Navigation */}
-              <CNav variant="tabs">
-                <CNavItem>
-                  <CNavLink
-                    active={activeTab === 'summary'}
-                    onClick={() => setActiveTab('summary')}
-                  >
-                    <CIcon icon={cilInfo} className="me-1" />
-                    Summary
-                  </CNavLink>
-                </CNavItem>
-                <CNavItem>
-                  <CNavLink
-                    active={activeTab === 'records'}
-                    onClick={() => setActiveTab('records')}
-                    disabled={!selectedImport.processedData || selectedImport.processedData.length === 0}
-                  >
-                    Processed Records ({selectedImport.processedData?.length || 0})
-                  </CNavLink>
-                </CNavItem>
-              </CNav>
-
-              {/* Tab Content */}
-              <CTabContent className="mt-3">
-                {/* Summary Tab */}
-                <CTabPane visible={activeTab === 'summary'}>
-                  <div className="row">
-                    {/* Left Column - Basic Info */}
-                    <div className="col-md-6">
-                      <Card className="mb-3">
-                        <CardHeader className="bg-light d-flex align-items-center">
-                          <CIcon icon={cilFile} className="me-2" />
-                          <span className="fw-medium">File Information</span>
-                        </CardHeader>
-                        <CardBody>
-                          <div className="mb-2">
-                            <small className="text-muted d-block">Batch Name</small>
-                            <div className="fw-medium">{selectedImport.batchName || 'No Batch Name'}</div>
-                          </div>
-                          <div className="mb-2">
-                            <small className="text-muted d-block">Filename</small>
-                            <div className="fw-medium">{selectedImport.originalFilename || selectedImport.filename || '-'}</div>
-                          </div>
-                          <div className="mb-2">
-                            <small className="text-muted d-block">File Type</small>
-                            <div className="fw-medium">{selectedImport.fileType || '-'}</div>
-                          </div>
-                          <div className="mb-2">
-                            <small className="text-muted d-block">Total Records</small>
-                            <div className="fw-medium">{selectedImport.totalRecords || 0}</div>
-                          </div>
-                        </CardBody>
-                      </Card>
-
-                      <Card className="mb-3">
-                        <CardHeader className="bg-light d-flex align-items-center">
-                          <CIcon icon={cilUser} className="me-2" />
-                          <span className="fw-medium">Import Details</span>
-                        </CardHeader>
-                        <CardBody>
-                          <div className="mb-2">
-                            <small className="text-muted d-block">Imported By</small>
-                            <div className="fw-medium">{selectedImport.importedBy?.name || '-'}</div>
-                            <small className="text-muted">{selectedImport.importedBy?.email || ''}</small>
-                          </div>
-                          <div className="mb-2">
-                            <small className="text-muted d-block">Import Date</small>
-                            <div className="fw-medium">{formatDate(selectedImport.importedAt)}</div>
-                          </div>
-                          <div className="mb-2">
-                            <small className="text-muted d-block">Created At</small>
-                            <div className="fw-medium">{formatDate(selectedImport.createdAt)}</div>
-                          </div>
-                        </CardBody>
-                      </Card>
-                    </div>
-
-                    {/* Right Column - Statistics and Results */}
-                    <div className="col-md-6">
-                      <Card className="mb-3">
-                        <CardHeader className="bg-light d-flex align-items-center">
-                          <CIcon icon={cilList} className="me-2" />
-                          <span className="fw-medium">Processing Statistics</span>
-                        </CardHeader>
-                        <CardBody>
-                          <div className="row text-center">
-                            <div className="col-4">
-                              <div className="border rounded p-3">
-                                <div className="display-6 fw-bold text-primary">{selectedImport.totalRecords || 0}</div>
-                                <small className="text-muted">Total Records</small>
-                              </div>
-                            </div>
-                            <div className="col-4">
-                              <div className="border rounded p-3">
-                                <div className="display-6 fw-bold text-success">{selectedImport.processedRecords || 0}</div>
-                                <small className="text-muted">Processed</small>
-                              </div>
-                            </div>
-                            <div className="col-4">
-                              <div className="border rounded p-3">
-                                <div className="display-6 fw-bold text-danger">{selectedImport.errorRecords || 0}</div>
-                                <small className="text-muted">Errors</small>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="mt-3">
-                            <div className="d-flex justify-content-between mb-1">
-                              <small>Success Rate</small>
-                              <small>
-                                {selectedImport.totalRecords > 0 
-                                  ? Math.round((selectedImport.processedRecords / selectedImport.totalRecords) * 100) 
-                                  : 0}%
-                              </small>
-                            </div>
-                            <CProgress 
-                              value={selectedImport.totalRecords > 0 
-                                ? (selectedImport.processedRecords / selectedImport.totalRecords) * 100 
-                                : 0} 
-                              color="success"
-                              className="mb-3"
-                            />
-                          </div>
-                        </CardBody>
-                      </Card>
-
-                      <Card className="mb-3">
-                        <CardHeader className="bg-light d-flex align-items-center">
-                          <CIcon icon={cilCalendar} className="me-2" />
-                          <span className="fw-medium">Export Information</span>
-                        </CardHeader>
-                        <CardBody>
-                          <div className="mb-2">
-                            <small className="text-muted d-block">Exported</small>
-                            <div className="d-flex align-items-center">
-                              <div className={`badge ${selectedImport.exported ? 'bg-success' : 'bg-secondary'} me-2`}>
-                                {selectedImport.exported ? 'Yes' : 'No'}
-                              </div>
-                              {selectedImport.exported && (
-                                <small className="text-muted">({selectedImport.exportCount || 0} times)</small>
-                              )}
-                            </div>
-                          </div>
-                          {selectedImport.exportedAt && (
-                            <div className="mb-2">
-                              <small className="text-muted d-block">Last Exported At</small>
-                              <div className="fw-medium">{formatDate(selectedImport.exportedAt)}</div>
-                            </div>
-                          )}
-                          <div className="mb-2">
-                            <small className="text-muted d-block">Last Updated</small>
-                            <div className="fw-medium">{formatDate(selectedImport.updatedAt)}</div>
-                          </div>
-                        </CardBody>
-                      </Card>
-                    </div>
+      {/* View Import Details Modal with Tabs - Requires VIEW permission */}
+      {canViewPageAccess && (
+        <CModal visible={detailsModalOpen} onClose={resetDetailsModal} size="xl" fullscreen="lg">
+          <CModalHeader>
+            <CModalTitle className="d-flex align-items-center">
+              <CIcon icon={cilInfo} className="me-2" />
+              Import Details
+            </CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            {selectedImport && (
+              <div className="import-details-container">
+                {/* Import ID and Status Header */}
+                <div className="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
+                  <div>
+                    <h6 className="mb-0 text-muted">Import ID</h6>
+                    <h5 className="mb-0 fw-bold">{selectedImport.importId || '-'}</h5>
+                    {selectedImport.batchName && (
+                      <div>
+                        <h6 className="mb-0 text-muted">Batch Name</h6>
+                        <h6 className="mb-0 fw-bold">{selectedImport.batchName}</h6>
+                      </div>
+                    )}
                   </div>
+                  <div className="text-end">
+                    <h6 className="mb-0 text-muted">Status</h6>
+                    <CBadge color={getStatusBadge(selectedImport.status)} className="px-3 py-2">
+                      <CIcon icon={getStatusIcon(selectedImport.status)} className="me-1" />
+                      {selectedImport.status || 'Unknown'}
+                    </CBadge>
+                  </div>
+                </div>
 
-                  {/* Errors Section (if any) */}
-                  {selectedImport.errors && selectedImport.errors.length > 0 && (
-                    <Card className="border-danger">
-                      <CardHeader className="bg-danger text-white d-flex align-items-center">
-                        <CIcon icon={cilWarning} className="me-2" />
-                        <span className="fw-medium">Errors Found ({selectedImport.errors.length})</span>
-                      </CardHeader>
-                      <CardBody>
-                        <ul className="list-unstyled mb-0">
-                          {selectedImport.errors.map((error, index) => (
-                            <li key={index} className="mb-2">
-                              <div className="alert alert-danger py-2 mb-2">
-                                <small className="d-flex align-items-center">
-                                  <span className="badge bg-danger me-2">{index + 1}</span>
-                                  {error.error}
+                {/* Tabs Navigation */}
+                <CNav variant="tabs">
+                  <CNavItem>
+                    <CNavLink
+                      active={activeTab === 'summary'}
+                      onClick={() => setActiveTab('summary')}
+                    >
+                      <CIcon icon={cilInfo} className="me-1" />
+                      Summary
+                    </CNavLink>
+                  </CNavItem>
+                  <CNavItem>
+                    <CNavLink
+                      active={activeTab === 'records'}
+                      onClick={() => setActiveTab('records')}
+                      disabled={!selectedImport.processedData || selectedImport.processedData.length === 0}
+                    >
+                      Processed Records ({selectedImport.processedData?.length || 0})
+                    </CNavLink>
+                  </CNavItem>
+                </CNav>
+
+                {/* Tab Content */}
+                <CTabContent className="mt-3">
+                  {/* Summary Tab */}
+                  <CTabPane visible={activeTab === 'summary'}>
+                    <div className="row">
+                      {/* Left Column - Basic Info */}
+                      <div className="col-md-6">
+                        <Card className="mb-3">
+                          <CardHeader className="bg-light d-flex align-items-center">
+                            <CIcon icon={cilFile} className="me-2" />
+                            <span className="fw-medium">File Information</span>
+                          </CardHeader>
+                          <CardBody>
+                            <div className="mb-2">
+                              <small className="text-muted d-block">Batch Name</small>
+                              <div className="fw-medium">{selectedImport.batchName || 'No Batch Name'}</div>
+                            </div>
+                            <div className="mb-2">
+                              <small className="text-muted d-block">Filename</small>
+                              <div className="fw-medium">{selectedImport.originalFilename || selectedImport.filename || '-'}</div>
+                            </div>
+                            <div className="mb-2">
+                              <small className="text-muted d-block">File Type</small>
+                              <div className="fw-medium">{selectedImport.fileType || '-'}</div>
+                            </div>
+                            <div className="mb-2">
+                              <small className="text-muted d-block">Total Records</small>
+                              <div className="fw-medium">{selectedImport.totalRecords || 0}</div>
+                            </div>
+                          </CardBody>
+                        </Card>
+
+                        <Card className="mb-3">
+                          <CardHeader className="bg-light d-flex align-items-center">
+                            <CIcon icon={cilUser} className="me-2" />
+                            <span className="fw-medium">Import Details</span>
+                          </CardHeader>
+                          <CardBody>
+                            <div className="mb-2">
+                              <small className="text-muted d-block">Imported By</small>
+                              <div className="fw-medium">{selectedImport.importedBy?.name || '-'}</div>
+                              <small className="text-muted">{selectedImport.importedBy?.email || ''}</small>
+                            </div>
+                            <div className="mb-2">
+                              <small className="text-muted d-block">Import Date</small>
+                              <div className="fw-medium">{formatDate(selectedImport.importedAt)}</div>
+                            </div>
+                            <div className="mb-2">
+                              <small className="text-muted d-block">Created At</small>
+                              <div className="fw-medium">{formatDate(selectedImport.createdAt)}</div>
+                            </div>
+                          </CardBody>
+                        </Card>
+                      </div>
+
+                      {/* Right Column - Statistics and Results */}
+                      <div className="col-md-6">
+                        <Card className="mb-3">
+                          <CardHeader className="bg-light d-flex align-items-center">
+                            <CIcon icon={cilList} className="me-2" />
+                            <span className="fw-medium">Processing Statistics</span>
+                          </CardHeader>
+                          <CardBody>
+                            <div className="row text-center">
+                              <div className="col-4">
+                                <div className="border rounded p-3">
+                                  <div className="display-6 fw-bold text-primary">{selectedImport.totalRecords || 0}</div>
+                                  <small className="text-muted">Total Records</small>
+                                </div>
+                              </div>
+                              <div className="col-4">
+                                <div className="border rounded p-3">
+                                  <div className="display-6 fw-bold text-success">{selectedImport.processedRecords || 0}</div>
+                                  <small className="text-muted">Processed</small>
+                                </div>
+                              </div>
+                              <div className="col-4">
+                                <div className="border rounded p-3">
+                                  <div className="display-6 fw-bold text-danger">{selectedImport.errorRecords || 0}</div>
+                                  <small className="text-muted">Errors</small>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <div className="d-flex justify-content-between mb-1">
+                                <small>Success Rate</small>
+                                <small>
+                                  {selectedImport.totalRecords > 0 
+                                    ? Math.round((selectedImport.processedRecords / selectedImport.totalRecords) * 100) 
+                                    : 0}%
                                 </small>
                               </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </CardBody>
-                    </Card>
+                              <CProgress 
+                                value={selectedImport.totalRecords > 0 
+                                  ? (selectedImport.processedRecords / selectedImport.totalRecords) * 100 
+                                  : 0} 
+                                color="success"
+                                className="mb-3"
+                              />
+                            </div>
+                          </CardBody>
+                        </Card>
+
+                        <Card className="mb-3">
+                          <CardHeader className="bg-light d-flex align-items-center">
+                            <CIcon icon={cilCalendar} className="me-2" />
+                            <span className="fw-medium">Export Information</span>
+                          </CardHeader>
+                          <CardBody>
+                            <div className="mb-2">
+                              <small className="text-muted d-block">Exported</small>
+                              <div className="d-flex align-items-center">
+                                <div className={`badge ${selectedImport.exported ? 'bg-success' : 'bg-secondary'} me-2`}>
+                                  {selectedImport.exported ? 'Yes' : 'No'}
+                                </div>
+                                {selectedImport.exported && (
+                                  <small className="text-muted">({selectedImport.exportCount || 0} times)</small>
+                                )}
+                              </div>
+                            </div>
+                            {selectedImport.exportedAt && (
+                              <div className="mb-2">
+                                <small className="text-muted d-block">Last Exported At</small>
+                                <div className="fw-medium">{formatDate(selectedImport.exportedAt)}</div>
+                              </div>
+                            )}
+                            <div className="mb-2">
+                              <small className="text-muted d-block">Last Updated</small>
+                              <div className="fw-medium">{formatDate(selectedImport.updatedAt)}</div>
+                            </div>
+                          </CardBody>
+                        </Card>
+                      </div>
+                    </div>
+
+                    {/* Errors Section (if any) */}
+                    {selectedImport.errors && selectedImport.errors.length > 0 && (
+                      <Card className="border-danger">
+                        <CardHeader className="bg-danger text-white d-flex align-items-center">
+                          <CIcon icon={cilWarning} className="me-2" />
+                          <span className="fw-medium">Errors Found ({selectedImport.errors.length})</span>
+                        </CardHeader>
+                        <CardBody>
+                          <ul className="list-unstyled mb-0">
+                            {selectedImport.errors.map((error, index) => (
+                              <li key={index} className="mb-2">
+                                <div className="alert alert-danger py-2 mb-2">
+                                  <small className="d-flex align-items-center">
+                                    <span className="badge bg-danger me-2">{index + 1}</span>
+                                    {error.error}
+                                  </small>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </CardBody>
+                      </Card>
+                    )}
+                  </CTabPane>
+
+                  {/* Processed Records Tab */}
+                  <CTabPane visible={activeTab === 'records'}>
+                    {selectedImport.processedData && selectedImport.processedData.length > 0 ? (
+                      <div className="processed-records-section">
+                        <div className="alert alert-info mb-3">
+                          Showing {selectedImport.processedData.length} processed records
+                        </div>
+                        
+                        <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                          <CTable striped bordered hover responsive className="processed-records-table">
+                            <CTableHead>
+                              <CTableRow>
+                                <CTableHeaderCell>Sr.no</CTableHeaderCell>
+                                <CTableHeaderCell>Chassis Number</CTableHeaderCell>
+                                <CTableHeaderCell>Model Name</CTableHeaderCell>
+                                <CTableHeaderCell>Date of Inward</CTableHeaderCell>
+                                <CTableHeaderCell>Date of Sale</CTableHeaderCell>
+                                <CTableHeaderCell>Ageing (Inward to Sale)</CTableHeaderCell>
+                                <CTableHeaderCell>Ageing (Inward to Registration)</CTableHeaderCell>
+                                <CTableHeaderCell>Selling Dealer Location</CTableHeaderCell>
+                                <CTableHeaderCell>Sales EXE</CTableHeaderCell>
+                                <CTableHeaderCell>Customer Name</CTableHeaderCell>
+                                <CTableHeaderCell>Financer Name</CTableHeaderCell>
+                                <CTableHeaderCell>Ledger Balance</CTableHeaderCell>
+                                <CTableHeaderCell>Vehicle Status</CTableHeaderCell>
+                              </CTableRow>
+                            </CTableHead>
+                            <CTableBody>
+                              {selectedImport.processedData.map((record, index) => (
+                                <CTableRow key={index}>
+                                  <CTableDataCell>{index + 1}</CTableDataCell>
+                                  <CTableDataCell>
+                                    <strong>{record.chassisNumber || '-'}</strong>
+                                  </CTableDataCell>
+                                  <CTableDataCell>{record.modelName || '-'}</CTableDataCell>
+                                  <CTableDataCell>{formatDate(record.dateOfInward)}</CTableDataCell>
+                                  <CTableDataCell>{formatDate(record.dateOfSale)}</CTableDataCell>
+                                  <CTableDataCell>{record.ageingFromInwardToSale || '-'}</CTableDataCell>
+                                  <CTableDataCell>{record.ageingFromInwardToRegistration || '-'}</CTableDataCell>
+                                  <CTableDataCell>{record.sellingDealerLocation || '-'}</CTableDataCell>
+                                  <CTableDataCell>{record.salesExe || '-'}</CTableDataCell>
+                                  <CTableDataCell>{record.customerName || '-'}</CTableDataCell>
+                                  <CTableDataCell>{record.financerName || '-'}</CTableDataCell>
+                                  <CTableDataCell>
+                                    {record.ledgerBalance !== null && record.ledgerBalance !== undefined 
+                                      ? `₹${record.ledgerBalance}` 
+                                      : '-'}
+                                  </CTableDataCell>
+                                  <CTableDataCell>
+                                    <CBadge color={getVehicleStatusBadge(record.vehicleStatus)}>
+                                      {record.vehicleStatus ? record.vehicleStatus.replace('_', ' ') : '-'}
+                                    </CBadge>
+                                  </CTableDataCell>
+                                </CTableRow>
+                              ))}
+                            </CTableBody>
+                          </CTable>
+                        </div>
+
+                        {/* Summary Statistics */}
+                        <div className="row mt-4">
+                          <div className="col-md-6">
+                            <Card className="mb-3">
+                              <CardHeader className="bg-light">
+                                <small className="fw-medium">Records Summary</small>
+                              </CardHeader>
+                              <CardBody>
+                                <div className="row">
+                                  <div className="col-6 mb-2">
+                                    <small className="text-muted d-block">Total Records</small>
+                                    <div className="fw-medium">{selectedImport.processedData.length}</div>
+                                  </div>
+                                  <div className="col-6 mb-2">
+                                    <small className="text-muted d-block">With Errors</small>
+                                    <div className="fw-medium">
+                                      {selectedImport.processedData.filter(r => r.hasError).length}
+                                    </div>
+                                  </div>
+                                  <div className="col-6 mb-2">
+                                    <small className="text-muted d-block">Sold Vehicles</small>
+                                    <div className="fw-medium">
+                                      {selectedImport.processedData.filter(r => r.vehicleStatus === 'sold').length}
+                                    </div>
+                                  </div>
+                                  <div className="col-6 mb-2">
+                                    <small className="text-muted d-block">Not Approved</small>
+                                    <div className="fw-medium">
+                                      {selectedImport.processedData.filter(r => r.vehicleStatus === 'not_approved').length}
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardBody>
+                            </Card>
+                          </div>
+                          <div className="col-md-6">
+                            <Card className="mb-3">
+                              <CardHeader className="bg-light">
+                                <small className="fw-medium">Financial Summary</small>
+                              </CardHeader>
+                              <CardBody>
+                                <div className="row">
+                                  <div className="col-6 mb-2">
+                                    <small className="text-muted d-block">Total Ledger Balance</small>
+                                    <div className="fw-medium">
+                                      ₹{selectedImport.processedData
+                                        .filter(r => r.ledgerBalance !== null && r.ledgerBalance !== undefined)
+                                        .reduce((sum, r) => sum + r.ledgerBalance, 0)}
+                                    </div>
+                                  </div>
+                                  <div className="col-6 mb-2">
+                                    <small className="text-muted d-block">Records with Balance</small>
+                                    <div className="fw-medium">
+                                      {selectedImport.processedData.filter(r => r.ledgerBalance !== null && r.ledgerBalance !== undefined).length}
+                                    </div>
+                                  </div>
+                                  <div className="col-6 mb-2">
+                                    <small className="text-muted d-block">Avg Balance</small>
+                                    <div className="fw-medium">
+                                      ₹{(() => {
+                                        const recordsWithBalance = selectedImport.processedData
+                                          .filter(r => r.ledgerBalance !== null && r.ledgerBalance !== undefined);
+                                        if (recordsWithBalance.length === 0) return 0;
+                                        const total = recordsWithBalance.reduce((sum, r) => sum + r.ledgerBalance, 0);
+                                        return Math.round(total / recordsWithBalance.length);
+                                      })()}
+                                    </div>
+                                  </div>
+                                  <div className="col-6 mb-2">
+                                    <small className="text-muted d-block">Max Balance</small>
+                                    <div className="fw-medium">
+                                      ₹{Math.max(...selectedImport.processedData
+                                        .filter(r => r.ledgerBalance !== null && r.ledgerBalance !== undefined)
+                                        .map(r => r.ledgerBalance), 0)}
+                                    </div>
+                                </div>
+                              </div>
+                            </CardBody>
+                          </Card>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="alert alert-warning text-center py-5">
+                      <CIcon icon={cilWarning} className="me-2" />
+                      No processed records available for this import.
+                    </div>
                   )}
                 </CTabPane>
-
-                {/* Processed Records Tab */}
-<CTabPane visible={activeTab === 'records'}>
-  {selectedImport.processedData && selectedImport.processedData.length > 0 ? (
-    <div className="processed-records-section">
-      <div className="alert alert-info mb-3">
-        Showing {selectedImport.processedData.length} processed records
-      </div>
-      
-      <div className="table-responsive" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-        <CTable striped bordered hover responsive className="processed-records-table">
-          <CTableHead>
-            <CTableRow>
-              <CTableHeaderCell>Sr.no</CTableHeaderCell>
-              <CTableHeaderCell>Chassis Number</CTableHeaderCell>
-              {/* <CTableHeaderCell>Vehicle ID</CTableHeaderCell> */}
-              <CTableHeaderCell>Model Name</CTableHeaderCell>
-              <CTableHeaderCell>Date of Inward</CTableHeaderCell>
-              <CTableHeaderCell>Date of Sale</CTableHeaderCell>
-              <CTableHeaderCell>Ageing (Inward to Sale)</CTableHeaderCell>
-              <CTableHeaderCell>Ageing (Inward to Registration)</CTableHeaderCell>
-              <CTableHeaderCell>Selling Dealer Location</CTableHeaderCell>
-              <CTableHeaderCell>Sales EXE</CTableHeaderCell>
-              <CTableHeaderCell>Customer Name</CTableHeaderCell>
-              <CTableHeaderCell>Financer Name</CTableHeaderCell>
-              <CTableHeaderCell>Ledger Balance</CTableHeaderCell>
-              {/* <CTableHeaderCell>Booking ID</CTableHeaderCell> */}
-              <CTableHeaderCell>Vehicle Status</CTableHeaderCell>
-              {/* <CTableHeaderCell>Has Error</CTableHeaderCell> */}
-            </CTableRow>
-          </CTableHead>
-          <CTableBody>
-            {selectedImport.processedData.map((record, index) => (
-              <CTableRow key={index}>
-                <CTableDataCell>{index + 1}</CTableDataCell>
-                <CTableDataCell>
-                  <strong>{record.chassisNumber || '-'}</strong>
-                </CTableDataCell>
-                {/* <CTableDataCell>
-                  <small className="text-muted">{record.vehicleId || '-'}</small>
-                </CTableDataCell> */}
-                <CTableDataCell>{record.modelName || '-'}</CTableDataCell>
-                <CTableDataCell>{formatDate(record.dateOfInward)}</CTableDataCell>
-                <CTableDataCell>{formatDate(record.dateOfSale)}</CTableDataCell>
-                <CTableDataCell>{record.ageingFromInwardToSale || '-'}</CTableDataCell>
-                <CTableDataCell>{record.ageingFromInwardToRegistration || '-'}</CTableDataCell>
-                <CTableDataCell>{record.sellingDealerLocation || '-'}</CTableDataCell>
-                <CTableDataCell>{record.salesExe || '-'}</CTableDataCell>
-                <CTableDataCell>{record.customerName || '-'}</CTableDataCell>
-                <CTableDataCell>{record.financerName || '-'}</CTableDataCell>
-                <CTableDataCell>
-                  {record.ledgerBalance !== null && record.ledgerBalance !== undefined 
-                    ? `₹${record.ledgerBalance}` 
-                    : '-'}
-                </CTableDataCell>
-                {/* <CTableDataCell>
-                  <small className="text-muted">{record.bookingId || '-'}</small>
-                </CTableDataCell> */}
-                <CTableDataCell>
-                  <CBadge color={getVehicleStatusBadge(record.vehicleStatus)}>
-                    {record.vehicleStatus ? record.vehicleStatus.replace('_', ' ') : '-'}
-                  </CBadge>
-                </CTableDataCell>
-                {/* <CTableDataCell>
-                  <CBadge color={record.hasError ? 'danger' : 'success'}>
-                    {record.hasError ? 'Yes' : 'No'}
-                  </CBadge>
-                </CTableDataCell> */}
-              </CTableRow>
-            ))}
-          </CTableBody>
-        </CTable>
-      </div>
-
-      {/* Summary Statistics */}
-      <div className="row mt-4">
-        <div className="col-md-6">
-          <Card className="mb-3">
-            <CardHeader className="bg-light">
-              <small className="fw-medium">Records Summary</small>
-            </CardHeader>
-            <CardBody>
-              <div className="row">
-                <div className="col-6 mb-2">
-                  <small className="text-muted d-block">Total Records</small>
-                  <div className="fw-medium">{selectedImport.processedData.length}</div>
-                </div>
-                <div className="col-6 mb-2">
-                  <small className="text-muted d-block">With Errors</small>
-                  <div className="fw-medium">
-                    {selectedImport.processedData.filter(r => r.hasError).length}
-                  </div>
-                </div>
-                <div className="col-6 mb-2">
-                  <small className="text-muted d-block">Sold Vehicles</small>
-                  <div className="fw-medium">
-                    {selectedImport.processedData.filter(r => r.vehicleStatus === 'sold').length}
-                  </div>
-                </div>
-                <div className="col-6 mb-2">
-                  <small className="text-muted d-block">Not Approved</small>
-                  <div className="fw-medium">
-                    {selectedImport.processedData.filter(r => r.vehicleStatus === 'not_approved').length}
-                  </div>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-        <div className="col-md-6">
-          <Card className="mb-3">
-            <CardHeader className="bg-light">
-              <small className="fw-medium">Financial Summary</small>
-            </CardHeader>
-            <CardBody>
-              <div className="row">
-                <div className="col-6 mb-2">
-                  <small className="text-muted d-block">Total Ledger Balance</small>
-                  <div className="fw-medium">
-                    ₹{selectedImport.processedData
-                      .filter(r => r.ledgerBalance !== null && r.ledgerBalance !== undefined)
-                      .reduce((sum, r) => sum + r.ledgerBalance, 0)}
-                  </div>
-                </div>
-                <div className="col-6 mb-2">
-                  <small className="text-muted d-block">Records with Balance</small>
-                  <div className="fw-medium">
-                    {selectedImport.processedData.filter(r => r.ledgerBalance !== null && r.ledgerBalance !== undefined).length}
-                  </div>
-                </div>
-                <div className="col-6 mb-2">
-                  <small className="text-muted d-block">Avg Balance</small>
-                  <div className="fw-medium">
-                    ₹{(() => {
-                      const recordsWithBalance = selectedImport.processedData
-                        .filter(r => r.ledgerBalance !== null && r.ledgerBalance !== undefined);
-                      if (recordsWithBalance.length === 0) return 0;
-                      const total = recordsWithBalance.reduce((sum, r) => sum + r.ledgerBalance, 0);
-                      return Math.round(total / recordsWithBalance.length);
-                    })()}
-                  </div>
-                </div>
-                <div className="col-6 mb-2">
-                  <small className="text-muted d-block">Max Balance</small>
-                  <div className="fw-medium">
-                    ₹{Math.max(...selectedImport.processedData
-                      .filter(r => r.ledgerBalance !== null && r.ledgerBalance !== undefined)
-                      .map(r => r.ledgerBalance), 0)}
-                  </div>
-                </div>
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="alert alert-warning text-center py-5">
-      <CIcon icon={cilWarning} className="me-2" />
-      No processed records available for this import.
-    </div>
-  )}
-</CTabPane>
               </CTabContent>
             </div>
           )}
@@ -1207,6 +1343,7 @@ const handleExportExcel = async (importId) => {
           </CButton>
         </CModalFooter>
       </CModal>
+      )}
     </div>
   );
 };

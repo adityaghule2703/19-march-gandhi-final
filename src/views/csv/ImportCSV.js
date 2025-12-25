@@ -75,9 +75,9 @@ const ImportCSV = ({ endpoint, onSuccess, buttonText = 'Import CSV', acceptedFil
     }
     
     // Verticle is required for import
-    if (!selectedVerticleId) {
-      errors.verticle = 'Please select a verticle.';
-    }
+    // if (!selectedVerticleId) {
+    //   errors.verticle = 'Please select a verticle.';
+    // }
     
     setImportErrors(errors);
     return Object.keys(errors).length === 0;
@@ -90,11 +90,11 @@ const ImportCSV = ({ endpoint, onSuccess, buttonText = 'Import CSV', acceptedFil
     }
     
     // Check if active verticles exist
-    const activeVerticles = verticles.filter(v => v.status === 'active');
-    if (activeVerticles.length === 0) {
-      showError('No active verticles available. Please create an active verticle first.');
-      return;
-    }
+    // const activeVerticles = verticles.filter(v => v.status === 'active');
+    // if (activeVerticles.length === 0) {
+    //   showError('No active verticles available. Please create an active verticle first.');
+    //   return;
+    // }
     
     setExportTypeDialogOpen(true);
   };
@@ -118,7 +118,7 @@ const ImportCSV = ({ endpoint, onSuccess, buttonText = 'Import CSV', acceptedFil
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', selectedModelType);
-    formData.append('verticle_id', selectedVerticleId);
+    // formData.append('verticle_id', selectedVerticleId);
 
     // Only append branch_id or subdealer_id, not both
     if (exportTarget === 'branch') {
@@ -137,7 +137,7 @@ const ImportCSV = ({ endpoint, onSuccess, buttonText = 'Import CSV', acceptedFil
 
     console.log('FormData being sent:', {
       type: selectedModelType,
-      verticle_id: selectedVerticleId,
+      // verticle_id: selectedVerticleId,
       branch_id: exportTarget === 'branch' ? selectedBranchId : undefined,
       subdealer_id: exportTarget === 'subdealer' ? selectedSubdealerId : undefined,
       filename: file.name
@@ -292,7 +292,7 @@ const ImportCSV = ({ endpoint, onSuccess, buttonText = 'Import CSV', acceptedFil
           </div>
 
           {/* Verticle selection - Now Required */}
-          <div className="mb-3">
+          {/* <div className="mb-3">
             <CFormLabel>Verticle <span className="text-danger">*</span></CFormLabel>
             <CFormSelect 
               value={selectedVerticleId} 
@@ -315,7 +315,7 @@ const ImportCSV = ({ endpoint, onSuccess, buttonText = 'Import CSV', acceptedFil
             {verticles.filter(v => v.status === 'active').length === 0 && (
               <small className="text-danger">No active verticles available. Please create a verticle first.</small>
             )}
-          </div>
+          </div> */}
 
           {exportTarget === 'branch' ? (
             <div className="mb-3">
@@ -369,7 +369,7 @@ const ImportCSV = ({ endpoint, onSuccess, buttonText = 'Import CSV', acceptedFil
             disabled={
               isImporting || 
               !selectedModelType || 
-              !selectedVerticleId ||
+              // !selectedVerticleId ||
               (exportTarget === 'branch' ? !selectedBranchId : !selectedSubdealerId)
             }
           >

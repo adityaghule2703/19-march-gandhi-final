@@ -29,15 +29,40 @@ import {
   CAlert
 } from '@coreui/react';
 import { showError } from '../../../utils/sweetAlerts';
+import { useAuth } from '../../../context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage
+} from '../../../utils/modulePermissions';
 
 const CustomerLedger = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Customer Ledger page under Subdealer Account module
+  const hasCustomerLedgerView = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.CUSTOMER_LEDGER, 
+    ACTIONS.VIEW
+  );
+
+  // Using convenience function for cleaner code
+  const canViewCustomerLedger = canViewPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.CUSTOMER_LEDGER);
 
   useEffect(() => {
+    if (!canViewCustomerLedger) {
+      showError('You do not have permission to view Customer Ledger');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewCustomerLedger]);
 
   const fetchData = async () => {
     try {
@@ -274,10 +299,19 @@ const CustomerLedger = () => {
   const handleSearch = (searchValue) => {
     handleFilter(searchValue, getDefaultSearchFields('booking'));
   };
+
+  if (!canViewCustomerLedger) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Customer Ledger.
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }

@@ -30,7 +30,6 @@ import {
   cilCheckCircle, 
   cilXCircle,
   cilFile,
-  
 } from '@coreui/icons';
 import config from '../../../config';
 import ViewBooking from './BookingDetails';
@@ -66,7 +65,16 @@ import {
 } from '@coreui/react';
 import PrintModal from './PrintFinance';
 import PendingUpdateDetailsModal from './ViewPendingUpdates';
-import { hasPermission } from '../../../utils/permissionUtils';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -80,7 +88,6 @@ const BookingList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
   
   // Chassis Approval Modal States
   const [chassisApprovalModal, setChassisApprovalModal] = useState(false);
@@ -190,22 +197,112 @@ const BookingList = () => {
   const [selectedBookingForChassis, setSelectedBookingForChassis] = useState(null);
   const [chassisLoading, setChassisLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState();
- const [isUpdateChassis, setIsUpdateChassis] = useState(false);
+  const [isUpdateChassis, setIsUpdateChassis] = useState(false);
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [selectedBookingForPrint, setSelectedBookingForPrint] = useState(null);
   const [loadingId, setLoadingId] = useState(null);
-  const { permissions} = useAuth();
+  
+  const { permissions = [] } = useAuth();
+  const navigate = useNavigate();
   const userRole = localStorage.getItem('userRole');
-  const hasEditPermission = hasPermission(permissions,'BOOKING_UPDATE');
-  const hasViewPermission = hasPermission(permissions,'BOOKING_READ');
-  const hasDeletePermission = hasPermission(permissions,'BOOKING_DELETE');
-  const hasChassisAllocation = hasPermission(permissions,'BOOKING_CHASSIS_ALLOCATION');
-  const hasActionPermission = hasPermission(permissions,'BOOKING_BOOKING_ACTIONS');
-  const hasFinancePermission = hasPermission(permissions,'FINANCE_LETTER', 'READ', 'CREATE', 'VERIFY', 'DOWNLOAD');
-  const hasKYCPermission = hasPermission('KYC', 'READ', 'CREATE', 'VERIFY', 'DOWNLOAD');
-  const hasChassisApprovalPermission = hasPermission('BOOKING', 'CHASSIS_APPROVAL');
+
+  // Page-level permission checks for All Booking page under Sales module
+  const canViewAllBooking = canViewPage(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING);
+  const canCreateAllBooking = canCreateInPage(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING);
+  const canUpdateAllBooking = canUpdateInPage(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING);
+  const canDeleteAllBooking = canDeleteInPage(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING);
+
+  // Specific action permissions
+  const canAllocateChassis = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.UPDATE
+  );
+  
+  const canApproveChassis = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.APPROVE
+  );
+  
+  const canPrintFinance = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.PRINT
+  );
+  
+  const canUploadKYC = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.CREATE
+  );
+  
+  const canViewKYC = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.VIEW
+  );
+  
+  const canUploadFinance = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.CREATE
+  );
+  
+  const canViewFinance = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.VIEW
+  );
+  
+  // IMPORTANT: Approve cancellation uses CREATE permission
+  const canApproveCancellation = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.CREATE
+  );
+  
+  // IMPORTANT: Reject cancellation uses DELETE permission
+  const canRejectCancellation = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.DELETE
+  );
+  
+  // IMPORTANT: Restore booking uses CREATE permission
+  const canRestoreBooking = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.CREATE
+  );
+  
+  const canViewAvailableDocs = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.ALL_BOOKING, 
+    ACTIONS.VIEW
+  );
+
+  // PATCH operations (chassis approval) use UPDATE permission
+  const canPatchBooking = canUpdateAllBooking;
 
   useEffect(() => {
+    if (!canViewAllBooking) {
+      showError('You do not have permission to view All Booking');
+      navigate('/dashboard');
+      return;
+    }
+    
     fetchAllData();
   }, []);
 
@@ -263,9 +360,9 @@ const BookingList = () => {
       
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -285,9 +382,9 @@ const BookingList = () => {
       
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -302,6 +399,12 @@ const BookingList = () => {
   };
 
   const handleOpenRestoreModal = (bookingId, type) => {
+    // IMPORTANT: Use canRestoreBooking (CREATE permission)
+    if (!canRestoreBooking) {
+      showError('You do not have permission to restore bookings');
+      return;
+    }
+    
     setSelectedRestoreBooking(bookingId);
     setRestoreType(type);
     setRestoreReason('');
@@ -311,6 +414,12 @@ const BookingList = () => {
   };
 
   const handleRestoreBooking = async () => {
+    // IMPORTANT: Use canRestoreBooking (CREATE permission)
+    if (!canRestoreBooking) {
+      showError('You do not have permission to restore bookings');
+      return;
+    }
+
     if (!selectedRestoreBooking) return;
 
     try {
@@ -348,6 +457,11 @@ const BookingList = () => {
   };
 
   const handleOpenAvailableDocs = async (bookingId) => {
+    if (!canViewAvailableDocs) {
+      showError('You do not have permission to view available documents');
+      return;
+    }
+    
     try {
       setLoadingTemplates(true);
       setSelectedBookingForDocs(bookingId);
@@ -393,6 +507,11 @@ const BookingList = () => {
   };
 
   const handleSubmitTemplateSelection = async () => {
+    if (!canUpdateAllBooking) {
+      showError('You do not have permission to select templates');
+      return;
+    }
+
     if (!selectedBookingForDocs || selectedTemplateIds.length === 0) {
       showError('Please select at least one template');
       return;
@@ -423,7 +542,14 @@ const BookingList = () => {
       setSubmittingSelection(false);
     }
   };
+
   const handleApproveCancellation = (cancellation) => {
+    // IMPORTANT: Use canApproveCancellation (CREATE permission)
+    if (!canApproveCancellation) {
+      showError('You do not have permission to approve cancellations');
+      return;
+    }
+    
     setSelectedCancellationForApproval(cancellation);
     setCancelApprovalAction('APPROVE');
     setEditedReason(cancellation.cancellationRequest?.reason || '');
@@ -433,6 +559,12 @@ const BookingList = () => {
   };
 
   const handleRejectCancellation = (cancellation) => {
+    // IMPORTANT: Use canRejectCancellation (DELETE permission)
+    if (!canRejectCancellation) {
+      showError('You do not have permission to reject cancellations');
+      return;
+    }
+    
     setSelectedCancellationForApproval(cancellation);
     setCancelApprovalAction('REJECT');
     setRejectionReason('');
@@ -447,6 +579,12 @@ const BookingList = () => {
       setCancelActionLoading(true);
       
       if (cancelApprovalAction === 'APPROVE') {
+        // Check CREATE permission for approve
+        if (!canApproveCancellation) {
+          showError('You do not have permission to approve cancellations');
+          return;
+        }
+        
         const payload = {
           reason: selectedCancellationForApproval.cancellationRequest?.reason || '',
           editedReason: editedReason,
@@ -457,6 +595,12 @@ const BookingList = () => {
         await axiosInstance.put(`/cancelbooking/cancellations/${selectedCancellationForApproval._id}/cancel`, payload);
         showSuccess('Cancellation approved successfully!');
       } else {
+        // Check DELETE permission for reject
+        if (!canRejectCancellation) {
+          showError('You do not have permission to reject cancellations');
+          return;
+        }
+        
         const payload = {
           rejectionReason: rejectionReason,
           notes: notes
@@ -484,6 +628,11 @@ const BookingList = () => {
   };
 
   const handleApproveChassis = (bookingId) => {
+    if (!canApproveChassis) {
+      showError('You do not have permission to approve chassis allocation');
+      return;
+    }
+    
     setSelectedBookingForApproval(bookingId);
     setApprovalAction('APPROVE');
     setApprovalNote('');
@@ -492,6 +641,11 @@ const BookingList = () => {
   };
 
   const handleRejectChassis = (bookingId) => {
+    if (!canApproveChassis) {
+      showError('You do not have permission to reject chassis allocation');
+      return;
+    }
+    
     setSelectedBookingForApproval(bookingId);
     setApprovalAction('REJECT');
     setApprovalNote('');
@@ -500,6 +654,12 @@ const BookingList = () => {
   };
 
   const handleChassisApprovalSubmit = async () => {
+    // PATCH method permission check (uses UPDATE permission)
+    if (!canPatchBooking) {
+      showError('You do not have permission to approve/reject chassis');
+      return;
+    }
+    
     if (!approvalNote.trim()) {
       showError('Please enter approval note');
       return;
@@ -542,12 +702,22 @@ const BookingList = () => {
   };
 
   const handlePrint = (bookingId) => {
+    if (!canPrintFinance) {
+      showError('You do not have permission to print documents');
+      return;
+    }
+    
     setSelectedBookingForPrint(bookingId);
     setPrintModalVisible(true);
     handleClose();
   };
 
   const handleViewKYC = async (bookingId) => {
+    if (!canViewKYC) {
+      showError('You do not have permission to view KYC');
+      return;
+    }
+    
     try {
       console.log('Fetching KYC for booking ID:', bookingId);
       setKycBookingId(bookingId);
@@ -570,14 +740,19 @@ const BookingList = () => {
       setKycModalVisible(true);
       handleClose();
     } catch (error) {
-       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
     }
   };
 
   const handleViewFinanceLetter = async (bookingId) => {
+    if (!canViewFinance) {
+      showError('You do not have permission to view finance letters');
+      return;
+    }
+    
     try {
       setActionLoadingId(bookingId);
       setFinanceBookingId(bookingId);
@@ -599,15 +774,20 @@ const BookingList = () => {
       handleClose();
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setActionLoadingId(null);
     }
   };
 
   const handleAllocateChassis = (bookingId) => {
+    if (!canAllocateChassis) {
+      showError('You do not have permission to allocate chassis');
+      return;
+    }
+    
     setSelectedBookingForChassis(bookingId);
     setIsUpdateChassis(false);
     setShowChassisModal(true);
@@ -615,6 +795,11 @@ const BookingList = () => {
   };
 
   const handleUpdateChassis = (bookingId) => {
+    if (!canAllocateChassis) {
+      showError('You do not have permission to update chassis');
+      return;
+    }
+    
     setSelectedBookingForChassis(bookingId);
     setIsUpdateChassis(true);
     setShowChassisModal(true);
@@ -622,66 +807,71 @@ const BookingList = () => {
   };
 
   const handleSaveChassisNumber = async (payload) => {
-  try {
-    setChassisLoading(true);
-
-    let url = `/bookings/${selectedBookingForChassis}/allocate`;
-    const queryParams = [];
-    
-    if (isUpdateChassis && payload.reason) {
-      queryParams.push(`reason=${encodeURIComponent(payload.reason)}`);
-    }
-  
-    if (!isUpdateChassis && payload.reason) {
-      queryParams.push(`reason=${encodeURIComponent(payload.reason)}`);
-    }
-
-    if (queryParams.length > 0) {
-      url += `?${queryParams.join('&')}`;
-    }
-
-    const formData = new FormData();
-    formData.append('chassisNumber', payload.chassisNumber);
-    formData.append('is_deviation', payload.is_deviation);
-
-    if (payload.note) {
-      formData.append('note', payload.note);
+    if (!canAllocateChassis) {
+      showError('You do not have permission to save chassis number');
+      return;
     }
     
-    if (payload.claimDetails) {
-      formData.append('hasClaim', 'true');
-      formData.append('priceClaim', payload.claimDetails.price);
-      formData.append('description', payload.claimDetails.description);
+    try {
+      setChassisLoading(true);
 
-      payload.claimDetails.documents.forEach((file, index) => {
-        formData.append(`documents`, file);
-      });
-    } else {
-      formData.append('hasClaim', 'false');
-    }
-
-    const response = await axiosInstance.put(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
+      let url = `/bookings/${selectedBookingForChassis}/allocate`;
+      const queryParams = [];
+      
+      if (isUpdateChassis && payload.reason) {
+        queryParams.push(`reason=${encodeURIComponent(payload.reason)}`);
       }
-    });
+    
+      if (!isUpdateChassis && payload.reason) {
+        queryParams.push(`reason=${encodeURIComponent(payload.reason)}`);
+      }
 
-    showSuccess(response.data.message);
-    
-    await fetchAllData();
-    
-    setShowChassisModal(false);
-    setIsUpdateChassis(false);
-    setSelectedBookingForChassis(null);
-  } catch (error) {
-    const message = showError(error);
-  if (message) {
-    setError(message);
-  }
-  } finally {
-    setChassisLoading(false);
-  }
-};
+      if (queryParams.length > 0) {
+        url += `?${queryParams.join('&')}`;
+      }
+
+      const formData = new FormData();
+      formData.append('chassisNumber', payload.chassisNumber);
+      formData.append('is_deviation', payload.is_deviation);
+
+      if (payload.note) {
+        formData.append('note', payload.note);
+      }
+      
+      if (payload.claimDetails) {
+        formData.append('hasClaim', 'true');
+        formData.append('priceClaim', payload.claimDetails.price);
+        formData.append('description', payload.claimDetails.description);
+
+        payload.claimDetails.documents.forEach((file, index) => {
+          formData.append(`documents`, file);
+        });
+      } else {
+        formData.append('hasClaim', 'false');
+      }
+
+      const response = await axiosInstance.put(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      showSuccess(response.data.message);
+      
+      await fetchAllData();
+      
+      setShowChassisModal(false);
+      setIsUpdateChassis(false);
+      setSelectedBookingForChassis(null);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    } finally {
+      setChassisLoading(false);
+    }
+  };
 
   const handleViewAltrationRequest = (booking) => {
     setSelectedUpdate(booking);
@@ -690,6 +880,11 @@ const BookingList = () => {
   };
 
   const handleApproveUpdate = async (id, payload) => {
+    if (!canUpdateAllBooking) {
+      showError('You do not have permission to approve updates');
+      return;
+    }
+    
     try {
       setLoadingId(id);
       await axiosInstance.post(`/bookings/${id}/approve-update`, payload);
@@ -709,6 +904,11 @@ const BookingList = () => {
   };
 
   const handleRejectUpdate = async (id, payload) => {
+    if (!canUpdateAllBooking) {
+      showError('You do not have permission to reject updates');
+      return;
+    }
+    
     try {
       setLoadingId(id);
       await axiosInstance.post(`/bookings/${id}/reject-update`, payload);
@@ -728,6 +928,11 @@ const BookingList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteAllBooking) {
+      showError('You do not have permission to delete bookings');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -811,6 +1016,7 @@ const BookingList = () => {
                             className="me-2"
                             color="success"
                             onClick={() => handleApproveCancellation(cancellation)}
+                            disabled={!canApproveCancellation}
                           >
                             <CIcon icon={cilCheck} /> Approve
                           </CButton>
@@ -818,6 +1024,7 @@ const BookingList = () => {
                             size="sm"
                             color="danger"
                             onClick={() => handleRejectCancellation(cancellation)}
+                            disabled={!canRejectCancellation}
                           >
                             <CIcon icon={cilX} /> Reject
                           </CButton>
@@ -830,6 +1037,7 @@ const BookingList = () => {
                           size="sm"
                           color="primary"
                           onClick={() => handleOpenRestoreModal(cancellation._id, 'cancelled')}
+                          disabled={!canRestoreBooking}
                         >
                           Back to Normal
                         </CButton>
@@ -881,14 +1089,14 @@ const BookingList = () => {
                 <CTableRow key={index}>
                   {tabIndex != 2 && tabIndex != 4 && <CTableDataCell>{index + 1}</CTableDataCell>}
                   <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
-                  <CTableDataCell>{booking.model.model_name || booking.model.name || ''}</CTableDataCell>
-                  {tabIndex != 2 && tabIndex != 4 && <CTableDataCell>{booking.model.type}</CTableDataCell>}
+                  <CTableDataCell>{booking.model?.model_name || booking.model?.name || 'N/A'}</CTableDataCell>
+                  {tabIndex != 2 && tabIndex != 4 && <CTableDataCell>{booking.model?.type || 'N/A'}</CTableDataCell>}
                   <CTableDataCell>{booking.color?.name || ''}</CTableDataCell>
-                  <CTableDataCell>{booking.customerDetails.name || ''}</CTableDataCell>
-                  {tabIndex != 2 && tabIndex != 4 && <CTableDataCell>{booking.customerDetails.mobile1 || ''}</CTableDataCell>}
+                  <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
+                  {tabIndex != 2 && tabIndex != 4 && <CTableDataCell>{booking.customerDetails?.mobile1 || ''}</CTableDataCell>}
                   {tabIndex != 2 && tabIndex != 3 && tabIndex != 4 && (
                     <CTableDataCell>
-                      {booking.payment.type === 'FINANCE' && (
+                      {booking.payment?.type === 'FINANCE' && canPrintFinance && (
                         <CButton 
                           size="sm" 
                           className="view-button"
@@ -901,16 +1109,16 @@ const BookingList = () => {
                   )}
                   {tabIndex != 2 && tabIndex != 3 && tabIndex != 4 && (
                     <CTableDataCell>
-                      {booking.payment.type === 'FINANCE' && (
+                      {booking.payment?.type === 'FINANCE' && (
                         <>
-                          {booking.documentStatus.financeLetter.status === 'NOT_UPLOADED' ||
-                          booking.documentStatus.financeLetter.status === 'REJECTED' ? (
+                          {canUploadFinance && (booking.documentStatus?.financeLetter?.status === 'NOT_UPLOADED' ||
+                          booking.documentStatus?.financeLetter?.status === 'REJECTED') ? (
                             <Link
                               to={`/upload-finance/${booking.id}`}
                               state={{
                                 bookingId: booking.id,
-                                customerName: booking.customerDetails.name,
-                                address: `${booking.customerDetails.address}, ${booking.customerDetails.taluka}, ${booking.customerDetails.district}, ${booking.customerDetails.pincode}`
+                                customerName: booking.customerDetails?.name,
+                                address: `${booking.customerDetails?.address || ''}, ${booking.customerDetails?.taluka || ''}, ${booking.customerDetails?.district || ''}, ${booking.customerDetails?.pincode || ''}`
                               }}
                             >
                               <CButton size="sm" className="upload-kyc-btn icon-only">
@@ -918,9 +1126,9 @@ const BookingList = () => {
                               </CButton>
                             </Link>
                           ) : null}
-                          {booking.documentStatus.financeLetter.status !== 'NOT_UPLOADED' && (
-                            <span className={`status-badge ${booking.documentStatus.financeLetter.status.toLowerCase()}`}>
-                              {booking.documentStatus.financeLetter.status}
+                          {booking.documentStatus?.financeLetter?.status !== 'NOT_UPLOADED' && (
+                            <span className={`status-badge ${booking.documentStatus?.financeLetter?.status?.toLowerCase() || ''}`}>
+                              {booking.documentStatus?.financeLetter?.status || ''}
                             </span>
                           )}
                         </>
@@ -929,13 +1137,13 @@ const BookingList = () => {
                   )}
                   {tabIndex != 2 && tabIndex != 4 && (
                     <CTableDataCell>
-                      {booking.documentStatus.kyc.status === 'NOT_UPLOADED' ? (
+                      {canUploadKYC && booking.documentStatus?.kyc?.status === 'NOT_UPLOADED' ? (
                         <Link
                           to={`/upload-kyc/${booking.id}`}
                           state={{
                             bookingId: booking.id,
-                            customerName: booking.customerDetails.name,
-                            address: `${booking.customerDetails.address}, ${booking.customerDetails.taluka}, ${booking.customerDetails.district}, ${booking.customerDetails.pincode}`
+                            customerName: booking.customerDetails?.name,
+                            address: `${booking.customerDetails?.address || ''}, ${booking.customerDetails?.taluka || ''}, ${booking.customerDetails?.district || ''}, ${booking.customerDetails?.pincode || ''}`
                           }}
                         >
                           <CButton size="sm" className="upload-kyc-btn icon-only">
@@ -944,16 +1152,16 @@ const BookingList = () => {
                         </Link>
                       ) : (
                         <div className="d-flex align-items-center">
-                          <span className={`status-badge ${booking.documentStatus.kyc.status.toLowerCase()}`}>
-                            {booking.documentStatus.kyc.status}
+                          <span className={`status-badge ${booking.documentStatus?.kyc?.status?.toLowerCase() || ''}`}>
+                            {booking.documentStatus?.kyc?.status || ''}
                           </span>
-                          {booking.documentStatus.kyc.status === 'REJECTED' && (
+                          {canUploadKYC && booking.documentStatus?.kyc?.status === 'REJECTED' && (
                             <Link
                               to={`/upload-kyc/${booking.id}`}
                               state={{
                                 bookingId: booking.id,
-                                customerName: booking.customerDetails.name,
-                                address: `${booking.customerDetails.address}, ${booking.customerDetails.taluka}, ${booking.customerDetails.district}, ${booking.customerDetails.pincode}`
+                                customerName: booking.customerDetails?.name,
+                                address: `${booking.customerDetails?.address || ''}, ${booking.customerDetails?.taluka || ''}, ${booking.customerDetails?.district || ''}, ${booking.customerDetails?.pincode || ''}`
                               }}
                               className="ms-2"
                             >
@@ -967,31 +1175,31 @@ const BookingList = () => {
                     </CTableDataCell>
                   )}
                   <CTableDataCell>
-  {/* Show "FROZEN" for FREEZZED status */}
-  <span 
-    className="status-badge" 
-    style={{
-      backgroundColor: booking.status === 'FREEZZED' ? '#ffc107' : 
-                      booking.status === 'PENDING_APPROVAL' ? '#0d6efd' : 
-                      booking.status === 'PENDING_APPROVAL (Discount_Exceeded)' ? '#fd7e14' : 
-                      booking.status === 'APPROVED' ? '#198754' : 
-                      booking.status === 'REJECTED' ? '#dc3545' : 
-                      booking.status === 'ALLOCATED' ? '#6f42c1' : 
-                      booking.status === 'ON_HOLD' ? '#6c757d' : '#6c757d',
-      color: booking.status === 'FREEZZED' ? '#000' : '#fff',
-      padding: '2px 8px',
-      borderRadius: '12px',
-      fontSize: '12px',
-      fontWeight: '500',
-      display: 'inline-block'
-    }}
-  >
-    {booking.status === 'FREEZZED' ? 'FROZEN (self insurance)' : booking.status}
-  </span>
-</CTableDataCell>
+                    {/* Show "FROZEN" for FREEZZED status */}
+                    <span 
+                      className="status-badge" 
+                      style={{
+                        backgroundColor: booking.status === 'FREEZZED' ? '#ffc107' : 
+                                        booking.status === 'PENDING_APPROVAL' ? '#0d6efd' : 
+                                        booking.status === 'PENDING_APPROVAL (Discount_Exceeded)' ? '#fd7e14' : 
+                                        booking.status === 'APPROVED' ? '#198754' : 
+                                        booking.status === 'REJECTED' ? '#dc3545' : 
+                                        booking.status === 'ALLOCATED' ? '#6f42c1' : 
+                                        booking.status === 'ON_HOLD' ? '#6c757d' : '#6c757d',
+                        color: booking.status === 'FREEZZED' ? '#000' : '#fff',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {booking.status === 'FREEZZED' ? 'FROZEN (self insurance)' : booking.status}
+                    </span>
+                  </CTableDataCell>
                   {tabIndex === 0 && (
                     <CTableDataCell>
-                      <span className={`status-badge ${booking.updateRequestStatus.toLowerCase()}`}>
+                      <span className={`status-badge ${booking.updateRequestStatus?.toLowerCase() || ''}`}>
                         {booking.updateRequestStatus === 'NONE' ? '' : booking.updateRequestStatus || ''}
                       </span>
                     </CTableDataCell>
@@ -1015,7 +1223,7 @@ const BookingList = () => {
                         <>
                           {userRole === 'SALES_EXECUTIVE' && booking.status === 'PENDING_APPROVAL (Discount_Exceeded)' ? (
                             <span className="awaiting-approval-text">Awaiting for Approval</span>
-                          ) : (
+                          ) : canPrintFinance && (
                             <a href={`${config.baseURL}${booking.formPath}`} target="_blank" rel="noopener noreferrer">
                               <CButton size="sm" className="upload-kyc-btn icon-only">
                                 <CIcon icon={cilPrint} />
@@ -1042,7 +1250,7 @@ const BookingList = () => {
                       open={menuId === booking.id} 
                       onClose={handleClose}
                     >
-                      {hasViewPermission && (
+                      {canViewAllBooking && (
                         <MenuItem onClick={() => handleViewBooking(booking.id)} style={{ color: 'black' }}>
                           <CIcon icon={cilZoomOut} className="me-2" /> View Booking
                         </MenuItem>
@@ -1053,9 +1261,9 @@ const BookingList = () => {
                         </MenuItem>
                       )}
 
-                      {hasEditPermission && (
+                      {canUpdateAllBooking && (
                         <>
-                          {(tabIndex === 4) && (
+                          {(tabIndex === 4) && canRestoreBooking && (
                             <MenuItem onClick={() => handleOpenRestoreModal(booking.id, 'rejected_discount')} style={{ color: 'black' }}>
                               <CIcon icon={cilCheck} className="me-2" /> Back to Normal
                             </MenuItem>
@@ -1071,7 +1279,7 @@ const BookingList = () => {
                         </>
                       )}
 
-                      {hasDeletePermission && (
+                      {canDeleteAllBooking && (
                         <>
                           {(tabIndex === 0 || tabIndex === 4) && (
                             <MenuItem onClick={() => handleDelete(booking.id)} style={{ color: 'black' }}>
@@ -1081,23 +1289,19 @@ const BookingList = () => {
                         </>
                       )}
 
-                      {booking.payment.type === 'FINANCE' && booking.documentStatus?.financeLetter?.status !== 'NOT_UPLOADED' && (
+                      {booking.payment?.type === 'FINANCE' && booking.documentStatus?.financeLetter?.status !== 'NOT_UPLOADED' && canViewFinance && (
                         <MenuItem onClick={() => handleViewFinanceLetter(booking._id)} style={{ color: 'black' }}>
                           <CIcon icon={cilZoomOut} className="me-2" /> View Finance Letter
                         </MenuItem>
                       )}
 
-                      {hasKYCPermission && (
-                        <>
-                          {booking.documentStatus?.kyc?.status !== 'NOT_UPLOADED' && (
-                            <MenuItem onClick={() => handleViewKYC(booking.id)} style={{ color: 'black' }}>
-                              <CIcon icon={cilZoomOut} className="me-2" /> View KYC
-                            </MenuItem>
-                          )}
-                        </>
+                      {canViewKYC && booking.documentStatus?.kyc?.status !== 'NOT_UPLOADED' && (
+                        <MenuItem onClick={() => handleViewKYC(booking.id)} style={{ color: 'black' }}>
+                          <CIcon icon={cilZoomOut} className="me-2" /> View KYC
+                        </MenuItem>
                       )}
 
-                      {hasChassisAllocation && (
+                      {canAllocateChassis && (
                         <>
                           {tabIndex === 1 &&
                             booking.status === 'APPROVED' &&
@@ -1115,7 +1319,7 @@ const BookingList = () => {
                         </>
                       )}
 
-                      {hasChassisAllocation && tabIndex === 2 && booking.status === 'ON_HOLD' && (
+                      {canApproveChassis && tabIndex === 2 && booking.status === 'ON_HOLD' && (
                         <>
                           <MenuItem onClick={() => handleApproveChassis(booking.id)} style={{ color: 'green' }}>
                             <CIcon icon={cilCheck} className="me-2" /> Approve Chassis
@@ -1127,7 +1331,7 @@ const BookingList = () => {
                       )}
 
                       {/* Available Documents Option - Only for Approved tab */}
-                      {tabIndex === 1 && booking.status === 'APPROVED' && (
+                      {tabIndex === 1 && booking.status === 'APPROVED' && canViewAvailableDocs && (
                         <MenuItem onClick={() => handleOpenAvailableDocs(booking.id)} style={{ color: 'black' }}>
                           <CIcon icon={cilFile} className="me-2" /> Available Documents
                         </MenuItem>
@@ -1161,6 +1365,14 @@ const BookingList = () => {
     );
   }
 
+  if (!canViewAllBooking) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view All Booking.
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className='title'>Booking List</div>
@@ -1172,7 +1384,7 @@ const BookingList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasPermission('BOOKING', 'CREATE') && (
+            {canCreateAllBooking && (
               <Link to="/new-booking">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Booking
@@ -1380,7 +1592,7 @@ const BookingList = () => {
           <CButton 
             color="primary" 
             onClick={handleRestoreBooking}
-            disabled={restoreLoading}
+            disabled={restoreLoading || !canRestoreBooking}
           >
             {restoreLoading ? (
               <>
@@ -1523,7 +1735,7 @@ const BookingList = () => {
           <CButton 
             color="primary"
             onClick={handleSubmitTemplateSelection}
-            disabled={selectedTemplateIds.length === 0 || submittingSelection}
+            disabled={selectedTemplateIds.length === 0 || submittingSelection || !canUpdateAllBooking}
           >
             {submittingSelection ? (
               <>
@@ -1644,7 +1856,7 @@ const BookingList = () => {
           <CButton 
             className={approvalAction === 'APPROVE' ? 'submit-button' : 'cancel-button'}
             onClick={handleChassisApprovalSubmit}
-            disabled={approvalLoading}
+            disabled={approvalLoading || !canPatchBooking}
           >
             {approvalLoading ? (
               <CSpinner size="sm" />
@@ -1713,5 +1925,3 @@ const BookingList = () => {
 };
 
 export default BookingList;
-
-

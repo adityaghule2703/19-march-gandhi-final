@@ -11,7 +11,6 @@ import {
 } from '../../utils/tableImports';
 import tvsLogo from '../../assets/images/logo.png';
 import config from '../../config';
-import { hasPermission } from '../../utils/permissionUtils';
 import { 
   CButton, 
   CCard, 
@@ -30,16 +29,39 @@ import {
 } from '@coreui/react';
 import { useAuth } from '../../context/AuthContext';
 
+// Import permission utilities
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../utils/modulePermissions';
+
 const ViewLedgers = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Ledgers under ACCOUNT module
+  const canViewLedgers = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.LEDGERS);
+  const canCreateLedgers = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.LEDGERS);
+  const canUpdateLedgers = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.LEDGERS);
+  const canDeleteLedgers = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.LEDGERS);
+
   useEffect(() => {
+    if (!canViewLedgers) {
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewLedgers]);
 
   const fetchData = async () => {
     try {
@@ -59,38 +81,42 @@ const ViewLedgers = () => {
     }
   };
 
-
   const handleViewLedger = async (booking) => {
-  try {
-    const res = await axiosInstance.get(`/ledger/report/${booking._id}`);
-    const ledgerData = res.data.data;
-    const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${booking._id}`;
-
-    // First filter approved entries
-    let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
-
-    // Filter entries based on chassis allocation status
-    let filteredEntries = approvedEntries;
-    if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
-      // Show all entries where debit field exists (debit entries)
-      filteredEntries = approvedEntries.filter((entry) => 
-        entry.debit !== undefined && entry.debit !== null
-      );
+    if (!canViewLedgers) {
+      showError('You do not have permission to view ledgers');
+      return;
     }
+    
+    try {
+      const res = await axiosInstance.get(`/ledger/report/${booking._id}`);
+      const ledgerData = res.data.data;
+      const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${booking._id}`;
 
-    // Recalculate totals based on filtered entries
-    const totals = {
-      totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
-      totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
-      finalBalance: filteredEntries.reduce((sum, entry) => {
-        const credit = entry.credit || 0;
-        const debit = entry.debit || 0;
-        return sum + (debit - credit);
-      }, 0)
-    };
+      // First filter approved entries
+      let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
 
-    const win = window.open('', '_blank');
-    win.document.write(`
+      // Filter entries based on chassis allocation status
+      let filteredEntries = approvedEntries;
+      if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
+        // Show all entries where debit field exists (debit entries)
+        filteredEntries = approvedEntries.filter((entry) => 
+          entry.debit !== undefined && entry.debit !== null
+        );
+      }
+
+      // Recalculate totals based on filtered entries
+      const totals = {
+        totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
+        totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
+        finalBalance: filteredEntries.reduce((sum, entry) => {
+          const credit = entry.credit || 0;
+          const debit = entry.debit || 0;
+          return sum + (debit - credit);
+        }, 0)
+      };
+
+      const win = window.open('', '_blank');
+      win.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
@@ -232,18 +258,16 @@ const ViewLedgers = () => {
               </div>
               <div class="divider"></div>
               <div class="customer-info">
-                <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || ''}</div>
+                <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
                 <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
-                <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || ''}</div>
-                <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || ''}</div>
-                <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.chassisNo || ''}</div>
-                <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || ''}</div>
+                <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
+                <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
+                <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.chassisNo || 'N/A'}</div>
+                <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || 'N/A'}</div>
                 <div><strong>Chassis Allocated:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? 'Yes' : 'No'}</div>
-                <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || ''}</div>
-                <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || ''}</div>
+                <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || 'N/A'}</div>
+                <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || 'N/A'}</div>
               </div>
-              
-              
               
               <table>
                 <thead>
@@ -263,9 +287,9 @@ const ViewLedgers = () => {
                           .map(
                             (entry) => `
                               <tr>
-                                <td>${entry.date}</td>
-                                <td>${entry.description || ''}</td>
-                                <td>${entry.receiptNo || ''}</td>
+                                <td>${entry.date || 'N/A'}</td>
+                                <td>${entry.description || 'N/A'}</td>
+                                <td>${entry.receiptNo || 'N/A'}</td>
                                 <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN') : '-'}</td>
                                 <td class="text-right">${entry.debit !== undefined ? entry.debit.toLocaleString('en-IN') : '-'}</td>
                                 <td class="text-right">${entry.balance ? entry.balance.toLocaleString('en-IN') : '-'}</td>
@@ -311,16 +335,31 @@ const ViewLedgers = () => {
           </body>
         </html>
       `);
-  } catch (err) {
-    console.error('Error fetching ledger:', err);
-    setError('Failed to load ledger. Please try again.');
-  }
-};
+    } catch (err) {
+      console.error('Error fetching ledger:', err);
+      const message = showError(err);
+      if (message) {
+        setError(message);
+      }
+    }
+  };
 
   const handleSearch = (value) => {
+    if (!canViewLedgers) {
+      return;
+    }
+    
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('booking'));
   };
+
+  if (!canViewLedgers) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Ledgers.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -333,11 +372,18 @@ const ViewLedgers = () => {
   return (
     <div>
       <div className='title'>Customer Ledger</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
+      
       {error && (
-            <CAlert color="danger" className="mb-3">
-              {error}
-            </CAlert>
-          )}
+        <CAlert color="danger" className="mb-3">
+          {error}
+        </CAlert>
+      )}
           
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
@@ -349,6 +395,7 @@ const ViewLedgers = () => {
               className="d-inline-block square-search"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
+              disabled={!canViewLedgers}
             />
           </div>
         </CCardHeader>
@@ -367,42 +414,44 @@ const ViewLedgers = () => {
                   <CTableHeaderCell>Total</CTableHeaderCell>
                   <CTableHeaderCell>Received</CTableHeaderCell>
                   <CTableHeaderCell>Balance</CTableHeaderCell>
-                  {hasPermission(permissions,'LEDGER_READ') && <CTableHeaderCell>Action</CTableHeaderCell>}
+                  {canViewLedgers && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {currentRecords.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={hasPermission(permissions,'LEDGER_READ') ? "10" : "9"} className="text-center">
-                      No ledger details available
+                    <CTableDataCell colSpan={canViewLedgers ? "10" : "9"} className="text-center">
+                      No booking details available
                     </CTableDataCell>
                   </CTableRow>
                 ) : (
                   currentRecords.map((booking, index) => (
                     <CTableRow key={booking._id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
-                      <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
-                      <CTableDataCell>{booking.model?.model_name || ''}</CTableDataCell>
+                      <CTableDataCell>{booking.bookingNumber || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>
-                        {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ''}
+                        {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : 'N/A'}
                       </CTableDataCell>
-                      <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
+                      <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>
                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-                    ? (booking.chassisNumber || '')
-                    : ''
-                  }
+                          ? (booking.chassisNumber || 'N/A')
+                          : 'N/A'
+                        }
                       </CTableDataCell>
                       <CTableDataCell>₹{booking.discountedAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                       <CTableDataCell>₹{booking.receivedAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                       <CTableDataCell>₹{booking.balanceAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-                      {hasPermission(permissions,'LEDGER_READ') && (
+                      {canViewLedgers && (
                         <CTableDataCell>
                           <CButton
                             size="sm"
                             color="info"
                             className="action-btn"
                             onClick={() => handleViewLedger(booking)}
+                            disabled={!canViewLedgers}
+                            title={canViewLedgers ? "View Ledger" : "No permission to view ledger"}
                           >
                             View
                           </CButton>
@@ -421,4 +470,3 @@ const ViewLedgers = () => {
 };
 
 export default ViewLedgers;
-

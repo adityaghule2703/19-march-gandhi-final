@@ -4,7 +4,6 @@ import {
   React,
   useState,
   useEffect,
-  SearchOutlinedIcon,
   getDefaultSearchFields,
   useTableFilter,
   axiosInstance
@@ -24,9 +23,18 @@ import {
   CTableRow,
   CTableHeaderCell,
   CTableBody,
-  CTableDataCell
+  CTableDataCell,
+  CAlert
 } from '@coreui/react';
 import { showError } from '../../../utils/sweetAlerts';
+import { useAuth } from 'src/context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage
+} from 'src/utils/modulePermissions';
 
 const DeliveryChallan = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
@@ -40,9 +48,26 @@ const DeliveryChallan = () => {
   const [loading, setLoading] = useState(false);
   const [declarations, setDeclarations] = useState([]);
 
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Subdealer Booking - Delivery Challan page
+  const hasViewPermission = canViewPage(permissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.DELIVERY_CHALLAN);
+  
+  // Check for print permission
+  const hasPrintPermission = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_BOOKING, 
+    PAGES.SUBDEALER_BOOKING.DELIVERY_CHALLAN, 
+    ACTIONS.PRINT
+  );
+
   useEffect(() => {
+    if (!hasViewPermission) {
+      showError('You do not have permission to view Delivery Challan');
+      return;
+    }
     fetchData();
-  }, []);
+  }, [hasViewPermission]);
 
   const fetchData = async () => {
     try {
@@ -130,6 +155,11 @@ const DeliveryChallan = () => {
   };
 
   const handlePrint = async (booking, type) => {
+    if (!hasPrintPermission) {
+      showError('You do not have permission to print delivery challan');
+      return;
+    }
+    
     if (!booking) {
       setError('No booking data found');
       return;
@@ -603,6 +633,15 @@ tr.data-row td:nth-child(4) {
     handleFilter(searchValue, getDefaultSearchFields('booking'));
   };
 
+  // Early return if no view permission
+  if (!hasViewPermission) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Delivery Challan.
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
@@ -621,7 +660,7 @@ tr.data-row td:nth-child(4) {
         </CCardHeader>
         
         <CCardBody>
-          {error && <div className="alert alert-danger">{error}</div>}
+          {error && <CAlert color="danger">{error}</CAlert>}
           
           <div className="d-flex justify-content-between mb-3">
             <div></div>
@@ -664,31 +703,43 @@ tr.data-row td:nth-child(4) {
                       <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
                       <CTableDataCell>{booking.chassisNumber || ''}</CTableDataCell>
                       <CTableDataCell>
-                        <CButton 
-                          size="sm" 
-                          className="action-btn"
-                          onClick={() => handlePrint(booking, 'Customer Copy')}
-                        >
-                          <CIcon icon={cilPrint} className='icon'/> Print
-                        </CButton>
+                        {hasPrintPermission ? (
+                          <CButton 
+                            size="sm" 
+                            className="action-btn"
+                            onClick={() => handlePrint(booking, 'Customer Copy')}
+                          >
+                            <CIcon icon={cilPrint} className='icon'/> Print
+                          </CButton>
+                        ) : (
+                          <span className="text-muted">No permission</span>
+                        )}
                       </CTableDataCell>
                       <CTableDataCell>
-                        <CButton 
-                          size="sm" 
-                          className="action-btn"
-                          onClick={() => handlePrint(booking, 'Office Copy')}
-                        >
-                          <CIcon icon={cilPrint} className='icon'/> Print
-                        </CButton>
+                        {hasPrintPermission ? (
+                          <CButton 
+                            size="sm" 
+                            className="action-btn"
+                            onClick={() => handlePrint(booking, 'Office Copy')}
+                          >
+                            <CIcon icon={cilPrint} className='icon'/> Print
+                          </CButton>
+                        ) : (
+                          <span className="text-muted">No permission</span>
+                        )}
                       </CTableDataCell>
                       <CTableDataCell>
-                        <CButton 
-                          size="sm" 
-                          className="action-btn"
-                          onClick={() => handlePrint(booking, 'Helmet')}
-                        >
-                          <CIcon icon={cilPrint} className='icon'/> Print
-                        </CButton>
+                        {hasPrintPermission ? (
+                          <CButton 
+                            size="sm" 
+                            className="action-btn"
+                            onClick={() => handlePrint(booking, 'Helmet')}
+                          >
+                            <CIcon icon={cilPrint} className='icon'/> Print
+                          </CButton>
+                        ) : (
+                          <span className="text-muted">No permission</span>
+                        )}
                       </CTableDataCell>
                     </CTableRow>
                   ))

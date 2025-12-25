@@ -18,7 +18,8 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, showError, useTableFilter } from '../../../utils/tableImports';
 import '../../../css/invoice.css';
@@ -27,6 +28,18 @@ import AddInsurance from './AddInsurance';
 import ViewInsuranceModal from './ViewInsurance';
 import CIcon from '@coreui/icons-react';
 import { cilPlus, cilZoom, cilPencil } from '@coreui/icons';
+
+// Import the permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage
+} from '../../../utils/modulePermissions';
+import { useAuth } from '../../../context/AuthContext';
 
 function InsuranceReport() {
   const [activeTab, setActiveTab] = useState(0);
@@ -38,6 +51,27 @@ function InsuranceReport() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Insurance Details page under Insurance module
+  const canViewInsuranceDetails = canViewPage(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS
+  );
+  
+  const canCreateInsurance = canCreateInPage(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS
+  );
+  
+  const canUpdateInsurance = canUpdateInPage(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS
+  );
 
   const {
     data: pendingData,
@@ -62,6 +96,12 @@ function InsuranceReport() {
   } = useTableFilter([]);
 
   const fetchData = async () => {
+    if (!canViewInsuranceDetails) {
+      setError('Permission denied');
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/bookings/insurance-status/AWAITING`);
@@ -78,6 +118,10 @@ function InsuranceReport() {
   };
 
   const fetchCompleteData = async () => {
+    if (!canViewInsuranceDetails) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/insurance/status/COMPLETED`);
       setApprovedData(response.data.data);
@@ -91,15 +135,19 @@ function InsuranceReport() {
   };
 
   const fetchLaterData = async () => {
+    if (!canViewInsuranceDetails) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/insurance/status/LATER`);
       setLaterData(response.data.data);
       setFilteredLater(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -110,6 +158,11 @@ function InsuranceReport() {
   }, [refreshKey]);
 
   const handleAddClick = (booking) => {
+    if (!canCreateInsurance) {
+      showError('You do not have permission to add insurance');
+      return;
+    }
+    
     setSelectedBooking(booking);
     setSelectedInsurance(null);
     setShowModal(true);
@@ -122,13 +175,18 @@ function InsuranceReport() {
       setShowViewModal(true);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
   const handleUpdateClick = async (item) => {
+    if (!canUpdateInsurance) {
+      showError('You do not have permission to update insurance');
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/insurance/${item.id}`);
       setSelectedInsurance(response.data.data);
@@ -171,13 +229,13 @@ function InsuranceReport() {
               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
               <CTableHeaderCell scope="col">Insurance Status</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              {canCreateInsurance && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canCreateInsurance ? "8" : "7"} style={{ color: 'red', textAlign: 'center' }}>
                   No data available
                 </CTableDataCell>
               </CTableRow>
@@ -195,16 +253,18 @@ function InsuranceReport() {
                       {booking.insuranceStatus}
                     </CBadge>
                   </CTableDataCell>
-                  <CTableDataCell>
-                    <CButton 
-                      size="sm" 
-                      className="action-btn"
-                      onClick={() => handleAddClick(booking)}
-                    >
-                      <CIcon icon={cilPlus} className="me-1" />
-                      Add
-                    </CButton>
-                  </CTableDataCell>
+                  {canCreateInsurance && (
+                    <CTableDataCell>
+                      <CButton 
+                        size="sm" 
+                        className="action-btn"
+                        onClick={() => handleAddClick(booking)}
+                      >
+                        <CIcon icon={cilPlus} className="me-1" />
+                        Add
+                      </CButton>
+                    </CTableDataCell>
+                  )}
                 </CTableRow>
               ))
             )}
@@ -285,13 +345,13 @@ function InsuranceReport() {
               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
               <CTableHeaderCell scope="col">Insurance Status</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              {canUpdateInsurance && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredLater.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canUpdateInsurance ? "8" : "7"} style={{ color: 'red', textAlign: 'center' }}>
                   No data available
                 </CTableDataCell>
               </CTableRow>
@@ -309,16 +369,18 @@ function InsuranceReport() {
                       {item.status}
                     </CBadge>
                   </CTableDataCell>
-                  <CTableDataCell>
-                    <CButton 
-                      size="sm" 
-                      className="action-btn"
-                      onClick={() => handleUpdateClick(item)}
-                    >
-                      <CIcon icon={cilPencil} className="me-1" />
-                      Update
-                    </CButton>
-                  </CTableDataCell>
+                  {canUpdateInsurance && (
+                    <CTableDataCell>
+                      <CButton 
+                        size="sm" 
+                        className="action-btn"
+                        onClick={() => handleUpdateClick(item)}
+                      >
+                        <CIcon icon={cilPencil} className="me-1" />
+                        Update
+                      </CButton>
+                    </CTableDataCell>
+                  )}
                 </CTableRow>
               ))
             )}
@@ -327,6 +389,15 @@ function InsuranceReport() {
       </div>
     );
   };
+
+  // Check if user has permission to view the page
+  if (!canViewInsuranceDetails) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Insurance Details.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -339,7 +410,7 @@ function InsuranceReport() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -349,7 +420,6 @@ function InsuranceReport() {
       <div className='title'>Insurance Report</div>
       
       <CCard className='table-container mt-4'>
-        
         <CCardBody>
           <CNav variant="tabs" className="mb-3 border-bottom">
             <CNavItem>

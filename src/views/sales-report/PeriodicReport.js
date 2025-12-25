@@ -5,14 +5,43 @@ import * as XLSX from 'xlsx';
 import '../../css/report.css';
 import { toast } from 'react-toastify';
 import axiosInstance from '../../axiosInstance';
+import { useNavigate } from 'react-router-dom';
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+import { showError } from '../../utils/sweetAlerts';
 
 const PeriodicReport = () => {
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(new Date());
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth();
+
+  // Permission check for Periodic Report page under Sales Report module
+  const canViewPeriodicReport = canViewPage(permissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.PERIODIC_REPORT);
+
+  useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewPeriodicReport) {
+      showError('You do not have permission to view Periodic Report');
+      navigate('/dashboard');
+      return;
+    }
+  }, [canViewPeriodicReport, navigate]);
 
   const fetchPeriodicReport = async () => {
+    if (!canViewPeriodicReport) {
+      showError('You do not have permission to view Periodic Report');
+      return;
+    }
+
     if (!fromDate || !toDate) {
       toast.error('Please select both from and to dates');
       return;
@@ -45,6 +74,11 @@ const PeriodicReport = () => {
   };
 
   const exportToExcel = () => {
+    if (!canViewPeriodicReport) {
+      showError('You do not have permission to export Periodic Report');
+      return;
+    }
+
     if (reportData.length === 0) {
       toast.error('No data to export');
       return;
@@ -109,10 +143,19 @@ const PeriodicReport = () => {
   };
 
   useEffect(() => {
-    if (fromDate && toDate) {
+    if (fromDate && toDate && canViewPeriodicReport) {
       fetchPeriodicReport();
     }
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, canViewPeriodicReport]);
+
+  // Check if user has permission to view this page
+  if (!canViewPeriodicReport) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Periodic Report.
+      </div>
+    );
+  }
 
   return (
     <div className="rto-report-container">
@@ -149,7 +192,11 @@ const PeriodicReport = () => {
             />
           </div>
 
-          <button className="export-button" onClick={exportToExcel} disabled={loading || reportData.length === 0}>
+          <button 
+            className="export-button" 
+            onClick={exportToExcel} 
+            disabled={loading || reportData.length === 0}
+          >
             {loading ? 'Loading...' : 'Export to Excel'}
           </button>
         </div>

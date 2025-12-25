@@ -6,8 +6,6 @@ import {
   CButton,
   CFormCheck,
   CButtonGroup,
-  CCol,
-  CRow,
   CFormSwitch,
   CTable,
   CTableHead,
@@ -20,10 +18,11 @@ import {
   CAccordionHeader,
   CAccordionBody,
   CSpinner,
-  CAlert
+  CAlert,
+  CBadge
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilListRich, cilUser, cilSearch } from '@coreui/icons';
+import { cilListRich, cilUser, cilCheck, cilX } from '@coreui/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { showFormSubmitError, showFormSubmitToast } from 'src/utils/sweetAlerts';
 import axiosInstance from 'src/axiosInstance';
@@ -31,7 +30,104 @@ import FormButtons from 'src/utils/FormButtons';
 import '../../css/form.css';
 import '../../css/table.css';
 import { showError } from '../../utils/sweetAlerts';
-import { refreshUserPermissions} from '../../utils/permissionRefresh';
+
+// Complete sidebar structure with all pages
+const sidebarStructure = {
+  "Dashboard": {
+    pages: ["Dashboard"],
+    availablePermissions: ["VIEW"]
+  },
+  "Purchase": {
+    pages: ["Inward Stock", "Stock Verification", "Stock Transfer", "Upload Challan", "RTO Chassis"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Sales": {
+    pages: ["New Booking", "All Booking", "Self Insurance", "Delivery Challan", "GST Invoice", "Helmet Invoice", "Deal Form", "Upload Deal Form & Delivery Challan"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Sales Report": {
+    pages: ["Sales Person Wise", "Periodic Report"],
+    availablePermissions: ["VIEW"]
+  },
+  "Quotation": {
+    pages: ["Quotation"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Account": {
+    pages: ["Dashboard", "Receipts", "Debit Note", "Refund", "Cancelled Booking", "All Receipts", "Ledgers", "Exchange Ledger", "Broker Payment Verification", "Report"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Insurance": {
+    pages: ["Dashboard", "Insurance Details"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "RTO": {
+    pages: ["Dashboard", "Application", "RTO Paper", "RTO Tax", "HSRP Ordering", "HSRP Installation", "RC Confirmation", "Report"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Fund Management": {
+    pages: ["Cash Voucher", "Contra Voucher", "Contra Approval", "Workshop Cash Receipt", "All Cash Receipt", "Cash Book", "Day Book", "Report"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Masters": {
+    pages: ["Location", "Headers", "Vehicles", "Minimum Booking Amount", "Template List", "Accessories", "Colour", "Documents", "Terms & Conditions", "Offer", "Attachments", "Declaration", "RTO", "Financer", "Finance Rates", "Insurance Providers", "Brokers", "Broker Commission Range", "Vertical Masters"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Fund Master": {
+    pages: ["Cash Account Master", "Bank Account Master", "Payment Mode", "Expense Master", "Add Opening Balance"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Accessories Billing": {
+    pages: ["Accessories Billing"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Customers": {
+    pages: ["Customers"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Subdealer": {
+    pages: ["Subdealer Stock Audit"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Subdealer Master": {
+    pages: ["Subdealer List", "Subdealer Audit List", "Subdealer Commission", "Calculate Commission"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Subdealer Booking": {
+    pages: ["New Booking", "All Booking", "Delivery Challan"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "Subdealer Account": {
+    pages: ["Add Balance", "OnAccount Balance", "Add Amount", "Finance Payment", "Payment Verification", "Subdealer Commission", "Payment Summary", "Subdealer Ledger", "Customer Ledger", "Summary"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
+  "User Management": {
+    pages: ["Create Role", "All Role", "Add User", "User List", "Buffer Report", "Manager Deviation"],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  }
+};
+
+// Map sidebar module names to API module names
+const moduleNameMap = {
+  "Dashboard": "DASHBOARD",
+  "Purchase": "PURCHASE",
+  "Sales": "SALES",
+  "Sales Report": "SALES_REPORT",
+  "Quotation": "QUOTATION",
+  "Account": "ACCOUNT",
+  "Insurance": "INSURANCE",
+  "RTO": "RTO",
+  "Fund Management": "FUND_MANAGEMENT",
+  "Masters": "MASTERS",
+  "Fund Master": "FUND_MASTER",
+  "Accessories Billing": "ACCESSORIES_BILLING",
+  "Customers": "CUSTOMERS",
+  "Subdealer": "SUBDEALER",
+  "Subdealer Master": "SUBDEALER_MASTER",
+  "Subdealer Booking": "SUBDEALER_BOOKING",
+  "Subdealer Account": "SUBDEALER_ACCOUNT",
+  "User Management": "USER_MANAGEMENT"
+};
 
 const CreateRoleWithHierarchy = () => {
   const navigate = useNavigate();
@@ -39,98 +135,147 @@ const CreateRoleWithHierarchy = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    is_active: true,
-    permissions: []
+    is_active: true
   });
 
-  const [permissionsData, setPermissionsData] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [errors, setErrors] = useState({});
   const [activeModule, setActiveModule] = useState(null);
-
-  const mainModules = {
-    Masters: [
-      'ACCESSORIES',
-      'ACCESSORY_CATEGORY',
-      'ATTACHMENTS',
-      'BRANCH',
-      'BROKER',
-      'COLOR',
-      'CSV',
-      'DECLARATION',
-      'EMPLOYEE',
-      'FINANCE_PROVIDER',
-      'HEADER',
-      'INSURANCE',
-      'INSURANCE_PROVIDER',
-      'MODEL',
-      'OFFER',
-      'RTO',
-      'SUBDEALERMODEL',
-      'TERMS_CONDITION',
-      'VERTICLE_MASTER',
-      'MINIMUMAMOUNT'
-    ],
-    Template:['TEMPLATE'],
-    Purchase: ['VEHICLE_INWARD', 'STOCK_TRANSFER'],
-    Sales: ['BOOKING', 'FINANCE_LETTER', 'KYC','FINANCE_DOCUMENT'],
-    Fund_Management: ['CASH_VOUCHER', 'CONTRA_VOUCHER', 'EXPENSE_ACCOUNT', 'WORKSHOP_RECEIPT'],
-    Fund_Master: ['BANK', 'BANK_SUB_PAYMENT_MODE', 'CASH_LOCATION', 'EXPENSE_ACCOUNT'],
-    Accessory_Billing: ['ACCESSORY_BILLING'],
-    Account: ['LEDGER', 'BROKER_LEDGER'],
-    Insurance: ['INSURANCE'],
-    Rto: ['RTO_PROCESS'],
-    Subdealer_Master: ['SUBDEALER', 'SUBDEALER_COMMISSION', 'SUBDEALERMODEL'],
-    Subdealer_Accounts: ['SUBDEALER_ON_ACCOUNT', 'SUBDEALER_COMMISSION'],
-    Quotation: ['CUSTOMER', 'QUOTATION'],
-    User_Management: ['PERMISSION', 'ROLE', 'SUBDEALER', 'USER', 'USER_BUFFER', 'USER_STATUS']
-  };
+  const [pagePermissions, setPagePermissions] = useState({});
+  const [mainHeaderAccess, setMainHeaderAccess] = useState({});
+  const [permissionsList, setPermissionsList] = useState([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
 
   useEffect(() => {
     fetchPermissions();
-    if (id) fetchRole(id);
-  }, [id]);
+  }, []);
+
+  useEffect(() => {
+    if (permissionsList.length > 0) {
+      if (id) {
+        fetchRole(id);
+      } else {
+        initializeEmptyPermissions();
+        setLoading(false);
+      }
+    }
+  }, [id, permissionsList]);
 
   const fetchPermissions = async () => {
     try {
-      setLoading(true);
-      const res = await axiosInstance.get('/permissions');
-      setPermissionsData(res.data.data);
-      setLoading(false);
+      setPermissionsLoading(true);
+      const res = await axiosInstance.get('/roles/permissions');
+      setPermissionsList(res.data.data || []);
+      setPermissionsLoading(false);
     } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }    
-      setLoading(false);
+      console.error('Error fetching permissions:', error);
+      setError('Failed to fetch permissions. Please try again.');
+      setPermissionsLoading(false);
     }
+  };
+
+  const initializeEmptyPermissions = () => {
+    const initialMainHeaderAccess = {};
+    const initialPagePermissions = {};
+
+    Object.keys(sidebarStructure).forEach(mainHeader => {
+      initialMainHeaderAccess[mainHeader] = false;
+      
+      const headerPages = sidebarStructure[mainHeader].pages;
+      headerPages.forEach(page => {
+        const pageKey = `${mainHeader}_${page}`;
+        const pagePerms = {};
+        
+        // Check what permissions are available in the API for this page
+        const apiModuleName = moduleNameMap[mainHeader];
+        const availablePermissions = sidebarStructure[mainHeader].availablePermissions;
+        
+        availablePermissions.forEach(permType => {
+          // Check if this permission exists in the API
+          const hasPermissionInAPI = permissionsList.some(perm => 
+            perm.module === apiModuleName && 
+            perm.page === page && 
+            perm.action === permType.toUpperCase()
+          );
+          
+          pagePerms[permType] = false; // Initialize as false
+        });
+        
+        initialPagePermissions[pageKey] = pagePerms;
+      });
+    });
+
+    setMainHeaderAccess(initialMainHeaderAccess);
+    setPagePermissions(initialPagePermissions);
   };
 
   const fetchRole = async (roleId) => {
     try {
+      setLoading(true);
       const res = await axiosInstance.get(`/roles/${roleId}`);
-      const serverPerms = res.data.data.permissions ?? [];
+      const roleData = res.data.data;
 
-      if (permissionsData.length === 0) {
-        await fetchPermissions();
+      // Set form data
+      setFormData({
+        name: roleData.name || '',
+        description: roleData.description || '',
+        is_active: roleData.is_active !== undefined ? roleData.is_active : true
+      });
+
+      // Initialize main header access and page permissions from API data
+      const initialMainHeaderAccess = {};
+      const initialPagePermissions = {};
+
+      // First, set all to false
+      Object.keys(sidebarStructure).forEach(mainHeader => {
+        initialMainHeaderAccess[mainHeader] = false;
+        
+        const headerPages = sidebarStructure[mainHeader].pages;
+        headerPages.forEach(page => {
+          const pageKey = `${mainHeader}_${page}`;
+          const pagePerms = {};
+          sidebarStructure[mainHeader].availablePermissions.forEach(permType => {
+            pagePerms[permType] = false;
+          });
+          initialPagePermissions[pageKey] = pagePerms;
+        });
+      });
+
+      // Now populate with API data
+      if (roleData.moduleAccess) {
+        Object.keys(roleData.moduleAccess).forEach(module => {
+          if (sidebarStructure[module]) {
+            initialMainHeaderAccess[module] = roleData.moduleAccess[module];
+          }
+        });
       }
 
-      const selectedPermissionIds = serverPerms.map((perm) => {
-        if (typeof perm === 'object' && perm._id) {
-          return perm._id;
-        }
-        return perm;
-      });
+      if (roleData.pageAccess) {
+        Object.keys(roleData.pageAccess).forEach(module => {
+          if (sidebarStructure[module] && roleData.pageAccess[module]) {
+            Object.keys(roleData.pageAccess[module]).forEach(page => {
+              const pageKey = `${module}_${page}`;
+              const permissionsArray = roleData.pageAccess[module][page];
+              
+              if (initialPagePermissions[pageKey]) {
+                sidebarStructure[module].availablePermissions.forEach(permType => {
+                  initialPagePermissions[pageKey][permType] = 
+                    permissionsArray.includes(permType.toUpperCase());
+                });
+              }
+            });
+          }
+        });
+      }
 
-      setFormData({
-        ...res.data.data,
-        permissions: selectedPermissionIds
-      });
+      setMainHeaderAccess(initialMainHeaderAccess);
+      setPagePermissions(initialPagePermissions);
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching role:', error);
       setError('Failed to fetch role data. Please try again.');
+      setLoading(false);
     }
   };
 
@@ -140,142 +285,121 @@ const CreateRoleWithHierarchy = () => {
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const togglePermission = (permissionId) => {
-    setFormData((prev) => {
-      const newPermissions = [...prev.permissions];
-      const index = newPermissions.indexOf(permissionId);
+  const handleMainHeaderAccessChange = (mainHeader, hasAccess) => {
+    setMainHeaderAccess(prev => ({
+      ...prev,
+      [mainHeader]: hasAccess
+    }));
 
-      if (index >= 0) {
-        newPermissions.splice(index, 1);
-      } else {
-        newPermissions.push(permissionId);
-      }
-
-      return { ...prev, permissions: newPermissions };
-    });
-  };
-
-  const handleModuleAction = (actionType, moduleName = null) => {
-    setFormData((prev) => {
-      let newPermissions = [...prev.permissions];
-
-      const targetModule = moduleName || activeModule;
-
-      if (!targetModule) return prev;
-
-      if (actionType === 'none') {
-        const modulePermissionIds = permissionsData.filter((p) => mainModules[targetModule].includes(p.module)).map((p) => p._id);
-
-        newPermissions = newPermissions.filter((id) => !modulePermissionIds.includes(id));
-      } else if (actionType === 'selectAll') {
-        const modulePermissionIds = permissionsData.filter((p) => mainModules[targetModule].includes(p.module)).map((p) => p._id);
-        modulePermissionIds.forEach((id) => {
-          if (!newPermissions.includes(id)) {
-            newPermissions.push(id);
-          }
+    // If access is removed, clear all permissions for pages in this header
+    if (!hasAccess) {
+      const newPagePermissions = { ...pagePermissions };
+      sidebarStructure[mainHeader].pages.forEach(page => {
+        const pageKey = `${mainHeader}_${page}`;
+        const perms = {};
+        sidebarStructure[mainHeader].availablePermissions.forEach(perm => {
+          perms[perm] = false;
         });
-      } else if (actionType === 'viewOnly') {
-        const moduleReadPermissionIds = permissionsData
-          .filter((p) => mainModules[targetModule].includes(p.module) && p.action === 'READ')
-          .map((p) => p._id);
-        const allModulePermissionIds = permissionsData.filter((p) => mainModules[targetModule].includes(p.module)).map((p) => p._id);
-
-        newPermissions = newPermissions.filter((id) => !allModulePermissionIds.includes(id));
-
-        moduleReadPermissionIds.forEach((id) => {
-          if (!newPermissions.includes(id)) {
-            newPermissions.push(id);
-          }
-        });
-      }
-
-      return { ...prev, permissions: newPermissions };
-    });
-  };
-
-  const handleGlobalAction = (actionType) => {
-    setFormData((prev) => {
-      let newPermissions = [];
-
-      if (actionType === 'none') {
-        return { ...prev, permissions: [] };
-      }
-
-      if (actionType === 'selectAll') {
-        newPermissions = permissionsData.map((p) => p._id);
-      }
-
-      if (actionType === 'viewOnly') {
-        newPermissions = permissionsData.filter((p) => p.action === 'READ').map((p) => p._id);
-      }
-
-      return { ...prev, permissions: newPermissions };
-    });
-  };
-
-  const formatLabel = (text) => {
-    return text
-      .split('_')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
-  };
-
-  const isPermissionEnabled = (permissionId) => {
-    return formData.permissions.includes(permissionId);
-  };
-
-  const getPermissionsForModule = (module) => {
-    return permissionsData.filter((p) => p.module === module);
-  };
-
-  const getAvailableActionsForMainModule = (mainModule) => {
-    const allActions = new Set();
-
-    mainModules[mainModule].forEach((submodule) => {
-      const submodulePermissions = getPermissionsForModule(submodule);
-      submodulePermissions.forEach((permission) => {
-        allActions.add(permission.action);
+        newPagePermissions[pageKey] = perms;
       });
-    });
-
-    return Array.from(allActions).sort();
+      setPagePermissions(newPagePermissions);
+    }
   };
 
-  const getFilteredMainModules = () => {
-    return Object.keys(mainModules).filter((mainModule) => {
-      if (!searchTerm) return true;
+  const handlePagePermissionChange = (mainHeader, page, permissionType, value) => {
+    const pageKey = `${mainHeader}_${page}`;
+    setPagePermissions(prev => ({
+      ...prev,
+      [pageKey]: {
+        ...prev[pageKey],
+        [permissionType]: value
+      }
+    }));
+  };
 
-      const mainModuleMatch = mainModule.toLowerCase().includes(searchTerm.toLowerCase());
-      const submoduleMatch = mainModules[mainModule].some((submodule) => submodule.toLowerCase().includes(searchTerm.toLowerCase()));
+  const handleSelectAllPagePermissions = (mainHeader, page) => {
+    const pageKey = `${mainHeader}_${page}`;
+    const availablePermissions = sidebarStructure[mainHeader].availablePermissions;
+    
+    setPagePermissions(prev => ({
+      ...prev,
+      [pageKey]: availablePermissions.reduce((acc, perm) => {
+        acc[perm] = true;
+        return acc;
+      }, {})
+    }));
+  };
 
-      return mainModuleMatch || submoduleMatch;
-    });
+  const handleClearAllPagePermissions = (mainHeader, page) => {
+    const pageKey = `${mainHeader}_${page}`;
+    setPagePermissions(prev => ({
+      ...prev,
+      [pageKey]: sidebarStructure[mainHeader].availablePermissions.reduce((acc, perm) => {
+        acc[perm] = false;
+        return acc;
+      }, {})
+    }));
   };
 
   const validate = () => {
-    const { name, permissions } = formData;
+    const { name } = formData;
     const errs = {};
 
     if (!name.trim()) errs.name = 'Role name is required';
-    if (permissions.length === 0) errs.permissions = 'Please grant at least one permission';
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
+  };
+
+  const generatePayload = () => {
+    const payload = {
+      name: formData.name,
+      description: formData.description,
+      is_active: formData.is_active,
+      moduleAccess: { ...mainHeaderAccess },
+      pageAccess: {}
+    };
+
+    // Build pageAccess structure
+    Object.keys(sidebarStructure).forEach(mainHeader => {
+      if (mainHeaderAccess[mainHeader]) {
+        const pageAccessForModule = {};
+        
+        sidebarStructure[mainHeader].pages.forEach(page => {
+          const pageKey = `${mainHeader}_${page}`;
+          const pagePerms = pagePermissions[pageKey] || {};
+          
+          // Convert boolean permissions to array of permission strings
+          const permissionsArray = [];
+          sidebarStructure[mainHeader].availablePermissions.forEach(permType => {
+            if (pagePerms[permType]) {
+              permissionsArray.push(permType.toUpperCase());
+            }
+          });
+          
+          if (permissionsArray.length > 0) {
+            pageAccessForModule[page] = permissionsArray;
+          }
+        });
+        
+        if (Object.keys(pageAccessForModule).length > 0) {
+          payload.pageAccess[mainHeader] = pageAccessForModule;
+        }
+      }
+    });
+
+    return payload;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    const payload = {
-      ...formData
-    };
-
+    const payload = generatePayload();
+    
     try {
       if (id) {
         await axiosInstance.put(`/roles/${id}`, payload);
-        await refreshUserPermissions();
-        // triggerPermissionRefresh();
         await showFormSubmitToast('Role updated successfully!', () => navigate('/roles/all-role'));
       } else {
         await axiosInstance.post('/roles', payload);
@@ -289,7 +413,18 @@ const CreateRoleWithHierarchy = () => {
 
   const handleCancel = () => navigate('/roles/all-role');
 
-  if (loading) {
+  const checkPermissionExists = (mainHeader, page, permissionType) => {
+    const apiModuleName = moduleNameMap[mainHeader];
+    if (!apiModuleName) return false;
+    
+    return permissionsList.some(perm => 
+      perm.module === apiModuleName && 
+      perm.page === page && 
+      perm.action === permissionType.toUpperCase()
+    );
+  };
+
+  if (permissionsLoading || loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
         <CSpinner color="primary" size="lg" />
@@ -322,7 +457,13 @@ const CreateRoleWithHierarchy = () => {
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilUser} />
                   </CInputGroupText>
-                  <CFormInput type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Enter role name" />
+                  <CFormInput 
+                    type="text" 
+                    name="name" 
+                    value={formData.name} 
+                    onChange={handleChange} 
+                    placeholder="Enter role name" 
+                  />
                 </CInputGroup>
                 {errors.name && <p className="error">{errors.name}</p>}
               </div>
@@ -355,130 +496,144 @@ const CreateRoleWithHierarchy = () => {
               </div>
             </div>
 
-            {/* ------------ Permissions table ------------- */}
-            <div className="permissions-container mt-3">
-              <CRow className="mb-3 align-items-center">
-                <CCol>
-                  <h6 className="mb-0">Permissions</h6>
-                </CCol>
-                <CCol className="text-end">
-                  <CButtonGroup>
-                    <CButton color="secondary" onClick={() => handleGlobalAction('none')} variant="outline">
-                      None (All)
-                    </CButton>
-                    <CButton color="secondary" onClick={() => handleGlobalAction('selectAll')} variant="outline">
-                      Select All (All)
-                    </CButton>
-                    <CButton color="secondary" onClick={() => handleGlobalAction('viewOnly')} variant="outline">
-                      View Only (All)
-                    </CButton>
-                  </CButtonGroup>
-                </CCol>
-              </CRow>
-
-              <CRow className="mb-3 align-items-center">
-                <CCol>
-                  <CInputGroup className="search-box">
-                    <CInputGroupText className="input-icon">
-                      <CIcon icon={cilSearch} />
-                    </CInputGroupText>
-                    <CFormInput
-                      placeholder="Search modules or submodules..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      style={{ height: '35px' }}
-                    />
-                  </CInputGroup>
-                </CCol>
-              </CRow>
-
+            {/* ------------ Permissions Section ------------- */}
+            <div className="permissions-container mt-4">
+              <h5 className="mb-3">Permissions Configuration</h5>
+              <p className="text-muted mb-4">
+                Total permissions available: {permissionsList.length}
+              </p>
+              
               <CAccordion activeItemKey={activeModule} onActiveItemChange={setActiveModule}>
-                {getFilteredMainModules().map((mainModule) => {
-                  const availableActionsForModule = getAvailableActionsForMainModule(mainModule);
+                {Object.keys(sidebarStructure).map((mainHeader) => {
+                  const hasAccess = mainHeaderAccess[mainHeader] || false;
+                  const pageCount = sidebarStructure[mainHeader].pages.length;
+                  const availablePerms = sidebarStructure[mainHeader].availablePermissions;
 
                   return (
-                    <CAccordionItem key={mainModule} itemKey={mainModule}>
+                    <CAccordionItem key={mainHeader} itemKey={mainHeader}>
                       <CAccordionHeader>
-                        <div className="d-flex justify-content-between w-100 me-3">
-                          <h6 className="mb-0">{formatLabel(mainModule)}</h6>
-                          <span className="badge bg-primary rounded-pill">{mainModules[mainModule].length} submodules</span>
+                        <div className="d-flex justify-content-between w-100 me-3 align-items-center">
+                          <div>
+                            <h6 className="mb-0">{mainHeader}</h6>
+                            <small className="text-muted">{pageCount} pages</small>
+                          </div>
+                          <div className="d-flex align-items-center gap-2">
+                            <CBadge color={hasAccess ? "success" : "secondary"} className="me-2">
+                              {hasAccess ? 'Access Granted' : 'No Access'}
+                            </CBadge>
+                            <CButtonGroup size="sm">
+                              <CButton 
+                                color={hasAccess ? "success" : "secondary"} 
+                                variant={hasAccess ? "outline" : "outline"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMainHeaderAccessChange(mainHeader, true);
+                                }}
+                              >
+                                <CIcon icon={cilCheck} /> Yes
+                              </CButton>
+                              <CButton 
+                                color={!hasAccess ? "danger" : "secondary"} 
+                                variant={!hasAccess ? "outline" : "outline"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMainHeaderAccessChange(mainHeader, false);
+                                }}
+                              >
+                                <CIcon icon={cilX} /> No
+                              </CButton>
+                            </CButtonGroup>
+                          </div>
                         </div>
                       </CAccordionHeader>
                       <CAccordionBody>
-                        <div className="module-actions mb-2">
-                          <CButtonGroup size="sm">
-                            <CButton color="secondary" onClick={() => handleModuleAction('none', mainModule)} variant="outline">
-                              None
-                            </CButton>
-                            <CButton color="secondary" onClick={() => handleModuleAction('selectAll', mainModule)} variant="outline">
-                              Select All
-                            </CButton>
-                            <CButton color="secondary" onClick={() => handleModuleAction('viewOnly', mainModule)} variant="outline">
-                              View Only
-                            </CButton>
-                          </CButtonGroup>
-                        </div>
-                        <div className="table-responsive">
-                          <CTable bordered responsive hover small className="permission-table">
-                            <CTableHead color="light">
-                              <CTableRow>
-                                <CTableHeaderCell scope="col">Submodule</CTableHeaderCell>
-                                {availableActionsForModule.map((action) => (
-                                  <CTableHeaderCell key={action} scope="col" className="text-center">
-                                    {action.charAt(0).toUpperCase() + action.slice(1).toLowerCase()}
-                                  </CTableHeaderCell>
-                                ))}
-                              </CTableRow>
-                            </CTableHead>
-                            <CTableBody>
-                              {mainModules[mainModule]
-                                .filter(
-                                  (submodule) =>
-                                    !searchTerm ||
-                                    submodule.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    mainModule.toLowerCase().includes(searchTerm.toLowerCase())
-                                )
-                                .map((submodule) => {
-                                  const submodulePermissions = getPermissionsForModule(submodule);
-                                  return (
-                                    <CTableRow key={submodule}>
-                                      <CTableHeaderCell className="table-header-fixed" scope="row">
-                                        {formatLabel(submodule)}
+                        {hasAccess ? (
+                          <div className="pages-permissions">
+                            <div className="table-responsive">
+                              <CTable bordered responsive hover small className="permission-table">
+                                <CTableHead color="light">
+                                  <CTableRow>
+                                    <CTableHeaderCell scope="col">Page</CTableHeaderCell>
+                                    {availablePerms.map((perm) => (
+                                      <CTableHeaderCell key={perm} scope="col" className="text-center">
+                                        {perm}
                                       </CTableHeaderCell>
-                                      {availableActionsForModule.map((action) => {
-                                        const permission = submodulePermissions.find((p) => p.action === action);
-                                        return (
-                                          <CTableDataCell key={`${submodule}-${action}`} className="text-center">
-                                            {permission ? (
-                                              <CFormCheck
-                                                type="checkbox"
-                                                checked={isPermissionEnabled(permission._id)}
-                                                onChange={() => togglePermission(permission._id)}
-                                                aria-label={`${submodule}-${action}`}
-                                              />
-                                            ) : (
-                                              <span>-</span>
-                                            )}
-                                          </CTableDataCell>
-                                        );
-                                      })}
-                                    </CTableRow>
-                                  );
-                                })}
-                            </CTableBody>
-                          </CTable>
-                        </div>
+                                    ))}
+                                    <CTableHeaderCell scope="col" className="text-center">Actions</CTableHeaderCell>
+                                  </CTableRow>
+                                </CTableHead>
+                                <CTableBody>
+                                  {sidebarStructure[mainHeader].pages.map((page) => {
+                                    const pageKey = `${mainHeader}_${page}`;
+                                    const pagePerms = pagePermissions[pageKey] || {};
+
+                                    return (
+                                      <CTableRow key={pageKey}>
+                                        <CTableHeaderCell scope="row">
+                                          {page}
+                                        </CTableHeaderCell>
+                                        {availablePerms.map((perm) => {
+                                          const permissionExists = checkPermissionExists(mainHeader, page, perm);
+                                          const isChecked = pagePerms[perm] || false;
+                                          
+                                          return (
+                                            <CTableDataCell key={`${pageKey}-${perm}`} className="text-center">
+                                              {permissionExists ? (
+                                                <CFormCheck
+                                                  type="checkbox"
+                                                  checked={isChecked}
+                                                  onChange={(e) => handlePagePermissionChange(mainHeader, page, perm, e.target.checked)}
+                                                  aria-label={`${page}-${perm}`}
+                                                />
+                                              ) : (
+                                                <span className="text-muted" title="Permission not available in system">
+                                                  N/A
+                                                </span>
+                                              )}
+                                            </CTableDataCell>
+                                          );
+                                        })}
+                                        <CTableDataCell className="text-center">
+                                          <CButtonGroup size="sm">
+                                            <CButton 
+                                              color="primary" 
+                                              size="sm" 
+                                              variant="outline"
+                                              onClick={() => handleSelectAllPagePermissions(mainHeader, page)}
+                                              title="Select all available permissions"
+                                            >
+                                              All
+                                            </CButton>
+                                            <CButton 
+                                              color="secondary" 
+                                              size="sm" 
+                                              variant="outline"
+                                              onClick={() => handleClearAllPagePermissions(mainHeader, page)}
+                                              title="Clear all permissions"
+                                            >
+                                              None
+                                            </CButton>
+                                          </CButtonGroup>
+                                        </CTableDataCell>
+                                      </CTableRow>
+                                    );
+                                  })}
+                                </CTableBody>
+                              </CTable>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-4">
+                            <CIcon icon={cilX} size="xl" className="text-muted mb-2" />
+                            <p className="text-muted mb-0">No access granted for {mainHeader}</p>
+                            <small>Click "Yes" to grant access and configure permissions</small>
+                          </div>
+                        )}
                       </CAccordionBody>
                     </CAccordionItem>
                   );
                 })}
               </CAccordion>
-
-              {errors.permissions && (
-                <p className="error" style={{ color: 'red' }}>
-                  {errors.permissions}
-                </p>
-              )}
             </div>
 
             {/* ------------ Buttons ------------- */}

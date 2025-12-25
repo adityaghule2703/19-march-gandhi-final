@@ -26,9 +26,19 @@ import {
 import CIcon from '@coreui/icons-react';
 import { cilUser, cilSearch} from '@coreui/icons';
 import { useNavigate } from 'react-router-dom';
-import { showError,showSuccess } from '../../utils/sweetAlerts';
+import { showError, showSuccess } from '../../utils/sweetAlerts';
 import axiosInstance from '../../axiosInstance';
 import TransferChallan from './StockChallan';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canDeleteInPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 function StockTransfer() {
   const [formData, setFormData] = useState({
@@ -49,24 +59,56 @@ function StockTransfer() {
   const [showChallanModal, setShowChallanModal] = useState(false);
   const [challanData, setChallanData] = useState(null);
   const navigate = useNavigate();
+  
+  const { permissions = [] } = useAuth();
+  
+  // Page-level permission checks for Stock Transfer page under Purchase module
+  const hasStockTransferView = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.STOCK_TRANSFER, 
+    ACTIONS.VIEW
+  );
+  
+  const hasStockTransferCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.STOCK_TRANSFER, 
+    ACTIONS.CREATE
+  );
+  
+  const hasStockTransferDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.STOCK_TRANSFER, 
+    ACTIONS.DELETE
+  );
+  
+  // Using convenience functions
+  const canViewStockTransfer = canViewPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.STOCK_TRANSFER);
+  const canCreateStockTransfer = canCreateInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.STOCK_TRANSFER);
+  const canDeleteStockTransfer = canDeleteInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.STOCK_TRANSFER);
+
+  // Based on your permissions: VIEW = true, CREATE = false, DELETE = true
+  console.log('Permissions check:', {
+    canViewStockTransfer,
+    canCreateStockTransfer,
+    canDeleteStockTransfer
+  });
 
   useEffect(() => {
-    const fetchBranches = async () => {
-      try {
-        const response = await axiosInstance.get('/branches');
-        setBranches(response.data.data || []);
-      } catch (error) {
-        const message = showError(error);
-        if (message) {
-          setError(message);
-        }
-      }
-    };
-
+    // Check permission before loading data
+    if (!canViewStockTransfer) {
+      showError('You do not have permission to view Stock Transfer');
+      return;
+    }
+    
     fetchBranches();
   }, []);
 
   useEffect(() => {
+    if (!canViewStockTransfer) return;
+    
     const fetchSubdealers = async () => {
       if (formData.fromBranch) {
         try {
@@ -84,7 +126,23 @@ function StockTransfer() {
     fetchSubdealers();
   }, [formData.fromBranch]);
 
+  const fetchBranches = async () => {
+    if (!canViewStockTransfer) return;
+    
+    try {
+      const response = await axiosInstance.get('/branches');
+      setBranches(response.data.data || []);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    }
+  };
+
   const fetchVehiclesForBranch = async (branchId) => {
+    if (!canViewStockTransfer) return;
+    
     try {
       const res = await axiosInstance.get(`/vehicles/branch/${branchId}?locationType=branch`);
       const inStockVehicles = (res.data.data.vehicles || []).filter((vehicle) => vehicle.status === 'in_stock');
@@ -98,6 +156,8 @@ function StockTransfer() {
   };
 
   useEffect(() => {
+    if (!canViewStockTransfer) return;
+    
     if (searchTerm) {
       const filtered = vehicles.filter((vehicle) => {
         const searchLower = searchTerm.toLowerCase();
@@ -120,6 +180,8 @@ function StockTransfer() {
   }, [searchTerm, vehicles]);
 
   const handleChange = (e) => {
+    if (!canViewStockTransfer) return;
+    
     const { name, value } = e.target;
 
     if (name === 'toType') {
@@ -153,6 +215,11 @@ function StockTransfer() {
   };
 
   const handleVehicleSelect = (vehicleId, isSelected) => {
+    if (!canCreateStockTransfer) {
+      showError('You do not have permission to select vehicles for transfer');
+      return;
+    }
+    
     setSelectedVehicles((prev) => {
       if (isSelected) {
         return [...prev, vehicleId];
@@ -164,6 +231,12 @@ function StockTransfer() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!canCreateStockTransfer) {
+      showError('You do not have permission to transfer stock');
+      return;
+    }
+    
     setIsSubmitting(true);
     const newErrors = {};
     
@@ -235,7 +308,7 @@ function StockTransfer() {
       setSelectedVehicles([]);
     } catch (error) {
       const message = showError(error); 
-  if (message) setError(message);
+      if (message) setError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -249,12 +322,28 @@ function StockTransfer() {
     setShowChallanModal(false);
   };
 
+  // Check permission before rendering
+  if (!canViewStockTransfer) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Stock Transfer.
+      </div>
+    );
+  }
+
   return (
     <div className="form-container">
       <div className="title">TRANSFER STOCK TO NETWORK</div>
       {error && <CAlert color="danger">{error}</CAlert>}
       <div className="form-card">
         <div className="form-body">
+          {/* READ-ONLY VIEW FOR USERS WITHOUT CREATE PERMISSION */}
+          {!canCreateStockTransfer ? (
+            <div className="alert alert-warning mb-4">
+              <strong>Note:</strong> You have VIEW permission only. You can view stock transfer information but cannot create new transfers.
+            </div>
+          ) : null}
+          
           <form onSubmit={handleSubmit}>
             <div className="user-details">
               <div className="input-box">
@@ -271,7 +360,7 @@ function StockTransfer() {
                     value={formData.fromBranch} 
                     onChange={handleChange} 
                     invalid={!!errors.fromBranch}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !canCreateStockTransfer}
                   >
                     <option value="">-Select-</option>
                     {branches.map((branch) => (
@@ -299,7 +388,7 @@ function StockTransfer() {
                     value={formData.toType} 
                     onChange={handleChange} 
                     invalid={!!errors.toType}
-                    disabled={!formData.fromBranch || isSubmitting}
+                    disabled={!formData.fromBranch || isSubmitting || !canCreateStockTransfer}
                   >
                     <option value="branch">Branch</option>
                     <option value="subdealer">Subdealer</option>
@@ -324,7 +413,7 @@ function StockTransfer() {
                       value={formData.toBranch} 
                       onChange={handleChange} 
                       invalid={!!errors.toBranch}
-                      disabled={!formData.fromBranch || isSubmitting}
+                      disabled={!formData.fromBranch || isSubmitting || !canCreateStockTransfer}
                     >
                       <option value="">-Select-</option>
                       {branches
@@ -356,7 +445,7 @@ function StockTransfer() {
                       value={formData.toSubdealer} 
                       onChange={handleChange} 
                       invalid={!!errors.toSubdealer}
-                      disabled={!formData.fromBranch || isSubmitting}
+                      disabled={!formData.fromBranch || isSubmitting || !canCreateStockTransfer}
                     >
                       <option value="">-Select-</option>
                       {subdealers.map((subdealer) => (
@@ -374,22 +463,30 @@ function StockTransfer() {
 
             </div>
             <div className="form-footer">
-                <button 
-                  type="submit" 
-                  className="submit-button" 
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Transferring...' : 'Transfer'}
-                </button>
-                <button 
-                  type="button" 
-                  className="cancel-button" 
-                  onClick={handleCancel} 
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-              </div>
+              {canCreateStockTransfer ? (
+                <>
+                  <button 
+                    type="submit" 
+                    className="submit-button" 
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Transferring...' : 'Transfer'}
+                  </button>
+                  <button 
+                    type="button" 
+                    className="cancel-button" 
+                    onClick={handleCancel} 
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <div className="alert alert-info">
+                  <strong>View Mode:</strong> You have VIEW permission only. To create transfers, contact your administrator.
+                </div>
+              )}
+            </div>
           </form>
 
           {vehicles.length > 0 && formData.fromBranch ? (
@@ -406,6 +503,7 @@ function StockTransfer() {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       placeholder="Search by chassis, model, type..."
+                      disabled={!canCreateStockTransfer}
                     />
                   </CInputGroup>
                 </CCol>
@@ -419,15 +517,17 @@ function StockTransfer() {
               <CTable striped bordered hover responsive>
                 <CTableHead className="table-header-fixed">
                   <CTableRow>
-                    <CTableHeaderCell>
-                      Select
-                    </CTableHeaderCell>
+                    {canCreateStockTransfer && (
+                      <CTableHeaderCell>
+                        Select
+                      </CTableHeaderCell>
+                    )}
                     <CTableHeaderCell>Sr. No</CTableHeaderCell>
                     <CTableHeaderCell>Unload Location</CTableHeaderCell>
                     <CTableHeaderCell>Inward Date</CTableHeaderCell>
                     <CTableHeaderCell>Type</CTableHeaderCell>
                     <CTableHeaderCell>Vehicle Model</CTableHeaderCell>
-                   <CTableHeaderCell>Color</CTableHeaderCell>
+                    <CTableHeaderCell>Color</CTableHeaderCell>
                     <CTableHeaderCell>Chassis No</CTableHeaderCell>
                     <CTableHeaderCell>Current Status</CTableHeaderCell>
                   </CTableRow>
@@ -436,13 +536,15 @@ function StockTransfer() {
                   {filteredVehicles.length > 0 ? (
                     filteredVehicles.map((vehicle, index) => (
                       <CTableRow key={vehicle._id}>
-                        <CTableDataCell>
-                          <CFormCheck
-                            onChange={(e) => handleVehicleSelect(vehicle._id, e.target.checked)}
-                            checked={selectedVehicles.includes(vehicle._id)}
-                            disabled={isSubmitting}
-                          />
-                        </CTableDataCell>
+                        {canCreateStockTransfer && (
+                          <CTableDataCell>
+                            <CFormCheck
+                              onChange={(e) => handleVehicleSelect(vehicle._id, e.target.checked)}
+                              checked={selectedVehicles.includes(vehicle._id)}
+                              disabled={isSubmitting}
+                            />
+                          </CTableDataCell>
+                        )}
                         <CTableDataCell>{index + 1}</CTableDataCell>
                         <CTableDataCell>{vehicle.unloadLocation?.name || ''}</CTableDataCell>
                         <CTableDataCell>{new Date(vehicle.createdAt).toLocaleDateString()}</CTableDataCell>
@@ -455,7 +557,7 @@ function StockTransfer() {
                     ))
                   ) : (
                     <CTableRow>
-                      <CTableDataCell colSpan={9} className="text-center">
+                      <CTableDataCell colSpan={canCreateStockTransfer ? 9 : 8} className="text-center">
                         {searchTerm ? 'No vehicles match your search criteria' : 'No in-stock vehicles found'}
                       </CTableDataCell>
                     </CTableRow>

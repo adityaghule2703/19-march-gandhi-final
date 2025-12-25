@@ -17,16 +17,27 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import { Link } from 'react-router-dom';
 import CIcon from '@coreui/icons-react';
-import { cilCloudUpload,cilZoom } from '@coreui/icons';
+import { cilCloudUpload, cilZoom } from '@coreui/icons';
 import { axiosInstance, getDefaultSearchFields, showError, useTableFilter } from '../../utils/tableImports';
 import '../../css/invoice.css';
 import '../../css/table.css';
 import KYCDocuments from './KYCDocuments';
-import { hasPermission } from '../../utils/permissionUtils';
+
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canUpdateInPage,
+  canCreateInPage
+} from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 function RTOPaper() {
@@ -37,7 +48,26 @@ function RTOPaper() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for RTO Paper page under RTO module
+  const canViewRTOPaper = canViewPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.RTO_PAPER
+  );
+  
+  const canUpdateRTOPaper = canUpdateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.RTO_PAPER
+  );
+  
+  const canCreateRTOPaper = canCreateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.RTO_PAPER
+  );
 
   const {
     data: pendingData,
@@ -56,11 +86,21 @@ function RTOPaper() {
   } = useTableFilter([]);
 
   useEffect(() => {
+    if (!canViewRTOPaper) {
+      setError('Permission denied');
+      setLoading(false);
+      return;
+    }
+    
     fetchData();
     fetchLocationData();
-  }, []);
+  }, [canViewRTOPaper]);
 
   const fetchData = async () => {
+    if (!canViewRTOPaper) {
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/rtoProcess/rtopaperspending`);
@@ -68,15 +108,19 @@ function RTOPaper() {
       setFilteredPendings(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchLocationData = async () => {
+    if (!canViewRTOPaper) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/rtoProcess/rtopaperapproved`);
       setApprovedData(response.data.data);
@@ -90,6 +134,11 @@ function RTOPaper() {
   };
 
   const handleViewKYC = async (rtoItem) => {
+    if (!canViewRTOPaper) {  // Changed from canUpdateRTOPaper to canViewRTOPaper
+      showError('You do not have permission to view KYC documents');
+      return;
+    }
+    
     try {
       const bookingId = rtoItem.bookingId?.id;
       setSelectedRtoId(rtoItem._id);
@@ -143,13 +192,13 @@ function RTOPaper() {
               <CTableHeaderCell scope="col">Contact Number1</CTableHeaderCell>
               <CTableHeaderCell scope="col">RTO Paper</CTableHeaderCell>
               <CTableHeaderCell scope="col">Upload KYC</CTableHeaderCell>
-              {hasPermission(permissions,'RTO_PROCESS_UPDATE') && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+              {canViewRTOPaper && <CTableHeaderCell scope="col">Action</CTableHeaderCell>} {/* Changed to canViewRTOPaper */}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan={hasPermission(permissions,'RTO_PROCESS_UPDATE') ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canViewRTOPaper ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}> {/* Changed to canViewRTOPaper */}
                   No data available
                 </CTableDataCell>
               </CTableRow>
@@ -169,26 +218,30 @@ function RTOPaper() {
                   </CTableDataCell>
                   <CTableDataCell>
                     {!rtoItem.kycStatus || rtoItem.kycStatus === 'NOT_UPLOADED' || rtoItem.kycStatus === 'REJECTED' ? (
-                      <Link
-                        to={`/upload-kyc/${rtoItem.bookingId?.id}`}
-                        state={{
-                          bookingId: rtoItem.bookingId?.id,
-                          customerName: rtoItem.bookingId?.customerName,
-                          address: `${rtoItem.bookingId?.customerAddress || ''}`,
-                          chassisNumber: rtoItem.bookingId?.chassisNumber
-                        }}
-                      >
-                        <CButton size="sm" className="upload-kyc-btn icon-only">
-                          <CIcon icon={cilCloudUpload} />
-                        </CButton>
-                      </Link>
+                      canCreateRTOPaper ? (
+                        <Link
+                          to={`/upload-kyc/${rtoItem.bookingId?.id}`}
+                          state={{
+                            bookingId: rtoItem.bookingId?.id,
+                            customerName: rtoItem.bookingId?.customerName,
+                            address: `${rtoItem.bookingId?.customerAddress || ''}`,
+                            chassisNumber: rtoItem.bookingId?.chassisNumber
+                          }}
+                        >
+                          <CButton size="sm" className="upload-kyc-btn icon-only">
+                            <CIcon icon={cilCloudUpload} />
+                          </CButton>
+                        </Link>
+                      ) : (
+                        <span className="text-muted">No permission</span>
+                      )
                     ) : (
                       <span className={`status-badge ${(rtoItem.kycStatus || '').toLowerCase()}`}>
                         {rtoItem.kycStatus || 'N/A'}
                       </span>
                     )}
                   </CTableDataCell>
-                  {hasPermission(permissions,'RTO_PROCESS_UPDATE') && (
+                  {canViewRTOPaper && (  // Changed to canViewRTOPaper
                     <CTableDataCell>
                       <CButton 
                         size="sm" 
@@ -254,6 +307,15 @@ function RTOPaper() {
     );
   };
 
+  // Check if user has permission to view the page
+  if (!canViewRTOPaper) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view RTO Paper Management.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -265,7 +327,7 @@ function RTOPaper() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-       {error}
+        {error}
       </div>
     );
   }
@@ -275,7 +337,6 @@ function RTOPaper() {
       <div className='title'>RTO Paper Management</div>
       
       <CCard className='table-container mt-4'>
-        
         <CCardBody>
           <CNav variant="tabs" className="mb-3 border-bottom">
             <CNavItem>

@@ -25,6 +25,14 @@ import {
   CSpinner
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
+import { useAuth } from '../../context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage
+} from '../../utils/modulePermissions';
 
 const CashReceipt = () => {
   const [loading, setLoading] = useState(true);
@@ -32,10 +40,19 @@ const CashReceipt = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
+  const { permissions } = useAuth();
+  
+  // Page-level permission check for All Cash Receipt page under Fund Management module
+  const canViewCashReceipt = canViewPage(permissions, MODULES.FUND_MANAGEMENT, PAGES.FUND_MANAGEMENT.ALL_CASH_RECEIPT);
 
   useEffect(() => {
+    if (!canViewCashReceipt) {
+      showError('You do not have permission to view Cash Receipts');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewCashReceipt]);
 
   const fetchData = async () => {
     try {
@@ -89,6 +106,14 @@ const CashReceipt = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('vouchers'));
   };
+
+  if (!canViewCashReceipt) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Cash Receipts.
+      </div>
+    );
+  }
 
   if (loading) {
     return (

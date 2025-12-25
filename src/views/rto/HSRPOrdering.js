@@ -17,15 +17,26 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, useTableFilter } from '../../utils/tableImports';
 import '../../css/invoice.css';
 import '../../css/table.css';
 import { confirmVerify, showError, showSuccess } from '../../utils/sweetAlerts';
-import { hasPermission } from '../../utils/permissionUtils';
 import CIcon from '@coreui/icons-react';
-import {cilCheckCircle } from '@coreui/icons';
+import { cilCheckCircle } from '@coreui/icons';
+
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canUpdateInPage,
+  canCreateInPage
+} from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 function HSRPOrdering() {
@@ -33,7 +44,27 @@ function HSRPOrdering() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for HSRP Ordering page under RTO module
+  const canViewHSRPOrdering = canViewPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.HSRP_ORDERING
+  );
+  
+  const canUpdateHSRPOrdering = canUpdateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.HSRP_ORDERING
+  );
+
+  const canCreateHSRPOrdering = canCreateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.HSRP_ORDERING
+  );
+
   const {
     data: pendingData,
     setData: setPendingData,
@@ -51,11 +82,21 @@ function HSRPOrdering() {
   } = useTableFilter([]);
 
   useEffect(() => {
+    if (!canViewHSRPOrdering) {
+      setError('Permission denied');
+      setLoading(false);
+      return;
+    }
+    
     fetchData();
     fetchLocationData();
-  }, []);
+  }, [canViewHSRPOrdering]);
 
   const fetchData = async () => {
+    if (!canViewHSRPOrdering) {
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/rtoProcess/hsrporderedpending`);
@@ -72,6 +113,10 @@ function HSRPOrdering() {
   };
 
   const fetchLocationData = async () => {
+    if (!canViewHSRPOrdering) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/rtoProcess/hsrpordered`);
       setApprovedData(response.data.data);
@@ -82,6 +127,11 @@ function HSRPOrdering() {
   };
 
   const handleVerify = async (item) => {
+    if (!canCreateHSRPOrdering) {
+      showError('You do not have permission to verify HSRP Ordering');
+      return;
+    }
+    
     try {
       const result = await confirmVerify();
 
@@ -104,6 +154,7 @@ function HSRPOrdering() {
     setActiveTab(tab);
     setSearchTerm('');
   };
+  
   const renderPendingTable = () => {
     return (
       <div className="responsive-table-wrapper">
@@ -118,13 +169,13 @@ function HSRPOrdering() {
               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
               <CTableHeaderCell scope="col">Contact Number</CTableHeaderCell>
-              {hasPermission(permissions,'RTO_PROCESS_UPDATE') && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+              {canCreateHSRPOrdering && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan={hasPermission(permissions,'RTO_PROCESS_UPDATE') ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canCreateHSRPOrdering ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}>
                   No data available
                 </CTableDataCell>
               </CTableRow>
@@ -139,7 +190,7 @@ function HSRPOrdering() {
                   <CTableDataCell>{item.bookingId?.chassisNumber || 'N/A'}</CTableDataCell>
                   <CTableDataCell>{item.bookingId?.customerName || 'N/A'}</CTableDataCell>
                   <CTableDataCell>{item.bookingId?.customerMobile || 'N/A'}</CTableDataCell>
-                  {hasPermission(permissions,'RTO_PROCESS_UPDATE') && (
+                  {canCreateHSRPOrdering && (
                     <CTableDataCell>
                       <CButton 
                         size="sm" 
@@ -205,6 +256,15 @@ function HSRPOrdering() {
     );
   };
 
+  // Check if user has permission to view the page
+  if (!canViewHSRPOrdering) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view HSRP Ordering Management.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -216,7 +276,7 @@ function HSRPOrdering() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -226,27 +286,6 @@ function HSRPOrdering() {
       <div className='title'>HSRP Ordering Management</div>
       
       <CCard className='table-container mt-4'>
-        {/* <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-          <div>
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-            >
-              <CIcon icon={cilSearch} className='icon' /> Search
-            </CButton>
-            {searchTerm && (
-              <CButton 
-                size="sm" 
-                color="secondary" 
-                className="action-btn me-1"
-                onClick={handleResetSearch}
-              >
-                <CIcon icon={cilZoomOut} className='icon' /> Reset Search
-              </CButton>
-            )}
-          </div>
-        </CCardHeader> */}
-        
         <CCardBody>
           <CNav variant="tabs" className="mb-3 border-bottom">
             <CNavItem>

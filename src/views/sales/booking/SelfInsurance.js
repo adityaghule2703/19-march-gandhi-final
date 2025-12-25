@@ -40,6 +40,19 @@ import {
   CFormTextarea,
   CModalFooter,
 } from '@coreui/react'
+// Import permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions'
+import { useAuth } from '../../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 const SelfInsurance = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([])
@@ -54,9 +67,44 @@ const SelfInsurance = () => {
   const [anchorEl, setAnchorEl] = useState(null)
   const [menuId, setMenuId] = useState(null)
 
+  // Get user permissions from auth context
+  const { permissions = [] } = useAuth()
+  const navigate = useNavigate()
+
+  // Page-level permission checks for Self Insurance page under Sales module
+  const canViewSelfInsurance = canViewPage(permissions, MODULES.SALES, PAGES.SALES.SELF_INSURANCE)
+  const canCreateSelfInsurance = canCreateInPage(permissions, MODULES.SALES, PAGES.SALES.SELF_INSURANCE)
+  const canUpdateSelfInsurance = canUpdateInPage(permissions, MODULES.SALES, PAGES.SALES.SELF_INSURANCE)
+  const canDeleteSelfInsurance = canDeleteInPage(permissions, MODULES.SALES, PAGES.SALES.SELF_INSURANCE)
+
+  // Specific action permissions - Approve/Reject use CREATE permission (POST method)
+  const canApproveSelfInsurance = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.SELF_INSURANCE, 
+    ACTIONS.CREATE
+  )
+  
+  const canRejectSelfInsurance = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.SELF_INSURANCE, 
+    ACTIONS.CREATE
+  )
+
+  // Show action column if user can approve or reject
+  const showActionColumn = canApproveSelfInsurance || canRejectSelfInsurance
+
   useEffect(() => {
+    // Check if user has permission to view the page
+    if (!canViewSelfInsurance) {
+      showError('You do not have permission to view Self Insurance')
+      navigate('/dashboard')
+      return
+    }
+    
     fetchData()
-  }, [])
+  }, [canViewSelfInsurance])
 
   const fetchData = async () => {
     try {
@@ -80,11 +128,26 @@ const SelfInsurance = () => {
   }
 
   const handleSearch = (value) => {
+    if (!canViewSelfInsurance) {
+      showError('You do not have permission to search self insurance')
+      return
+    }
+    
     setSearchTerm(value)
     handleFilter(value, getDefaultSearchFields('booking'))
   }
 
   const handleApproveReject = (booking, decision) => {
+    if (decision === 'APPROVE' && !canApproveSelfInsurance) {
+      showError('You do not have permission to approve self insurance')
+      return
+    }
+    
+    if (decision === 'REJECT' && !canRejectSelfInsurance) {
+      showError('You do not have permission to reject self insurance')
+      return
+    }
+    
     setSelectedBooking(booking)
     setActionType(decision)
     setNote('')
@@ -98,6 +161,17 @@ const SelfInsurance = () => {
   if (message) {
     setError(message);
   }
+      return
+    }
+
+    // Check permission based on action type
+    if (actionType === 'APPROVE' && !canApproveSelfInsurance) {
+      showError('You do not have permission to approve self insurance')
+      return
+    }
+    
+    if (actionType === 'REJECT' && !canRejectSelfInsurance) {
+      showError('You do not have permission to reject self insurance')
       return
     }
 
@@ -133,6 +207,11 @@ const SelfInsurance = () => {
   }
 
   const handleClick = (event, id) => {
+    if (!showActionColumn) {
+      showError('You do not have permission to perform actions on self insurance')
+      return
+    }
+    
     setAnchorEl(event.currentTarget)
     setMenuId(id)
   }
@@ -203,6 +282,15 @@ const SelfInsurance = () => {
     }
   }
 
+  // Check if user has permission to view the page
+  if (!canViewSelfInsurance) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Self Insurance.
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -230,14 +318,19 @@ const SelfInsurance = () => {
         <CCardHeader className="card-header d-flex justify-content-between align-items-center">
           <div></div>
           <div className="d-flex">
-            <CFormLabel className="mt-1 m-1">Search:</CFormLabel>
-            <CFormInput
-              type="text"
-              className="d-inline-block square-search"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Search bookings..."
-            />
+            {/* Search field - Requires VIEW permission */}
+            {canViewSelfInsurance && (
+              <>
+                <CFormLabel className="mt-1 m-1">Search:</CFormLabel>
+                <CFormInput
+                  type="text"
+                  className="d-inline-block square-search"
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="Search bookings..."
+                />
+              </>
+            )}
           </div>
         </CCardHeader>
 
@@ -257,7 +350,7 @@ const SelfInsurance = () => {
                   <CTableHeaderCell>Cancellation Status</CTableHeaderCell>
                   <CTableHeaderCell>Total Amount</CTableHeaderCell>
                   <CTableHeaderCell>Balance Amount</CTableHeaderCell>
-                  <CTableHeaderCell>Action</CTableHeaderCell>
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
@@ -298,81 +391,95 @@ const SelfInsurance = () => {
                       <CTableDataCell>
                         ₹{booking.balanceAmount?.toLocaleString('en-IN') || '0'}
                       </CTableDataCell>
-                      <CTableDataCell>
-                        <CButton
-                          size="sm"
-                          className='option-button btn-sm'
-                          onClick={(event) => handleClick(event, booking._id)}
-                        >
-                          <CIcon icon={cilSettings} />
-                          Options
-                        </CButton>
-                        
-                        {/* Material-UI Menu Component */}
-                        <Menu 
-                          id={`action-menu-${booking._id}`} 
-                          anchorEl={anchorEl} 
-                          open={menuId === booking._id} 
-                          onClose={handleClose}
-                          anchorOrigin={{
-                            vertical: 'bottom',
-                            horizontal: 'right',
-                          }}
-                          transformOrigin={{
-                            vertical: 'top',
-                            horizontal: 'right',
-                          }}
-                          style={{
-                            marginTop: '8px',
-                          }}
-                        >
-                          <MenuItem 
-                            onClick={() => handleApproveReject(booking, 'APPROVE')}
-                            style={{ 
-                              padding: '8px 16px',
-                              minWidth: '140px',
-                              fontSize: '14px',
-                              color: '#198754',
+                      {showActionColumn && (
+                        <CTableDataCell>
+                          <CButton
+                            size="sm"
+                            className='option-button btn-sm'
+                            onClick={(event) => handleClick(event, booking._id)}
+                            disabled={!canApproveSelfInsurance && !canRejectSelfInsurance}
+                          >
+                            <CIcon icon={cilSettings} />
+                            Options
+                          </CButton>
+                          
+                          {/* Material-UI Menu Component */}
+                          <Menu 
+                            id={`action-menu-${booking._id}`} 
+                            anchorEl={anchorEl} 
+                            open={menuId === booking._id} 
+                            onClose={handleClose}
+                            anchorOrigin={{
+                              vertical: 'bottom',
+                              horizontal: 'right',
+                            }}
+                            transformOrigin={{
+                              vertical: 'top',
+                              horizontal: 'right',
+                            }}
+                            style={{
+                              marginTop: '8px',
                             }}
                           >
-                            <CIcon icon={cilCheckCircle} className="me-2" />
-                            Approve
-                          </MenuItem>
-                          <MenuItem 
-                            onClick={() => handleApproveReject(booking, 'REJECT')}
-                            style={{ 
-                              padding: '8px 16px',
-                              minWidth: '140px',
-                              fontSize: '14px',
-                              color: '#dc3545',
-                            }}
-                          >
-                            <CIcon icon={cilXCircle} className="me-2" />
-                            Reject
-                          </MenuItem>
-                          <div style={{ 
-                            height: '1px', 
-                            backgroundColor: '#e9ecef', 
-                            margin: '4px 0'
-                          }}/>
-                          <MenuItem 
-                            onClick={handleClose}
-                            style={{ 
-                              padding: '8px 16px',
-                              minWidth: '140px',
-                              fontSize: '14px',
-                              color: '#6c757d',
-                            }}
-                          >
-                            Close
-                          </MenuItem>
-                        </Menu>
-                      </CTableDataCell>
+                            {/* Approve option - Requires CREATE permission */}
+                            {canApproveSelfInsurance && (
+                              <MenuItem 
+                                onClick={() => handleApproveReject(booking, 'APPROVE')}
+                                style={{ 
+                                  padding: '8px 16px',
+                                  minWidth: '140px',
+                                  fontSize: '14px',
+                                  color: '#198754',
+                                }}
+                              >
+                                <CIcon icon={cilCheckCircle} className="me-2" />
+                                Approve
+                              </MenuItem>
+                            )}
+                            
+                            {/* Reject option - Requires CREATE permission */}
+                            {canRejectSelfInsurance && (
+                              <MenuItem 
+                                onClick={() => handleApproveReject(booking, 'REJECT')}
+                                style={{ 
+                                  padding: '8px 16px',
+                                  minWidth: '140px',
+                                  fontSize: '14px',
+                                  color: '#dc3545',
+                                }}
+                              >
+                                <CIcon icon={cilXCircle} className="me-2" />
+                                Reject
+                              </MenuItem>
+                            )}
+                            
+                            {(canApproveSelfInsurance || canRejectSelfInsurance) && (
+                              <div style={{ 
+                                height: '1px', 
+                                backgroundColor: '#e9ecef', 
+                                margin: '4px 0'
+                              }}/>
+                            )}
+                            
+                            <MenuItem 
+                              onClick={handleClose}
+                              style={{ 
+                                padding: '8px 16px',
+                                minWidth: '140px',
+                                fontSize: '14px',
+                                color: '#6c757d',
+                              }}
+                            >
+                              Close
+                            </MenuItem>
+                          </Menu>
+                        </CTableDataCell>
+                      )}
                     </CTableRow>
                   ))
                 ) : (
                   <CTableRow>
-                    <CTableDataCell colSpan="12" className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "12" : "11"} className="text-center">
                       No self insurance bookings found.
                     </CTableDataCell>
                   </CTableRow>
@@ -383,77 +490,81 @@ const SelfInsurance = () => {
         </CCardBody>
       </CCard>
 
-      {/* Decision Modal */}
-      <CModal visible={modalVisible} onClose={() => setModalVisible(false)}>
-        <CModalHeader onClose={() => setModalVisible(false)}>
-          <CModalTitle>
-            {actionType === 'APPROVE' ? 'Approve' : 'Reject'} Self Insurance Request
-          </CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <div className="mb-3">
-            <strong>Booking Details:</strong>
-            <div className="mt-2">
-              <p><strong>Booking ID:</strong> {selectedBooking?.bookingNumber}</p>
-              <p><strong>Customer:</strong> {selectedBooking?.customerDetails?.name}</p>
-              <p><strong>Model:</strong> {selectedBooking?.model?.model_name}</p>
-              <p><strong>Total Amount:</strong> ₹{selectedBooking?.discountedAmount?.toLocaleString('en-IN')}</p>
-              <p><strong>Cancellation Status:</strong> {selectedBooking?.cancellationRequest?.status || 'Not Requested'}</p>
+      {/* Decision Modal - Only shown if user has CREATE permission */}
+      {(canApproveSelfInsurance || canRejectSelfInsurance) && (
+        <CModal visible={modalVisible} onClose={() => setModalVisible(false)}>
+          <CModalHeader onClose={() => setModalVisible(false)}>
+            <CModalTitle>
+              {actionType === 'APPROVE' ? 'Approve' : 'Reject'} Self Insurance Request
+            </CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <div className="mb-3">
+              <strong>Booking Details:</strong>
+              <div className="mt-2">
+                <p><strong>Booking ID:</strong> {selectedBooking?.bookingNumber}</p>
+                <p><strong>Customer:</strong> {selectedBooking?.customerDetails?.name}</p>
+                <p><strong>Model:</strong> {selectedBooking?.model?.model_name}</p>
+                <p><strong>Total Amount:</strong> ₹{selectedBooking?.discountedAmount?.toLocaleString('en-IN')}</p>
+                <p><strong>Cancellation Status:</strong> {selectedBooking?.cancellationRequest?.status || 'Not Requested'}</p>
+              </div>
             </div>
-          </div>
-          
-          <div className="mb-3">
-            <CFormLabel htmlFor="note">
-              <strong>Note *</strong> 
-              <span className="text-muted ms-1">
-                (Please provide reason for {actionType === 'APPROVE' ? 'approval' : 'rejection'})
-              </span>
-            </CFormLabel>
-            <CFormTextarea
-              id="note"
-              rows={4}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={
-                actionType === 'APPROVE' 
-                  ? "Enter note for approval. Example: Customer will arrange their own insurance policy..."
-                  : "Enter note for rejection. Example: Insurance must be purchased through dealer as per policy..."
-              }
-              required
-            />
-          </div>
-        </CModalBody>
-        <CModalFooter>
-          <CButton 
-            color="secondary" 
-            onClick={() => {
-              setModalVisible(false)
-              setSelectedBooking(null)
-              setNote('')
-            }}
-            disabled={processing}
-          >
-            Cancel
-          </CButton>
-          <CButton 
-            color={actionType === 'APPROVE' ? 'success' : 'danger'}
-            onClick={handleSubmitDecision}
-            disabled={!note.trim() || processing}
-          >
-            {processing ? (
-              <>
-                <CSpinner component="span" size="sm" />
-                <span className="ms-1">Processing...</span>
-              </>
-            ) : (
-              <>
-                <CIcon icon={actionType === 'APPROVE' ? cilCheckCircle : cilXCircle} className="me-2" />
-                {actionType === 'APPROVE' ? 'Approve Request' : 'Reject Request'}
-              </>
-            )}
-          </CButton>
-        </CModalFooter>
-      </CModal>
+            
+            <div className="mb-3">
+              <CFormLabel htmlFor="note">
+                <strong>Note *</strong> 
+                <span className="text-muted ms-1">
+                  (Please provide reason for {actionType === 'APPROVE' ? 'approval' : 'rejection'})
+                </span>
+              </CFormLabel>
+              <CFormTextarea
+                id="note"
+                rows={4}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={
+                  actionType === 'APPROVE' 
+                    ? "Enter note for approval. Example: Customer will arrange their own insurance policy..."
+                    : "Enter note for rejection. Example: Insurance must be purchased through dealer as per policy..."
+                }
+                required
+              />
+            </div>
+          </CModalBody>
+          <CModalFooter>
+            <CButton 
+              color="secondary" 
+              onClick={() => {
+                setModalVisible(false)
+                setSelectedBooking(null)
+                setNote('')
+              }}
+              disabled={processing}
+            >
+              Cancel
+            </CButton>
+            <CButton 
+              color={actionType === 'APPROVE' ? 'success' : 'danger'}
+              onClick={handleSubmitDecision}
+              disabled={!note.trim() || processing || 
+                (actionType === 'APPROVE' && !canApproveSelfInsurance) ||
+                (actionType === 'REJECT' && !canRejectSelfInsurance)}
+            >
+              {processing ? (
+                <>
+                  <CSpinner component="span" size="sm" />
+                  <span className="ms-1">Processing...</span>
+                </>
+              ) : (
+                <>
+                  <CIcon icon={actionType === 'APPROVE' ? cilCheckCircle : cilXCircle} className="me-2" />
+                  {actionType === 'APPROVE' ? 'Approve Request' : 'Reject Request'}
+                </>
+              )}
+            </CButton>
+          </CModalFooter>
+        </CModal>
+      )}
     </div>
   )
 }

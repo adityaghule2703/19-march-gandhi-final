@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -7,13 +6,44 @@ import '../../css/report.css';
 import { toast } from 'react-toastify';
 import axiosInstance from '../../axiosInstance';
 
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+
 const RTOReport = () => {
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(new Date());
   const [reportData, setReportData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Report page under RTO module
+  const canViewRTOReport = canViewPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.REPORT
+  );
+  
+  const canExportRTOReport = canCreateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.REPORT
+  );
+
   const fetchRTOReport = async () => {
+    if (!canViewRTOReport) {
+      toast.error('You do not have permission to view RTO Report');
+      return;
+    }
+
     if (!fromDate || !toDate) {
       toast.error('Please select both from and to dates');
       return;
@@ -46,6 +76,11 @@ const RTOReport = () => {
   };
 
   const exportToExcel = () => {
+    if (!canExportRTOReport) {
+      toast.error('You do not have permission to export RTO Report');
+      return;
+    }
+
     if (reportData.length === 0) {
       toast.error('No data to export');
       return;
@@ -80,11 +115,27 @@ const RTOReport = () => {
 
     XLSX.writeFile(workbook, fileName);
   };
+
   useEffect(() => {
+    if (!canViewRTOReport) {
+      return;
+    }
+    
     if (fromDate && toDate) {
       fetchRTOReport();
     }
   }, [fromDate, toDate]);
+
+  // Check if user has permission to view the page
+  if (!canViewRTOReport) {
+    return (
+      <div className="rto-report-container">
+        <div className="alert alert-danger m-3" role="alert">
+          You do not have permission to view RTO Report.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rto-report-container">
@@ -121,7 +172,11 @@ const RTOReport = () => {
             />
           </div>
 
-          <button className="export-button" onClick={exportToExcel} disabled={loading || reportData.length === 0}>
+          <button 
+            className="export-button" 
+            onClick={exportToExcel} 
+            disabled={loading || reportData.length === 0 || !canExportRTOReport}
+          >
             {loading ? 'Loading...' : 'Export'}
           </button>
         </div>

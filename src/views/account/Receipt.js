@@ -17,19 +17,32 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../utils/tableImports';
 import '../../css/invoice.css';
 import '../../css/table.css';
 import ReceiptModal from './ReceiptModal';
 import { confirmVerify } from '../../utils/sweetAlerts';
-import { hasPermission } from '../../utils/permissionUtils';
 import CIcon from '@coreui/icons-react';
 import { cilCheckCircle, cilPrint, cilSettings, cilPlus } from '@coreui/icons';
 import { numberToWords } from '../../utils/numberToWords';
 import { Menu, MenuItem } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
+
+// Import permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  SafePagePermissionGuard 
+} from '../../utils/modulePermissions';
 
 function Receipt() {
   const [activeTab, setActiveTab] = useState(0);
@@ -43,12 +56,30 @@ function Receipt() {
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuBookingId, setMenuBookingId] = useState(null);
-  const { permissions} = useAuth();
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Receipts under ACCOUNT module
+  const canViewReceipts = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS);
+  const canCreateReceipts = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS);
+  const canUpdateReceipts = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS);
+  const canDeleteReceipts = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS);
+  
+  // Check if user has permission to verify payments (CREATE permission for POST/PATCH)
+  const canVerifyPayments = canCreateReceipts;
+  // Check if user has permission to add payments (CREATE permission)
+  const canAddPayments = canCreateReceipts;
+
   useEffect(() => {
+    if (!canViewReceipts) {
+      return;
+    }
+    
     fetchData();
     fetchPendingPayments();
     fetchVerifiedPayments();
-  }, []);
+  }, [canViewReceipts]);
 
   const fetchData = async () => {
     try {
@@ -67,6 +98,10 @@ function Receipt() {
   };
 
   const fetchPendingPayments = async () => {
+    if (!canViewReceipts) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/ledger/pending`);
       setPendingPaymentsData(response.data.data.ledgerEntries);
@@ -79,14 +114,18 @@ function Receipt() {
   };
 
   const fetchVerifiedPayments = async () => {
+    if (!canViewReceipts) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/payment/verified/bank/ledger`);
       setVerifiedPaymentsData(response.data.data.ledgerEntries);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -143,12 +182,22 @@ function Receipt() {
   };
 
   const handleAddClick = (booking) => {
+    if (!canAddPayments) {
+      showError('You do not have permission to add payments');
+      return;
+    }
+    
     setSelectedBooking(booking);
     setShowModal(true);
     handleMenuClose();
   };
 
   const handleVerifyPayment = async (entry) => {
+    if (!canVerifyPayments) {
+      showError('You do not have permission to verify payments');
+      return;
+    }
+    
     try {
       const result = await confirmVerify({
         title: 'Confirm Payment Verification',
@@ -160,7 +209,8 @@ function Receipt() {
         await axiosInstance.patch(`/ledger/approve/${entry._id}`, {
           remark: ''
         });
-        await showSuccess('Payment verified successfully!');
+        setSuccessMessage('Payment verified successfully!');
+        setTimeout(() => setSuccessMessage(''), 3000);
         fetchPendingPayments();
         fetchVerifiedPayments();
       }
@@ -171,11 +221,20 @@ function Receipt() {
   };
 
   const handleTabChange = (tab) => {
+    if (!canViewReceipts) {
+      return;
+    }
+    
     setActiveTab(tab);
     setSearchTerm('');
   };
 
   const printInvoice = async (bookingId) => {
+    if (!canViewReceipts) {
+      showError('You do not have permission to print invoices');
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
       const bookingData = response.data.data.bookingDetails;
@@ -672,13 +731,13 @@ function Receipt() {
             <CTableHeaderCell scope="col">Total</CTableHeaderCell>
             <CTableHeaderCell scope="col">Received</CTableHeaderCell>
             <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-            {hasPermission(permissions,'LEDGER_CREATE') && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+            {(canAddPayments || canViewReceipts) && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
           </CTableRow>
         </CTableHead>
         <CTableBody>
           {filteredBookings.length === 0 ? (
             <CTableRow>
-              <CTableDataCell colSpan={hasPermission(permissions,'LEDGER_CREATE') ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
+              <CTableDataCell colSpan={(canAddPayments || canViewReceipts) ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
                 {searchTerm ? 'No matching bookings found' : 'No booking available'}
               </CTableDataCell>
             </CTableRow>
@@ -701,12 +760,13 @@ function Receipt() {
                 <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
                 <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
 
-                {hasPermission(permissions,'LEDGER_CREATE') && (
+                {(canAddPayments || canViewReceipts) && (
                   <CTableDataCell>
                     <CButton
                       size="sm"
                       className='option-button btn-sm'
                       onClick={(event) => handleMenuClick(event, booking._id)}
+                      disabled={!canAddPayments && !canViewReceipts}
                     >
                       <CIcon icon={cilSettings} />
                       Options
@@ -726,21 +786,25 @@ function Receipt() {
                         horizontal: 'right',
                       }}
                     >
-                      <MenuItem onClick={() => {
-                        handleAddClick(booking);
-                        handleMenuClose();
-                      }}>
-                        <CIcon icon={cilPlus} className="me-2" />
-                        Add Payment
-                      </MenuItem>
+                      {canAddPayments && (
+                        <MenuItem onClick={() => {
+                          handleAddClick(booking);
+                          handleMenuClose();
+                        }}>
+                          <CIcon icon={cilPlus} className="me-2" />
+                          Add Payment
+                        </MenuItem>
+                      )}
 
-                      <MenuItem onClick={() => {
-                        printInvoice(booking._id);
-                        handleMenuClose();
-                      }}>
-                        <CIcon icon={cilPrint} className="me-2" />
-                        Print Invoice
-                      </MenuItem>
+                      {canViewReceipts && (
+                        <MenuItem onClick={() => {
+                          printInvoice(booking._id);
+                          handleMenuClose();
+                        }}>
+                          <CIcon icon={cilPrint} className="me-2" />
+                          Print Invoice
+                        </MenuItem>
+                      )}
                     </Menu>
                   </CTableDataCell>
                 )}
@@ -766,13 +830,13 @@ function Receipt() {
               <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
               <CTableHeaderCell scope="col">Date</CTableHeaderCell>
               <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              {canVerifyPayments && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendingLedgerEntries.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canVerifyPayments ? "8" : "7"} style={{ color: 'red', textAlign: 'center' }}>
                   {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
                 </CTableDataCell>
               </CTableRow>
@@ -790,17 +854,22 @@ function Receipt() {
                       {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
                     </CBadge>
                   </CTableDataCell>
-                  <CTableDataCell>
-                    <CButton
-                      size="sm"
-                      className="action-btn"
-                      onClick={() => handleVerifyPayment(entry)}
-                      disabled={entry.approvalStatus !== 'Pending'}
-                    >
-                      <CIcon icon={cilCheckCircle} className="me-1" />
-                      Verify
-                    </CButton>
-                  </CTableDataCell>
+                  {canVerifyPayments && (
+                    <CTableDataCell>
+                      {entry.approvalStatus === 'Pending' ? (
+                        <CButton
+                          size="sm"
+                          className="action-btn"
+                          onClick={() => handleVerifyPayment(entry)}
+                        >
+                          <CIcon icon={cilCheckCircle} className="me-1" />
+                          Verify
+                        </CButton>
+                      ) : (
+                        <span className="text-muted">Verified</span>
+                      )}
+                    </CTableDataCell>
+                  )}
                 </CTableRow>
               ))
             )}
@@ -957,6 +1026,14 @@ const renderPendingListTable = () => {
     );
   };
 
+  if (!canViewReceipts) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Receipts.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -968,7 +1045,7 @@ const renderPendingListTable = () => {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-    {error}
+        {error}
       </div>
     );
   }
@@ -976,6 +1053,12 @@ const renderPendingListTable = () => {
   return (
     <div>
       <div className='title'>Receipt Management</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
       
       <CCard className='table-container mt-4'>
         <CCardBody>
@@ -990,26 +1073,27 @@ const renderPendingListTable = () => {
                   color: 'black',
                   borderBottom: 'none'
                 }}
+                disabled={!canViewReceipts}
               >
                 Customer
               </CNavLink>
             </CNavItem>
-            {hasPermission(permissions,'LEDGER_VERIFY') && (
-              <CNavItem>
-                <CNavLink
-                  active={activeTab === 1}
-                  onClick={() => handleTabChange(1)}
-                  style={{ 
-                    cursor: 'pointer',
-                    borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
-                    borderBottom: 'none',
-                    color: 'black'
-                  }}
-                >
-                  Payment Verification
-                </CNavLink>
-              </CNavItem>
-            )}
+            {/* Payment Verification tab - Always visible with VIEW permission */}
+            <CNavItem>
+              <CNavLink
+                active={activeTab === 1}
+                onClick={() => handleTabChange(1)}
+                style={{ 
+                  cursor: 'pointer',
+                  borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+                  borderBottom: 'none',
+                  color: 'black'
+                }}
+                disabled={!canViewReceipts}
+              >
+                Payment Verification
+              </CNavLink>
+            </CNavItem>
             <CNavItem>
               <CNavLink
                 active={activeTab === 2}
@@ -1017,9 +1101,10 @@ const renderPendingListTable = () => {
                 style={{ 
                   cursor: 'pointer',
                   borderTop: activeTab === 2 ? '4px solid #2759a2' : '3px solid transparent',
-                  borderBottom: 'none',
-                  color: 'black'
+                    borderBottom: 'none',
+                    color: 'black'
                 }}
+                disabled={!canViewReceipts}
               >
                 Complete Payment
               </CNavLink>
@@ -1034,6 +1119,7 @@ const renderPendingListTable = () => {
                   borderBottom: 'none',
                   color: 'black'
                 }}
+                disabled={!canViewReceipts}
               >
                 Pending List
               </CNavLink>
@@ -1048,6 +1134,7 @@ const renderPendingListTable = () => {
                   borderBottom: 'none',
                   color: 'black'
                 }}
+                disabled={!canViewReceipts}
               >
                 Verified List
               </CNavLink>
@@ -1064,6 +1151,7 @@ const renderPendingListTable = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                disabled={!canViewReceipts}
               />
             </div>
           </div>
@@ -1088,11 +1176,14 @@ const renderPendingListTable = () => {
         </CCardBody>
       </CCard>
 
-      <ReceiptModal show={showModal} onClose={() => setShowModal(false)} bookingData={selectedBooking} />
+      <ReceiptModal 
+        show={showModal} 
+        onClose={() => setShowModal(false)} 
+        bookingData={selectedBooking} 
+        canCreateReceipts={canCreateReceipts}
+      />
     </div>
   );
 }
 
 export default Receipt;
-
-

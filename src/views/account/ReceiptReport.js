@@ -6,6 +6,17 @@ import '../../css/report.css';
 import { toast } from 'react-toastify';
 import axiosInstance from '../../axiosInstance';
 
+// Import the permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+
 const ReceiptReport = () => {
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(new Date());
@@ -13,7 +24,38 @@ const ReceiptReport = () => {
   const [loading, setLoading] = useState(false);
   const [summaryData, setSummaryData] = useState(null);
 
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Receipt Report page under Account module
+  const canViewReceiptReport = canViewPage(
+    permissions, 
+    MODULES.ACCOUNT, 
+    PAGES.ACCOUNT.REPORT
+  );
+  
+  const canExportReceiptReport = canCreateInPage(
+    permissions, 
+    MODULES.ACCOUNT, 
+    PAGES.ACCOUNT.REPORT
+  );
+
+  useEffect(() => {
+    if (!canViewReceiptReport) {
+      toast.error('You do not have permission to view Receipt Report');
+      return;
+    }
+    
+    if (fromDate && toDate) {
+      fetchVoucherReport();
+    }
+  }, [fromDate, toDate]);
+
   const fetchVoucherReport = async () => {
+    if (!canViewReceiptReport) {
+      toast.error('You do not have permission to view Receipt Report');
+      return;
+    }
+
     if (!fromDate || !toDate) {
       toast.error('Please select both from and to dates');
       return;
@@ -59,6 +101,11 @@ const ReceiptReport = () => {
   };
 
   const exportToExcel = () => {
+    if (!canExportReceiptReport) {
+      toast.error('You do not have permission to export Receipt Report');
+      return;
+    }
+
     if (reportData.length === 0) {
       toast.error('No data to export');
       return;
@@ -118,11 +165,16 @@ const ReceiptReport = () => {
     XLSX.writeFile(workbook, fileName);
   };
 
-  useEffect(() => {
-    if (fromDate && toDate) {
-      fetchVoucherReport();
-    }
-  }, [fromDate, toDate]);
+  // Check if user has permission to view the page
+  if (!canViewReceiptReport) {
+    return (
+      <div className="rto-report-container">
+        <div className="alert alert-danger m-3" role="alert">
+          You do not have permission to view Receipt Report.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rto-report-container">
@@ -159,7 +211,11 @@ const ReceiptReport = () => {
             />
           </div>
 
-          <button className="export-button" onClick={exportToExcel} disabled={loading || reportData.length === 0}>
+          <button 
+            className="export-button" 
+            onClick={exportToExcel} 
+            disabled={loading || reportData.length === 0 || !canExportReceiptReport}
+          >
             {loading ? 'Loading...' : 'Export to Excel'}
           </button>
         </div>

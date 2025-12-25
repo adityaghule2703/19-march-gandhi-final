@@ -24,7 +24,14 @@ import { axiosInstance, getDefaultSearchFields, showError, showSuccess, useTable
 import '../../css/invoice.css';
 import '../../css/table.css';
 import Swal from 'sweetalert2';
-import { hasPermission } from '../../utils/permissionUtils';
+import { 
+  hasSafePagePermission, 
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage 
+} from '../../utils/modulePermissions';
 import CIcon from '@coreui/icons-react';
 import { cilCheckCircle, cilZoomOut } from '@coreui/icons';
 import { useAuth } from '../../context/AuthContext';
@@ -36,10 +43,38 @@ function StockVerification() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions = [] } = useAuth();
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const branchId = storedUser.branch?._id;
   const userRole = (localStorage.getItem('userRole') || '').toUpperCase();
+
+  // Page-level permission checks for Stock Verification
+  const hasStockVerificationView = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.STOCK_VERIFICATION, 
+    ACTIONS.VIEW
+  );
+  
+  const hasStockVerificationCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.STOCK_VERIFICATION, 
+    ACTIONS.CREATE
+  );
+
+  // Using convenience functions
+  const canViewStockVerification = canViewPage(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.STOCK_VERIFICATION
+  );
+  
+  const canVerifyStock = canCreateInPage(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.STOCK_VERIFICATION
+  );
 
   const {
     data: pendingData,
@@ -58,86 +93,57 @@ function StockVerification() {
   } = useTableFilter([]);
 
   useEffect(() => {
+    // Check permission before loading data
+    if (!canViewStockVerification) {
+      showError('You do not have permission to view Stock Verification');
+      return;
+    }
+    
     fetchData();
     fetchLocationData();
   }, []);
 
-  
-
-  // const fetchData = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const res = await axiosInstance.get('/vehicles/status/not_approved');
-  //     let vehicles = res.data?.data?.vehicles || [];
-
-  //     if (userRole !== 'SUPERADMIN' && branchId) {
-  //       vehicles = vehicles.filter((v) => v.unloadLocation?._id === branchId);
-  //     }
-
-  //     setPendingData(vehicles);
-  //     setFilteredPendings(vehicles);
-  //   } catch (err) {
-  //     const message = showError(error);
-  //     if (message) {
-  //       setError(message);
-  //     }
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const fetchLocationData = async () => {
-  //   try {
-  //     const res = await axiosInstance.get('/vehicles/status/in_stock');
-  //     let vehicles = res.data?.data?.vehicles || [];
-
-  //     if (userRole !== 'SUPERADMIN' && branchId) {
-  //       vehicles = vehicles.filter((v) => v.unloadLocation?._id === branchId);
-  //     }
-
-  //     setApprovedData(vehicles);
-  //     setFilteredApproved(vehicles);
-  //   } catch (error) {
-  //     const message = showError(error);
-  //     if (message) {
-  //       setError(message);
-  //     }
-  //   }
-  // };
-
-
   const fetchData = async () => {
-  try {
-    setLoading(true);
-    const res = await axiosInstance.get('/vehicles/status/not_approved');
-    let vehicles = res.data?.data?.vehicles || [];
-    setPendingData(vehicles);
-    setFilteredPendings(vehicles);
-  } catch (err) {
-    const message = showError(error);
-    if (message) {
-      setError(message);
+    if (!canViewStockVerification) return;
+    
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get('/vehicles/status/not_approved');
+      let vehicles = res.data?.data?.vehicles || [];
+      setPendingData(vehicles);
+      setFilteredPendings(vehicles);
+    } catch (err) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-const fetchLocationData = async () => {
-  try {
-    const res = await axiosInstance.get('/vehicles/status/in_stock');
-    let vehicles = res.data?.data?.vehicles || [];
-    setApprovedData(vehicles);
-    setFilteredApproved(vehicles);
-  } catch (error) {
-    const message = showError(error);
-    if (message) {
-      setError(message);
+  const fetchLocationData = async () => {
+    if (!canViewStockVerification) return;
+    
+    try {
+      const res = await axiosInstance.get('/vehicles/status/in_stock');
+      let vehicles = res.data?.data?.vehicles || [];
+      setApprovedData(vehicles);
+      setFilteredApproved(vehicles);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
     }
-  }
-};
+  };
 
   const handleSelectVehicle = (vehicleId, isChecked) => {
+    if (!canVerifyStock) {
+      showError('You do not have permission to verify vehicles');
+      return;
+    }
+    
     if (isChecked) {
       setSelectedVehicles([...selectedVehicles, vehicleId]);
     } else {
@@ -146,6 +152,11 @@ const fetchLocationData = async () => {
   };
 
   const verifyVehicles = async () => {
+    if (!canVerifyStock) {
+      showError('You do not have permission to verify vehicles');
+      return;
+    }
+
     if (selectedVehicles.length === 0) {
       showError('Please select at least one vehicle to verify');
       return;
@@ -182,6 +193,11 @@ const fetchLocationData = async () => {
   };
 
   const handleVerifySingle = async (vehicleId) => {
+    if (!canVerifyStock) {
+      showError('You do not have permission to verify vehicles');
+      return;
+    }
+
     const result = await Swal.fire({
       title: 'Confirm Verification',
       html: `Are you sure you want to verify this vehicle?`,
@@ -228,41 +244,51 @@ const fetchLocationData = async () => {
         <CTable striped bordered hover className='responsive-table'>
           <CTableHead>
             <CTableRow>
-              <CTableHeaderCell scope="col">
-              </CTableHeaderCell>
+              {canVerifyStock && (
+                <CTableHeaderCell scope="col">
+                  Select
+                </CTableHeaderCell>
+              )}
               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
               <CTableHeaderCell scope="col">Type</CTableHeaderCell>
               <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
               <CTableHeaderCell scope="col">Color</CTableHeaderCell>
               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
               <CTableHeaderCell scope="col">Load Location</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              {canVerifyStock && (
+                <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              )}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell 
+                  colSpan={canVerifyStock ? "8" : "7"} 
+                  style={{ color: 'red', textAlign: 'center' }}
+                >
                   No data available
                 </CTableDataCell>
               </CTableRow>
             ) : (
               filteredPendings.map((vehicle, index) => (
                 <CTableRow key={index}>
-                  <CTableDataCell>
-                    <CFormCheck
-                      checked={selectedVehicles.includes(vehicle._id)}
-                      onChange={(e) => handleSelectVehicle(vehicle._id, e.target.checked)}
-                    />
-                  </CTableDataCell>
+                  {canVerifyStock && (
+                    <CTableDataCell>
+                      <CFormCheck
+                        checked={selectedVehicles.includes(vehicle._id)}
+                        onChange={(e) => handleSelectVehicle(vehicle._id, e.target.checked)}
+                      />
+                    </CTableDataCell>
+                  )}
                   <CTableDataCell>{index + 1}</CTableDataCell>
                   <CTableDataCell>{vehicle.type}</CTableDataCell>
                   <CTableDataCell>{vehicle.modelName || ''}</CTableDataCell>
                   <CTableDataCell>{vehicle.color?.name || ''}</CTableDataCell>
                   <CTableDataCell>{vehicle.chassisNumber}</CTableDataCell>
                   <CTableDataCell>{vehicle.unloadLocation?.name || ''}</CTableDataCell>
-                  <CTableDataCell>
-                    {hasPermission(permissions,'VEHICLE_INWARD_APPROVE') && (
+                  {canVerifyStock && (
+                    <CTableDataCell>
                       <CButton 
                         size="sm" 
                         className="action-btn"
@@ -272,8 +298,8 @@ const fetchLocationData = async () => {
                         <CIcon icon={cilCheckCircle} className="me-1" />
                         {isVerifying ? 'Verifying...' : 'Verify'}
                       </CButton>
-                    )}
-                  </CTableDataCell>
+                    </CTableDataCell>
+                  )}
                 </CTableRow>
               ))
             )}
@@ -330,10 +356,18 @@ const fetchLocationData = async () => {
     );
   }
 
+  if (!canViewStockVerification) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Stock Verification.
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -345,7 +379,7 @@ const fetchLocationData = async () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {activeTab === 0 && selectedVehicles.length > 0 && (
+            {activeTab === 0 && canVerifyStock && selectedVehicles.length > 0 && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -356,16 +390,11 @@ const fetchLocationData = async () => {
                 {isVerifying ? 'Verifying...' : `Verify Selected (${selectedVehicles.length})`}
               </CButton>
             )}
-            {/* <CButton 
-              size="sm" 
-              className="action-btn me-1"
-            >
-              <CIcon icon={cilSearch} className='icon' /> Search
-            </CButton> */}
+            
             {searchTerm && (
               <CButton 
                 size="sm" 
-               className="action-btn me-1"
+                className="action-btn me-1"
                 onClick={handleResetSearch}
               >
                 <CIcon icon={cilZoomOut} className='icon' /> Reset Search

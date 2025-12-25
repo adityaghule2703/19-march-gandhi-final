@@ -28,7 +28,15 @@ import {
   CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilCloudUpload} from '@coreui/icons';
+import { cilCloudUpload } from '@coreui/icons';
+import { useNavigate } from 'react-router-dom';
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 const UploadDealForm = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
@@ -37,8 +45,23 @@ const UploadDealForm = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth();
+
+  // Permission checks for Upload Deal Form page under Sales module
+  const canViewUploadDealForm = canViewPage(permissions, MODULES.SALES, PAGES.SALES.UPLOAD_DEAL_FORM);
+  const canCreateUploadDealForm = canCreateInPage(permissions, MODULES.SALES, PAGES.SALES.UPLOAD_DEAL_FORM);
 
   useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewUploadDealForm) {
+      showError('You do not have permission to view Upload Deal Form & Delivery Challan');
+      navigate('/dashboard');
+      return;
+    }
+    
     fetchData();
   }, []);
 
@@ -51,15 +74,21 @@ const UploadDealForm = () => {
       setFilteredData(branchBookings);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleFileUpload = async (bookingId, fileType, event) => {
+    // Check CREATE permission before uploading
+    if (!canCreateUploadDealForm) {
+      showError('You do not have permission to upload documents');
+      return;
+    }
+
     const file = event.target.files[0];
     if (!file) return;
 
@@ -95,7 +124,6 @@ const UploadDealForm = () => {
       console.error(`Error uploading ${fileType}:`, error);
       showError(`Failed to upload ${fileType === 'dealForm' ? 'deal form' : 'delivery challan'}`);
     } finally {
-
       setUploading((prev) => ({ ...prev, [`${bookingId}-${fileType}`]: false }));
       event.target.value = '';
     }
@@ -113,6 +141,15 @@ const UploadDealForm = () => {
     handleFilter(value, getDefaultSearchFields('booking'));
   };
 
+  // Check if user has permission to view this page
+  if (!canViewUploadDealForm) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Upload Deal Form & Delivery Challan.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -125,10 +162,11 @@ const UploadDealForm = () => {
     <div>
       <div className='title'>Upload Deal Form & Delivery Challan</div>
       {error && (
-    <CAlert color="danger" className="mb-3">
-      {error}
-    </CAlert>
-  )}
+        <CAlert color="danger" className="mb-3">
+          {error}
+        </CAlert>
+      )}
+      
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div></div>
@@ -171,71 +209,91 @@ const UploadDealForm = () => {
                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
                       <CTableDataCell>{booking.customerDetails?.name}</CTableDataCell>
                       <CTableDataCell>{booking.model?.model_name}</CTableDataCell>
-                      {/* <CTableDataCell>{booking.chassisNumber}</CTableDataCell> */}
-                      <CTableDataCell>{booking.status === "ALLOCATED" && booking.chassisAllocationStatus === "ALLOCATED" ? (booking.chassisNumber || ''):''}</CTableDataCell>
+                      <CTableDataCell>
+                        {booking.status === "ALLOCATED" && booking.chassisAllocationStatus === "ALLOCATED" ? 
+                          (booking.chassisNumber || '') : ''
+                        }
+                      </CTableDataCell>
+                      
+                      {/* Deal Form Column */}
                       <CTableDataCell>
                         {booking.documentStatus?.dealForm?.status === 'COMPLETED' && booking.dealForm ? (
-                          <CButton
-                            size="sm"
-                            color="info"
-                            className="action-btn"
-                            onClick={() => handleViewDocument(booking.dealForm.path)}
-                          >
-                            View
-                          </CButton>
-                        ) : (
-                          <div className="file-upload-container">
-                            <input
-                              type="file"
-                              id={`deal-form-${booking._id}`}
-                              style={{ display: 'none' }}
-                              onChange={(e) => handleFileUpload(booking._id, 'dealForm', e)}
-                              accept=".pdf,.jpg,.jpeg,.png"
-                            />
+                          // Show View button for uploaded documents (requires VIEW permission)
+                          canViewUploadDealForm && (
                             <CButton
                               size="sm"
-                              color="primary"
+                              color="info"
                               className="action-btn"
-                              onClick={() => document.getElementById(`deal-form-${booking._id}`).click()}
-                              disabled={uploading[`${booking._id}-dealForm`]}
+                              onClick={() => handleViewDocument(booking.dealForm.path)}
                             >
-                              <CIcon icon={cilCloudUpload} className="me-1" />
-                              {uploading[`${booking._id}-dealForm`] ? 'Uploading...' : 'Upload'}
+                          
+                              View
                             </CButton>
-                          </div>
+                          )
+                        ) : (
+                          // Show Upload button for missing documents (requires CREATE permission)
+                          canCreateUploadDealForm && (
+                            <div className="file-upload-container">
+                              <input
+                                type="file"
+                                id={`deal-form-${booking._id}`}
+                                style={{ display: 'none' }}
+                                onChange={(e) => handleFileUpload(booking._id, 'dealForm', e)}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                              />
+                              <CButton
+                                size="sm"
+                                color="primary"
+                                className="action-btn"
+                                onClick={() => document.getElementById(`deal-form-${booking._id}`).click()}
+                                disabled={uploading[`${booking._id}-dealForm`]}
+                              >
+                                <CIcon icon={cilCloudUpload} className="me-1" />
+                                {uploading[`${booking._id}-dealForm`] ? 'Uploading...' : 'Upload'}
+                              </CButton>
+                            </div>
+                          )
                         )}
                       </CTableDataCell>
+                      
+                      {/* Delivery Challan Column */}
                       <CTableDataCell>
                         {booking.documentStatus?.deliveryChallan?.status === 'COMPLETED' && booking.deliveryChallan ? (
-                          <CButton
-                            size="sm"
-                            color="info"
-                            className="action-btn"
-                            onClick={() => handleViewDocument(booking.deliveryChallan.path)}
-                          >
-                            <CIcon icon={cilEye} className="me-1" />
-                            View
-                          </CButton>
-                        ) : (
-                          <div className="file-upload-container">
-                            <input
-                              type="file"
-                              id={`delivery-challan-${booking._id}`}
-                              style={{ display: 'none' }}
-                              onChange={(e) => handleFileUpload(booking._id, 'deliveryChallan', e)}
-                              accept=".pdf,.jpg,.jpeg,.png"
-                            />
+                          // Show View button for uploaded documents (requires VIEW permission)
+                          canViewUploadDealForm && (
                             <CButton
                               size="sm"
-                              color="primary"
+                              color="info"
                               className="action-btn"
-                              onClick={() => document.getElementById(`delivery-challan-${booking._id}`).click()}
-                              disabled={uploading[`${booking._id}-deliveryChallan`]}
+                              onClick={() => handleViewDocument(booking.deliveryChallan.path)}
                             >
-                              <CIcon icon={cilCloudUpload} className="me-1" />
-                              {uploading[`${booking._id}-deliveryChallan`] ? 'Uploading...' : 'Upload'}
+                            
+                              View
                             </CButton>
-                          </div>
+                          )
+                        ) : (
+                          // Show Upload button for missing documents (requires CREATE permission)
+                          canCreateUploadDealForm && (
+                            <div className="file-upload-container">
+                              <input
+                                type="file"
+                                id={`delivery-challan-${booking._id}`}
+                                style={{ display: 'none' }}
+                                onChange={(e) => handleFileUpload(booking._id, 'deliveryChallan', e)}
+                                accept=".pdf,.jpg,.jpeg,.png"
+                              />
+                              <CButton
+                                size="sm"
+                                color="primary"
+                                className="action-btn"
+                                onClick={() => document.getElementById(`delivery-challan-${booking._id}`).click()}
+                                disabled={uploading[`${booking._id}-deliveryChallan`]}
+                              >
+                                <CIcon icon={cilCloudUpload} className="me-1" />
+                                {uploading[`${booking._id}-deliveryChallan`] ? 'Uploading...' : 'Upload'}
+                              </CButton>
+                            </div>
+                          )
                         )}
                       </CTableDataCell>
                     </CTableRow>

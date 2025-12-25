@@ -3,6 +3,15 @@ import { CModal, CModalHeader, CModalTitle, CModalBody, CModalFooter, CButton, C
 import './CommissionPayments.css';
 import axiosInstance from 'src/axiosInstance';
 import { showError } from '../../../utils/sweetAlerts';
+import { useAuth } from '../../../context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage
+} from '../../../utils/modulePermissions';
 
 const CommissionPayments = () => {
   const [payments, setPayments] = useState([]);
@@ -14,6 +23,27 @@ const CommissionPayments = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Payment Summary page under Subdealer Account module
+  const hasPaymentSummaryView = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.PAYMENT_SUMMARY, 
+    ACTIONS.VIEW
+  );
+  
+  const hasPaymentSummaryCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.PAYMENT_SUMMARY, 
+    ACTIONS.CREATE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewPaymentSummary = canViewPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.PAYMENT_SUMMARY);
+  const canCreatePaymentSummary = canCreateInPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.PAYMENT_SUMMARY);
+
   const months = [
     { value: '', label: 'All Months' },
     { value: '1', label: 'January' },
@@ -40,6 +70,11 @@ const CommissionPayments = () => {
   ];
 
   useEffect(() => {
+    if (!canViewPaymentSummary) {
+      showError('You do not have permission to view Commission Payments');
+      return;
+    }
+    
     const fetchSubdealers = async () => {
       try {
         const response = await axiosInstance.get('/subdealers');
@@ -54,7 +89,7 @@ const CommissionPayments = () => {
     };
 
     fetchSubdealers();
-  }, []);
+  }, [canViewPaymentSummary]);
 
   const fetchPayments = async () => {
     setLoading(true);
@@ -459,13 +494,22 @@ Upnagar, Nashik Road, Nashik - 422101</p>
     return <CBadge color={color}>{status}</CBadge>;
   };
 
-  if (error) {
+  if (!canViewPaymentSummary) {
     return (
-      <div className="alert alert-danger" role="alert">
-      {error}
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Commission Payments.
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="alert alert-danger" role="alert">
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div className="commission-payments-container">
       <div className="header-section">
@@ -474,13 +518,15 @@ Upnagar, Nashik Road, Nashik - 422101</p>
           <button className="btn btn-primary filter-btn" onClick={handleFilterClick}>
             <i className="fas fa-filter"></i> Filter
           </button>
-          <button
-            className="btn btn-success receipt-btn"
-            onClick={handleGenerateReceipt}
-            disabled={!selectedSubdealer || !selectedMonth || !selectedYear || filteredPayments.length === 0}
-          >
-            <i className="fas fa-receipt"></i> Generate Receipt
-          </button>
+          {canCreatePaymentSummary && (
+            <button
+              className="btn btn-success receipt-btn"
+              onClick={handleGenerateReceipt}
+              disabled={!selectedSubdealer || !selectedMonth || !selectedYear || filteredPayments.length === 0}
+            >
+              <i className="fas fa-receipt"></i> Generate Receipt
+            </button>
+          )}
         </div>
       </div>
       {(selectedSubdealer || selectedMonth || selectedYear) && (

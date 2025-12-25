@@ -30,6 +30,14 @@ import tvsLogo from '../../../assets/images/logo.png';
 import config from 'src/config';
 import CIcon from '@coreui/icons-react';
 import { cilPrint} from '@coreui/icons';
+import { useAuth } from '../../../context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage
+} from '../../../utils/modulePermissions';
 
 function SubdealerLedger() {
   const [activeTab, setActiveTab] = useState(0);
@@ -39,13 +47,30 @@ function SubdealerLedger() {
   const [selectedReceipt, setSelectedReceipt] = useState('');
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Subdealer Ledger page under Subdealer Account module
+  const hasSubdealerLedgerView = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.SUBDEALER_LEDGER, 
+    ACTIONS.VIEW
+  );
+
+  // Using convenience function for cleaner code
+  const canViewSubdealerLedger = canViewPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.SUBDEALER_LEDGER);
 
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   useEffect(() => {
+    if (!canViewSubdealerLedger) {
+      showError('You do not have permission to view Subdealer Ledger');
+      return;
+    }
+    
     fetchData();
     fetchSubdealers();
-  }, []);
+  }, [canViewSubdealerLedger]);
 
   useEffect(() => {
     if (selectedSubdealer) {
@@ -63,9 +88,9 @@ function SubdealerLedger() {
       setFilteredData(response.data.data.subdealers);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -75,9 +100,9 @@ function SubdealerLedger() {
       setSubdealers(response.data.data.subdealers || []);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -469,13 +494,22 @@ function SubdealerLedger() {
     }
   };
 
-  if (error) {
+  if (!canViewSubdealerLedger) {
     return (
-      <div className="alert alert-danger" role="alert">
-      {error}
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Subdealer Ledger.
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="alert alert-danger" role="alert">
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className='title'>Subdealer Ledger</div>

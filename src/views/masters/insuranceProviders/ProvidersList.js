@@ -13,7 +13,16 @@ import {
   showError,
   axiosInstance
 } from '../../../utils/tableImports';
-import { hasPermission } from '../../../utils/permissionUtils';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -48,15 +57,53 @@ const ProviderList = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'INSURANCE_PROVIDER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'INSURANCE_PROVIDER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'INSURANCE_PROVIDER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Insurance Providers page under Masters module
+  const hasInsuranceProvidersView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.INSURANCE_PROVIDERS, 
+    ACTIONS.VIEW
+  );
+  
+  const hasInsuranceProvidersCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.INSURANCE_PROVIDERS, 
+    ACTIONS.CREATE
+  );
+  
+  const hasInsuranceProvidersUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.INSURANCE_PROVIDERS, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasInsuranceProvidersDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.INSURANCE_PROVIDERS, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewInsuranceProviders = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.INSURANCE_PROVIDERS);
+  const canCreateInsuranceProviders = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.INSURANCE_PROVIDERS);
+  const canUpdateInsuranceProviders = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.INSURANCE_PROVIDERS);
+  const canDeleteInsuranceProviders = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.INSURANCE_PROVIDERS);
+  
+  const showActionColumn = canUpdateInsuranceProviders || canDeleteInsuranceProviders;
 
   useEffect(() => {
+    if (!canViewInsuranceProviders) {
+      showError('You do not have permission to view Insurance Providers');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewInsuranceProviders]);
 
   const fetchData = async () => {
     try {
@@ -85,6 +132,11 @@ const ProviderList = () => {
   };
 
   const handleToggleActive = async (providerId, currentStatus) => {
+    if (!canUpdateInsuranceProviders) {
+      showError('You do not have permission to update insurance provider status');
+      return;
+    }
+    
     const newStatus = !currentStatus;
 
     try {
@@ -107,6 +159,11 @@ const ProviderList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteInsuranceProviders) {
+      showError('You do not have permission to delete insurance providers');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -128,11 +185,21 @@ const ProviderList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateInsuranceProviders) {
+      showError('You do not have permission to add insurance providers');
+      return;
+    }
+    
     setEditingProvider(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (provider) => {
+    if (!canUpdateInsuranceProviders) {
+      showError('You do not have permission to edit insurance providers');
+      return;
+    }
+    
     setEditingProvider(provider);
     setShowModal(true);
   };
@@ -148,6 +215,14 @@ const ProviderList = () => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
+
+  if (!canViewInsuranceProviders) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Insurance Providers.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -179,7 +254,7 @@ const ProviderList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateInsuranceProviders && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -235,6 +310,7 @@ const ProviderList = () => {
                             checked={provider.is_active}
                             onChange={() => handleToggleActive(provider.id, provider.is_active)}
                             className="ms-2"
+                            disabled={!canUpdateInsuranceProviders}
                           />
                         </div>
                       </CTableDataCell>
@@ -244,6 +320,7 @@ const ProviderList = () => {
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, provider.id)}
+                            disabled={!canUpdateInsuranceProviders && !canDeleteInsuranceProviders}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -254,7 +331,7 @@ const ProviderList = () => {
                             open={menuId === provider.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateInsuranceProviders && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(provider)}
                                 style={{ color: 'black' }}
@@ -263,7 +340,7 @@ const ProviderList = () => {
                                 Edit
                               </MenuItem>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteInsuranceProviders && (
                               <MenuItem onClick={() => handleDelete(provider.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

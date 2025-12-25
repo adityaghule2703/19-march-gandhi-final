@@ -24,11 +24,18 @@ import {
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields,useTableFilter } from 'src/utils/tableImports';
 import SubdealerReceiptModal from './SubdealerReceiptModel';
-import { hasPermission } from 'src/utils/permissionUtils';
 import CIcon from '@coreui/icons-react';
 import { cilPlus} from '@coreui/icons';
 import { showError } from '../../../utils/sweetAlerts';
 import { useAuth } from '../../../context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage
+} from '../../../utils/modulePermissions';
 
 function SubdealerReceipts() {
   const [activeTab, setActiveTab] = useState(0);
@@ -38,7 +45,27 @@ function SubdealerReceipts() {
   const [pendingSearchTerm, setPendingSearchTerm] = useState('');
   const [completedSearchTerm, setCompletedSearchTerm] = useState('');
   const [error, setError] = useState(null);
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Finance Payment page under Subdealer Account module
+  const hasFinancePaymentView = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.FINANCE_PAYMENT, 
+    ACTIONS.VIEW
+  );
+  
+  const hasFinancePaymentCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.FINANCE_PAYMENT, 
+    ACTIONS.CREATE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewFinancePayment = canViewPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.FINANCE_PAYMENT);
+  const canCreateFinancePayment = canCreateInPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.FINANCE_PAYMENT);
+
   const {
     data: pendingBookingsData,
     setData: setPendingBookingsData,
@@ -64,8 +91,13 @@ function SubdealerReceipts() {
   } = useTableFilter([]);
 
   useEffect(() => {
+    if (!canViewFinancePayment) {
+      showError('You do not have permission to view Subdealer Receipts');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewFinancePayment]);
 
   const fetchData = async () => {
     try {
@@ -135,10 +167,18 @@ function SubdealerReceipts() {
     handleCompletedBookingsFilter('', getDefaultSearchFields('booking'));
   };
 
+  if (!canViewFinancePayment) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Subdealer Receipts.
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -228,13 +268,13 @@ function SubdealerReceipts() {
                       <CTableHeaderCell scope="col">Total</CTableHeaderCell>
                       <CTableHeaderCell scope="col">Received</CTableHeaderCell>
                       <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-                      {hasPermission(permissions,'FINANCE_DISBURSEMENT_CREATE') && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+                      {canCreateFinancePayment && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
                     </CTableRow>
                   </CTableHead>
                   <CTableBody>
                     {filteredPendingBookings.length === 0 ? (
                       <CTableRow>
-                        <CTableDataCell colSpan={hasPermission(permissions,'FINANCE_DISBURSEMENT_CREATE') ? "10" : "9"} style={{ color: 'red', textAlign: 'center' }}>
+                        <CTableDataCell colSpan={canCreateFinancePayment ? "10" : "9"} style={{ color: 'red', textAlign: 'center' }}>
                           {pendingSearchTerm ? 'No matching pending bookings found' : 'No pending bookings available'}
                         </CTableDataCell>
                       </CTableRow>
@@ -252,7 +292,7 @@ function SubdealerReceipts() {
                           <CTableDataCell>
                             <CBadge color="warning">₹{booking.balanceAmount || '0'}</CBadge>
                           </CTableDataCell>
-                          {hasPermission(permissions,'FINANCE_DISBURSEMENT_CREATE') && (
+                          {canCreateFinancePayment && (
                             <CTableDataCell>
                               <CButton 
                                 size="sm" 

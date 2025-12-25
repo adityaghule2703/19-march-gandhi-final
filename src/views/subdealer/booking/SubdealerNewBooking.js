@@ -1259,9 +1259,9 @@
 
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import '../../../css/form.css';
-import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CFormCheck, CAlert } from '@coreui/react';
+import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CFormCheck, CTable, CTableHead, CTableRow, CTableHeaderCell, CTableBody, CTableDataCell, CAlert } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import {
   cilBank,
@@ -1276,6 +1276,7 @@ import {
   cilFingerprint,
   cilHome,
   cilInstitution,
+  cilList,
   cilLocationPin,
   cilMap,
   cilMoney,
@@ -1326,7 +1327,8 @@ function SubdealerNewBooking() {
     is_exchange: false,
     broker_id: '',
     vehicle_number: '',
-    chassis_number: ''
+    chassis_number: '',
+    note: ''
   });
   
   const [error, setError] = useState(null);
@@ -1349,6 +1351,10 @@ function SubdealerNewBooking() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [modelType, setModelType] = useState('');
   const [selectedModelName, setSelectedModelName] = useState('');
+  const [headerDiscounts, setHeaderDiscounts] = useState({});
+  const [bookingPriceComponents, setBookingPriceComponents] = useState([]);
+  
+  const isInitialBookingLoad = useRef(false);
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -1356,7 +1362,8 @@ function SubdealerNewBooking() {
   useEffect(() => {
     fetchUserProfile();
     
-    if (id) {
+    if (id && !isInitialBookingLoad.current) {
+      isInitialBookingLoad.current = true;
       fetchBookingDetails(id);
       setIsEditMode(true);
     }
@@ -1401,11 +1408,27 @@ function SubdealerNewBooking() {
     try {
       const response = await axiosInstance.get(`/bookings/${bookingId}`);
       const bookingData = response.data.data;
+
+      const priceComponents = bookingData.priceComponents || [];
+      setBookingPriceComponents(priceComponents);
+
+      const initialDiscounts = {};
+      if (priceComponents.length > 0) {
+        priceComponents.forEach(priceComponent => {
+          if (priceComponent.header && priceComponent.header._id) {
+            const discountAmount = priceComponent.discountAmount || 0;
+            initialDiscounts[priceComponent.header._id] = discountAmount;
+          }
+        });
+      }
       
+      console.log('Initial discounts from booking API:', initialDiscounts);
+      setHeaderDiscounts(initialDiscounts);
+
       await fetchModels(bookingData.customerType, bookingData.subdealer?._id);
-      
-      const optionalComponents = bookingData.priceComponents?.filter((pc) => pc.header && pc.header._id)?.map((pc) => pc.header._id) || [];
-      
+
+      const optionalComponents = priceComponents.filter((pc) => pc.header && pc.header._id)?.map((pc) => pc.header._id) || [];
+
       const bookingVerticle = bookingData.verticles && bookingData.verticles.length > 0 
         ? bookingData.verticles[0]._id || bookingData.verticles[0] 
         : '';
@@ -1440,7 +1463,8 @@ function SubdealerNewBooking() {
         financer_id: bookingData.payment?.financer?._id || '',
         value: bookingData.discounts[0]?.amount || 0,
         selected_accessories: bookingData.accessories?.map((a) => a.accessory?._id).filter(Boolean) || [],
-        hpa: bookingData.hpa || false
+        hpa: bookingData.hpa || false,
+        note: bookingData.note || ''
       });
 
       setSelectedSubdealerName(bookingData.subdealer?.name || '');
@@ -1454,8 +1478,10 @@ function SubdealerNewBooking() {
       }
 
       if (bookingData.model?.id) {
-        fetchModels(bookingData.customerType, bookingData.subdealer?._id);
-        fetchModelHeaders(bookingData.model.id);
+        setTimeout(() => {
+          fetchModelHeadersForEdit(bookingData.model.id, initialDiscounts);
+        }, 1000);
+        
         fetchAccessories(bookingData.model.id);
         fetchModelColors(bookingData.model.id);
       }
@@ -1474,6 +1500,65 @@ function SubdealerNewBooking() {
       }
     }
   }, [isEditMode, formData.model_id, models]);
+
+  const fetchModelHeadersForEdit = async (modelId, existingDiscounts = {}) => {
+    try {
+      console.log('Fetching model headers for edit with existing discounts:', existingDiscounts);
+      
+      const response = await axiosInstance.get(`/models/${modelId}`);
+      const modelData = response.data.data.model;
+      const prices = modelData.prices || [];
+
+      const selectedModel = models.find((model) => model._id === modelId);
+      const mandatoryHeaders = selectedModel?.mandatoryHeaders || [];
+
+      setFormData((prev) => ({
+        ...prev,
+        optionalComponents: [...prev.optionalComponents, ...mandatoryHeaders]
+      }));
+
+      setSelectedModelHeaders(prices);
+      setModelDetails(modelData);
+
+      console.log('Model prices structure:', prices);
+
+      const mergedDiscounts = {};
+      
+      prices.forEach(price => {
+        let headerId;
+        
+        if (price.header && price.header._id) {
+          headerId = price.header._id;
+        } else if (price.header_id) {
+          headerId = price.header_id;
+        } else if (price.headerId) {
+          headerId = price.headerId;
+        }
+        
+        if (headerId) {
+          if (existingDiscounts[headerId] !== undefined) {
+            mergedDiscounts[headerId] = existingDiscounts[headerId];
+          } else {
+            mergedDiscounts[headerId] = '';
+          }
+        }
+      });
+      
+      console.log('Merged discounts after fetching model headers:', mergedDiscounts);
+      setHeaderDiscounts(mergedDiscounts);
+
+      const accessoriesTotal = calculateAccessoriesTotal(prices);
+      setAccessoriesTotal(accessoriesTotal);
+      
+      fetchModelColors(modelId);
+    } catch (error) {
+      console.error('Failed to fetch model headers:', error);
+      setSelectedModelHeaders([]);
+      setModelDetails(null);
+      setAccessoriesTotal(0);
+      setHeaderDiscounts({});
+    }
+  };
 
   const validateTab1 = () => {
     const requiredFields = ['customer_type', 'verticle_id', 'model_id', 'subdealer'];
@@ -1530,6 +1615,22 @@ function SubdealerNewBooking() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateTab6 = () => {
+    const newErrors = {};
+    
+    Object.entries(headerDiscounts).forEach(([headerId, discountValue]) => {
+      if (discountValue !== '' && discountValue !== null && discountValue !== undefined) {
+        const numValue = parseFloat(discountValue);
+        if (isNaN(numValue) || numValue < 0) {
+          newErrors[`discount_${headerId}`] = 'Discount must be a positive number';
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const validateMobileNumber = (mobile) => {
     const regex = /^[6-9]\d{9}$/;
     return regex.test(mobile);
@@ -1545,9 +1646,21 @@ function SubdealerNewBooking() {
     return regex.test(aadhar);
   };
 
+  const validatePincode = (pincode) => {
+    const regex = /^\d{6}$/;
+    return regex.test(pincode);
+  };
+
   const handleNextTab = () => {
     if (activeTab === 1) {
       if (!validateTab1()) {
+        const firstErrorField = Object.keys(errors)[0];
+        if (firstErrorField) {
+          document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
         return;
       }
     } else if (activeTab === 2) {
@@ -1591,6 +1704,9 @@ function SubdealerNewBooking() {
       if (formData.aadhar_number && !validateAadhar(formData.aadhar_number)) {
         newErrors.aadhar_number = 'Invalid Aadhar number';
       }
+      if (formData.pincode && !validatePincode(formData.pincode)) {
+        newErrors.pincode = 'Pincode must be exactly 6 digits';
+      }
 
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) {
@@ -1603,6 +1719,17 @@ function SubdealerNewBooking() {
       }
     } else if (activeTab === 4) {
       if (!validateTab4()) {
+        const firstErrorField = Object.keys(errors)[0];
+        if (firstErrorField) {
+          document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+        return;
+      }
+    } else if (activeTab === 6) {
+      if (!validateTab6()) {
         const firstErrorField = Object.keys(errors)[0];
         if (firstErrorField) {
           document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({
@@ -1678,17 +1805,39 @@ function SubdealerNewBooking() {
   const fetchModelHeaders = async (modelId) => {
     try {
       const response = await axiosInstance.get(`/models/${modelId}`);
-      const prices = response.data.data.model.prices || [];
+      const modelData = response.data.data.model;
+      const prices = modelData.prices || [];
 
       const selectedModel = models.find((model) => model._id === modelId);
       const mandatoryHeaders = selectedModel?.mandatoryHeaders || [];
+
       setFormData((prev) => ({
         ...prev,
         optionalComponents: [...prev.optionalComponents, ...mandatoryHeaders]
       }));
 
       setSelectedModelHeaders(prices);
-      setModelDetails(response.data.data.model);
+      setModelDetails(modelData);
+
+      const initialDiscounts = {};
+      prices.forEach(price => {
+        let headerId;
+        
+        if (price.header && price.header._id) {
+          headerId = price.header._id;
+        } else if (price.header_id) {
+          headerId = price.header_id;
+        } else if (price.headerId) {
+          headerId = price.headerId;
+        }
+        
+        if (headerId) {
+          initialDiscounts[headerId] = '';
+        }
+      });
+      
+      console.log('Setting initial discounts for new booking:', initialDiscounts);
+      setHeaderDiscounts(initialDiscounts);
 
       const accessoriesTotal = calculateAccessoriesTotal(prices);
       setAccessoriesTotal(accessoriesTotal);
@@ -1698,6 +1847,7 @@ function SubdealerNewBooking() {
       setSelectedModelHeaders([]);
       setModelDetails(null);
       setAccessoriesTotal(0);
+      setHeaderDiscounts({});
     }
   };
 
@@ -1833,7 +1983,11 @@ function SubdealerNewBooking() {
         
         fetchAccessories(value);
         fetchModelColors(value);
-        fetchModelHeaders(value);
+        if (isEditMode) {
+          fetchModelHeadersForEdit(value, headerDiscounts);
+        } else {
+          fetchModelHeaders(value);
+        }
       }
     }
   };
@@ -1861,6 +2015,13 @@ function SubdealerNewBooking() {
     });
   };
 
+  const handleHeaderDiscountChange = (headerId, value) => {
+    setHeaderDiscounts(prev => ({
+      ...prev,
+      [headerId]: value
+    }));
+  };
+
   const handleAccessorySelection = (accessoryId, isChecked) => {
     setFormData((prev) => {
       if (isChecked) {
@@ -1875,6 +2036,30 @@ function SubdealerNewBooking() {
         };
       }
     });
+  };
+
+  const calculateTaxableAmount = (unitCost, discount, gstRate, customerType) => {
+    const netAmount = unitCost - (discount || 0);
+    const gstRateDecimal = gstRate / 100;
+    
+    // For B2B/B2C, calculate taxable amount
+    if (gstRateDecimal === 0) {
+      return netAmount;
+    }
+    
+    return netAmount / (1 + gstRateDecimal);
+  };
+
+  const calculateGST = (taxable, gstRate, customerType) => {
+    // For B2B/B2C, split GST equally
+    const halfRate = gstRate / 2;
+    const cgstAmount = taxable * (halfRate / 100);
+    const sgstAmount = taxable * (halfRate / 100);
+    return { cgstAmount, sgstAmount, halfRate, cgstRate: halfRate, sgstRate: halfRate };
+  };
+
+  const calculateLineTotal = (taxable, cgstAmount, sgstAmount) => {
+    return taxable + cgstAmount + sgstAmount;
   };
 
   const handleSubmit = async (e) => {
@@ -1920,6 +2105,13 @@ function SubdealerNewBooking() {
       return;
     }
 
+    const headerDiscountsArray = Object.entries(headerDiscounts)
+      .filter(([headerId, value]) => value !== '' && value !== null && value !== undefined && !isNaN(parseFloat(value)))
+      .map(([headerId, value]) => ({
+        headerId,
+        discountAmount: parseFloat(value) || 0
+      }));
+
     const requestBody = {
       model_id: formData.model_id,
       model_color: formData.model_color,
@@ -1952,6 +2144,7 @@ function SubdealerNewBooking() {
           financer_id: formData.financer_id
         })
       },
+      headerDiscounts: headerDiscountsArray,
       discount: {
         type: formData.discountType,
         value: formData.value ? parseFloat(formData.value) : 0
@@ -1959,7 +2152,8 @@ function SubdealerNewBooking() {
       accessories: {
         selected: formData.selected_accessories.map((id) => ({ id }))
       },
-      hpa: formData.hpa === true
+      hpa: formData.hpa === true,
+      note: formData.note
     };
 
     if (formData.customer_type === 'B2B') {
@@ -1968,6 +2162,8 @@ function SubdealerNewBooking() {
     if (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') {
       requestBody.rtoAmount = formData.rtoAmount;
     }
+
+    console.log('Submitting request body:', requestBody);
 
     try {
       let response;
@@ -1991,6 +2187,12 @@ function SubdealerNewBooking() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const debugHeaderDiscounts = () => {
+    console.log('Current headerDiscounts:', headerDiscounts);
+    console.log('Current formData.model_id:', formData.model_id);
+    console.log('Current models:', models);
   };
 
   return (
@@ -2026,7 +2228,7 @@ function SubdealerNewBooking() {
                         <option value="B2C" selected>
                           B2C
                         </option>
-                        <option value="CSD">CSD</option>
+                        {/* CSD option removed */}
                       </CFormSelect>
                     </CInputGroup>
                     {errors.customer_type && <p className="error">{errors.customer_type}</p>}
@@ -2674,33 +2876,124 @@ function SubdealerNewBooking() {
 
             {activeTab === 6 && (
               <>
+                <div className="user-details">
+                  <div className="input-box">
+                    <span className="details">Note</span>
+                    <CInputGroup>
+                      <CInputGroupText className="input-icon">
+                        <CIcon icon={cilList} />
+                      </CInputGroupText>
+                      <CFormInput name="note" value={formData.note} onChange={handleChange} />
+                    </CInputGroup>
+                  </div>
+                </div>
+                
                 {getSelectedModelHeaders().length > 0 && (
-                  <div className="model-headers-section">
+                  <div className="model-headers-section" style={{ marginTop: '20px' }}>
                     <h5>Model Options</h5>
-                    <div className="headers-list">
-                      {getSelectedModelHeaders()
-                        .filter((price) => price.header && price.header._id)
-                        .map((price) => {
-                          const header = price.header;
-                          const isMandatory = header.is_mandatory;
-                          const isChecked = isMandatory || formData.optionalComponents.includes(header._id);
+                    {/* Debug button */}
+                    <button 
+                      type="button" 
+                      onClick={debugHeaderDiscounts}
+                      style={{ marginBottom: '10px', padding: '5px 10px', backgroundColor: '#f0f0f0', border: '1px solid #ccc' }}
+                    >
+                      Debug Discounts
+                    </button>
+                    <div className="table-responsive">
+                      <CTable striped hover responsive>
+                        <CTableHead>
+                          <CTableRow>
+                            <CTableHeaderCell>Particulars</CTableHeaderCell>
+                            <CTableHeaderCell>HSN</CTableHeaderCell>
+                            <CTableHeaderCell>Unit Cost (₹)</CTableHeaderCell>
+                            <CTableHeaderCell>Discount (₹)</CTableHeaderCell>
+                            <CTableHeaderCell>Taxable (₹)</CTableHeaderCell>
+                            <CTableHeaderCell>CGST %</CTableHeaderCell>
+                            <CTableHeaderCell>CGST Amount (₹)</CTableHeaderCell>
+                            <CTableHeaderCell>SGST %</CTableHeaderCell>
+                            <CTableHeaderCell>SGST Amount (₹)</CTableHeaderCell>
+                            <CTableHeaderCell>LINE TOTAL (₹)</CTableHeaderCell>
+                          </CTableRow>
+                        </CTableHead>
+                        <CTableBody>
+                          {getSelectedModelHeaders()
+                            .filter((price) => price.header && price.header._id)
+                            .map((price) => {
+                              const header = price.header;
+                              const isMandatory = header.is_mandatory;
+                              const isDiscountAllowed = header.is_discount;
+                              const isChecked = isMandatory || formData.optionalComponents.includes(header._id);
+                              
+                              if (!isChecked) return null;
 
-                          return (
-                            <div key={header._id} className="header-item">
-                              <CFormCheck
-                                id={`header-${header._id}`}
-                                label={`${header.header_key} (₹${price.value}) ${isMandatory ? '(Mandatory)' : ''}`}
-                                checked={isChecked}
-                                onChange={(e) => !isMandatory && handleHeaderSelection(header._id, e.target.checked)}
-                                disabled={isMandatory}
-                              />
-                              {isMandatory && <input type="hidden" name={`mandatory-${header._id}`} value={header._id} />}
-                            </div>
-                          );
-                        })}
+                              // Get the discount amount from headerDiscounts state
+                              const discountValue = headerDiscounts[header._id] !== undefined ? headerDiscounts[header._id] : '';
+                              const unitPrice = price.value || 0;
+                              const discountAmount = discountValue !== '' ? parseFloat(discountValue) : 0;
+                              const netAmount = unitPrice - discountAmount;
+                              
+                              // Get GST rate from metadata
+                              const gstRate = header.metadata?.gst_rate ? parseFloat(header.metadata.gst_rate) : 0;
+                              const hsnCode = header.metadata?.hsn_code || 'N/A';
+                              
+                              // Calculate taxable amount based on customer type
+                              const taxable = calculateTaxableAmount(unitPrice, discountAmount, gstRate, formData.customer_type);
+                              
+                              // Calculate CGST and SGST based on customer type
+                              const { cgstAmount, sgstAmount, cgstRate, sgstRate } = calculateGST(taxable, gstRate, formData.customer_type);
+                              
+                              // Calculate line total
+                              const lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+
+                              return (
+                                <CTableRow key={header._id}>
+                                  <CTableDataCell>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                      <CFormCheck
+                                        id={`header-${header._id}`}
+                                        label={`${header.header_key} ${isMandatory ? '(Mandatory)' : ''}`}
+                                        checked={true}
+                                        onChange={(e) => !isMandatory && handleHeaderSelection(header._id, e.target.checked)}
+                                        disabled={isMandatory}
+                                        style={{ marginRight: '10px' }}
+                                      />
+                                      {header.header_key}
+                                    </div>
+                                  </CTableDataCell>
+                                  <CTableDataCell>{hsnCode}</CTableDataCell>
+                                  <CTableDataCell>₹{unitPrice.toFixed(2)}</CTableDataCell>
+                                  <CTableDataCell>
+                                    <CFormInput
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      placeholder="Enter discount"
+                                      value={discountValue}
+                                      onChange={(e) => handleHeaderDiscountChange(header._id, e.target.value)}
+                                      disabled={!isDiscountAllowed}
+                                      style={{ width: '150px' }}
+                                    />
+                                    {errors[`discount_${header._id}`] && (
+                                      <small className="text-danger d-block">{errors[`discount_${header._id}`]}</small>
+                                    )}
+                                  </CTableDataCell>
+                                  <CTableDataCell>₹{taxable.toFixed(2)}</CTableDataCell>
+                                  <CTableDataCell>{cgstRate.toFixed(2)}%</CTableDataCell>
+                                  <CTableDataCell>₹{cgstAmount.toFixed(2)}</CTableDataCell>
+                                  <CTableDataCell>{sgstRate.toFixed(2)}%</CTableDataCell>
+                                  <CTableDataCell>₹{sgstAmount.toFixed(2)}</CTableDataCell>
+                                  <CTableDataCell>
+                                    <strong>₹{lineTotal.toFixed(2)}</strong>
+                                  </CTableDataCell>
+                                </CTableRow>
+                              );
+                            })}
+                        </CTableBody>
+                      </CTable>
                     </div>
                   </div>
                 )}
+
                 <div className="form-footer">
                   <button type="button" className="cancel-button" onClick={() => setActiveTab(5)}>
                     Back

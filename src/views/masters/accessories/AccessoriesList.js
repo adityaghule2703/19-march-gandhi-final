@@ -15,7 +15,16 @@ import {
   showSuccess,
   axiosInstance
 } from '../../../utils/tableImports';
-import { hasPermission } from '../../../utils/permissionUtils';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -44,15 +53,53 @@ const AccessoriesList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'ACCESSORIES_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'ACCESSORIES_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'ACCESSORIES_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Accessories page under Masters module
+  const hasAccessoriesView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.ACCESSORIES, 
+    ACTIONS.VIEW
+  );
+  
+  const hasAccessoriesCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.ACCESSORIES, 
+    ACTIONS.CREATE
+  );
+  
+  const hasAccessoriesUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.ACCESSORIES, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasAccessoriesDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.ACCESSORIES, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewAccessories = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.ACCESSORIES);
+  const canCreateAccessories = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.ACCESSORIES);
+  const canUpdateAccessories = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.ACCESSORIES);
+  const canDeleteAccessories = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.ACCESSORIES);
+  
+  const showActionColumn = canUpdateAccessories || canDeleteAccessories;
 
   useEffect(() => {
+    if (!canViewAccessories) {
+      showError('You do not have permission to view Accessories');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewAccessories]);
 
   const fetchData = async () => {
     try {
@@ -81,6 +128,11 @@ const AccessoriesList = () => {
   };
 
   const handleTogglePartStatus = async (id, currentStatus) => {
+    if (!canUpdateAccessories) {
+      showError('You do not have permission to update accessory status');
+      return;
+    }
+    
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
 
     try {
@@ -98,6 +150,11 @@ const AccessoriesList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteAccessories) {
+      showError('You do not have permission to delete accessories');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -116,6 +173,14 @@ const AccessoriesList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('accessories'));
   };
+
+  if (!canViewAccessories) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Accessories.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -140,7 +205,7 @@ const AccessoriesList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateAccessories && (
               <Link to="/accessories/add-accessories">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Accessory
@@ -198,15 +263,13 @@ const AccessoriesList = () => {
                       <CTableDataCell>{accessories.categoryDetails?.header_key || ''}</CTableDataCell>
                       <CTableDataCell>{accessories.part_number}</CTableDataCell>
                       <CTableDataCell>
-                        {/* <CBadge color={accessories.part_number_status === 'active' ? 'success' : 'secondary'}>
-                          {accessories.part_number_status === 'active' ? 'Active' : 'Inactive'}
-                        </CBadge> */}
                         <CFormSwitch
                           className="custom-switch-toggle ms-2"
                           checked={accessories.part_number_status === 'active'}
                           onChange={() =>
                             handleTogglePartStatus(accessories.id, accessories.part_number_status === 'active' ? 'active' : 'inactive')
                           }
+                          disabled={!canUpdateAccessories}
                         />
                       </CTableDataCell>
                       <CTableDataCell>
@@ -228,7 +291,7 @@ const AccessoriesList = () => {
                             open={menuId === accessories.id}
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateAccessories && (
                               <Link className="Link" to={`/accessories/update-accessories/${accessories.id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />
@@ -236,7 +299,7 @@ const AccessoriesList = () => {
                                 </MenuItem>
                               </Link>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteAccessories && (
                               <MenuItem onClick={() => handleDelete(accessories.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

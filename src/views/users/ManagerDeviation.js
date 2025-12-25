@@ -14,7 +14,8 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CBadge
+  CBadge,
+  CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
@@ -35,7 +36,15 @@ import {
   showSuccess,
   axiosInstance
 } from 'src/utils/tableImports.js';
-import { hasPermission } from 'src/utils/permissionUtils.js';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from 'src/utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 const ManagerDeviation = () => {
@@ -46,14 +55,38 @@ const ManagerDeviation = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState({});
   const dropdownRefs = useRef({});
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'MANAGER_DEVIATION_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'MANAGER_DEVIATION_DELETE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Manager Deviation page under USER_MANAGEMENT module
+  // Based on your permission structure, Manager Deviation is under USER_MANAGEMENT module
+  const canViewManagerDeviation = canViewPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,
+    PAGES.MANAGER_DEVIATION.MANAGER_DEVIATION
+  );
+  
+  const canUpdateManagerDeviation = canUpdateInPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,
+    PAGES.MANAGER_DEVIATION.MANAGER_DEVIATION
+  );
+
+  const canDeleteManagerDeviation = canDeleteInPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,
+    PAGES.MANAGER_DEVIATION.MANAGER_DEVIATION
+  );
+
+  const showActionColumn = canUpdateManagerDeviation || canDeleteManagerDeviation;
 
   useEffect(() => {
+    if (!canViewManagerDeviation) {
+      showError('You do not have permission to view Manager Deviation');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewManagerDeviation]);
 
   const fetchData = async () => {
     try {
@@ -97,6 +130,11 @@ const ManagerDeviation = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteManagerDeviation) {
+      showError('You do not have permission to delete Manager Deviation');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -151,10 +189,12 @@ const ManagerDeviation = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
   const getRoleNames = (roles) => {
     if (!roles || !roles.length) return 'No Role';
     return roles.map((role) => role.name).join(', ');
   };
+
   const getDeviationUsageBadge = (usage, limit) => {
     const usagePercent = limit > 0 ? (usage / limit) * 100 : 0;
     
@@ -166,6 +206,14 @@ const ManagerDeviation = () => {
       return <CBadge color="success">{usage}</CBadge>;
     }
   };
+
+  if (!canViewManagerDeviation) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Manager Deviation.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -217,9 +265,6 @@ const ManagerDeviation = () => {
                   <CTableHeaderCell>Deviation Amount</CTableHeaderCell>
                   <CTableHeaderCell>Deviation Limit</CTableHeaderCell>
                   <CTableHeaderCell>Current Deviation Usage</CTableHeaderCell>
-                  {/* Uncomment if you want to show these columns */}
-                  {/* <CTableHeaderCell>Last Login</CTableHeaderCell>
-                  <CTableHeaderCell>Status</CTableHeaderCell> */}
                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
@@ -238,11 +283,6 @@ const ManagerDeviation = () => {
                       <CTableDataCell>
                         {getDeviationUsageBadge(user.currentDeviationUsage || '0', user.perTransactionDeviationLimit || 1)}
                       </CTableDataCell>
-                      {/* Uncomment if you want to show these columns */}
-                      {/* <CTableDataCell>{formatDate(user.lastLogin)}</CTableDataCell>
-                      <CTableDataCell>
-                        {getStatusBadge(user.status)}
-                      </CTableDataCell> */}
                       {showActionColumn && (
                         <CTableDataCell>
                           <div className="dropdown-container" ref={el => dropdownRefs.current[user.id] = el}>
@@ -250,13 +290,14 @@ const ManagerDeviation = () => {
                               size="sm"
                               className='option-button btn-sm'
                               onClick={() => toggleDropdown(user.id)}
+                              disabled={!canUpdateManagerDeviation && !canDeleteManagerDeviation}
                             >
                               <CIcon icon={cilSettings} />
                               Options
                             </CButton>
                             {dropdownOpen[user.id] && (
                               <div className="dropdown-menu show">
-                                {hasEditPermission && (
+                                {canUpdateManagerDeviation && (
                                   <Link 
                                     className="dropdown-item"
                                     to={`/users/update-user/${user.id}`}
@@ -264,7 +305,7 @@ const ManagerDeviation = () => {
                                     <CIcon icon={cilPencil} className="me-2" /> Edit
                                   </Link>
                                 )}
-                                {hasDeletePermission && (
+                                {canDeleteManagerDeviation && (
                                   <button 
                                     className="dropdown-item"
                                     onClick={() => handleDelete(user.id)}

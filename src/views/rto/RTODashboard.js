@@ -18,13 +18,38 @@ import {
 import axiosInstance from '../../axiosInstance';
 import '../../css/dashboard.css';
 
+// Import the permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+
 const RTODashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [bookingData, setBookingData] = useState(null);
   const [loading, setLoading] = useState({ dashboard: true, bookings: true });
   const [error, setError] = useState({ dashboard: null, bookings: null });
 
+  const { permissions } = useAuth();
+  
+  // Page-level permission check for RTO Dashboard page under RTO module
+  const canViewRTODashboard = canViewPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.DASHBOARD
+  );
+
   useEffect(() => {
+    if (!canViewRTODashboard) {
+      setError({ dashboard: 'Permission denied', bookings: 'Permission denied' });
+      setLoading({ dashboard: false, bookings: false });
+      return;
+    }
+    
     const fetchDashboardData = async () => {
       try {
         const response = await axiosInstance.get('/rtoProcess/stats');
@@ -57,7 +82,16 @@ const RTODashboard = () => {
 
     fetchDashboardData();
     fetchBookingCounts();
-  }, []);
+  }, [canViewRTODashboard]);
+
+  // Check if user has permission to view the page
+  if (!canViewRTODashboard) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view RTO Dashboard.
+      </div>
+    );
+  }
 
   if (loading.dashboard || loading.bookings) {
     return (

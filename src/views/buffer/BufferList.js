@@ -21,7 +21,8 @@ import {
   CModalBody,
   CModalFooter,
   CFormTextarea,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
@@ -40,7 +41,14 @@ import {
   showSuccess,
   axiosInstance
 } from 'src/utils/tableImports.js';
-import { hasPermission } from 'src/utils/permissionUtils.js';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canUpdateInPage 
+} from 'src/utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 const BufferList = () => {
@@ -51,7 +59,7 @@ const BufferList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
 
   const [unfreezeModalVisible, setUnfreezeModalVisible] = useState(false);
   const [extendTimeModalVisible, setExtendTimeModalVisible] = useState(false);
@@ -63,12 +71,46 @@ const BufferList = () => {
     reason: ''
   });
 
-  const hasUpdatePermission = hasPermission(permissions,'USER_BUFFER_UPDATE');
-  const showActionColumn = hasUpdatePermission;
+  // Page-level permission checks for Buffer Report page under USER_MANAGEMENT module
+  // Note: Based on your permission data, Buffer Report is under USER_MANAGEMENT module
+  const canViewBufferReport = canViewPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,  // Changed from MODULES.BUFFER_REPORT
+    PAGES.BUFFER_REPORT.BUFFER_LIST  // But keep using PAGES.BUFFER_REPORT for page name
+  );
+  
+  const canUpdateBufferReport = canUpdateInPage(
+    permissions, 
+    MODULES.USER_MANAGEMENT,  // Changed from MODULES.BUFFER_REPORT
+    PAGES.BUFFER_REPORT.BUFFER_LIST
+  );
+
+  // Alternative: You can also check using the exact permission structure
+  const hasViewPermission = hasSafePagePermission(
+    permissions,
+    'USER MANAGEMENT',  // Match exactly what's in your permission data
+    'Buffer Report',
+    ACTIONS.VIEW
+  );
+
+  const hasUpdatePermission = hasSafePagePermission(
+    permissions,
+    'USER MANAGEMENT',  // Match exactly what's in your permission data
+    'Buffer Report',
+    ACTIONS.UPDATE
+  );
+
+  const showActionColumn = canUpdateBufferReport || hasUpdatePermission;
 
   useEffect(() => {
+    // Check using both methods to be safe
+    if (!canViewBufferReport && !hasViewPermission) {
+      showError('You do not have permission to view Buffer Report');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewBufferReport, hasViewPermission]);
 
   const fetchData = async () => {
     try {
@@ -110,12 +152,22 @@ const BufferList = () => {
 
   // Unfreeze handlers
   const handleUnfreezeClick = (userId) => {
+    if (!canUpdateBufferReport && !hasUpdatePermission) {
+      showError('You do not have permission to update Buffer Report');
+      return;
+    }
+    
     setSelectedUserId(userId);
     setUnfreezeModalVisible(true);
     handleClose();
   };
 
   const confirmUnfreeze = async () => {
+    if (!canUpdateBufferReport && !hasUpdatePermission) {
+      showError('You do not have permission to update Buffer Report');
+      return;
+    }
+    
     if (!unfreezeReason.trim()) {
       showError('Please enter a reason for unfreezing');
       return;
@@ -140,12 +192,22 @@ const BufferList = () => {
 
   // Extend time handlers
   const handleExtendTimeClick = (userId) => {
+    if (!canUpdateBufferReport && !hasUpdatePermission) {
+      showError('You do not have permission to update Buffer Report');
+      return;
+    }
+    
     setSelectedUserId(userId);
     setExtendTimeModalVisible(true);
     handleClose();
   };
 
   const confirmExtendTime = async () => {
+    if (!canUpdateBufferReport && !hasUpdatePermission) {
+      showError('You do not have permission to update Buffer Report');
+      return;
+    }
+    
     if (!extendTimeData.reason.trim()) {
       showError('Please enter a reason for extending time');
       return;
@@ -196,6 +258,17 @@ const BufferList = () => {
       <CBadge color="danger">Frozen</CBadge> : 
       <CBadge color="success">Active</CBadge>;
   };
+
+  // Check permission using both methods
+  const hasPermissionToView = canViewBufferReport || hasViewPermission;
+
+  if (!hasPermissionToView) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Buffer Report.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -341,6 +414,7 @@ const BufferList = () => {
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, user.id || user._id)}
+                            disabled={!canUpdateBufferReport && !hasUpdatePermission}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -351,10 +425,18 @@ const BufferList = () => {
                             open={menuId === (user.id || user._id)} 
                             onClose={handleClose}
                           >
-                            <MenuItem onClick={() => handleUnfreezeClick(user.id || user._id)} style={{ color: 'black' }}>
+                            <MenuItem 
+                              onClick={() => handleUnfreezeClick(user.id || user._id)} 
+                              style={{ color: 'black' }}
+                              disabled={!canUpdateBufferReport && !hasUpdatePermission}
+                            >
                               <CIcon icon={cilBan} className="me-2" /> Unfreeze
                             </MenuItem>
-                            <MenuItem onClick={() => handleExtendTimeClick(user.id || user._id)} style={{ color: 'black' }}>
+                            <MenuItem 
+                              onClick={() => handleExtendTimeClick(user.id || user._id)} 
+                              style={{ color: 'black' }}
+                              disabled={!canUpdateBufferReport && !hasUpdatePermission}
+                            >
                               <CIcon icon={cilClock} className="me-2" /> Extend Time
                             </MenuItem>
                           </Menu>

@@ -17,16 +17,27 @@ import {
   CFormInput,
   CSpinner,
   CFormLabel,
-  CCardHeader
+  CCardHeader,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, showError, useTableFilter } from '../../utils/tableImports';
 import '../../css/invoice.css';
 import '../../css/table.css';
 import UpdateRTO from './UpdateRTO';
 import DeviationModal from './DeviationModal';
-import { hasPermission } from '../../utils/permissionUtils';
 import CIcon from '@coreui/icons-react';
 import { cilPencil, cilDollar } from '@coreui/icons';
+
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage
+} from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 function Application() {
@@ -38,7 +49,26 @@ function Application() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Application page under RTO module
+  const canViewApplication = canViewPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.APPLICATION
+  );
+  
+  const canCreateInApplication = canCreateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.APPLICATION
+  );
+  
+  const canUpdateInApplication = canUpdateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.APPLICATION
+  );
 
   const {
     data: pendingData,
@@ -57,6 +87,12 @@ function Application() {
   } = useTableFilter([]);
 
   const fetchData = async () => {
+    if (!canViewApplication) {
+      setError('Permission denied');
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/bookings/pfbookings`);
@@ -73,6 +109,10 @@ function Application() {
   };
 
   const fetchLocationData = async () => {
+    if (!canViewApplication) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/rtoProcess/application-numbers`);
       setApprovedData(response.data.data);
@@ -88,14 +128,24 @@ function Application() {
   useEffect(() => {
     fetchData();
     fetchLocationData();
-  }, [refreshKey]);
+  }, [refreshKey, canViewApplication]);
 
   const handleAddClick = (booking) => {
+    if (!canUpdateInApplication) {
+      showError('You do not have permission to update RTO applications');
+      return;
+    }
+    
     setSelectedBooking(booking);
     setShowModal(true);
   };
 
   const handleDeviationClick = () => {
+    if (!canCreateInApplication) {
+      showError('You do not have permission to add deviation');
+      return;
+    }
+    
     setShowDeviationModal(true);
   };
 
@@ -133,7 +183,7 @@ function Application() {
               <CTableHeaderCell scope="col">Line Total</CTableHeaderCell>
               <CTableHeaderCell scope="col">Received</CTableHeaderCell>
               <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-              {hasPermission(permissions,'RTO_PROCESS_UPDATE') && (
+              {canUpdateInApplication && (
                 <CTableHeaderCell scope="col" className="text-center">Action</CTableHeaderCell>
               )}
             </CTableRow>
@@ -141,7 +191,7 @@ function Application() {
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan={hasPermission(permissions,'RTO_PROCESS_UPDATE') ? "10" : "9"} style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canUpdateInApplication ? "10" : "9"} style={{ color: 'red', textAlign: 'center' }}>
                   No data available
                 </CTableDataCell>
               </CTableRow>
@@ -157,7 +207,7 @@ function Application() {
                   <CTableDataCell>{booking.discountedAmount || '0'}</CTableDataCell>
                   <CTableDataCell>{booking.receivedAmount || '0'}</CTableDataCell>
                   <CTableDataCell>{booking.balanceAmount || '0'}</CTableDataCell>
-                  {hasPermission(permissions,'RTO_PROCESS_UPDATE') && (
+                  {canUpdateInApplication && (
                     <CTableDataCell>
                       <CButton 
                         size="sm" 
@@ -218,6 +268,15 @@ function Application() {
     );
   };
 
+  // Check if user has permission to view the page
+  if (!canViewApplication) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view RTO Application Management.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -241,8 +300,7 @@ function Application() {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-
-            {/* {hasPermission('RTO_PROCESS', 'UPDATE') && activeTab === 0 && ( */}
+            {canCreateInApplication && activeTab === 0 && (
               <CButton
                 size="sm" 
                 color="info"
@@ -251,7 +309,7 @@ function Application() {
               >
                 <CIcon icon={cilDollar} className='icon' /> Add Deviation
               </CButton>
-            {/* )} */}
+            )}
           </div>
         </CCardHeader>
         

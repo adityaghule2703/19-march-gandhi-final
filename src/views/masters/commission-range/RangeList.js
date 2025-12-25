@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -13,6 +12,16 @@ import {
   showError,
   axiosInstance
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -46,15 +55,53 @@ const RangeList = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData || []);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'BROKER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'BROKER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'BROKER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Broker Commission Range page under Masters module
+  const hasBrokerCommissionRangeView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.BROKER_COMMISSION_RANGE, 
+    ACTIONS.VIEW
+  );
+  
+  const hasBrokerCommissionRangeCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.BROKER_COMMISSION_RANGE, 
+    ACTIONS.CREATE
+  );
+  
+  const hasBrokerCommissionRangeUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.BROKER_COMMISSION_RANGE, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasBrokerCommissionRangeDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.BROKER_COMMISSION_RANGE, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewBrokerCommissionRange = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKER_COMMISSION_RANGE);
+  const canCreateBrokerCommissionRange = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKER_COMMISSION_RANGE);
+  const canUpdateBrokerCommissionRange = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKER_COMMISSION_RANGE);
+  const canDeleteBrokerCommissionRange = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKER_COMMISSION_RANGE);
+  
+  const showActionColumn = canUpdateBrokerCommissionRange || canDeleteBrokerCommissionRange;
 
   useEffect(() => {
+    if (!canViewBrokerCommissionRange) {
+      showError('You do not have permission to view Broker Commission Range');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewBrokerCommissionRange]);
 
   const fetchData = async () => {
     try {
@@ -85,6 +132,11 @@ const RangeList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteBrokerCommissionRange) {
+      showError('You do not have permission to delete commission ranges');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -106,6 +158,11 @@ const RangeList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateBrokerCommissionRange) {
+      showError('You do not have permission to add commission ranges');
+      return;
+    }
+    
     setEditingRange(null);
     setShowModal(true);
   };
@@ -121,6 +178,14 @@ const RangeList = () => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 1500);
   };
+
+  if (!canViewBrokerCommissionRange) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Broker Commission Range.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -151,7 +216,7 @@ const RangeList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateBrokerCommissionRange && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -210,6 +275,7 @@ const RangeList = () => {
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, range._id || range.id)}
+                            disabled={!canUpdateBrokerCommissionRange && !canDeleteBrokerCommissionRange}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -220,7 +286,8 @@ const RangeList = () => {
                             open={menuId === (range._id || range.id)} 
                             onClose={handleClose}
                           >
-                            {/* {hasEditPermission && (
+                            {/* Note: Edit functionality is commented out in the original code
+                            {canUpdateBrokerCommissionRange && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(range)}
                                 style={{ color: 'black' }}
@@ -229,7 +296,7 @@ const RangeList = () => {
                                 Edit
                               </MenuItem>
                             )} */}
-                            {hasDeletePermission && (
+                            {canDeleteBrokerCommissionRange && (
                               <MenuItem onClick={() => handleDelete(range._id || range.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

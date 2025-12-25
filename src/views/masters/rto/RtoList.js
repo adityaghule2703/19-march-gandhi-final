@@ -14,7 +14,16 @@ import {
   showError,
   axiosInstance
 } from '../../../utils/tableImports';
-import { hasPermission } from '../../../utils/permissionUtils';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -48,15 +57,53 @@ const RtoList = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData || []);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'RTO_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'RTO_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'RTO_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for RTO page under Masters module
+  const hasRTOView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.RTO_MASTER, 
+    ACTIONS.VIEW
+  );
+  
+  const hasRTOCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.RTO_MASTER, 
+    ACTIONS.CREATE
+  );
+  
+  const hasRTOUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.RTO_MASTER, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasRTODelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.RTO_MASTER, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewRTO = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.RTO_MASTER);
+  const canCreateRTO = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.RTO_MASTER);
+  const canUpdateRTO = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.RTO_MASTER);
+  const canDeleteRTO = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.RTO_MASTER);
+  
+  const showActionColumn = canUpdateRTO || canDeleteRTO;
 
   useEffect(() => {
+    if (!canViewRTO) {
+      showError('You do not have permission to view RTO');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewRTO]);
 
   const fetchData = async () => {
     try {
@@ -66,9 +113,9 @@ const RtoList = () => {
       setFilteredData(response.data?.data || []);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
       setData([]);
       setFilteredData([]);
     } finally {
@@ -87,6 +134,11 @@ const RtoList = () => {
   };
 
   const handleToggleRtoStatus = async (id, currentStatus) => {
+    if (!canUpdateRTO) {
+      showError('You do not have permission to update RTO status');
+      return;
+    }
+    
     const newStatus = !currentStatus;
 
     try {
@@ -105,6 +157,11 @@ const RtoList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteRTO) {
+      showError('You do not have permission to delete RTO');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -126,11 +183,21 @@ const RtoList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateRTO) {
+      showError('You do not have permission to add RTO');
+      return;
+    }
+    
     setEditingRto(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (rto) => {
+    if (!canUpdateRTO) {
+      showError('You do not have permission to edit RTO');
+      return;
+    }
+    
     setEditingRto(rto);
     setShowModal(true);
   };
@@ -146,6 +213,14 @@ const RtoList = () => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
+
+  if (!canViewRTO) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view RTO.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -176,7 +251,7 @@ const RtoList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateRTO && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -232,6 +307,7 @@ const RtoList = () => {
                             checked={rto.is_active} 
                             onChange={() => handleToggleRtoStatus(rto.id, rto.is_active)}
                             className="ms-2"
+                            disabled={!canUpdateRTO}
                           />
                         </div>
                       </CTableDataCell>
@@ -241,6 +317,7 @@ const RtoList = () => {
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, rto?.id)}
+                            disabled={!canUpdateRTO && !canDeleteRTO}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -251,7 +328,7 @@ const RtoList = () => {
                             open={menuId === rto?.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateRTO && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(rto)}
                                 style={{ color: 'black' }}
@@ -260,7 +337,7 @@ const RtoList = () => {
                                 Edit
                               </MenuItem>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteRTO && (
                               <MenuItem onClick={() => handleDelete(rto?.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

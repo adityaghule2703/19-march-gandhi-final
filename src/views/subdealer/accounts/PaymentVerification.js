@@ -20,12 +20,22 @@ import {
   CTableRow,
   CTableHeaderCell,
   CTableBody,
-  CTableDataCell
+  CTableDataCell,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, showError, showSuccess} from 'src/utils/tableImports';
 import { confirmVerify } from 'src/utils/sweetAlerts';
 import CIcon from '@coreui/icons-react';
 import { cilCheckCircle} from '@coreui/icons';
+import { useAuth } from '../../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES, 
+  PAGES
+} from '../../../utils/modulePermissions';
 
 function PaymentVerification() {
   const [activeTab, setActiveTab] = useState(0);
@@ -33,10 +43,23 @@ function PaymentVerification() {
   const [verifiedPaymentsData, setVerifiedPaymentsData] = useState([]);
   const [searchValue, setSearchValue] = useState('');
   const [error, setError] = useState(null);
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Payment Verification page under Subdealer Account module
+  const canViewPaymentVerification = canViewPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.PAYMENT_VERIFICATION);
+  
+  // Verify action = CREATE permission (creating verification record)
+  const canCreatePaymentVerification = canCreateInPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.PAYMENT_VERIFICATION);
+
   useEffect(() => {
+    if (!canViewPaymentVerification) {
+      showError('You do not have permission to view Payment Verification');
+      return;
+    }
+    
     fetchPendingPayments();
     fetchVerifiedPayments();
-  }, []);
+  }, [canViewPaymentVerification]);
 
   const fetchPendingPayments = async () => {
     try {
@@ -98,6 +121,12 @@ function PaymentVerification() {
   const filteredVerifiedLedgerEntries = filterData(verifiedPaymentsData, searchValue);
 
   const handleVerifyPayment = async (entry) => {
+    // Check CREATE permission for verification action
+    if (!canCreatePaymentVerification) {
+      showError('You do not have permission to verify payments');
+      return;
+    }
+    
     try {
       const result = await confirmVerify({
         title: 'Confirm Payment Verification',
@@ -127,10 +156,18 @@ function PaymentVerification() {
     setSearchValue('');
   };
 
+  if (!canViewPaymentVerification) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Payment Verification.
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -138,6 +175,12 @@ function PaymentVerification() {
   return (
     <div>
       <div className='title'>Payment Verification</div>
+    
+      {canViewPaymentVerification && !canCreatePaymentVerification && (
+        <CAlert color="warning" className="mb-3">
+          You have VIEW permission but cannot verify payments.
+        </CAlert>
+      )}
     
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
@@ -190,7 +233,7 @@ function PaymentVerification() {
                 className="d-inline-block square-search"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-               
+                disabled={!canViewPaymentVerification}
               />
               {searchValue && (
                 <CButton 
@@ -219,13 +262,13 @@ function PaymentVerification() {
                       <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
                       <CTableHeaderCell scope="col">Date</CTableHeaderCell>
                       <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-                      <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+                      {canCreatePaymentVerification && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
                     </CTableRow>
                   </CTableHead>
                   <CTableBody>
                     {filteredPendingLedgerEntries.length === 0 ? (
                       <CTableRow>
-                        <CTableDataCell colSpan="9" style={{ color: 'red', textAlign: 'center' }}>
+                        <CTableDataCell colSpan={canCreatePaymentVerification ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}>
                           {searchValue ? 'No matching pending payments found' : 'No pending payments available'}
                         </CTableDataCell>
                       </CTableRow>
@@ -244,16 +287,18 @@ function PaymentVerification() {
                               {entry.approvalStatus === 'Pending' ? 'PENDING' : 'COMPLETE'}
                             </CBadge>
                           </CTableDataCell>
-                          <CTableDataCell>
-                            <CButton 
-                              size="sm" 
-                              className="action-btn"
-                              onClick={() => handleVerifyPayment(entry)}
-                              disabled={entry.approvalStatus !== 'Pending'}
-                            >
-                              <CIcon icon={cilCheckCircle} className='icon'/> Verify
-                            </CButton>
-                          </CTableDataCell>
+                          {canCreatePaymentVerification && (
+                            <CTableDataCell>
+                              <CButton 
+                                size="sm" 
+                                className="action-btn"
+                                onClick={() => handleVerifyPayment(entry)}
+                                disabled={entry.approvalStatus !== 'Pending'}
+                              >
+                                <CIcon icon={cilCheckCircle} className='icon'/> Verify
+                              </CButton>
+                            </CTableDataCell>
+                          )}
                         </CTableRow>
                       ))
                     )}

@@ -31,7 +31,16 @@ import CIcon from '@coreui/icons-react';
 import { cilPlus, cilSettings, cilPencil, cilTrash } from '@coreui/icons';
 import AddMinimumBookingAmount from './AddMinimumBookingAmount';
 import { useAuth } from '../../../context/AuthContext';
-import { hasPermission } from '../../../utils/permissionUtils';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 
 const MinimumBookingAmountList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -43,15 +52,53 @@ const MinimumBookingAmountList = () => {
   const [editingItem, setEditingItem] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'MINIMUMAMOUNT_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'MINIMUMAMOUNT_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'MINIMUMAMOUNT_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Minimum Booking Amount page under Masters module
+  const hasMinimumBookingAmountView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.MINIMUM_BOOKING_AMOUNT, 
+    ACTIONS.VIEW
+  );
+  
+  const hasMinimumBookingAmountCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.MINIMUM_BOOKING_AMOUNT, 
+    ACTIONS.CREATE
+  );
+  
+  const hasMinimumBookingAmountUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.MINIMUM_BOOKING_AMOUNT, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasMinimumBookingAmountDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.MINIMUM_BOOKING_AMOUNT, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewMinimumBookingAmount = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.MINIMUM_BOOKING_AMOUNT);
+  const canCreateMinimumBookingAmount = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.MINIMUM_BOOKING_AMOUNT);
+  const canUpdateMinimumBookingAmount = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.MINIMUM_BOOKING_AMOUNT);
+  const canDeleteMinimumBookingAmount = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.MINIMUM_BOOKING_AMOUNT);
+  
+  const showActionColumn = canUpdateMinimumBookingAmount || canDeleteMinimumBookingAmount;
 
   useEffect(() => {
+    if (!canViewMinimumBookingAmount) {
+      showError('You do not have permission to view Minimum Booking Amount');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewMinimumBookingAmount]);
 
   const fetchData = async () => {
     try {
@@ -82,6 +129,11 @@ const MinimumBookingAmountList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteMinimumBookingAmount) {
+      showError('You do not have permission to delete minimum booking amounts');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -102,11 +154,21 @@ const MinimumBookingAmountList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateMinimumBookingAmount) {
+      showError('You do not have permission to add minimum booking amounts');
+      return;
+    }
+    
     setEditingItem(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (item) => {
+    if (!canUpdateMinimumBookingAmount) {
+      showError('You do not have permission to edit minimum booking amounts');
+      return;
+    }
+    
     setEditingItem(item);
     setShowModal(true);
   };
@@ -126,6 +188,14 @@ const MinimumBookingAmountList = () => {
   const formatPercentage = (amount) => {
     return `${parseFloat(amount).toFixed(2)}%`;
   };
+
+  if (!canViewMinimumBookingAmount) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Minimum Booking Amount.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -156,7 +226,7 @@ const MinimumBookingAmountList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-          {hasCreatePermission && (
+          {canCreateMinimumBookingAmount && (
             <CButton 
               size="sm" 
               className="action-btn me-1"
@@ -190,13 +260,13 @@ const MinimumBookingAmountList = () => {
                   <CTableHeaderCell>Model Name</CTableHeaderCell>
                   <CTableHeaderCell>Type</CTableHeaderCell>
                   <CTableHeaderCell>Minimum Amount (%)</CTableHeaderCell>
-                  <CTableHeaderCell>Action</CTableHeaderCell>
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {!filteredData?.length ? (
                   <CTableRow>
-                    <CTableDataCell colSpan="5" className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "5" : "4"} className="text-center">
                       No minimum booking amounts available
                     </CTableDataCell>
                   </CTableRow>
@@ -233,7 +303,7 @@ const MinimumBookingAmountList = () => {
                           open={menuId === item?._id} 
                           onClose={handleClose}
                         >
-                           {hasEditPermission && (
+                           {canUpdateMinimumBookingAmount && (
                           <MenuItem 
                             onClick={() => handleShowEditModal(item)}
                             style={{ color: 'black' }}
@@ -242,7 +312,7 @@ const MinimumBookingAmountList = () => {
                             Edit
                           </MenuItem>
                            )}
-                          {hasDeletePermission && (
+                          {canDeleteMinimumBookingAmount && (
                           <MenuItem onClick={() => handleDelete(item?._id)}>
                             <CIcon icon={cilTrash} className="me-2" />
                             Delete

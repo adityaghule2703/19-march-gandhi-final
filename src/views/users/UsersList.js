@@ -1,4 +1,3 @@
-
 import '../../css/table.css';
 import '../../css/form.css';
 import React, { useState, useEffect } from 'react';
@@ -38,8 +37,17 @@ import {
   showSuccess,
   axiosInstance
 } from 'src/utils/tableImports.js';
-import { hasPermission } from 'src/utils/permissionUtils.js';
 import { useAuth } from '../../context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage
+} from 'src/utils/modulePermissions.js';
 
 const UsersList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -49,15 +57,53 @@ const UsersList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'USER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'USER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'USER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for User List page under User Management module
+  const hasUserListView = hasSafePagePermission(
+    permissions, 
+    MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+    PAGES.USER.USER_LIST, 
+    ACTIONS.VIEW
+  );
+  
+  const hasUserListCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+    PAGES.USER.USER_LIST, 
+    ACTIONS.CREATE
+  );
+  
+  const hasUserListUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+    PAGES.USER.USER_LIST, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasUserListDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+    PAGES.USER.USER_LIST, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewUserList = canViewPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+  const canCreateUserList = canCreateInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+  const canUpdateUserList = canUpdateInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+  const canDeleteUserList = canDeleteInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+
+  const showActionColumn = canUpdateUserList || canDeleteUserList;
 
   useEffect(() => {
+    if (!canViewUserList) {
+      showError('You do not have permission to view Users List');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewUserList]);
 
   const fetchData = async () => {
     try {
@@ -152,6 +198,14 @@ const UsersList = () => {
     }
   };
 
+  if (!canViewUserList) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Users List.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -163,7 +217,7 @@ const UsersList = () => {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -175,7 +229,7 @@ const UsersList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateUserList && (
               <Link to='/users/add-user'>
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New User
@@ -247,14 +301,14 @@ const UsersList = () => {
                             open={menuId === user.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateUserList && (
                               <Link className="Link" to={`/users/update-user/${user.id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />Edit
                                 </MenuItem>
                               </Link>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteUserList && (
                               <MenuItem onClick={() => handleDelete(user.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />Delete
                               </MenuItem>

@@ -17,7 +17,16 @@ import {
 import '../../css/importCsv.css';
 import '../../css/form.css';
 import ImportInwardCSV from '../../views/csv/ImportInwardCSV';
-import { hasPermission } from '../../utils/permissionUtils';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -74,19 +83,58 @@ const StockList = () => {
   const [selectedVehicleForAllocation, setSelectedVehicleForAllocation] = useState(null);
   const [vehicleAllocationDetails, setVehicleAllocationDetails] = useState(null);
 
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions, 'VEHICLE_INWARD_UPDATE');
-  const hasDeletePermission = hasPermission(permissions, 'VEHICLE_INWARD_DELETE');
-  const hasCreatePermission = hasPermission(permissions, 'VEHICLE_INWARD_CREATE');
-  const hasReadPermission = hasPermission(permissions, 'VEHICLE_INWARD_READ');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions = [] } = useAuth();
+  const navigate = useNavigate();
+
+  // Page-level permission checks for Inward Stock page under Purchase module
+  const hasInwardStockView = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.INWARD_STOCK, 
+    ACTIONS.VIEW
+  );
   
+  const hasInwardStockCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.INWARD_STOCK, 
+    ACTIONS.CREATE
+  );
+  
+  const hasInwardStockUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.INWARD_STOCK, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasInwardStockDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.INWARD_STOCK, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewInwardStock = canViewPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
+  const canCreateInwardStock = canCreateInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
+  const canUpdateInwardStock = canUpdateInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
+  const canDeleteInwardStock = canDeleteInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
+  
+  // For export, you might need a specific permission or use CREATE permission
+  const canExportInwardStock = hasInwardStockCreate || canCreateInwardStock;
+
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const branchId = storedUser.branch?._id;
   const userRole = localStorage.getItem('userRole');
-  const navigate = useNavigate();
 
   useEffect(() => {
+    if (!canViewInwardStock) {
+      showError('You do not have permission to view Inward Stock');
+      navigate('/dashboard');
+      return;
+    }
+    
     fetchData();
     fetchBranches();
   }, []);
@@ -126,6 +174,11 @@ const StockList = () => {
   };
 
   const handlePrintQR = (vehicle) => {
+    if (!canViewInwardStock) {
+      showError('You do not have permission to view Inward Stock');
+      return;
+    }
+    
     const qrUrl = vehicle.qrCode
       ? `${config.baseURL || ''}${vehicle.qrCode}`
       : '';
@@ -139,26 +192,26 @@ const StockList = () => {
           <style>
             body {
               font-family: Arial, sans-serif;
-              text-align: center;
-              padding: 20px;
+              text-align: center,
+              padding: 20px,
             }
             .qr-container {
-              border: 1px solid #000;
-              padding: 15px;
-              width: 400px;
-              margin: auto;
+              border: 1px solid #000,
+              padding: 15px,
+              width: 400px,
+              margin: auto,
             }
             img {
-              width: 250px;
-              height: 250px;
-              margin-bottom: 10px;
+              width: 250px,
+              height: 250px,
+              margin-bottom: 10px,
             }
             .label {
-              font-weight: bold;
-              margin-top: 8px;
+              font-weight: bold,
+              margin-top: 8px,
             }
             .value {
-              margin-bottom: 6px;
+              margin-bottom: 6px,
             }
           </style>
         </head>
@@ -188,9 +241,13 @@ const StockList = () => {
   
     printWindow.document.close();
   };
-  
 
   const handleClick = (event, id) => {
+    if (!canViewInwardStock && !canUpdateInwardStock && !canDeleteInwardStock) {
+      showError('You do not have permission to access this menu');
+      return;
+    }
+    
     setAnchorEl(event.currentTarget);
     setMenuId(id);
   };
@@ -201,12 +258,21 @@ const StockList = () => {
   };
 
   const handleUnblockClick = (vehicleId) => {
+    if (!canUpdateInwardStock) {
+      showError('You do not have permission to unblock vehicles');
+      return;
+    }
     setSelectedVehicleId(vehicleId);
     setUnblockModalOpen(true);
     handleClose();
   };
 
   const handleUnblockSubmit = async () => {
+    if (!canUpdateInwardStock) {
+      showError('You do not have permission to unblock vehicles');
+      return;
+    }
+
     if (!unblockReason.trim()) {
       showError('Please enter a reason for unblocking');
       return;
@@ -236,6 +302,11 @@ const StockList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteInwardStock) {
+      showError('You do not have permission to delete vehicles');
+      return;
+    }
+
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -251,6 +322,10 @@ const StockList = () => {
   };
 
   const handleImportSuccess = () => {
+    if (!canCreateInwardStock) {
+      showError('You do not have permission to import vehicles');
+      return;
+    }
     fetchData();
   };
 
@@ -277,10 +352,19 @@ const StockList = () => {
   };
 
   const addNewStock = () => {
+    if (!canCreateInwardStock) {
+      showError('You do not have permission to add new stock');
+      return;
+    }
     navigate('/inward-stock');
   };
 
   const handleExportExcel = async () => {
+    if (!canExportInwardStock) {
+      showError('You do not have permission to export data');
+      return;
+    }
+
     if (!selectedType) {
       showError('Please select a type.');
       return;
@@ -338,8 +422,42 @@ const StockList = () => {
   const isVehicleBlocked = (status) => {
     return status.toLowerCase() === 'blocked';
   };
+  
   const isVehicleFriz = (status) => {
     return status.toUpperCase() === 'FROZEN';
+  };
+
+  const handleAllocateClick = (vehicle) => {
+    if (!canUpdateInwardStock) {
+      showError('You do not have permission to allocate vehicles');
+      return;
+    }
+
+    const extractId = (item) => {
+      if (!item) return '';
+      if (typeof item === 'object') {
+        return item._id || item.id || '';
+      }
+      return item;
+    };
+
+    const vehicleDetails = {
+      vehicleId: vehicle._id || vehicle.id,
+      modelName: vehicle.modelName || '',
+      colorName: vehicle.color?.name || vehicle.color?.id || vehicle.color || '',
+      chassisNumber: vehicle.chassisNumber || '',
+      locationName: vehicle.unloadLocation?.name || vehicle.subdealerLocation?.name || '',
+      modelId: extractId(vehicle.model),
+      colorId: extractId(vehicle.color),
+      locationId: extractId(vehicle.unloadLocation || vehicle.subdealerLocation)
+    };
+    
+    console.log('Vehicle details for allocation:', vehicleDetails);
+    
+    setVehicleAllocationDetails(vehicleDetails);
+    setSelectedVehicleForAllocation(vehicle._id || vehicle.id);
+    setAllocateModalOpen(true);
+    handleClose();
   };
 
   if (loading) {
@@ -350,37 +468,18 @@ const StockList = () => {
     );
   }
 
-const handleAllocateClick = (vehicle) => {
-  const extractId = (item) => {
-    if (!item) return '';
-    if (typeof item === 'object') {
-      return item._id || item.id || '';
-    }
-    return item;
-  };
+  if (!canViewInwardStock) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Inward Stock.
+      </div>
+    );
+  }
 
-  const vehicleDetails = {
-    vehicleId: vehicle._id || vehicle.id,
-    modelName: vehicle.modelName || '',
-    colorName: vehicle.color?.name || vehicle.color?.id || vehicle.color || '',
-    chassisNumber: vehicle.chassisNumber || '',
-    locationName: vehicle.unloadLocation?.name || vehicle.subdealerLocation?.name || '',
-    modelId: extractId(vehicle.model),
-    colorId: extractId(vehicle.color),
-    locationId: extractId(vehicle.unloadLocation || vehicle.subdealerLocation)
-  };
-  
-  console.log('Vehicle details for allocation:', vehicleDetails);
-  
-  setVehicleAllocationDetails(vehicleDetails);
-  setSelectedVehicleForAllocation(vehicle._id || vehicle.id);
-  setAllocateModalOpen(true);
-  handleClose();
-};
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -392,7 +491,7 @@ const handleAllocateClick = (vehicle) => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateInwardStock && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -409,16 +508,18 @@ const handleAllocateClick = (vehicle) => {
             >
               <CIcon icon={cilSearch} className='icon' /> Search
             </CButton>
+            
             {isFilterApplied && (
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-              onClick={clearFilter}
-            >
-              <CIcon icon={cilZoomOut} className='icon' /> Reset Search
-            </CButton>
+              <CButton 
+                size="sm" 
+                className="action-btn me-1"
+                onClick={clearFilter}
+              >
+                <CIcon icon={cilZoomOut} className='icon' /> Reset Search
+              </CButton>
             )}
-            {(hasCreatePermission || hasReadPermission) && (
+           
+            {canViewInwardStock && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -428,7 +529,7 @@ const handleAllocateClick = (vehicle) => {
               </CButton>
             )}
 
-            {hasCreatePermission && (
+            {canCreateInwardStock && (
               <ImportInwardCSV 
                 endpoint="/vehicles/import-excel" 
                 onSuccess={handleImportSuccess} 
@@ -465,13 +566,18 @@ const handleAllocateClick = (vehicle) => {
                   <CTableHeaderCell>Chassis No</CTableHeaderCell>
                   <CTableHeaderCell>QR Code</CTableHeaderCell>
                   <CTableHeaderCell>Current Status</CTableHeaderCell>
-                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
+                  {(canUpdateInwardStock || canDeleteInwardStock || canViewInwardStock) && (
+                    <CTableHeaderCell>Action</CTableHeaderCell>
+                  )}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {currentRecords.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={showActionColumn ? "15" : "14"} className="text-center">
+                    <CTableDataCell 
+                      colSpan={(canUpdateInwardStock || canDeleteInwardStock || canViewInwardStock) ? "11" : "10"} 
+                      className="text-center"
+                    >
                       No inward details available
                     </CTableDataCell>
                   </CTableRow>
@@ -479,7 +585,7 @@ const handleAllocateClick = (vehicle) => {
                   currentRecords.map((vehicle, index) => (
                     <CTableRow key={index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
-                       <CTableDataCell>{vehicle.unloadLocation?.name || vehicle.subdealerLocation?.name}</CTableDataCell>
+                      <CTableDataCell>{vehicle.unloadLocation?.name || vehicle.subdealerLocation?.name}</CTableDataCell>
                       <CTableDataCell>{new Date(vehicle.createdAt).toLocaleDateString()}</CTableDataCell>
                       <CTableDataCell>{vehicle.type}</CTableDataCell>
                       <CTableDataCell>{vehicle.modelName || ''}</CTableDataCell>
@@ -515,12 +621,14 @@ const handleAllocateClick = (vehicle) => {
                           {vehicle.status}
                         </CBadge>
                       </CTableDataCell>
-                      {showActionColumn && (
+                      
+                      {(canUpdateInwardStock || canDeleteInwardStock || canViewInwardStock) && (
                         <CTableDataCell>
                           <CButton
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, vehicle.id)}
+                            disabled={!canViewInwardStock && !canUpdateInwardStock && !canDeleteInwardStock}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -531,7 +639,7 @@ const handleAllocateClick = (vehicle) => {
                             open={menuId === vehicle.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateInwardStock && (
                               <Link className="Link" to={`/update-inward/${vehicle.id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />Edit
@@ -539,27 +647,30 @@ const handleAllocateClick = (vehicle) => {
                               </Link>
                             )}
                             
-                            {isVehicleBlocked(vehicle.status) && hasEditPermission && (
+                            {canUpdateInwardStock && isVehicleBlocked(vehicle.status) && (
                               <MenuItem onClick={() => handleUnblockClick(vehicle.id)}>
                                 <CIcon icon={cilLockUnlocked} className="me-2" />Unblock
                               </MenuItem>
                             )}
-                             {isVehicleFriz(vehicle.status) && hasEditPermission && (
-                               <MenuItem onClick={() => handleAllocateClick(vehicle)}>
-                                 <CIcon icon={cilShare} className="me-2" />Allocate
-                                </MenuItem>
-                             )}
                             
-                            {hasDeletePermission && (
+                            {canUpdateInwardStock && isVehicleFriz(vehicle.status) && (
+                              <MenuItem onClick={() => handleAllocateClick(vehicle)}>
+                                <CIcon icon={cilShare} className="me-2" />Allocate
+                              </MenuItem>
+                            )}
+                            
+                            {canDeleteInwardStock && (
                               <MenuItem onClick={() => handleDelete(vehicle.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />Delete
                               </MenuItem>
                             )}
-                            <MenuItem onClick={() => handlePrintQR(vehicle)}>
-  <CIcon icon={cilPrint} className="me-2" />
-  Print QR
-</MenuItem>
-
+                            
+                            {canViewInwardStock && (
+                              <MenuItem onClick={() => handlePrintQR(vehicle)}>
+                                <CIcon icon={cilPrint} className="me-2" />
+                                Print QR
+                              </MenuItem>
+                            )}
                           </Menu>
                         </CTableDataCell>
                       )}
@@ -597,7 +708,7 @@ const handleAllocateClick = (vehicle) => {
             Cancel
           </CButton>
           <CButton 
-           className='submit-button'
+            className='submit-button'
             onClick={handleUnblockSubmit}
             disabled={unblockLoading}
           >
@@ -653,6 +764,7 @@ const handleAllocateClick = (vehicle) => {
         </CModalFooter>
       </CModal>
 
+      {/* Export Excel Modal */}
       <CModal visible={csvDialogOpen} onClose={resetExportModal}>
         <CModalHeader>
           <CModalTitle>Export Excel</CModalTitle>
@@ -695,19 +807,20 @@ const handleAllocateClick = (vehicle) => {
           </CButton>
         </CModalFooter>
       </CModal>
-<AllocateVehicleModal
-  vehicleId={selectedVehicleForAllocation}
-  visible={allocateModalOpen}
-  onClose={() => {
-    setAllocateModalOpen(false);
-    setVehicleAllocationDetails(null);
-  }}
-  onSuccess={() => {
-    fetchData(); 
-    setAllocateModalOpen(false);
-  }}
-  vehicleDetails={vehicleAllocationDetails}
-/>
+
+      <AllocateVehicleModal
+        vehicleId={selectedVehicleForAllocation}
+        visible={allocateModalOpen}
+        onClose={() => {
+          setAllocateModalOpen(false);
+          setVehicleAllocationDetails(null);
+        }}
+        onSuccess={() => {
+          fetchData(); 
+          setAllocateModalOpen(false);
+        }}
+        vehicleDetails={vehicleAllocationDetails}
+      />
     </div>
   );
 };

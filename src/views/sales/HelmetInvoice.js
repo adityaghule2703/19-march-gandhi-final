@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/invoice.css';
-import { CFormInput, CInputGroup, CInputGroupText, CButton } from '@coreui/react';
+import { CFormInput, CInputGroup, CInputGroupText, CButton, CAlert, CSpinner } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilCarAlt, cilPrint, cilReload } from '@coreui/icons';
 import axiosInstance from '../../axiosInstance';
 import '../../css/form.css';
-import { Api } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+import { showError } from '../../utils/sweetAlerts';
 
 function HelmetInvoice() {
   const [formData, setFormData] = useState({
@@ -16,6 +23,8 @@ function HelmetInvoice() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [typingTimeout, setTypingTimeout] = useState(null);
+  const navigate = useNavigate();
+
   const helmetStaticData = {
     particulars: 'TVS HELMET',
     hsnCode: '000000',
@@ -33,13 +42,26 @@ function HelmetInvoice() {
     netTotal: 1500
   };
 
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth();
+
+  // Permission check for Helmet Invoice page under Sales module
+  const canViewHelmetInvoice = canViewPage(permissions, MODULES.SALES, PAGES.SALES.HELMET_INVOICE);
+
   useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewHelmetInvoice) {
+      showError('You do not have permission to view Helmet Invoice');
+      navigate('/dashboard');
+      return;
+    }
+    
     return () => {
       if (typingTimeout) {
         clearTimeout(typingTimeout);
       }
     };
-  }, [typingTimeout]);
+  }, [typingTimeout, canViewHelmetInvoice, navigate]);
 
   const fetchInvoiceDetails = async (chassisNumber) => {
     if (!chassisNumber) {
@@ -372,15 +394,37 @@ function HelmetInvoice() {
       setError('Please fetch invoice details first');
       return;
     }
+
+    // Check VIEW permission before printing
+    if (!canViewHelmetInvoice) {
+      showError('You do not have permission to print Helmet Invoice');
+      return;
+    }
+
     const printWindow = window.open('', '_blank');
     printWindow.document.write(generateHelmetInvoiceHTML(invoiceData));
     printWindow.document.close();
     printWindow.focus();
   };
 
+  // Check if user has permission to view this page
+  if (!canViewHelmetInvoice) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Helmet Invoice.
+      </div>
+    );
+  }
+
   return (
     <div className="invoice-container">
       <h4 className="mb-4">Invoice</h4>
+
+      {error && (
+        <CAlert color="danger" className="mb-3">
+          {error}
+        </CAlert>
+      )}
 
       <div className="p-3">
         <h5>Helmet Invoice</h5>
@@ -397,17 +441,13 @@ function HelmetInvoice() {
           />
           {loading && (
             <CInputGroupText>
-              <div className="spinner-border spinner-border-sm" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </div>
+              <CSpinner size="sm" color="primary" />
             </CInputGroupText>
           )}
         </CInputGroup>
 
-        {error && <div className="text-danger mb-3">{error}</div>}
-
         <div className="d-flex gap-2">
-          <CButton className='submit-button' onClick={handlePrint}>
+          <CButton className='submit-button' onClick={handlePrint} disabled={!invoiceData || loading}>
             <CIcon icon={cilPrint} className="me-2" />
             Print
           </CButton>

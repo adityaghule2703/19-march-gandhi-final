@@ -34,10 +34,25 @@ import {
   CModalTitle,
   CModalBody,
   CModalFooter,
-  CFormSelect
+  CFormSelect,
+  CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilPlus, cilSettings, cilPencil, cilTrash, cilCheckCircle, cilXCircle, cilSearch, cilZoomOut } from '@coreui/icons';
+
+// Import permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  SafePagePermissionGuard 
+} from '../../../utils/modulePermissions';
+import { useAuth } from '../../../context/AuthContext';
 
 const VerticalMasterList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -51,12 +66,56 @@ const VerticalMasterList = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [tempStatusFilter, setTempStatusFilter] = useState('all');
   const [tempSearchTerm, setTempSearchTerm] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
+  const { permissions } = useAuth();
   const { handleFilter: tableFilter } = useTableFilter([]);
 
+  // Page-level permission checks for Vertical Masters page under Masters module
+  const hasVerticalMasterView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.VERTICAL_MASTERS, 
+    ACTIONS.VIEW
+  );
+  
+  const hasVerticalMasterCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.VERTICAL_MASTERS, 
+    ACTIONS.CREATE
+  );
+  
+  const hasVerticalMasterUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.VERTICAL_MASTERS, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasVerticalMasterDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.VERTICAL_MASTERS, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewVerticalMasters = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.VERTICAL_MASTERS);
+  const canCreateVerticalMasters = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.VERTICAL_MASTERS);
+  const canUpdateVerticalMasters = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.VERTICAL_MASTERS);
+  const canDeleteVerticalMasters = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.VERTICAL_MASTERS);
+  
+  const showActionColumn = canUpdateVerticalMasters || canDeleteVerticalMasters;
+
   useEffect(() => {
+    if (!canViewVerticalMasters) {
+      showError('You do not have permission to view Vertical Masters');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewVerticalMasters]);
 
   const fetchData = async () => {
     try {
@@ -78,6 +137,11 @@ const VerticalMasterList = () => {
   };
 
   const handleFilterClick = () => {
+    if (!canViewVerticalMasters) {
+      showError('You do not have permission to view Vertical Masters');
+      return;
+    }
+    
     setTempStatusFilter(statusFilter);
     setTempSearchTerm(searchTerm);
     setShowFilterModal(true);
@@ -139,6 +203,11 @@ const VerticalMasterList = () => {
   };
 
   const handleStatusUpdate = async (id, newStatus) => {
+    if (!canUpdateVerticalMasters) {
+      showError('You do not have permission to update Vertical Master status');
+      return;
+    }
+    
     try {
       await axiosInstance.patch(`/verticle-masters/${id}/status`, {
         status: newStatus
@@ -156,7 +225,8 @@ const VerticalMasterList = () => {
         )
       );
 
-      showSuccess(`Status updated to ${newStatus}`);
+      setSuccessMessage(`Status updated to ${newStatus}`);
+      setTimeout(() => setSuccessMessage(''), 3000);
       handleClose();
     } catch (error) {
       console.log('Error updating status', error);
@@ -165,6 +235,11 @@ const VerticalMasterList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteVerticalMasters) {
+      showError('You do not have permission to delete Vertical Masters');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -173,7 +248,8 @@ const VerticalMasterList = () => {
         setData(prevData => prevData.filter(item => item._id !== id));
         setFilteredData(prevData => prevData.filter(item => item._id !== id));
         
-        showSuccess('Vertical master deleted successfully');
+        setSuccessMessage('Vertical master deleted successfully');
+        setTimeout(() => setSuccessMessage(''), 3000);
         handleClose();
       } catch (error) {
         console.log(error);
@@ -187,9 +263,16 @@ const VerticalMasterList = () => {
     if (statusFilter !== 'all') {
       text += `(Filtered by Status: ${statusFilter})`;
     }
-    // Removed search term from the header
     return text;
   };
+
+  if (!canViewVerticalMasters) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Vertical Masters.
+      </div>
+    );
+  }
 
   if (loading && data.length === 0) {
     return (
@@ -202,27 +285,43 @@ const VerticalMasterList = () => {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
+
   return (
     <div>
       <div className='title'>Vertical Masters {getFilterText()}</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
     
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            <Link to="/vertical-master/add-vertical-master">
-              <CButton size="sm" className="action-btn me-1">
-                <CIcon icon={cilPlus} className='icon'/> New Vertical Master
-              </CButton>
-            </Link>
+            {/* Only show New button if user has CREATE permission */}
+            <SafePagePermissionGuard
+              permissions={permissions}
+              module={MODULES.MASTERS}
+              page={PAGES.MASTERS.VERTICAL_MASTERS}
+              action={ACTIONS.CREATE}
+            >
+              <Link to="/vertical-master/add-vertical-master">
+                <CButton size="sm" className="action-btn me-1">
+                  <CIcon icon={cilPlus} className='icon'/> New Vertical Master
+                </CButton>
+              </Link>
+            </SafePagePermissionGuard>
             
             <CButton 
               size="sm" 
               className="action-btn me-1"
               onClick={handleFilterClick}
+              disabled={!canViewVerticalMasters}
             >
               <CIcon icon={cilSearch} className='icon' /> Filter
             </CButton>
@@ -233,6 +332,7 @@ const VerticalMasterList = () => {
                 color="secondary" 
                 className="action-btn me-1"
                 onClick={clearFilters}
+                disabled={!canViewVerticalMasters}
               >
                 <CIcon icon={cilZoomOut} className='icon' /> 
                 Clear Filters
@@ -250,6 +350,7 @@ const VerticalMasterList = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                disabled={!canViewVerticalMasters}
                 // placeholder="Search by name or creator..."
               />
             </div>
@@ -263,13 +364,13 @@ const VerticalMasterList = () => {
                   <CTableHeaderCell>Created By</CTableHeaderCell>
                   <CTableHeaderCell>Created At</CTableHeaderCell>
                   <CTableHeaderCell>Status</CTableHeaderCell>
-                  <CTableHeaderCell>Action</CTableHeaderCell>
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {filteredData.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={6} className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "6" : "5"} className="text-center">
                       No vertical masters found
                     </CTableDataCell>
                   </CTableRow>
@@ -301,53 +402,62 @@ const VerticalMasterList = () => {
                           )}
                         </CBadge>
                       </CTableDataCell>
-                      <CTableDataCell>
-                        <CButton
-                          size="sm"
-                          className='option-button btn-sm'
-                          onClick={(event) => handleClick(event, vertical._id)}
-                        >
-                          <CIcon icon={cilSettings} />
-                          Options
-                        </CButton>
-                        <Menu 
-                          id={`action-menu-${vertical._id}`} 
-                          anchorEl={anchorEl} 
-                          open={menuId === vertical._id} 
-                          onClose={handleClose}
-                        >
-                          <Link
-                            className="Link"
-                            to={`/vertical-master/update-vertical-master/${vertical._id}`}
+                      {showActionColumn && (
+                        <CTableDataCell>
+                          <CButton
+                            size="sm"
+                            className='option-button btn-sm'
+                            onClick={(event) => handleClick(event, vertical._id)}
+                            disabled={!canUpdateVerticalMasters && !canDeleteVerticalMasters}
                           >
-                            <MenuItem style={{ color: 'black' }}>
-                              <CIcon icon={cilPencil} className="me-2" />
-                              Edit
-                            </MenuItem>
-                          </Link>
+                            <CIcon icon={cilSettings} />
+                            Options
+                          </CButton>
+                          <Menu 
+                            id={`action-menu-${vertical._id}`} 
+                            anchorEl={anchorEl} 
+                            open={menuId === vertical._id} 
+                            onClose={handleClose}
+                          >
+                            {canUpdateVerticalMasters && (
+                              <Link
+                                className="Link"
+                                to={`/vertical-master/update-vertical-master/${vertical._id}`}
+                              >
+                                <MenuItem style={{ color: 'black' }}>
+                                  <CIcon icon={cilPencil} className="me-2" />
+                                  Edit
+                                </MenuItem>
+                              </Link>
+                            )}
 
-                          {vertical.status === 'active' ? (
-                            <MenuItem
-                              onClick={() => handleStatusUpdate(vertical._id, 'inactive')}
-                            >
-                              <CIcon icon={cilXCircle} className="me-2" />
-                              Mark as Inactive
-                            </MenuItem>
-                          ) : (
-                            <MenuItem
-                              onClick={() => handleStatusUpdate(vertical._id, 'active')}
-                            >
-                              <CIcon icon={cilCheckCircle} className="me-2" />
-                              Mark as Active
-                            </MenuItem>
-                          )}
+                            {canUpdateVerticalMasters && (
+                              vertical.status === 'active' ? (
+                                <MenuItem
+                                  onClick={() => handleStatusUpdate(vertical._id, 'inactive')}
+                                >
+                                  <CIcon icon={cilXCircle} className="me-2" />
+                                  Mark as Inactive
+                                </MenuItem>
+                              ) : (
+                                <MenuItem
+                                  onClick={() => handleStatusUpdate(vertical._id, 'active')}
+                                >
+                                  <CIcon icon={cilCheckCircle} className="me-2" />
+                                  Mark as Active
+                                </MenuItem>
+                              )
+                            )}
 
-                          <MenuItem onClick={() => handleDelete(vertical._id)}>
-                            <CIcon icon={cilTrash} className="me-2" />
-                            Delete
-                          </MenuItem>
-                        </Menu>
-                      </CTableDataCell>
+                            {canDeleteVerticalMasters && (
+                              <MenuItem onClick={() => handleDelete(vertical._id)}>
+                                <CIcon icon={cilTrash} className="me-2" />
+                                Delete
+                              </MenuItem>
+                            )}
+                          </Menu>
+                        </CTableDataCell>
+                      )}
                     </CTableRow>
                   ))
                 )}
@@ -368,6 +478,7 @@ const VerticalMasterList = () => {
               type="text"
               value={tempSearchTerm}
               onChange={(e) => setTempSearchTerm(e.target.value)}
+              disabled={!canViewVerticalMasters}
             //   placeholder="Search by name or creator..."
             />
           </div>
@@ -377,6 +488,7 @@ const VerticalMasterList = () => {
             <CFormSelect
               value={tempStatusFilter}
               onChange={(e) => setTempStatusFilter(e.target.value)}
+              disabled={!canViewVerticalMasters}
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>

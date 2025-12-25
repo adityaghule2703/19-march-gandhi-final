@@ -10,6 +10,13 @@
   min-height: 100vh;
 
 }
+.full-width-map {
+  grid-column: 1 / span 2 !important;
+  width: 100% !important;
+}
+.full-width-map .details-container {
+  width: 100%;
+}
 .required {
   color: #a94442;;
 }

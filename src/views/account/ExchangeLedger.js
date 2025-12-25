@@ -33,12 +33,22 @@ import {
   CModalBody,
   CModalFooter,
   CButton,
-  CFormSelect
+  CFormSelect,
+  CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilPlus, cilSettings,cilSearch, cilZoomOut } from '@coreui/icons';
-import { hasPermission } from '../../utils/permissionUtils';
 import { useAuth } from '../../context/AuthContext';
+
+// Import permission utilities
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../utils/modulePermissions';
 
 const ExchangeLedger = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -55,18 +65,28 @@ const ExchangeLedger = () => {
   const [selectedBranch, setSelectedBranch] = useState('');
   const [isFiltered, setIsFiltered] = useState(false);
   const [selectedBranchName, setSelectedBranchName] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasAddPermission = hasPermission(permissions,'BROKER_LEDGER_CREATE');
-  const hasViewPermission = hasPermission(permissions,'BROKER_LEDGER_READ');
-  const showActionColumn = hasAddPermission || hasViewPermission;
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Exchange Ledger under ACCOUNT module
+  const canViewExchangeLedger = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+  const canCreateExchangeLedger = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+  const canUpdateExchangeLedger = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+  const canDeleteExchangeLedger = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+  
+  const showActionColumn = canCreateExchangeLedger || canViewExchangeLedger;
 
   useEffect(() => {
+    if (!canViewExchangeLedger) {
+      return;
+    }
+    
     fetchData();
     fetchBranches();
-  }, []);
+  }, [canViewExchangeLedger]);
 
   useEffect(() => {
     if (data.length > 0) {
@@ -77,6 +97,10 @@ const ExchangeLedger = () => {
   }, [data, isFiltered]);
 
   const fetchBranches = async () => {
+    if (!canViewExchangeLedger) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get('/branches');
       setBranches(response.data.data);
@@ -89,6 +113,10 @@ const ExchangeLedger = () => {
   };
 
   const fetchData = async (branchId = null) => {
+    if (!canViewExchangeLedger) {
+      return;
+    }
+    
     try {
       setLoading(true);
       let url = '/broker-ledger/summary/detailed';
@@ -152,6 +180,10 @@ const ExchangeLedger = () => {
   };
 
   const handleBranchFilter = async () => {
+    if (!canViewExchangeLedger) {
+      return;
+    }
+    
     if (selectedBranch) {
       await fetchData(selectedBranch);
     } else {
@@ -161,6 +193,10 @@ const ExchangeLedger = () => {
   };
 
   const clearFilter = async () => {
+    if (!canViewExchangeLedger) {
+      return;
+    }
+    
     setSelectedBranch('');
     await fetchData();
     setShowFilterModal(false);
@@ -235,6 +271,10 @@ const ExchangeLedger = () => {
   };
 
   const toggleBrokerExpansion = (brokerId) => {
+    if (!canViewExchangeLedger) {
+      return;
+    }
+    
     if (!isFiltered) {
       setExpandedBrokers((prev) => ({
         ...prev,
@@ -244,6 +284,10 @@ const ExchangeLedger = () => {
   };
 
   const handleClick = (event, id, brokerData = null, branchId = null) => {
+    if (!canViewExchangeLedger && !canCreateExchangeLedger) {
+      return;
+    }
+    
     setAnchorEl(event.currentTarget);
     setMenuId(id);
     if (brokerData) {
@@ -257,12 +301,22 @@ const ExchangeLedger = () => {
   };
 
   const handleAddClick = (brokerData, branchId = null) => {
+    if (!canCreateExchangeLedger) {
+      showError('You do not have permission to add payments');
+      return;
+    }
+    
     setSelectedledger({ ...brokerData, branchId });
     setShowModal(true);
     handleClose();
   };
 
   const handleViewLedger = async (brokerData, branchId = null) => {
+    if (!canViewExchangeLedger) {
+      showError('You do not have permission to view ledgers');
+      return;
+    }
+    
     try {
       let url = `/broker-ledger/statement/${brokerData.broker?._id}`;
       if (branchId) {
@@ -423,7 +477,7 @@ const ExchangeLedger = () => {
                 </div>
                 <div class="divider"></div>
                 <div class="customer-info">
-                  <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || ''}</div>
+                  <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || 'N/A'}</div>
                   <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
                 </div>
 
@@ -443,12 +497,12 @@ const ExchangeLedger = () => {
                       ?.map(
                         (entry) => `
                       <tr>
-                        <td>${new Date(entry.date).toLocaleDateString()}</td>
+                        <td>${new Date(entry.date).toLocaleDateString() || 'N/A'}</td>
                         <td>
                           Booking No: ${entry.booking?.bookingNumber || '-'}<br>
                            Customer: ${entry.booking?.customerName || '-'}<br>
                            Chassis Number:${entry.booking?.chassisNumber || '-'}
-                           ${entry.mode}
+                           ${entry.mode || ''}
                         </td>
                         <td>${entry.referenceNumber || ''}</td>
                        <td class="text-right">${entry.type === 'CREDIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
@@ -501,15 +555,36 @@ const ExchangeLedger = () => {
         `);
     } catch (err) {
       console.error('Error fetching ledger:', err);
-      setError('Failed to load ledger. Please try again.');
+      const message = showError(err);
+      if (message) {
+        setError(message);
+      }
     }
     handleClose();
   };
 
   const handleSearch = (value) => {
+    if (!canViewExchangeLedger) {
+      return;
+    }
+    
     setSearchTerm(value);
     handleFilter(value, ['broker.name']);
   };
+
+  const handlePaymentSaved = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 3000);
+    fetchData();
+  };
+
+  if (!canViewExchangeLedger) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Exchange Ledger.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -522,14 +597,23 @@ const ExchangeLedger = () => {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-     {error}
+        {error}
       </div>
     );
   }
 
+  const totalColumns = isFiltered ? 11 : 12;
+  const actionColumnIndex = showActionColumn ? 1 : 0;
+
   return (
     <div>
       <div className='title'>Exchange Ledger {isFiltered && `- ${selectedBranchName}`}</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
     
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
@@ -538,6 +622,7 @@ const ExchangeLedger = () => {
               size="sm" 
               className="action-btn me-1"
               onClick={() => setShowFilterModal(true)}
+              disabled={!canViewExchangeLedger}
             >
               <CIcon icon={cilSearch} className='me-1' />
               Search
@@ -547,6 +632,7 @@ const ExchangeLedger = () => {
                 size="sm" 
                 className="action-btn me-1"
                 onClick={clearFilter}
+                disabled={!canViewExchangeLedger}
               >
                 <CIcon icon={cilZoomOut} className='me-1' />
                 Clear Filter
@@ -565,6 +651,7 @@ const ExchangeLedger = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                disabled={!canViewExchangeLedger}
               />
             </div>
           </div>
@@ -591,7 +678,7 @@ const ExchangeLedger = () => {
               <CTableBody>
                 {currentRecords.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={isFiltered ? 11 : 12} className="text-center">
+                    <CTableDataCell colSpan={totalColumns + actionColumnIndex} className="text-center">
                       No ledger details available
                     </CTableDataCell>
                   </CTableRow>
@@ -605,6 +692,7 @@ const ExchangeLedger = () => {
                               color="link"
                               size="sm"
                               onClick={() => toggleBrokerExpansion(brokerData.broker._id)}
+                              disabled={!canViewExchangeLedger}
                             >
                               {expandedBrokers[brokerData.broker._id] ? '▼' : '►'}
                             </CButton>
@@ -614,19 +702,20 @@ const ExchangeLedger = () => {
                         <CTableDataCell>{brokerData.broker.name || 'N/A'}</CTableDataCell>
                         <CTableDataCell>{brokerData.broker.mobile || 'N/A'}</CTableDataCell>
                         {!isFiltered && <CTableDataCell>All Branches</CTableDataCell>}
-                        <CTableDataCell>{brokerData.totalBookings}</CTableDataCell>
-                        <CTableDataCell>{brokerData.totalExchangeAmount.toLocaleString('en-IN')}</CTableDataCell>
-                        <CTableDataCell>{brokerData.totalCredit.toLocaleString('en-IN')}</CTableDataCell>
-                        <CTableDataCell>{brokerData.totalDebit.toLocaleString('en-IN')}</CTableDataCell>
-                        <CTableDataCell>{brokerData.onAccount.toLocaleString('en-IN')}</CTableDataCell>
-                        <CTableDataCell>{brokerData.currentBalance.toLocaleString('en-IN')}</CTableDataCell>
-                        <CTableDataCell>{brokerData.outstandingAmount.toLocaleString('en-IN')}</CTableDataCell>
+                        <CTableDataCell>{brokerData.totalBookings || 0}</CTableDataCell>
+                        <CTableDataCell>{brokerData.totalExchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                        <CTableDataCell>{brokerData.totalCredit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                        <CTableDataCell>{brokerData.totalDebit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                        <CTableDataCell>{brokerData.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                        <CTableDataCell>{brokerData.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                        <CTableDataCell>{brokerData.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                         {showActionColumn && (
                           <CTableDataCell>
                             <CButton
                               size="sm"
                               className='option-button btn-sm'
                               onClick={(event) => handleClick(event, brokerData.broker._id, brokerData)}
+                              disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
                             >
                               <CIcon icon={cilSettings} />
                               Options
@@ -637,13 +726,13 @@ const ExchangeLedger = () => {
                               open={menuId === brokerData.broker._id}
                               onClose={handleClose}
                             >
-                              {hasPermission(permissions,'BROKER_LEDGER_CREATE') && (
+                              {canCreateExchangeLedger && (
                                 <MenuItem onClick={() => handleAddClick(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
                                   <CIcon icon={cilPlus} className="me-2" />
                                   Add Payment
                                 </MenuItem>
                               )}
-                              {hasPermission(permissions,'BROKER_LEDGER_CREATE') && (
+                              {canViewExchangeLedger && (
                                 <MenuItem
                                   onClick={() => handleViewLedger(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}
                                 >
@@ -662,14 +751,14 @@ const ExchangeLedger = () => {
                             <CTableDataCell></CTableDataCell>
                             <CTableDataCell></CTableDataCell>
                             <CTableDataCell></CTableDataCell>
-                            <CTableDataCell>{branch.name}</CTableDataCell>
-                            <CTableDataCell>{branch.bookings}</CTableDataCell>
-                            <CTableDataCell>{branch.exchangeAmount.toLocaleString('en-IN')}</CTableDataCell>
-                            <CTableDataCell>{branch.credit.toLocaleString('en-IN')}</CTableDataCell>
-                            <CTableDataCell>{branch.debit.toLocaleString('en-IN')}</CTableDataCell>
-                            <CTableDataCell>{branch.onAccount.toLocaleString('en-IN')}</CTableDataCell>
-                            <CTableDataCell>{branch.currentBalance.toLocaleString('en-IN')}</CTableDataCell>
-                            <CTableDataCell>{branch.outstandingAmount.toLocaleString('en-IN')}</CTableDataCell>
+                            <CTableDataCell>{branch.name || 'N/A'}</CTableDataCell>
+                            <CTableDataCell>{branch.bookings || 0}</CTableDataCell>
+                            <CTableDataCell>{branch.exchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                            <CTableDataCell>{branch.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                            <CTableDataCell>{branch.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                            <CTableDataCell>{branch.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                            <CTableDataCell>{branch.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                            <CTableDataCell>{branch.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                             {showActionColumn && (
                               <CTableDataCell>
                                 <CButton
@@ -678,6 +767,7 @@ const ExchangeLedger = () => {
                                   onClick={(event) =>
                                     handleClick(event, `${brokerData.broker._id}-${branch.branchId}`, brokerData, branch.branchId)
                                   }
+                                  disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
                                 >
                                   <CIcon icon={cilSettings} />
                                   Options
@@ -688,13 +778,13 @@ const ExchangeLedger = () => {
                                   open={menuId === `${brokerData.broker._id}-${branch.branchId}`}
                                   onClose={handleClose}
                                 >
-                                  {hasAddPermission && (
+                                  {canCreateExchangeLedger && (
                                     <MenuItem onClick={() => handleAddClick(brokerData, branch.branchId)}>
                                       <CIcon icon={cilPlus} className="me-2" />
                                       Add Payment
                                     </MenuItem>
                                   )}
-                                  {hasViewPermission && (
+                                  {canViewExchangeLedger && (
                                     <MenuItem onClick={() => handleViewLedger(brokerData, branch.branchId)}>
                                       View Ledger
                                     </MenuItem>
@@ -720,23 +810,39 @@ const ExchangeLedger = () => {
         <CModalBody>
           <div className="mb-3">
             <CFormLabel>Select Branch</CFormLabel>
-            <CFormSelect value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)}>
+            <CFormSelect 
+              value={selectedBranch} 
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              disabled={!canViewExchangeLedger}
+            >
               <option value="">All Branches</option>
               {branches.map((branch) => (
                 <option key={branch._id} value={branch._id}>
-                  {branch.name}
+                  {branch.name || 'N/A'}
                 </option>
               ))}
             </CFormSelect>
           </div>
         </CModalBody>
         <CModalFooter>
-          <CButton color="primary" onClick={handleBranchFilter}>
-           Search
+          <CButton 
+            color="primary" 
+            onClick={handleBranchFilter}
+            disabled={!canViewExchangeLedger}
+          >
+            Search
           </CButton>
         </CModalFooter>
       </CModal>
-      <ExchangeLedgerModel show={showModal} onClose={() => setShowModal(false)} brokerData={selectedledger} refreshData={fetchData} />
+      
+      <ExchangeLedgerModel 
+        show={showModal} 
+        onClose={() => setShowModal(false)} 
+        brokerData={selectedledger} 
+        refreshData={fetchData}
+        onPaymentSaved={handlePaymentSaved}
+        canCreateExchangeLedger={canCreateExchangeLedger}
+      />
     </div>
   );
 };

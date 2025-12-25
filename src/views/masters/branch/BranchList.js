@@ -14,7 +14,6 @@ import {
   axiosInstance,
   getDefaultSearchFields
 } from '../../../utils/tableImports';
-import { hasPermission } from '../../../utils/permissionUtils';
 import config from '../../../config';
 import { 
   CButton, 
@@ -30,12 +29,21 @@ import {
   CTableRow,
   CTableDataCell,
   CSpinner,
-  CBadge
+  CBadge,
+  CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilPlus, cilCheckCircle, cilXCircle, cilSettings, cilPencil, cilDelete, cilTrash } from '@coreui/icons';
+import { cilPlus, cilCheckCircle, cilXCircle, cilSettings, cilPencil, cilTrash } from '@coreui/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 
 const BranchList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -45,14 +53,27 @@ const BranchList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'BRANCH_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'BRANCH_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'BRANCH_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
   const navigate = useNavigate();
 
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth();
+
+  // Page-level permission checks for Location page under Masters module
+  const canViewLocation = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION);
+  const canCreateLocation = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION);
+  const canUpdateLocation = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION);
+  const canDeleteLocation = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION);
+  
+  const showActionColumn = canUpdateLocation || canDeleteLocation;
+
   useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewLocation) {
+      showError('You do not have permission to view Locations');
+      navigate('/dashboard');
+      return;
+    }
+    
     fetchData();
   }, []);
 
@@ -83,6 +104,11 @@ const BranchList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteLocation) {
+      showError('You do not have permission to delete locations');
+      return;
+    }
+
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -98,6 +124,11 @@ const BranchList = () => {
   };
 
   const handleToggleStatus = async (branchId, currentStatus) => {
+    if (!canUpdateLocation) {
+      showError('You do not have permission to update locations');
+      return;
+    }
+
     try {
       const newStatus = !currentStatus;
       await axiosInstance.patch(`/branches/${branchId}/status`, {
@@ -119,6 +150,10 @@ const BranchList = () => {
   };
 
   const addNew = () => {
+    if (!canCreateLocation) {
+      showError('You do not have permission to create locations');
+      return;
+    }
     navigate('/branch/add-branch');
   };
 
@@ -126,6 +161,15 @@ const BranchList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('branch'));
   };
+
+  // Check if user has permission to view this page
+  if (!canViewLocation) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Locations.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -137,9 +181,9 @@ const BranchList = () => {
 
   if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
-       {error}
-      </div>
+      <CAlert color="danger" className="m-3">
+        {error}
+      </CAlert>
     );
   }
 
@@ -150,7 +194,7 @@ const BranchList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateLocation && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -163,7 +207,7 @@ const BranchList = () => {
         </CCardHeader>
         
         <CCardBody>
-        <div className="d-flex justify-content-between mb-3">
+          <div className="d-flex justify-content-between mb-3">
             <div></div>
             <div className='d-flex'>
               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
@@ -185,8 +229,6 @@ const BranchList = () => {
                   <CTableHeaderCell>Phone</CTableHeaderCell>
                   <CTableHeaderCell>Email</CTableHeaderCell>
                   <CTableHeaderCell>GST Number</CTableHeaderCell>
-                  {/* <CTableHeaderCell>Logo1</CTableHeaderCell>
-                  <CTableHeaderCell>Logo2</CTableHeaderCell> */}
                   <CTableHeaderCell>Status</CTableHeaderCell>
                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
@@ -194,7 +236,7 @@ const BranchList = () => {
               <CTableBody>
                 {currentRecords.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={showActionColumn ? "13" : "12"} className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "8" : "7"} className="text-center">
                       No branches available
                     </CTableDataCell>
                   </CTableRow>
@@ -207,24 +249,6 @@ const BranchList = () => {
                       <CTableDataCell>{branch.phone}</CTableDataCell>
                       <CTableDataCell>{branch.email}</CTableDataCell>
                       <CTableDataCell>{branch.gst_number}</CTableDataCell>
-                      {/* <CTableDataCell>
-                        {branch.logo1 && (
-                          <img 
-                            src={`${config.baseURL || ''}${branch.logo1}`} 
-                            alt="Logo 1" 
-                            style={{ maxWidth: '100px', maxHeight: '50px', objectFit: 'contain' }} 
-                          />
-                        )}
-                      </CTableDataCell>
-                      <CTableDataCell>
-                        {branch.logo2 && (
-                          <img 
-                            src={`${config.baseURL || ''}${branch.logo2}`} 
-                            alt="Logo 2" 
-                            style={{ maxWidth: '100px', maxHeight: '50px', objectFit: 'contain' }} 
-                          />
-                        )}
-                      </CTableDataCell> */}
                       <CTableDataCell>
                         <CBadge color={branch.is_active ? 'success' : 'secondary'}>
                           {branch.is_active ? (
@@ -256,17 +280,17 @@ const BranchList = () => {
                             open={menuId === branch.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateLocation && (
                               <Link className="Link" to={`/branch/update-branch/${branch.id}`}>
                                 <MenuItem style={{ color: 'black' }}><CIcon icon={cilPencil} className="me-2" />Edit</MenuItem>
                               </Link>
                             )}
-                            {hasEditPermission && (
+                            {canUpdateLocation && (
                               <MenuItem onClick={() => handleToggleStatus(branch.id, branch.is_active)}>
                                <CIcon icon={branch.is_active ? cilXCircle : cilCheckCircle} className="me-2" /> {branch.is_active ? 'Deactivate' : 'Activate'}
                               </MenuItem>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteLocation && (
                               <MenuItem onClick={() => handleDelete(branch.id)}><CIcon icon={cilTrash} className="me-2" />Delete</MenuItem>
                             )}
                           </Menu>

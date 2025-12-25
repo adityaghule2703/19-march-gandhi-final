@@ -1,12 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/form.css';
-import { CInputGroup, CInputGroupText, CFormInput, CFormSelect } from '@coreui/react';
+import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CAlert } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilBank, cilDollar, cilList, cilLocationPin, cilUser } from '@coreui/icons';
 import { useNavigate } from 'react-router-dom';
 import { showFormSubmitError, showFormSubmitToast } from '../../utils/sweetAlerts';
 import axiosInstance from '../../axiosInstance';
 import FormButtons from '../../utils/FormButtons';
+
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 function CashVoucher() {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -24,7 +35,23 @@ function CashVoucher() {
   const [cashLocations, setCashLocations] = useState([]);
   const [branches, setBranches] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Cash Voucher page under Fund Management module
+  const canViewCashVoucher = canViewPage(
+    permissions, 
+    MODULES.FUND_MANAGEMENT, 
+    PAGES.FUND_MANAGEMENT.CASH_VOUCHER
+  );
+  
+  const canCreateCashVoucher = canCreateInPage(
+    permissions, 
+    MODULES.FUND_MANAGEMENT, 
+    PAGES.FUND_MANAGEMENT.CASH_VOUCHER
+  );
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,46 +60,59 @@ function CashVoucher() {
   };
 
   useEffect(() => {
+    if (!canViewCashVoucher) {
+      setLoading(false);
+      return;
+    }
+    
     const fetchBranches = async () => {
       try {
         const response = await axiosInstance.get('/branches');
         setBranches(response.data.data || []);
       } catch (error) {
         console.error('Error fetching branches:', error);
-        showError(error);
       }
     };
 
-    fetchBranches();
-  }, []);
-  useEffect(() => {
     const fetchCashLocations = async () => {
       try {
         const response = await axiosInstance.get('/cash-locations');
         setCashLocations(response.data.data.cashLocations || []);
       } catch (error) {
         console.error('Error fetching cash location:', error);
-        showError(error);
       }
     };
 
-    fetchCashLocations();
-  }, []);
-  useEffect(() => {
     const fetchExpense = async () => {
       try {
         const response = await axiosInstance.get('/expense-accounts');
         setExpenses(response.data.data.expenseAccounts || []);
       } catch (error) {
         console.error('Error fetching expense:', error);
-        showError(error);
       }
     };
 
-    fetchExpense();
-  }, []);
+    const fetchAllData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchBranches(),
+        fetchCashLocations(),
+        fetchExpense()
+      ]);
+      setLoading(false);
+    };
+
+    fetchAllData();
+  }, [canViewCashVoucher]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!canCreateCashVoucher) {
+      showFormSubmitError('You do not have permission to create Cash Voucher');
+      return;
+    }
+    
     let formErrors = {};
 
     if (!formData.recipientName) formErrors.recipientName = 'This field is required';
@@ -100,9 +140,42 @@ function CashVoucher() {
   const handleCancel = () => {
     navigate('/cash-receipt');
   };
+
+  // Check if user has permission to view the page
+  if (!canViewCashVoucher) {
+    return (
+      <div className="form-container">
+        <div className="alert alert-danger m-3" role="alert">
+          You do not have permission to view Cash Voucher.
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="form-container">
+        <div className="title">Cash Voucher</div>
+        <div className="text-center py-4">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-2">Loading form data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="form-container">
-     <div className="title">Cash Voucher</div>
+      <div className="title">Cash Voucher</div>
+      
+      {!canCreateCashVoucher && (
+        <CAlert color="danger" className="mb-3">
+          You have VIEW permission but not CREATE permission. You can see this page but cannot create new cash vouchers.
+        </CAlert>
+      )}
+      
       <div className="form-card">
         <div className="form-body">
           <form onSubmit={handleSubmit}>
@@ -116,7 +189,13 @@ function CashVoucher() {
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilUser} />
                   </CInputGroupText>
-                  <CFormInput type="text" name="recipientName" value={formData.recipientName} onChange={handleChange} />
+                  <CFormInput 
+                    type="text" 
+                    name="recipientName" 
+                    value={formData.recipientName} 
+                    onChange={handleChange}
+                    disabled={!canCreateCashVoucher}
+                  />
                 </CInputGroup>
                 {errors.recipientName && <p className="error">{errors.recipientName}</p>}
               </div>
@@ -129,10 +208,12 @@ function CashVoucher() {
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilLocationPin} />
                   </CInputGroupText>
-                  {/* {hasBranch ? (
-                    <CFormInput value={storedUser.branch?.name || ''} readOnly />
-                  ) : ( */}
-                  <CFormSelect name="branch" value={formData.branch} onChange={handleChange}>
+                  <CFormSelect 
+                    name="branch" 
+                    value={formData.branch} 
+                    onChange={handleChange}
+                    disabled={!canCreateCashVoucher || hasBranch}
+                  >
                     <option value="">-Select-</option>
                     {branches.map((branch) => (
                       <option key={branch._id} value={branch._id}>
@@ -140,7 +221,6 @@ function CashVoucher() {
                       </option>
                     ))}
                   </CFormSelect>
-                  {/* )} */}
                 </CInputGroup>
                 {errors.branch && <p className="error">{errors.branch}</p>}
               </div>
@@ -153,7 +233,12 @@ function CashVoucher() {
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilUser} />
                   </CInputGroupText>
-                  <CFormSelect name="expenseType" value={formData.expenseType} onChange={handleChange}>
+                  <CFormSelect 
+                    name="expenseType" 
+                    value={formData.expenseType} 
+                    onChange={handleChange}
+                    disabled={!canCreateCashVoucher}
+                  >
                     <option value="">-Select-</option>
                     {expenses.map((expense) => (
                       <option key={expense._id} value={expense.name}>
@@ -173,7 +258,13 @@ function CashVoucher() {
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilDollar} />
                   </CInputGroupText>
-                  <CFormInput type="text" name="amount" value={formData.amount} onChange={handleChange} />
+                  <CFormInput 
+                    type="text" 
+                    name="amount" 
+                    value={formData.amount} 
+                    onChange={handleChange}
+                    disabled={!canCreateCashVoucher}
+                  />
                 </CInputGroup>
                 {errors.amount && <p className="error">{errors.amount}</p>}
               </div>
@@ -183,7 +274,13 @@ function CashVoucher() {
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilList} />
                   </CInputGroupText>
-                  <CFormInput type="text" name="remark" value={formData.remark} onChange={handleChange} />
+                  <CFormInput 
+                    type="text" 
+                    name="remark" 
+                    value={formData.remark} 
+                    onChange={handleChange}
+                    disabled={!canCreateCashVoucher}
+                  />
                 </CInputGroup>
               </div>
               <div className="input-box">
@@ -195,7 +292,12 @@ function CashVoucher() {
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilBank} />
                   </CInputGroupText>
-                  <CFormSelect name="cashLocation" value={formData.cashLocation} onChange={handleChange}>
+                  <CFormSelect 
+                    name="cashLocation" 
+                    value={formData.cashLocation} 
+                    onChange={handleChange}
+                    disabled={!canCreateCashVoucher}
+                  >
                     <option value="">-Select-</option>
                     {cashLocations.map((location) => (
                       <option key={location._id} value={location.name}>
@@ -207,11 +309,16 @@ function CashVoucher() {
                 {errors.cashLocation && <p className="error">{errors.cashLocation}</p>}
               </div>
             </div>
-            <FormButtons onCancel={handleCancel} />
+            <FormButtons 
+              onCancel={handleCancel} 
+              submitDisabled={!canCreateCashVoucher}
+              submitTooltip={!canCreateCashVoucher ? "You don't have permission to create cash vouchers" : ""}
+            />
           </form>
         </div>
       </div>
     </div>
   );
 }
+
 export default CashVoucher;

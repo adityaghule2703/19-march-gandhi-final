@@ -9,7 +9,6 @@ import {
   axiosInstance,
   showError
 } from '../../utils/tableImports';
-import { hasPermission } from '../../utils/permissionUtils';
 import RefundModel from './RefundModel';
 import { 
   CButton, 
@@ -28,6 +27,17 @@ import {
   CAlert
 } from '@coreui/react';
 
+// Import permission utilities
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
+
 const Refund = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const [showModal, setShowModal] = useState(false);
@@ -36,10 +46,25 @@ const Refund = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Refund under ACCOUNT module
+  const canViewRefund = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.REFUND);
+  const canCreateRefund = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.REFUND);
+  const canUpdateRefund = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.REFUND);
+  const canDeleteRefund = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.REFUND);
+  
+  const showActionColumn = canCreateRefund;
 
   useEffect(() => {
+    if (!canViewRefund) {
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewRefund]);
 
   const fetchData = async () => {
     try {
@@ -60,6 +85,11 @@ const Refund = () => {
   };
 
   const handleAddClick = (booking) => {
+    if (!canCreateRefund) {
+      showError('You do not have permission to process refunds');
+      return;
+    }
+    
     setSelectedBooking(booking);
     setShowModal(true);
   };
@@ -68,6 +98,20 @@ const Refund = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('booking'));
   };
+
+  const handleRefundSaved = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 3000);
+    fetchData();
+  };
+
+  if (!canViewRefund) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Refunds.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -80,11 +124,18 @@ const Refund = () => {
   return (
     <div>
       <div className='title'>Customer Refund</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
+      
       {error && (
-            <CAlert color="danger" className="mb-3">
-              {error}
-            </CAlert>
-          )}
+        <CAlert color="danger" className="mb-3">
+          {error}
+        </CAlert>
+      )}
           
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
@@ -96,6 +147,7 @@ const Refund = () => {
               className="d-inline-block square-search"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
+              disabled={!canViewRefund}
             />
           </div>
         </CCardHeader>
@@ -114,42 +166,43 @@ const Refund = () => {
                   <CTableHeaderCell>Total</CTableHeaderCell>
                   <CTableHeaderCell>Received</CTableHeaderCell>
                   <CTableHeaderCell>Balance</CTableHeaderCell>
-                  {hasPermission('LEDGER', 'READ') && <CTableHeaderCell>Action</CTableHeaderCell>}
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {currentRecords.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={hasPermission('LEDGER', 'READ') ? "10" : "9"} className="text-center">
-                      No ledger details available
+                    <CTableDataCell colSpan={showActionColumn ? "10" : "9"} className="text-center">
+                      No booking details available
                     </CTableDataCell>
                   </CTableRow>
                 ) : (
                   currentRecords.map((booking, index) => (
                     <CTableRow key={booking._id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
-                      <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
-                      <CTableDataCell>{booking.model?.model_name || ''}</CTableDataCell>
+                      <CTableDataCell>{booking.bookingNumber || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>
-                        {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ''}
+                        {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : 'N/A'}
                       </CTableDataCell>
-                      <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
+                      <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>
                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-                    ? (booking.chassisNumber || '')
-                    : ''
-                  }
+                          ? (booking.chassisNumber || 'N/A')
+                          : 'N/A'
+                        }
                       </CTableDataCell>
                       <CTableDataCell>₹{booking.discountedAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                       <CTableDataCell>₹{booking.receivedAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                       <CTableDataCell>₹{booking.balanceAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-                      {hasPermission('LEDGER', 'READ') && (
+                      {showActionColumn && (
                         <CTableDataCell>
                           <CButton
                             size="sm"
                             color="primary"
                             className="action-btn"
                             onClick={() => handleAddClick(booking)}
+                            disabled={!canCreateRefund}
                           >
                             Add
                           </CButton>
@@ -164,7 +217,13 @@ const Refund = () => {
         </CCardBody>
       </CCard>
       
-      <RefundModel show={showModal} onClose={() => setShowModal(false)} bookingData={selectedBooking} />
+      <RefundModel 
+        show={showModal} 
+        onClose={() => setShowModal(false)} 
+        bookingData={selectedBooking}
+        onRefundSaved={handleRefundSaved}
+        canCreateRefund={canCreateRefund}
+      />
     </div>
   );
 };

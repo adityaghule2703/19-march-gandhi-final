@@ -17,13 +17,23 @@ import {
   CFormCheck,
   CSpinner,
   CFormLabel,
-  CButton
+  CButton,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, useTableFilter } from '../../utils/tableImports';
 import '../../css/invoice.css';
 import '../../css/table.css';
 import { showError, showFormSubmitToast } from '../../utils/sweetAlerts';
-import { hasPermission } from '../../utils/permissionUtils';
+
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canUpdateInPage
+} from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 function RTOTax() {
@@ -34,7 +44,21 @@ function RTOTax() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for RTO Tax page under RTO module
+  const canViewRTOTax = canViewPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.RTO_TAX
+  );
+  
+  const canUpdateRTOTax = canUpdateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.RTO_TAX
+  );
+
   const {
     data: pendingData,
     setData: setPendingData,
@@ -51,11 +75,21 @@ function RTOTax() {
   } = useTableFilter([]);
 
   useEffect(() => {
+    if (!canViewRTOTax) {
+      setError('Permission denied');
+      setLoading(false);
+      return;
+    }
+    
     fetchData();
     fetchLocationData();
-  }, []);
+  }, [canViewRTOTax]);
 
   const fetchData = async () => {
+    if (!canViewRTOTax) {
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/rtoProcess/rtotaxpending`);
@@ -63,15 +97,19 @@ function RTOTax() {
       setFilteredPendings(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchLocationData = async () => {
+    if (!canViewRTOTax) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/rtoProcess/rtotaxcompleted`);
       setApprovedData(response.data.data);
@@ -104,6 +142,11 @@ function RTOTax() {
   };
 
   const handleUpdateSelected = async () => {
+    if (!canUpdateRTOTax) {
+      showError('You do not have permission to update RTO tax');
+      return;
+    }
+    
     if (!receiptNumber) {
       showError('Please enter a receipt number');
       return;
@@ -168,6 +211,7 @@ function RTOTax() {
     setSearchTerm('');
     setReceiptNoSearch('');
   };
+  
   const renderPendingTable = () => {
     return (
       <div className="responsive-table-wrapper">
@@ -284,6 +328,15 @@ function RTOTax() {
     );
   };
 
+  // Check if user has permission to view the page
+  if (!canViewRTOTax) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view RTO Tax Management.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -295,7 +348,7 @@ function RTOTax() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-       {error}
+        {error}
       </div>
     );
   }
@@ -338,29 +391,29 @@ function RTOTax() {
           </CNav>
 
           <div className="d-flex justify-content-between mb-3">
-          <div>
-            {activeTab === 0 && (
-              <div className="d-flex align-items-center gap-2">
-                <CFormInput
-                  type="text"
-                  placeholder="Receipt Number"
-                  value={receiptNumber}
-                  onChange={(e) => setReceiptNumber(e.target.value)}
-                  style={{ width: '200px' }}
-                  size="sm"
-                />
-                {hasPermission(permissions,'RTO_PROCESS_UPDATE') && (
-                  <CButton 
-                    size="sm" 
-                    className="action-btn"
-                    onClick={handleUpdateSelected}
-                  >
-                    Update
-                  </CButton>
-                )}
-              </div>
-            )}
-          </div>
+            <div>
+              {activeTab === 0 && (
+                <div className="d-flex align-items-center gap-2">
+                  <CFormInput
+                    type="text"
+                    placeholder="Receipt Number"
+                    value={receiptNumber}
+                    onChange={(e) => setReceiptNumber(e.target.value)}
+                    style={{ width: '200px' }}
+                    size="sm"
+                  />
+                  {canUpdateRTOTax && (
+                    <CButton 
+                      size="sm" 
+                      className="action-btn"
+                      onClick={handleUpdateSelected}
+                    >
+                      Update
+                    </CButton>
+                  )}
+                </div>
+              )}
+            </div>
             <div className='d-flex'>
               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
               <CFormInput

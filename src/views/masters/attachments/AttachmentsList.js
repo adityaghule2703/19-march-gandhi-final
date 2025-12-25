@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -17,6 +16,16 @@ import {
   axiosInstance,
 } from '../../../utils/tableImports';
 import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
+import { 
   CButton, 
   CCard, 
   CCardBody, 
@@ -33,7 +42,7 @@ import {
   CBadge
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilPlus, cilSettings, cilPencil, cilTrash, cilCheckCircle, cilXCircle } from '@coreui/icons';
+import { cilPlus, cilSettings, cilPencil, cilTrash, cilCheckCircle, cilXCircle, cilFile, cilVideo } from '@coreui/icons';
 import { useAuth } from '../../../context/AuthContext';
 
 const AttachmentsList = () => {
@@ -45,15 +54,53 @@ const AttachmentsList = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'ATTACHMENTS_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'ATTACHMENTS_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'ATTACHMENTS_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Attachments page under Masters module
+  const hasAttachmentsView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.ATTACHMENTS, 
+    ACTIONS.VIEW
+  );
+  
+  const hasAttachmentsCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.ATTACHMENTS, 
+    ACTIONS.CREATE
+  );
+  
+  const hasAttachmentsUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.ATTACHMENTS, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasAttachmentsDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.ATTACHMENTS, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewAttachments = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.ATTACHMENTS);
+  const canCreateAttachments = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.ATTACHMENTS);
+  const canUpdateAttachments = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.ATTACHMENTS);
+  const canDeleteAttachments = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.ATTACHMENTS);
+  
+  const showActionColumn = canUpdateAttachments || canDeleteAttachments;
 
   useEffect(() => {
+    if (!canViewAttachments) {
+      showError('You do not have permission to view Attachments');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewAttachments]);
 
   const fetchData = async () => {
     try {
@@ -82,6 +129,11 @@ const AttachmentsList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteAttachments) {
+      showError('You do not have permission to delete attachments');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -180,7 +232,7 @@ const AttachmentsList = () => {
                   }}
                   onClick={() => window.open(attachment.url, '_blank')}
                 >
-                  <CIcon icon={cilYoutube} style={{ color: 'red' }} />
+                  <CBadge color="danger">YouTube</CBadge>
                 </div>
               );
             default:
@@ -190,6 +242,14 @@ const AttachmentsList = () => {
       </div>
     );
   };
+
+  if (!canViewAttachments) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Attachments.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -214,7 +274,7 @@ const AttachmentsList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateAttachments && (
               <Link to="/attachments/add-attachments">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Attachment
@@ -314,7 +374,7 @@ const AttachmentsList = () => {
                             open={menuId === attachment.id}
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateAttachments && (
                               <Link className="Link" to={`/attachments/update-attachments/${attachment._id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />
@@ -322,7 +382,7 @@ const AttachmentsList = () => {
                                 </MenuItem>
                               </Link>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteAttachments && (
                               <MenuItem onClick={() => handleDelete(attachment._id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

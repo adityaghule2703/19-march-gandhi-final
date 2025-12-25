@@ -5,13 +5,38 @@ import { BsFileEarmarkCheck, BsFileEarmarkX } from 'react-icons/bs';
 import axiosInstance from '../../../axiosInstance';
 import '../../../css/dashboard.css';
 
+// Import the permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage
+} from '../../../utils/modulePermissions';
+import { useAuth } from '../../../context/AuthContext';
+
 const InsuranceDashboard = () => {
   const [bookingData, setBookingData] = useState(null);
   const [financialData, setFinancialData] = useState(null);
   const [loading, setLoading] = useState({ bookings: true, financials: true });
   const [error, setError] = useState({ bookings: null, financials: null });
 
+  const { permissions } = useAuth();
+  
+  // Page-level permission check for Insurance Dashboard page under Insurance module
+  const canViewInsuranceDashboard = canViewPage(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.DASHBOARD
+  );
+
   useEffect(() => {
+    if (!canViewInsuranceDashboard) {
+      setError({ bookings: 'Permission denied', financials: 'Permission denied' });
+      setLoading({ bookings: false, financials: false });
+      return;
+    }
+    
     const fetchBookingCounts = async () => {
       try {
         console.log('Fetching booking counts...');
@@ -32,9 +57,13 @@ const InsuranceDashboard = () => {
     };
 
     fetchBookingCounts();
-  }, []);
+  }, [canViewInsuranceDashboard]);
 
   useEffect(() => {
+    if (!canViewInsuranceDashboard) {
+      return;
+    }
+    
     const fetchFinancialSummary = async () => {
       try {
         console.log('Fetching financial summary...');
@@ -55,10 +84,19 @@ const InsuranceDashboard = () => {
     };
 
     fetchFinancialSummary();
-  }, []);
+  }, [canViewInsuranceDashboard]);
 
   // Debug current state
   console.log('Current State:', { bookingData, financialData, loading, error });
+
+  // Check if user has permission to view the page
+  if (!canViewInsuranceDashboard) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Insurance Dashboard.
+      </div>
+    );
+  }
 
   // Show loading only if both are loading
   if (loading.bookings && loading.financials) {

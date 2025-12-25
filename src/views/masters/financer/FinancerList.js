@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -13,6 +12,16 @@ import {
   showError,
   axiosInstance
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -47,15 +56,53 @@ const FinancersList = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'FINANCE_PROVIDER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'FINANCE_PROVIDER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'FINANCE_PROVIDER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Financer page under Masters module
+  const hasFinancerView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.FINANCER, 
+    ACTIONS.VIEW
+  );
+  
+  const hasFinancerCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.FINANCER, 
+    ACTIONS.CREATE
+  );
+  
+  const hasFinancerUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.FINANCER, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasFinancerDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.FINANCER, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewFinancer = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCER);
+  const canCreateFinancer = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCER);
+  const canUpdateFinancer = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCER);
+  const canDeleteFinancer = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCER);
+  
+  const showActionColumn = canUpdateFinancer || canDeleteFinancer;
 
   useEffect(() => {
+    if (!canViewFinancer) {
+      showError('You do not have permission to view Finance Providers');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewFinancer]);
 
   const fetchData = async () => {
     try {
@@ -65,9 +112,9 @@ const FinancersList = () => {
       setFilteredData(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -84,6 +131,11 @@ const FinancersList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteFinancer) {
+      showError('You do not have permission to delete finance providers');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -105,11 +157,21 @@ const FinancersList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateFinancer) {
+      showError('You do not have permission to add finance providers');
+      return;
+    }
+    
     setEditingFinancer(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (financer) => {
+    if (!canUpdateFinancer) {
+      showError('You do not have permission to edit finance providers');
+      return;
+    }
+    
     setEditingFinancer(financer);
     setShowModal(true);
   };
@@ -125,6 +187,14 @@ const FinancersList = () => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 3000);
   };
+
+  if (!canViewFinancer) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Finance Providers.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -156,7 +226,7 @@ const FinancersList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateFinancer && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -221,7 +291,7 @@ const FinancersList = () => {
                             open={menuId === financer.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateFinancer && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(financer)}
                                 style={{ color: 'black' }}
@@ -230,7 +300,7 @@ const FinancersList = () => {
                                 Edit
                               </MenuItem>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteFinancer && (
                               <MenuItem onClick={() => handleDelete(financer.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

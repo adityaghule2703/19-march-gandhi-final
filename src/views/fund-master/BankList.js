@@ -12,7 +12,6 @@ import {
   axiosInstance,
   getDefaultSearchFields
 } from '../../utils/tableImports';
-import { hasPermission } from '../../utils/permissionUtils';
 import { 
   CButton, 
   CCard, 
@@ -33,6 +32,14 @@ import CIcon from '@coreui/icons-react';
 import { cilPlus, cilCheckCircle, cilXCircle, cilSettings, cilPencil, cilTrash } from '@coreui/icons';
 import AddBank from './AddBank';
 import { useAuth } from '../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../utils/modulePermissions';
 
 const BankList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -44,16 +51,24 @@ const BankList = () => {
   const [editingBank, setEditingBank] = useState(null);
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
+  const { permissions } = useAuth();
   
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'BANK_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'BANK_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'BANK_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  // Page-level permission checks for Bank Account Master page under Fund Master module
+  const canViewBank = canViewPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.BANK_ACCOUNT_MASTER);
+  const canCreateBank = canCreateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.BANK_ACCOUNT_MASTER);
+  const canUpdateBank = canUpdateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.BANK_ACCOUNT_MASTER);
+  const canDeleteBank = canDeleteInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.BANK_ACCOUNT_MASTER);
+  
+  const showActionColumn = canUpdateBank || canDeleteBank;
 
   useEffect(() => {
+    if (!canViewBank) {
+      showError('You do not have permission to view Bank Account Master');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewBank]);
 
   const fetchData = async () => {
     try {
@@ -82,6 +97,11 @@ const BankList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteBank) {
+      showError('You do not have permission to delete bank account');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -96,6 +116,11 @@ const BankList = () => {
   };
 
   const handleToggleStatus = async (bankId, currentStatus) => {
+    if (!canUpdateBank) {
+      showError('You do not have permission to update bank account status');
+      return;
+    }
+    
     try {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       await axiosInstance.patch(`/banks/${bankId}/status`, {
@@ -116,11 +141,21 @@ const BankList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateBank) {
+      showError('You do not have permission to add bank account');
+      return;
+    }
+    
     setEditingBank(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (bank) => {
+    if (!canUpdateBank) {
+      showError('You do not have permission to edit bank account');
+      return;
+    }
+    
     setEditingBank(bank);
     setShowModal(true);
   };
@@ -139,6 +174,14 @@ const BankList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('cash_bank_allocation'));
   };
+
+  if (!canViewBank) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Bank Account Master.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -163,7 +206,7 @@ const BankList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateBank && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -233,6 +276,7 @@ const BankList = () => {
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, bank.id)}
+                            disabled={!canUpdateBank && !canDeleteBank}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -243,7 +287,7 @@ const BankList = () => {
                             open={menuId === bank.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateBank && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(bank)}
                                 style={{ color: 'black' }}
@@ -251,13 +295,13 @@ const BankList = () => {
                                 <CIcon icon={cilPencil} className="me-2" />Edit
                               </MenuItem>
                             )}
-                            {hasEditPermission && (
+                            {canUpdateBank && (
                               <MenuItem onClick={() => handleToggleStatus(bank.id, bank.status)}>
                                 <CIcon icon={bank.status === 'active' ? cilXCircle : cilCheckCircle} className="me-2" /> 
                                 {bank.status === 'active' ? 'Deactivate' : 'Activate'}
                               </MenuItem>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteBank && (
                               <MenuItem onClick={() => handleDelete(bank.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />Delete
                               </MenuItem>

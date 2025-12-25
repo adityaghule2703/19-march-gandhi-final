@@ -47,6 +47,15 @@ import {
   axiosInstance
 } from 'src/utils/tableImports.js';
 import AddSubdealerAuditModal from './AddSubdealerAuditModal';
+import { useAuth } from '../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../utils/modulePermissions';
 
 const SubdealerAuditList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -69,10 +78,26 @@ const SubdealerAuditList = () => {
   const [tempSelectedAuditType, setTempSelectedAuditType] = useState('daily');
   const [isFiltered, setIsFiltered] = useState(false);
 
+  // Permissions
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Subdealer Audit List page under Subdealer Master module
+  const canViewAuditList = canViewPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_AUDIT_LIST);
+  const canCreateAudit = canCreateInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_AUDIT_LIST);
+  const canUpdateAudit = canUpdateInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_AUDIT_LIST);
+  const canDeleteAudit = canDeleteInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_AUDIT_LIST);
+  
+  const showActionColumn = canUpdateAudit || canDeleteAudit;
+
   useEffect(() => {
+    if (!canViewAuditList) {
+      showError('You do not have permission to view Subdealer Audit List');
+      return;
+    }
+    
     fetchData();
     fetchSubdealers();
-  }, []);
+  }, [canViewAuditList]);
 
   useEffect(() => {
     filterData();
@@ -81,7 +106,7 @@ const SubdealerAuditList = () => {
   const fetchSubdealers = async () => {
     try {
       const response = await axiosInstance.get('/subdealers');
-      setSubdealers(response.data.data.subdealers || []);
+      setSubdealers(response.data.data?.subdealers || []);
     } catch (error) {
       const message = showError(error);
       if (message) {
@@ -94,7 +119,7 @@ const SubdealerAuditList = () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get('/subdealer-audits');
-      const audits = response.data.data.subdealerAudits || [];
+      const audits = response.data.data?.subdealerAudits || [];
       setData(audits);
       setFilteredData(audits);
     } catch (error) {
@@ -168,6 +193,11 @@ const SubdealerAuditList = () => {
   };
 
   const handleToggleStatus = async (auditId, currentStatus) => {
+    if (!canUpdateAudit) {
+      showError('You do not have permission to update audit status');
+      return;
+    }
+    
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
 
     try {
@@ -193,6 +223,11 @@ const SubdealerAuditList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteAudit) {
+      showError('You do not have permission to delete audit');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -213,11 +248,21 @@ const SubdealerAuditList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateAudit) {
+      showError('You do not have permission to create audit schedule');
+      return;
+    }
+    
     setEditingAudit(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (audit) => {
+    if (!canUpdateAudit) {
+      showError('You do not have permission to edit audit schedule');
+      return;
+    }
+    
     setEditingAudit(audit);
     setShowModal(true);
   };
@@ -307,6 +352,14 @@ const SubdealerAuditList = () => {
     );
   };
 
+  if (!canViewAuditList) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Subdealer Audit List.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -336,18 +389,22 @@ const SubdealerAuditList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-              onClick={handleShowAddModal}
-            >
-              <CIcon icon={cilPlus} className='icon'/> New Audit Schedule
-            </CButton>
+            {canCreateAudit && (
+              <CButton 
+                size="sm" 
+                className="action-btn me-1"
+                onClick={handleShowAddModal}
+                disabled={!canCreateAudit}
+              >
+                <CIcon icon={cilPlus} className='icon'/> New Audit Schedule
+              </CButton>
+            )}
             
             <CButton 
               size="sm" 
               className="action-btn me-1"
               onClick={handleFilterClick}
+              disabled={!canViewAuditList}
             >
               <CIcon icon={cilSearch} className='icon' /> Filter
             </CButton>
@@ -383,6 +440,7 @@ const SubdealerAuditList = () => {
                   handleSearch(e.target.value);
                 }}
                 placeholder="Search by subdealer, day, remarks..."
+                disabled={!canViewAuditList}
               />
             </div>
           </div>
@@ -400,40 +458,40 @@ const SubdealerAuditList = () => {
                   <CTableHeaderCell>Created By</CTableHeaderCell>
                   <CTableHeaderCell>Created Date</CTableHeaderCell>
                   <CTableHeaderCell>Status</CTableHeaderCell>
-                  <CTableHeaderCell>Action</CTableHeaderCell>
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
-                {filteredData.length > 0 ? (
+                {filteredData && filteredData.length > 0 ? (
                   filteredData.map((audit, index) => (
-                    <CTableRow key={audit._id}>
+                    <CTableRow key={audit?._id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
                       <CTableDataCell>
-                        {getAuditTypeBadge(audit.auditType)}
+                        {getAuditTypeBadge(audit?.auditType)}
                       </CTableDataCell>
                       <CTableDataCell>
-                        {audit.subdealerDetails?.name || 'N/A'}
+                        {audit?.subdealerDetails?.name || 'N/A'}
                         <div className="text-muted small">
-                          {audit.subdealerDetails?.location || ''}
+                          {audit?.subdealerDetails?.location || ''}
                         </div>
                       </CTableDataCell>
                       <CTableDataCell>
                         <div className="mb-1">
-                          {audit.scheduleDescription || 
-                            (audit.auditType === 'daily' ? `Daily (${audit.frequency})` : 
-                             audit.auditType === 'weekly' ? `Weekly on ${audit.dayFormatted || audit.day}` :
-                             audit.auditType === 'monthly' ? `Monthly on day ${audit.dayOfMonth}` : '')}
+                          {audit?.scheduleDescription || 
+                            (audit?.auditType === 'daily' ? `Daily (${audit?.frequency})` : 
+                             audit?.auditType === 'weekly' ? `Weekly on ${audit?.dayFormatted || audit?.day}` :
+                             audit?.auditType === 'monthly' ? `Monthly on day ${audit?.dayOfMonth}` : '')}
                         </div>
-                        {audit.frequency && audit.auditType !== 'daily' && (
+                        {audit?.frequency && audit?.auditType !== 'daily' && (
                           <div className="text-muted small">
-                            Frequency: {audit.frequency}
+                            Frequency: {audit?.frequency}
                           </div>
                         )}
                       </CTableDataCell>
                       <CTableDataCell>
                         <div className="d-flex flex-column">
                           <span>
-                            {audit.nextAuditDate ? 
+                            {audit?.nextAuditDate ? 
                               new Date(audit.nextAuditDate).toLocaleDateString('en-US', {
                                 day: '2-digit',
                                 month: 'short',
@@ -441,12 +499,12 @@ const SubdealerAuditList = () => {
                               }) : 'N/A'
                             }
                           </span>
-                          {audit.auditStatus === 'due-tomorrow' && (
+                          {audit?.auditStatus === 'due-tomorrow' && (
                             <CBadge color="warning" className="mt-1">
                               Due Tomorrow
                             </CBadge>
                           )}
-                          {audit.daysUntil !== undefined && audit.daysUntil > 0 && (
+                          {audit?.daysUntil !== undefined && audit.daysUntil > 0 && (
                             <span className="text-muted small">
                               in {audit.daysUntil} day{audit.daysUntil !== 1 ? 's' : ''}
                             </span>
@@ -454,17 +512,17 @@ const SubdealerAuditList = () => {
                         </div>
                       </CTableDataCell>
                       <CTableDataCell>
-                        {audit.remarks || '-'}
+                        {audit?.remarks || '-'}
                       </CTableDataCell>
                       <CTableDataCell>
-                        {audit.createdByDetails?.name || 'N/A'}
+                        {audit?.createdByDetails?.name || 'N/A'}
                       </CTableDataCell>
                       <CTableDataCell>
-                        {formatDate(audit.createdAt)}
+                        {formatDate(audit?.createdAt)}
                       </CTableDataCell>
                       <CTableDataCell>
-                        <CBadge color={audit.status === 'active' ? 'success' : 'secondary'}>
-                          {audit.status === 'active' ? (
+                        <CBadge color={audit?.status === 'active' ? 'success' : 'secondary'}>
+                          {audit?.status === 'active' ? (
                             <>
                               <CIcon icon={cilCheckCircle} className="me-1" />
                               Active
@@ -477,44 +535,53 @@ const SubdealerAuditList = () => {
                           )}
                         </CBadge>
                       </CTableDataCell>
-                      <CTableDataCell>
-                        <CButton
-                          size="sm"
-                          className='option-button btn-sm'
-                          onClick={(event) => handleClick(event, audit._id)}
-                        >
-                          <CIcon icon={cilSettings} />
-                          Options
-                        </CButton>
-                        <Menu 
-                          id={`action-menu-${audit._id}`} 
-                          anchorEl={anchorEl} 
-                          open={menuId === audit._id} 
-                          onClose={handleClose}
-                        >
-                          <MenuItem 
-                            onClick={() => handleShowEditModal(audit)}
-                            style={{ color: 'black' }}
+                      {showActionColumn && (
+                        <CTableDataCell>
+                          <CButton
+                            size="sm"
+                            className='option-button btn-sm'
+                            onClick={(event) => handleClick(event, audit?._id)}
+                            disabled={!canUpdateAudit && !canDeleteAudit}
                           >
-                            <CIcon icon={cilPencil} className="me-2" />
-                            Edit
-                          </MenuItem>
-                          <MenuItem onClick={() => handleToggleStatus(audit._id, audit.status)}>
-                            <CIcon icon={audit.status === 'active' ? cilXCircle : cilCheckCircle} className="me-2" /> 
-                            {audit.status === 'active' ? 'Deactivate' : 'Activate'}
-                          </MenuItem>
-                          <MenuItem onClick={() => handleDelete(audit._id)}>
-                            <CIcon icon={cilTrash} className="me-2" />
-                            Delete
-                          </MenuItem>
-                        </Menu>
-                      </CTableDataCell>
+                            <CIcon icon={cilSettings} />
+                            Options
+                          </CButton>
+                          <Menu 
+                            id={`action-menu-${audit?._id}`} 
+                            anchorEl={anchorEl} 
+                            open={menuId === audit?._id} 
+                            onClose={handleClose}
+                          >
+                            {canUpdateAudit && (
+                              <MenuItem 
+                                onClick={() => handleShowEditModal(audit)}
+                                style={{ color: 'black' }}
+                              >
+                                <CIcon icon={cilPencil} className="me-2" />
+                                Edit
+                              </MenuItem>
+                            )}
+                            {canUpdateAudit && (
+                              <MenuItem onClick={() => handleToggleStatus(audit?._id, audit?.status)}>
+                                <CIcon icon={audit?.status === 'active' ? cilXCircle : cilCheckCircle} className="me-2" /> 
+                                {audit?.status === 'active' ? 'Deactivate' : 'Activate'}
+                              </MenuItem>
+                            )}
+                            {canDeleteAudit && (
+                              <MenuItem onClick={() => handleDelete(audit?._id)}>
+                                <CIcon icon={cilTrash} className="me-2" />
+                                Delete
+                              </MenuItem>
+                            )}
+                          </Menu>
+                        </CTableDataCell>
+                      )}
                     </CTableRow>
                   ))
                 ) : (
                   <CTableRow>
-                    <CTableDataCell colSpan="10" className="text-center">
-                      {data.length === 0 
+                    <CTableDataCell colSpan={showActionColumn ? "11" : "10"} className="text-center">
+                      {data?.length === 0 
                         ? 'No audit schedules available. Click "New Audit Schedule" to create one.'
                         : `No audit schedules found for the selected filters. Try changing the filter or search term.`
                       }
@@ -539,6 +606,7 @@ const SubdealerAuditList = () => {
               <CFormSelect
                 value={tempSelectedAuditType || 'daily'}
                 onChange={(e) => setTempSelectedAuditType(e.target.value)}
+                disabled={!canViewAuditList}
               >
                 <option value="all">All Types</option>
                 <option value="daily">Daily</option>
@@ -551,6 +619,7 @@ const SubdealerAuditList = () => {
               <CFormSelect
                 value={tempSelectedSubdealer || ''}
                 onChange={(e) => setTempSelectedSubdealer(e.target.value || null)}
+                disabled={!canViewAuditList}
               >
                 <option value="">All Subdealers</option>
                 {subdealers

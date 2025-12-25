@@ -125,6 +125,8 @@ function BookingForm() {
   const navigate = useNavigate();
   const { id } = useParams();
 
+  
+
   useEffect(() => {
     fetchUserProfile();
     
@@ -136,38 +138,39 @@ function BookingForm() {
   }, []);
 
   const fetchUserProfile = async () => {
-  try {
-    const response = await axiosInstance.get('/auth/me');
-    const verticlesData = response.data.data?.verticles || [];
-    
-    // Extract verticle IDs from the objects
-    const verticleIds = verticlesData.map(verticle => verticle._id);
-    setUserVerticleIds(verticleIds);
-    
-    // Pass the full verticles data to fetchAllVerticles
-    await fetchAllVerticles(verticlesData);
-  } catch (error) {
-    const message = showError(error); 
-    if (message) setError(message);
-  }
-};
+    try {
+      const response = await axiosInstance.get('/auth/me');
+      const verticlesData = response.data.data?.verticles || [];
+      
+      // Extract verticle IDs from the objects
+      const verticleIds = verticlesData.map(verticle => verticle._id);
+      setUserVerticleIds(verticleIds);
+      
+      // Pass the full verticles data to fetchAllVerticles
+      await fetchAllVerticles(verticlesData);
+    } catch (error) {
+      const message = showError(error); 
+      if (message) setError(message);
+    }
+  };
+
   const fetchAllVerticles = async (userVerticlesData) => {
-  try {
-    const response = await axiosInstance.get('/verticle-masters');
-    const verticlesData = response.data.data?.verticleMasters || response.data.data || [];
-    setAllVerticles(verticlesData);
-    
-    // Since we already have the user's verticles data, we can use it directly
-    // Filter to only include active verticles
-    const filteredVerticles = userVerticlesData.filter(verticle => 
-      verticle.status === 'active'
-    );
-    setUserVerticles(filteredVerticles);
-  } catch (error) {
-    const message = showError(error); 
-    if (message) setError(message);
-  }
-};
+    try {
+      const response = await axiosInstance.get('/verticle-masters');
+      const verticlesData = response.data.data?.verticleMasters || response.data.data || [];
+      setAllVerticles(verticlesData);
+      
+      // Since we already have the user's verticles data, we can use it directly
+      // Filter to only include active verticles
+      const filteredVerticles = userVerticlesData.filter(verticle => 
+        verticle.status === 'active'
+      );
+      setUserVerticles(filteredVerticles);
+    } catch (error) {
+      const message = showError(error); 
+      if (message) setError(message);
+    }
+  };
 
   const handleCustomerSearch = async () => {
     if (!searchQuery.trim()) {
@@ -411,7 +414,6 @@ function BookingForm() {
       const mergedDiscounts = {};
       
       prices.forEach(price => {
-
         let headerId;
         
         if (price.header && price.header._id) {
@@ -1016,10 +1018,16 @@ function BookingForm() {
     });
   };
 
-  const calculateTaxableAmount = (unitCost, discount, gstRate) => {
+  const calculateTaxableAmount = (unitCost, discount, gstRate, customerType) => {
     const netAmount = unitCost - (discount || 0);
     const gstRateDecimal = gstRate / 100;
     
+    // For CSD customers, taxable amount is same as net amount (no GST adjustment)
+    if (customerType === 'CSD') {
+      return netAmount;
+    }
+    
+    // For B2B/B2C, calculate taxable amount
     if (gstRateDecimal === 0) {
       return netAmount;
     }
@@ -1027,11 +1035,20 @@ function BookingForm() {
     return netAmount / (1 + gstRateDecimal);
   };
 
-  const calculateGST = (taxable, gstRate) => {
+  const calculateGST = (taxable, gstRate, customerType) => {
+    // For CSD customers, CGST is always 0
+    if (customerType === 'CSD') {
+      const halfRate = gstRate / 2;
+      const cgstAmount = 0; // CGST is 0 for CSD
+      const sgstAmount = taxable * (halfRate / 100);
+      return { cgstAmount, sgstAmount, halfRate, cgstRate: 0, sgstRate: halfRate };
+    }
+    
+    // For B2B/B2C, split GST equally
     const halfRate = gstRate / 2;
     const cgstAmount = taxable * (halfRate / 100);
     const sgstAmount = taxable * (halfRate / 100);
-    return { cgstAmount, sgstAmount, halfRate };
+    return { cgstAmount, sgstAmount, halfRate, cgstRate: halfRate, sgstRate: halfRate };
   };
 
   const calculateLineTotal = (taxable, cgstAmount, sgstAmount) => {
@@ -1266,7 +1283,7 @@ function BookingForm() {
                     )}
                   </div>
                   
-                  {/* <div className="input-box">
+                  <div className="input-box">
                     <div className="details-container">
                       <span className="details">Model Name</span>
                       <span className="required">*</span>
@@ -1275,95 +1292,55 @@ function BookingForm() {
                       <CInputGroupText className="input-icon">
                         <CIcon icon={cilBike} />
                       </CInputGroupText>
-                      <CFormSelect 
-                        name="model_id" 
-                        value={formData.model_id} 
-                        onChange={handleChange} 
-                        disabled={!formData.branch || !formData.verticle_id}
-                      >
-                        <option value="">- Select a Model -</option>
-                        {filteredModels.length > 0 ? (
-                          filteredModels.map((model) => (
-                            <option key={model._id} value={model._id}>
-                              {model.model_name}
-                            </option>
-                          ))
-                        ) : formData.verticle_id ? (
-                          <option value="" disabled>
-                            No models available for this verticle
-                          </option>
-                        ) : (
-                          <option value="" disabled>
-                            Please select a verticle first
-                          </option>
-                        )}
-                      </CFormSelect>
+                      <div style={{ flex: 1 }}>
+                        <Select
+                          name="model_id"
+                          isDisabled={!formData.branch || !formData.verticle_id}
+                          placeholder={
+                            !formData.verticle_id
+                              ? "Select verticle first"
+                              : "Search Model"
+                          }
+                          value={
+                            filteredModels.find((m) => m._id === formData.model_id)
+                              ? {
+                                  label: filteredModels.find(
+                                    (m) => m._id === formData.model_id
+                                  ).model_name,
+                                  value: formData.model_id,
+                                }
+                              : null
+                          }
+                          onChange={(selected) =>
+                            handleChange({
+                              target: {
+                                name: "model_id",
+                                value: selected ? selected.value : "",
+                              },
+                            })
+                          }
+                          options={
+                            filteredModels.length > 0
+                              ? filteredModels.map((model) => ({
+                                  label: model.model_name,
+                                  value: model._id,
+                                }))
+                              : []
+                          }
+                          noOptionsMessage={() =>
+                            formData.verticle_id
+                              ? "No models available for this verticle"
+                              : "Please select a verticle first"
+                          }
+                          classNamePrefix="react-select"
+                          className={`react-select-container ${
+                            errors.model_id ? "error-input" : formData.model_id ? "valid-input" : ""
+                          }`}
+                        />
+                      </div>
                     </CInputGroup>
                     {errors.model_id && <p className="error">{errors.model_id}</p>}
-                  </div> */}
-
-<div className="input-box">
-  <div className="details-container">
-    <span className="details">Model Name</span>
-    <span className="required">*</span>
-  </div>
-
-  <CInputGroup>
-    <CInputGroupText className="input-icon">
-      <CIcon icon={cilBike} />
-    </CInputGroupText>
-
-    <div style={{ flex: 1 }}>
-      <Select
-        name="model_id"
-        isDisabled={!formData.branch || !formData.verticle_id}
-        placeholder={
-          !formData.verticle_id
-            ? "Select verticle first"
-            : "Search Model"
-        }
-        value={
-          filteredModels.find((m) => m._id === formData.model_id)
-            ? {
-                label: filteredModels.find(
-                  (m) => m._id === formData.model_id
-                ).model_name,
-                value: formData.model_id,
-              }
-            : null
-        }
-        onChange={(selected) =>
-          handleChange({
-            target: {
-              name: "model_id",
-              value: selected ? selected.value : "",
-            },
-          })
-        }
-        options={
-          filteredModels.length > 0
-            ? filteredModels.map((model) => ({
-                label: model.model_name,
-                value: model._id,
-              }))
-            : []
-        }
-        noOptionsMessage={() =>
-          formData.verticle_id
-            ? "No models available for this verticle"
-            : "Please select a verticle first"
-        }
-        classNamePrefix="react-select"
-        className={`react-select-container ${
-          errors.model_id ? "error-input" : formData.model_id ? "valid-input" : ""
-        }`}
-      />
-    </div>
-  </CInputGroup>
-
-  {errors.model_id && <p className="error">{errors.model_id}</p>}
-</div>
-
+                  </div>
 
                   {formData.customer_type === 'B2B' && (
                     <div className="input-box">
@@ -2240,11 +2217,11 @@ function BookingForm() {
                               const gstRate = header.metadata?.gst_rate ? parseFloat(header.metadata.gst_rate) : 0;
                               const hsnCode = header.metadata?.hsn_code || 'N/A';
                               
-                              // Calculate taxable amount
-                              const taxable = calculateTaxableAmount(unitPrice, discountAmount, gstRate);
+                              // Calculate taxable amount based on customer type
+                              const taxable = calculateTaxableAmount(unitPrice, discountAmount, gstRate, formData.customer_type);
                               
-                              // Calculate CGST and SGST
-                              const { cgstAmount, sgstAmount, halfRate } = calculateGST(taxable, gstRate);
+                              // Calculate CGST and SGST based on customer type
+                              const { cgstAmount, sgstAmount, cgstRate, sgstRate } = calculateGST(taxable, gstRate, formData.customer_type);
                               
                               // Calculate line total
                               const lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
@@ -2282,9 +2259,9 @@ function BookingForm() {
                                     )}
                                   </CTableDataCell>
                                   <CTableDataCell>₹{taxable.toFixed(2)}</CTableDataCell>
-                                  <CTableDataCell>{halfRate.toFixed(2)}%</CTableDataCell>
+                                  <CTableDataCell>{cgstRate.toFixed(2)}%</CTableDataCell>
                                   <CTableDataCell>₹{cgstAmount.toFixed(2)}</CTableDataCell>
-                                  <CTableDataCell>{halfRate.toFixed(2)}%</CTableDataCell>
+                                  <CTableDataCell>{sgstRate.toFixed(2)}%</CTableDataCell>
                                   <CTableDataCell>₹{sgstAmount.toFixed(2)}</CTableDataCell>
                                   <CTableDataCell>
                                     <strong>₹{lineTotal.toFixed(2)}</strong>

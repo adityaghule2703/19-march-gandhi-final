@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -15,6 +14,16 @@ import {
   showSuccess,
   axiosInstance,
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -44,15 +53,53 @@ const DocumentList = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'DOCUMENTS_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'DOCUMENTS_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'DOCUMENTS_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Documents page under Masters module
+  const hasDocumentsView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.DOCUMENTS, 
+    ACTIONS.VIEW
+  );
+  
+  const hasDocumentsCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.DOCUMENTS, 
+    ACTIONS.CREATE
+  );
+  
+  const hasDocumentsUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.DOCUMENTS, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasDocumentsDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.DOCUMENTS, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewDocuments = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  const canCreateDocuments = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  const canUpdateDocuments = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  const canDeleteDocuments = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  
+  const showActionColumn = canUpdateDocuments || canDeleteDocuments;
 
   useEffect(() => {
+    if (!canViewDocuments) {
+      showError('You do not have permission to view Documents');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewDocuments]);
 
   const fetchData = async () => {
     try {
@@ -62,9 +109,9 @@ const DocumentList = () => {
       setFilteredData(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,6 +128,11 @@ const DocumentList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteDocuments) {
+      showError('You do not have permission to delete documents');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -99,6 +151,14 @@ const DocumentList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('documents'));
   };
+
+  if (!canViewDocuments) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Documents.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -123,13 +183,13 @@ const DocumentList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {/* {hasCreatePermission && ( */}
+            {canCreateDocuments && (
               <Link to="/documents/add-document">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Document
                 </CButton>
               </Link>
-            {/* )} */}
+            )}
           </div>
         </CCardHeader>
         
@@ -155,9 +215,7 @@ const DocumentList = () => {
                   <CTableHeaderCell>Document name</CTableHeaderCell>
                   <CTableHeaderCell>Description</CTableHeaderCell>
                   <CTableHeaderCell>Is required</CTableHeaderCell>
-                  {/* {showActionColumn && */}
-                  <CTableHeaderCell>Action</CTableHeaderCell>
-                  {/* } */}
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
@@ -188,7 +246,7 @@ const DocumentList = () => {
                           )}
                         </CBadge>
                       </CTableDataCell>
-                      {/* {showActionColumn && ( */}
+                      {showActionColumn && (
                         <CTableDataCell>
                           <CButton
                             size="sm"
@@ -204,23 +262,23 @@ const DocumentList = () => {
                             open={menuId === document._id} 
                             onClose={handleClose}
                           >
-                            {/* {hasEditPermission && ( */}
+                            {canUpdateDocuments && (
                               <Link className="Link" to={`/documents/update-document/${document._id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />
                                   Edit
                                 </MenuItem>
                               </Link>
-                            {/* )} */}
-                            {/* {hasDeletePermission && ( */}
+                            )}
+                            {canDeleteDocuments && (
                               <MenuItem onClick={() => handleDelete(document._id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete
                               </MenuItem>
-                            {/* )} */}
+                            )}
                           </Menu>
                         </CTableDataCell>
-                      {/* )} */}
+                      )}
                     </CTableRow>
                   ))
                 )}

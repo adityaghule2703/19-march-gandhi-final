@@ -7,6 +7,8 @@ import CIcon from '@coreui/icons-react';
 import { cilLocationPin, cilSearch } from '@coreui/icons';
 import { showFormSubmitError, showFormSubmitToast } from '../../utils/sweetAlerts';
 import axiosInstance from '../../axiosInstance';
+import { useAuth } from '../../context/AuthContext';
+import { canViewPage, MODULES, PAGES } from '../../utils/modulePermissions';
 
 function DayBook() {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -18,8 +20,17 @@ function DayBook() {
   const [errors, setErrors] = useState({});
   const [branches, setBranches] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { permissions } = useAuth();
+  
+  // Page-level permission check for Day Book page under Fund Management module
+  const canViewDayBook = canViewPage(permissions, MODULES.FUND_MANAGEMENT, PAGES.FUND_MANAGEMENT.DAY_BOOK);
 
   useEffect(() => {
+    if (!canViewDayBook) {
+      showFormSubmitError('You do not have permission to view Day Book');
+      return;
+    }
+    
     const fetchBranches = async () => {
       try {
         const response = await axiosInstance.get('/branches');
@@ -31,7 +42,7 @@ function DayBook() {
     };
 
     fetchBranches();
-  }, []);
+  }, [canViewDayBook]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -243,6 +254,14 @@ function DayBook() {
 
     await generateCashBook();
   };
+
+  if (!canViewDayBook) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Day Book.
+      </div>
+    );
+  }
 
   return (
     <div className="form-container">

@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -16,6 +15,16 @@ import {
   showSuccess,
   axiosInstance
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -45,15 +54,53 @@ const OffersList = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'OFFER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'OFFER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'OFFER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Offer page under Masters module
+  const hasOfferView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.OFFER, 
+    ACTIONS.VIEW
+  );
+  
+  const hasOfferCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.OFFER, 
+    ACTIONS.CREATE
+  );
+  
+  const hasOfferUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.OFFER, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasOfferDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.OFFER, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewOffer = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.OFFER);
+  const canCreateOffer = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.OFFER);
+  const canUpdateOffer = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.OFFER);
+  const canDeleteOffer = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.OFFER);
+  
+  const showActionColumn = canUpdateOffer || canDeleteOffer;
 
   useEffect(() => {
+    if (!canViewOffer) {
+      showError('You do not have permission to view Offers');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewOffer]);
 
   const fetchData = async () => {
     try {
@@ -63,9 +110,9 @@ const OffersList = () => {
       setFilteredData(response.data.data.offers);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -82,6 +129,11 @@ const OffersList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteOffer) {
+      showError('You do not have permission to delete offers');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -100,6 +152,14 @@ const OffersList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('offers'));
   };
+
+  if (!canViewOffer) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Offers.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -124,7 +184,7 @@ const OffersList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateOffer && (
               <Link to="/offers/add-offer">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Offer
@@ -176,7 +236,13 @@ const OffersList = () => {
                       <CTableDataCell>{offer.title}</CTableDataCell>
                       <CTableDataCell>{offer.description}</CTableDataCell>
                       <CTableDataCell>
-                        <Link to={offer.url}>{offer.url}</Link>
+                        {offer.url ? (
+                          <Link to={offer.url} target="_blank" rel="noopener noreferrer">
+                            {offer.url.length > 30 ? `${offer.url.substring(0, 30)}...` : offer.url}
+                          </Link>
+                        ) : (
+                          <CBadge color="secondary">—</CBadge>
+                        )}
                       </CTableDataCell>
                       <CTableDataCell>
                         {offer.image ? (
@@ -217,7 +283,7 @@ const OffersList = () => {
                             open={menuId === offer._id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateOffer && (
                               <Link className="Link" to={`/offers/update-offer/${offer._id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />
@@ -225,7 +291,7 @@ const OffersList = () => {
                                 </MenuItem>
                               </Link>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteOffer && (
                               <MenuItem onClick={() => handleDelete(offer._id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { faFileExcel } from '@fortawesome/free-solid-svg-icons';
 import '../../../css/table.css';
 import '../../../css/importCsv.css';
@@ -8,8 +8,6 @@ import { getDefaultSearchFields, useTableFilter } from '../../../utils/tableFilt
 import { usePagination } from '../../../utils/pagination.js';
 import axiosInstance from '../../../axiosInstance';
 import { confirmDelete, showError, showSuccess } from '../../../utils/sweetAlerts';
-import { hasPermission } from '../../../utils/permissionUtils';
-
 import {
   CTable,
   CTableHead,
@@ -29,17 +27,25 @@ import {
   CModalBody,
   CModalFooter,
   CFormSelect,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
   cilSettings, 
   cilPencil, 
   cilTrash,
-  cilFilter, 
   cilPlus
 } from '@coreui/icons';
 import { useAuth } from '../../../context/AuthContext.js';
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 
 const HeadersList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -62,13 +68,27 @@ const HeadersList = () => {
   const [verticles, setVerticles] = useState([]);
   const [selectedVerticleId, setSelectedVerticleId] = useState('');
   const [exportErrors, setExportErrors] = useState({});
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'HEADER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'HEADER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'HEADER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const navigate = useNavigate();
+
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth();
+
+  // Page-level permission checks for Headers page under Masters module
+  const canViewHeaders = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.HEADERS);
+  const canCreateHeaders = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.HEADERS);
+  const canUpdateHeaders = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.HEADERS);
+  const canDeleteHeaders = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.HEADERS);
+  
+  const showActionColumn = canUpdateHeaders || canDeleteHeaders;
 
   useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewHeaders) {
+      showError('You do not have permission to view Headers');
+      navigate('/dashboard');
+      return;
+    }
+    
     fetchData();
     fetchBranches();
     fetchSubdealers();
@@ -130,6 +150,11 @@ const HeadersList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteHeaders) {
+      showError('You do not have permission to delete headers');
+      return;
+    }
+
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -169,9 +194,9 @@ const HeadersList = () => {
       errors.subdealer = 'Please select a subdealer.';
     }
 
-    if (!selectedVerticleId) {
-      errors.verticle = 'Please select a verticle.';
-    }
+    // if (!selectedVerticleId) {
+    //   errors.verticle = 'Please select a verticle.';
+    // }
     
     setExportErrors(errors);
     return Object.keys(errors).length === 0;
@@ -191,7 +216,7 @@ const HeadersList = () => {
     } else if (exportTarget === 'subdealer') {
       params.append('subdealer_id', selectedSubdealerId);
     }
-    params.append('verticle_id', selectedVerticleId);
+    // params.append('verticle_id', selectedVerticleId);
 
     endpoint = `/csv/export-template?${params.toString()}`;
 
@@ -203,12 +228,12 @@ const HeadersList = () => {
       link.href = url;
       
       let filename = `exported_data_${selectedModelType}_${exportTarget}`;
-      if (selectedVerticleId) {
-        const selectedVerticle = verticles.find(v => v._id === selectedVerticleId);
-        if (selectedVerticle) {
-          filename += `_${selectedVerticle.name.replace(/\s+/g, '_')}`;
-        }
-      }
+      // if (selectedVerticleId) {
+      //   const selectedVerticle = verticles.find(v => v._id === selectedVerticleId);
+      //   if (selectedVerticle) {
+      //     filename += `_${selectedVerticle.name.replace(/\s+/g, '_')}`;
+      //   }
+      // }
       filename += '.xlsx';
       
       link.setAttribute('download', filename);
@@ -220,7 +245,7 @@ const HeadersList = () => {
       setSelectedModelType('');
       setSelectedBranchId('');
       setSelectedSubdealerId('');
-      setSelectedVerticleId('');
+      // setSelectedVerticleId('');
       setExportTarget('');
       setExportErrors({});
       showSuccess('Excel exported successfully!');
@@ -270,10 +295,19 @@ const HeadersList = () => {
     setSelectedModelType('');
     setSelectedBranchId('');
     setSelectedSubdealerId('');
-    setSelectedVerticleId('');
+    // setSelectedVerticleId('');
     setExportErrors({});
     setCsvDialogOpen(false);
   };
+
+  // Check if user has permission to view this page
+  if (!canViewHeaders) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Headers.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -285,9 +319,9 @@ const HeadersList = () => {
 
   if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
-     {error}
-      </div>
+      <CAlert color="danger" className="m-3">
+        {error}
+      </CAlert>
     );
   }
 
@@ -298,7 +332,7 @@ const HeadersList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateHeaders && (
               <Link to="/headers/add-header">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Header
@@ -388,12 +422,12 @@ const HeadersList = () => {
                             </CButton>
                             {dropdownOpen[header._id] && (
                               <div className="dropdown-menu show">
-                                {hasEditPermission && (
+                                {canUpdateHeaders && (
                                   <Link className="dropdown-item" to={`/headers/update-header/${header._id}`}>
                                     <CIcon icon={cilPencil} className="me-2" /> Edit
                                   </Link>
                                 )}
-                                {hasDeletePermission && (
+                                {canDeleteHeaders && (
                                   <button 
                                     className="dropdown-item"
                                     onClick={() => handleDelete(header._id)}
@@ -415,7 +449,7 @@ const HeadersList = () => {
         </CCardBody>
       </CCard>
 
-      {/* Select Export Target Modal - Updated Design */}
+      {/* Select Export Target Modal */}
       <CModal 
         visible={exportTypeDialogOpen} 
         onClose={() => setExportTypeDialogOpen(false)} 
@@ -474,7 +508,6 @@ const HeadersList = () => {
               <option value="">-- Select Model Type --</option>
               <option value="EV">EV</option>
               <option value="ICE">ICE</option>
-           
             </CFormSelect>
             {exportErrors.modelType && <div className="invalid-feedback d-block">{exportErrors.modelType}</div>}
           </div>
@@ -521,8 +554,8 @@ const HeadersList = () => {
             </div>
           )}
 
-          {/* Verticles dropdown - Now Required */}
-          <div className="mb-3">
+          {/* Verticles dropdown */}
+          {/* <div className="mb-3">
             <label className="form-label">Verticle: <span className="text-danger">*</span></label>
             <CFormSelect
               value={selectedVerticleId}
@@ -545,7 +578,7 @@ const HeadersList = () => {
             {verticles.filter(v => v.status === 'active').length === 0 && (
               <small className="text-danger">No active verticles available. Please create a verticle first.</small>
             )}
-          </div>
+          </div> */}
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" onClick={clearExportForm}>

@@ -17,15 +17,25 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, showError, useTableFilter } from '../../utils/tableImports';
 import '../../css/invoice.css';
 import '../../css/table.css';
 import UpdateRCConfirmation from './UpdateRCConfirmation';
-import { hasPermission } from '../../utils/permissionUtils';
 import CIcon from '@coreui/icons-react';
 import { cilPencil } from '@coreui/icons';
+
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canUpdateInPage
+} from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 function RCConfirmation() {
@@ -35,7 +45,20 @@ function RCConfirmation() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for RC Confirmation page under RTO module
+  const canViewRCConfirmation = canViewPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.RC_CONFIRMATION
+  );
+  
+  const canUpdateRCConfirmation = canUpdateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.RC_CONFIRMATION
+  );
 
   const {
     data: pendingData,
@@ -54,11 +77,21 @@ function RCConfirmation() {
   } = useTableFilter([]);
 
   useEffect(() => {
+    if (!canViewRCConfirmation) {
+      setError('Permission denied');
+      setLoading(false);
+      return;
+    }
+    
     fetchData();
     fetchLocationData();
-  }, []);
+  }, [canViewRCConfirmation]);
 
   const fetchData = async () => {
+    if (!canViewRCConfirmation) {
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/rtoProcess/rcpending`);
@@ -66,15 +99,19 @@ function RCConfirmation() {
       setFilteredPendings(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchLocationData = async () => {
+    if (!canViewRCConfirmation) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/rtoProcess/rccompleted`);
       setApprovedData(response.data.data);
@@ -85,6 +122,11 @@ function RCConfirmation() {
   };
 
   const handleAddClick = (rcRecord) => {
+    if (!canUpdateRCConfirmation) {
+      showError('You do not have permission to update RC confirmation');
+      return;
+    }
+    
     setSelectedBooking(rcRecord);
     setShowModal(true);
   };
@@ -118,13 +160,13 @@ function RCConfirmation() {
               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
               <CTableHeaderCell scope="col">Contact Number</CTableHeaderCell>
               <CTableHeaderCell scope="col">RTO RC Confirmation</CTableHeaderCell>
-              {hasPermission(permissions,'RTO_PROCESS_UPDATE') && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+              {canUpdateRCConfirmation && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan={hasPermission(permissions,'RTO_PROCESS_UPDATE') ? "8" : "7"} style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canUpdateRCConfirmation ? "8" : "7"} style={{ color: 'red', textAlign: 'center' }}>
                   No data available
                 </CTableDataCell>
               </CTableRow>
@@ -142,7 +184,7 @@ function RCConfirmation() {
                       {item.rcConfirmation === false ? 'PENDING' : 'CONFIRMED'}
                     </CBadge>
                   </CTableDataCell>
-                  {hasPermission(permissions,'RTO_PROCESS_UPDATE') && (
+                  {canUpdateRCConfirmation && (
                     <CTableDataCell>
                       <CButton 
                         size="sm" 
@@ -212,6 +254,15 @@ function RCConfirmation() {
     );
   };
 
+  // Check if user has permission to view the page
+  if (!canViewRCConfirmation) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view RC Confirmation Management.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -223,7 +274,7 @@ function RCConfirmation() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-     {error}
+        {error}
       </div>
     );
   }

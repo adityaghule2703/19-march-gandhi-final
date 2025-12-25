@@ -24,6 +24,16 @@ import {
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilCloudUpload, cilPaperclip } from '@coreui/icons';
+import { 
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  hasSafePagePermission,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 const UploadChallan = () => {
   const [fileInputs, setFileInputs] = useState({});
@@ -33,13 +43,38 @@ const UploadChallan = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const fileInputRef = useRef({});
+  const { permissions = [] } = useAuth();
 
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords } = usePagination(Array.isArray(filteredData) ? filteredData : []);
 
+  // Page-level permission checks for Upload Challan page under Purchase module
+  const canViewUploadChallan = canViewPage(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.UPLOAD_CHALLAN
+  );
+  
+  const canCreateUploadChallan = canCreateInPage(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.UPLOAD_CHALLAN
+  );
+
+  const canUpdateUploadChallan = canUpdateInPage(
+    permissions, 
+    MODULES.PURCHASE, 
+    PAGES.PURCHASE.UPLOAD_CHALLAN
+  );
+
   useEffect(() => {
+    if (!canViewUploadChallan) {
+      showError('You do not have permission to view Upload Challan');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewUploadChallan]);
 
   const fetchData = async () => {
     try {
@@ -75,6 +110,11 @@ const UploadChallan = () => {
   };
 
   const handleFileChange = (transferId, e) => {
+    if (!canCreateUploadChallan) {
+      showError('You do not have permission to upload challans');
+      return;
+    }
+    
     setFileInputs((prev) => ({
       ...prev,
       [transferId]: e.target.files[0]
@@ -82,10 +122,20 @@ const UploadChallan = () => {
   };
 
   const handleUploadClick = (transferId) => {
+    if (!canCreateUploadChallan) {
+      showError('You do not have permission to upload challans');
+      return;
+    }
+    
     fileInputRef.current[transferId]?.click();
   };
 
   const handleUpload = async (transferId) => {
+    if (!canCreateUploadChallan) {
+      showError('You do not have permission to upload challans');
+      return;
+    }
+    
     if (!fileInputs[transferId]) {
       showError('Please select a file first');
       return;
@@ -119,6 +169,14 @@ const UploadChallan = () => {
     handleFilter(value, getDefaultSearchFields('stockTransfer'));
   };
 
+  if (!canViewUploadChallan) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Upload Challan.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -134,6 +192,7 @@ const UploadChallan = () => {
       </div>
     );
   }
+
   return (
     <div>
       <div className='title'>Upload Stock Transfer Challan</div>
@@ -214,7 +273,7 @@ const UploadChallan = () => {
                                     size="sm" 
                                     color="primary"
                                     onClick={() => handleUploadClick(transfer._id)} 
-                                    disabled={uploading}
+                                    disabled={uploading || !canCreateUploadChallan}
                                     className="action-btn"
                                   >
                                     <CIcon icon={cilCloudUpload} className="me-1" />
@@ -230,7 +289,7 @@ const UploadChallan = () => {
                                         size="sm"
                                         color="success"
                                         onClick={() => handleUpload(transfer._id)}
-                                        disabled={uploading}
+                                        disabled={uploading || !canCreateUploadChallan}
                                         className="action-btn"
                                       >
                                         {uploading ? 'Uploading...' : 'Upload'}

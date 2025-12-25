@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -16,6 +15,16 @@ import {
   showSuccess,
   axiosInstance
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -46,19 +55,57 @@ const BrokerList = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
 
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'BROKER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'BROKER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'BROKER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Brokers page under Masters module
+  const hasBrokersView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.BROKERS, 
+    ACTIONS.VIEW
+  );
+  
+  const hasBrokersCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.BROKERS, 
+    ACTIONS.CREATE
+  );
+  
+  const hasBrokersUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.BROKERS, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasBrokersDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.BROKERS, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewBrokers = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKERS);
+  const canCreateBrokers = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKERS);
+  const canUpdateBrokers = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKERS);
+  const canDeleteBrokers = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKERS);
+  
+  const showActionColumn = canUpdateBrokers || canDeleteBrokers;
 
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const branchId = storedUser.branch?._id;
   const userRole = localStorage.getItem('userRole');
 
   useEffect(() => {
+    if (!canViewBrokers) {
+      showError('You do not have permission to view Brokers');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewBrokers]);
 
   const fetchData = async () => {
     try {
@@ -82,9 +129,9 @@ const BrokerList = () => {
       setFilteredData(filtered);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -101,6 +148,11 @@ const BrokerList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteBrokers) {
+      showError('You do not have permission to delete brokers');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -150,6 +202,11 @@ const BrokerList = () => {
   };
 
   const handleOtpToggle = async (brokerId, currentOtpStatus) => {
+    if (!canUpdateBrokers) {
+      showError('You do not have permission to update broker OTP settings');
+      return;
+    }
+    
     try {
       await axiosInstance.post(`/brokers/${brokerId}/toggle-otp`);
       const updatedData = data.map((broker) => {
@@ -177,6 +234,14 @@ const BrokerList = () => {
     handleFilter(value, getDefaultSearchFields('broker'));
   };
 
+  if (!canViewBrokers) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Brokers.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -200,7 +265,7 @@ const BrokerList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateBrokers && (
               <Link to="/broker/add-broker">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Broker
@@ -287,6 +352,7 @@ const BrokerList = () => {
                                     checked={otp_required}
                                     onChange={() => handleOtpToggle(broker.id, otp_required)}
                                     className="ms-2"
+                                    disabled={!canUpdateBrokers}
                                   />
                                 </div>
                               </CTableDataCell>
@@ -296,6 +362,7 @@ const BrokerList = () => {
                                     size="sm"
                                     className='option-button btn-sm'
                                     onClick={(event) => handleClick(event, broker.id)}
+                                    disabled={!canUpdateBrokers && !canDeleteBrokers}
                                   >
                                     <CIcon icon={cilSettings} />
                                     Options
@@ -306,7 +373,7 @@ const BrokerList = () => {
                                     open={menuId === broker.id}
                                     onClose={handleClose}
                                   >
-                                    {hasEditPermission && (
+                                    {canUpdateBrokers && (
                                       <Link className="Link" to={`/broker/update-broker/${broker.id}`}>
                                         <MenuItem style={{ color: 'black' }}>
                                           <CIcon icon={cilPencil} className="me-2" />
@@ -314,7 +381,7 @@ const BrokerList = () => {
                                         </MenuItem>
                                       </Link>
                                     )}
-                                    {hasDeletePermission && (
+                                    {canDeleteBrokers && (
                                       <MenuItem onClick={() => handleDelete(broker.id)}>
                                         <CIcon icon={cilTrash} className="me-2" />
                                         Delete

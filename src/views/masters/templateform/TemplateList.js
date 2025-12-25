@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -32,9 +31,19 @@ import MenuItem from '@mui/material/MenuItem';
 import { useTableFilter } from '../../../utils/tableFilters';
 import axiosInstance from '../../../axiosInstance';
 import { confirmDelete, showError, showSuccess } from '../../../utils/sweetAlerts';
-import { hasPermission } from '../../../utils/permissionUtils';
 import { useAuth } from '../../../context/AuthContext';
 import '../../../css/table.css';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
+
 const TemplateList = () => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -44,16 +53,53 @@ const TemplateList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuId, setMenuId] = useState(null);
   
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'TEMPLATE_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'TEMPLATE_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'TEMPLATE_CREATE');
-  const hasViewPermission = hasPermission(permissions,'TEMPLATE_READ');
-  const showActionColumn = hasEditPermission || hasDeletePermission || hasViewPermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Template List page under Masters module
+  const hasTemplateListView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.TEMPLATE_LIST, 
+    ACTIONS.VIEW
+  );
+  
+  const hasTemplateListCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.TEMPLATE_LIST, 
+    ACTIONS.CREATE
+  );
+  
+  const hasTemplateListUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.TEMPLATE_LIST, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasTemplateListDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.TEMPLATE_LIST, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewTemplateList = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.TEMPLATE_LIST);
+  const canCreateTemplateList = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.TEMPLATE_LIST);
+  const canUpdateTemplateList = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.TEMPLATE_LIST);
+  const canDeleteTemplateList = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.TEMPLATE_LIST);
+  
+  const showActionColumn = canUpdateTemplateList || canDeleteTemplateList || canViewTemplateList;
 
   useEffect(() => {
+    if (!canViewTemplateList) {
+      showError('You do not have permission to view Template List');
+      return;
+    }
+    
     fetchTemplates();
-  }, []);
+  }, [canViewTemplateList]);
 
   const fetchTemplates = async () => {
     try {
@@ -73,6 +119,11 @@ const TemplateList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteTemplateList) {
+      showError('You do not have permission to delete templates');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -102,6 +153,14 @@ const TemplateList = () => {
     handleFilter(value, ['template_name', 'subject']);
   };
 
+  if (!canViewTemplateList) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Template List.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -125,7 +184,7 @@ const TemplateList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-          {hasCreatePermission && (
+          {canCreateTemplateList && (
             <Link to="/templateform/template-list/create">
               <CButton size="sm" className="action-btn me-1">
                 <CIcon icon={cilPlus} className='icon'/>Add
@@ -160,13 +219,13 @@ const TemplateList = () => {
                   <CTableHeaderCell>Status</CTableHeaderCell>
                   <CTableHeaderCell>Created By</CTableHeaderCell>
                   <CTableHeaderCell>Created Date</CTableHeaderCell>
-                  <CTableHeaderCell>Action</CTableHeaderCell>
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {filteredData.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan="9" className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "9" : "8"} className="text-center">
                       No templates available
                     </CTableDataCell>
                   </CTableRow>
@@ -220,7 +279,7 @@ const TemplateList = () => {
                             horizontal: 'right',
                           }}
                         >
-                          {hasViewPermission && (
+                          {canViewTemplateList && (
                                <MenuItem onClick={handleClose}>
                                <Link 
                                  className="Link" 
@@ -231,7 +290,7 @@ const TemplateList = () => {
                                </Link>
                              </MenuItem>
                           )}
-                          {hasEditPermission && (
+                          {canUpdateTemplateList && (
                           <MenuItem onClick={handleClose}>
                             <Link 
                               className="Link" 
@@ -242,7 +301,7 @@ const TemplateList = () => {
                             </Link>
                           </MenuItem>
                           )}
-                          {hasDeletePermission && (
+                          {canDeleteTemplateList && (
                           <MenuItem onClick={() => {
                             handleDelete(template._id);
                             handleClose();

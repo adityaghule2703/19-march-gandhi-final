@@ -1,4 +1,3 @@
-import { hasPermission } from '../../utils/permissionUtils';
 import '../../css/table.css';
 import {
   React,
@@ -34,6 +33,14 @@ import CIcon from '@coreui/icons-react';
 import { cilPlus, cilSettings, cilPencil, cilTrash } from '@coreui/icons';
 import AddExpense from './AddExpense';
 import { useAuth } from '../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../utils/modulePermissions';
 
 const ExpenseList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -46,15 +53,24 @@ const ExpenseList = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData || []);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'EXPENSE_ACCOUNT_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'EXPENSE_ACCOUNT_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'EXPENSE_ACCOUNT_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Expense Master page under Fund Master module
+  const canViewExpense = canViewPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.EXPENSE_MASTER);
+  const canCreateExpense = canCreateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.EXPENSE_MASTER);
+  const canUpdateExpense = canUpdateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.EXPENSE_MASTER);
+  const canDeleteExpense = canDeleteInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.EXPENSE_MASTER);
+  
+  const showActionColumn = canUpdateExpense || canDeleteExpense;
 
   useEffect(() => {
+    if (!canViewExpense) {
+      showError('You do not have permission to view Expense Master');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewExpense]);
 
   const fetchData = async () => {
     try {
@@ -64,9 +80,9 @@ const ExpenseList = () => {
       setFilteredData(response.data.data.expenseAccounts || []);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
       setData([]);
       setFilteredData([]);
     } finally {
@@ -85,6 +101,11 @@ const ExpenseList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteExpense) {
+      showError('You do not have permission to delete expense account');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -106,9 +127,15 @@ const ExpenseList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateExpense) {
+      showError('You do not have permission to add expense account');
+      return;
+    }
+    
     setEditingExpense(null);
     setShowModal(true);
   };
+  
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingExpense(null);
@@ -120,6 +147,14 @@ const ExpenseList = () => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 1500);
   };
+
+  if (!canViewExpense) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Expense Master.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -150,11 +185,12 @@ const ExpenseList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateExpense && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
                 onClick={handleShowAddModal}
+                disabled={!canCreateExpense}
               >
                 <CIcon icon={cilPlus} className='icon'/> New
               </CButton>
@@ -172,6 +208,7 @@ const ExpenseList = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                disabled={!canViewExpense}
               />
             </div>
           </div>
@@ -203,6 +240,7 @@ const ExpenseList = () => {
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, expense.id)}
+                            disabled={!canUpdateExpense && !canDeleteExpense}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -213,7 +251,7 @@ const ExpenseList = () => {
                             open={menuId === expense.id} 
                             onClose={handleClose}
                           >
-                            {/* {hasEditPermission && (
+                            {/* {canUpdateExpense && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(expense)}
                                 style={{ color: 'black' }}
@@ -222,7 +260,7 @@ const ExpenseList = () => {
                                 Edit
                               </MenuItem>
                             )} */}
-                            {hasDeletePermission && (
+                            {canDeleteExpense && (
                               <MenuItem onClick={() => handleDelete(expense.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

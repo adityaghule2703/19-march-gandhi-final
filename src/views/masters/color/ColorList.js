@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -15,6 +14,16 @@ import {
   showSuccess,
   axiosInstance
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -43,15 +52,53 @@ const ColorList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'COLOR_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'COLOR_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'COLOR_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Colour page under Masters module
+  const hasColourView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.COLOUR, 
+    ACTIONS.VIEW
+  );
+  
+  const hasColourCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.COLOUR, 
+    ACTIONS.CREATE
+  );
+  
+  const hasColourUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.COLOUR, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasColourDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.COLOUR, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewColour = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.COLOUR);
+  const canCreateColour = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.COLOUR);
+  const canUpdateColour = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.COLOUR);
+  const canDeleteColour = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.COLOUR);
+  
+  const showActionColumn = canUpdateColour || canDeleteColour;
 
   useEffect(() => {
+    if (!canViewColour) {
+      showError('You do not have permission to view Colors');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewColour]);
 
   const fetchData = async () => {
     try {
@@ -61,9 +108,9 @@ const ColorList = () => {
       setFilteredData(response.data.data.colors);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -80,6 +127,11 @@ const ColorList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteColour) {
+      showError('You do not have permission to delete colors');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -98,6 +150,14 @@ const ColorList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('color'));
   };
+
+  if (!canViewColour) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Colors.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -122,7 +182,7 @@ const ColorList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateColour && (
               <Link to="/color/add-color">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Color
@@ -191,7 +251,7 @@ const ColorList = () => {
                             open={menuId === color.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateColour && (
                               <Link className="Link" to={`/color/update-color/${color.id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />
@@ -199,7 +259,7 @@ const ColorList = () => {
                                 </MenuItem>
                               </Link>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteColour && (
                               <MenuItem onClick={() => handleDelete(color.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

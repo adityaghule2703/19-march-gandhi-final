@@ -1,4 +1,3 @@
-import { hasPermission } from '../../../utils/permissionUtils';
 import '../../../css/table.css';
 import {
   React,
@@ -16,6 +15,16 @@ import {
   showSuccess,
   axiosInstance,
 } from '../../../utils/tableImports';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
 import { 
   CButton, 
   CCard, 
@@ -46,15 +55,53 @@ const ConditionList = () => {
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
   
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'TERMS_CONDITION_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'TERMS_CONDITION_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'TERMS_CONDITION_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Terms & Conditions page under Masters module
+  const hasTermsConditionsView = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.TERMS_CONDITIONS, 
+    ACTIONS.VIEW
+  );
+  
+  const hasTermsConditionsCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.TERMS_CONDITIONS, 
+    ACTIONS.CREATE
+  );
+  
+  const hasTermsConditionsUpdate = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.TERMS_CONDITIONS, 
+    ACTIONS.UPDATE
+  );
+  
+  const hasTermsConditionsDelete = hasSafePagePermission(
+    permissions, 
+    MODULES.MASTERS, 
+    PAGES.MASTERS.TERMS_CONDITIONS, 
+    ACTIONS.DELETE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewTermsConditions = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.TERMS_CONDITIONS);
+  const canCreateTermsConditions = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.TERMS_CONDITIONS);
+  const canUpdateTermsConditions = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.TERMS_CONDITIONS);
+  const canDeleteTermsConditions = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.TERMS_CONDITIONS);
+  
+  const showActionColumn = canUpdateTermsConditions || canDeleteTermsConditions;
 
   useEffect(() => {
+    if (!canViewTermsConditions) {
+      showError('You do not have permission to view Terms & Conditions');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewTermsConditions]);
 
   const fetchData = async () => {
     try {
@@ -64,9 +111,9 @@ const ConditionList = () => {
       setFilteredData(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -83,6 +130,11 @@ const ConditionList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteTermsConditions) {
+      showError('You do not have permission to delete terms & conditions');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -101,6 +153,14 @@ const ConditionList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('conditions'));
   };
+
+  if (!canViewTermsConditions) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Terms & Conditions.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -125,7 +185,7 @@ const ConditionList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateTermsConditions && (
               <Link to="/conditions/add-condition">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Condition
@@ -206,7 +266,7 @@ const ConditionList = () => {
                             open={menuId === condition._id}
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateTermsConditions && (
                               <Link className="Link" to={`/conditions/update-condition/${condition._id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />
@@ -214,7 +274,7 @@ const ConditionList = () => {
                                 </MenuItem>
                               </Link>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteTermsConditions && (
                               <MenuItem onClick={() => handleDelete(condition._id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

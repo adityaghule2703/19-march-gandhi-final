@@ -23,7 +23,10 @@ import {
   cilPencil, 
   cilTrash,
   cilCheckCircle,
-  cilXCircle
+  cilXCircle,
+  cilLocationPin,
+  cilGlobeAlt,
+  cilDollar
 } from '@coreui/icons';
 import { Link } from 'react-router-dom';
 import { CFormLabel } from '@coreui/react';
@@ -40,8 +43,15 @@ import {
   showSuccess,
   axiosInstance
 } from 'src/utils/tableImports.js';
-import { hasPermission } from 'src/utils/permissionUtils.js';
 import { useAuth } from '../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../utils/modulePermissions';
 
 const SubdealerList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -51,34 +61,48 @@ const SubdealerList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'SUBDEALER_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'SUBDEALER_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'SUBDEALER_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Subdealer List page under Subdealer Master module
+  const canViewSubdealer = canViewPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_LIST);
+  const canCreateSubdealer = canCreateInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_LIST);
+  const canUpdateSubdealer = canUpdateInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_LIST);
+  const canDeleteSubdealer = canDeleteInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_LIST);
+  
+  const showActionColumn = canUpdateSubdealer || canDeleteSubdealer;
 
   useEffect(() => {
+    if (!canViewSubdealer) {
+      showError('You do not have permission to view Subdealer List');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewSubdealer]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/subdealers`);
-      setData(response.data.data.subdealers);
-      setFilteredData(response.data.data.subdealers);
+      const subdealers = response.data.data?.subdealers || [];
+      setData(subdealers);
+      setFilteredData(subdealers);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
+      setData([]);
+      setFilteredData([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSearch = (searchValue) => {
-    handleFilter(searchValue, getDefaultSearchFields('subdealer'));
+    // Update search fields to include new structure
+    const searchFields = ['name', 'type', 'branchDetails.name'];
+    handleFilter(searchValue, searchFields);
   };
 
   const handleClick = (event, id) => {
@@ -92,15 +116,20 @@ const SubdealerList = () => {
   };
 
   const handleToggleActive = async (subdealerId, currentStatus) => {
+    if (!canUpdateSubdealer) {
+      showError('You do not have permission to update subdealer status');
+      return;
+    }
+    
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
 
     try {
       await axiosInstance.patch(`/subdealers/${subdealerId}/status`, {
         status: newStatus
       });
-      setData((prevData) => prevData.map((subdealer) => (subdealer.id === subdealerId ? { ...subdealer, status: newStatus } : subdealer)));
+      setData((prevData) => prevData?.map((subdealer) => (subdealer._id === subdealerId ? { ...subdealer, status: newStatus } : subdealer)) || []);
       setFilteredData((prevData) =>
-        prevData.map((subdealer) => (subdealer.id === subdealerId ? { ...subdealer, status: newStatus } : subdealer))
+        prevData?.map((subdealer) => (subdealer._id === subdealerId ? { ...subdealer, status: newStatus } : subdealer)) || []
       );
       showSuccess('Subdealer status updated successfully!');
       handleClose();
@@ -111,12 +140,17 @@ const SubdealerList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteSubdealer) {
+      showError('You do not have permission to delete subdealer');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
         await axiosInstance.delete(`/subdealers/${id}`);
-        setData(data.filter((subdealer) => subdealer.id !== id));
-        setFilteredData(filteredData.filter((subdealer) => subdealer.id !== id));
+        setData(data?.filter((subdealer) => subdealer._id !== id) || []);
+        setFilteredData(filteredData?.filter((subdealer) => subdealer._id !== id) || []);
         showSuccess('Subdealer deleted successfully!');
         handleClose();
       } catch (error) {
@@ -125,6 +159,32 @@ const SubdealerList = () => {
       }
     }
   };
+
+  // Helper function to get location display
+  const getLocationDisplay = (subdealer) => {
+    if (subdealer.latLong?.address) {
+      return subdealer.latLong.address;
+    } else if (subdealer.location) {
+      return subdealer.location; // Fallback for old data
+    }
+    return 'N/A';
+  };
+
+  // Helper function to get coordinates display
+  const getCoordinatesDisplay = (subdealer) => {
+    if (subdealer.latLong?.coordinates && subdealer.latLong.coordinates.length === 2) {
+      return `(${subdealer.latLong.coordinates[1]}, ${subdealer.latLong.coordinates[0]})`;
+    }
+    return 'N/A';
+  };
+
+  if (!canViewSubdealer) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Subdealer List.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -137,7 +197,7 @@ const SubdealerList = () => {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -149,9 +209,9 @@ const SubdealerList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateSubdealer && (
               <Link to='/add-subdealer'>
-                <CButton size="sm" className="action-btn me-1">
+                <CButton size="sm" className="action-btn me-1" disabled={!canCreateSubdealer}>
                   <CIcon icon={cilPlus} className='icon'/> New Subdealer
                 </CButton>
               </Link>
@@ -172,6 +232,7 @@ const SubdealerList = () => {
                   setSearchTerm(e.target.value);
                   handleSearch(e.target.value);
                 }}
+                disabled={!canViewSubdealer}
               />
             </div>
           </div>
@@ -183,26 +244,47 @@ const SubdealerList = () => {
                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
                   <CTableHeaderCell>Name</CTableHeaderCell>
                   <CTableHeaderCell>Branch</CTableHeaderCell>
-                  <CTableHeaderCell>Location</CTableHeaderCell>
-                  <CTableHeaderCell>Rate Of Interest</CTableHeaderCell>
+                  <CTableHeaderCell>Address</CTableHeaderCell>
+                  <CTableHeaderCell>Coordinates</CTableHeaderCell>
+                  <CTableHeaderCell>Rate Of Interest (%)</CTableHeaderCell>
+                  <CTableHeaderCell>Discount (%)</CTableHeaderCell>
                   <CTableHeaderCell>Type</CTableHeaderCell>
                   <CTableHeaderCell>Status</CTableHeaderCell>
                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
-                {filteredData.length > 0 ? (
+                {filteredData && filteredData.length > 0 ? (
                   filteredData.map((subdealer, index) => (
-                    <CTableRow key={subdealer.id}>
+                    <CTableRow key={subdealer?._id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
-                      <CTableDataCell>{subdealer.name}</CTableDataCell>
-                      <CTableDataCell>{subdealer.name}</CTableDataCell>
-                      <CTableDataCell>{subdealer.branchDetails?.name || ''}</CTableDataCell>
-                      <CTableDataCell>{subdealer.rateOfInterest}</CTableDataCell>
-                      <CTableDataCell>{subdealer.type}</CTableDataCell>
+                      <CTableDataCell>{subdealer?.name || ''}</CTableDataCell>
+                      <CTableDataCell>{subdealer?.branchDetails?.name || ''}</CTableDataCell>
                       <CTableDataCell>
-                        <CBadge color={subdealer.status === 'active' ? 'success' : 'secondary'}>
-                          {subdealer.status === 'active' ? (
+                        <div className="d-flex align-items-center">
+                          <CIcon icon={cilLocationPin} className="me-1" />
+                          {getLocationDisplay(subdealer)}
+                        </div>
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <div className="d-flex align-items-center">
+                        
+                          {getCoordinatesDisplay(subdealer)}
+                        </div>
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <div className="d-flex align-items-center">
+                          
+                          {subdealer?.rateOfInterest ? `${subdealer.rateOfInterest}%` : '0%'}
+                        </div>
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        {subdealer?.discount ? `${subdealer.discount}%` : '0%'}
+                      </CTableDataCell>
+                      <CTableDataCell>{subdealer?.type || ''}</CTableDataCell>
+                      <CTableDataCell>
+                        <CBadge color={subdealer?.status === 'active' ? 'success' : 'secondary'}>
+                          {subdealer?.status === 'active' ? (
                             <>
                               <CIcon icon={cilCheckCircle} className="me-1" />
                               Active
@@ -220,32 +302,33 @@ const SubdealerList = () => {
                           <CButton
                             size="sm"
                             className='option-button btn-sm'
-                            onClick={(event) => handleClick(event, subdealer.id)}
+                            onClick={(event) => handleClick(event, subdealer?._id)}
+                            disabled={!canUpdateSubdealer && !canDeleteSubdealer}
                           >
                             <CIcon icon={cilSettings} />
                             Options
                           </CButton>
                           <Menu 
-                            id={`action-menu-${subdealer.id}`} 
+                            id={`action-menu-${subdealer?._id}`} 
                             anchorEl={anchorEl} 
-                            open={menuId === subdealer.id} 
+                            open={menuId === subdealer?._id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
-                              <Link className="Link" to={`/update-subdealer/${subdealer.id}`}>
+                            {canUpdateSubdealer && (
+                              <Link className="Link" to={`/update-subdealer/${subdealer?._id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />Edit
                                 </MenuItem>
                               </Link>
                             )}
-                            {hasEditPermission && (
-                              <MenuItem onClick={() => handleToggleActive(subdealer.id, subdealer.status)}>
-                                <CIcon icon={subdealer.status === 'active' ? cilXCircle : cilCheckCircle} className="me-2" /> 
-                                {subdealer.status === 'active' ? 'Deactivate' : 'Activate'}
+                            {canUpdateSubdealer && (
+                              <MenuItem onClick={() => handleToggleActive(subdealer?._id, subdealer?.status)}>
+                                <CIcon icon={subdealer?.status === 'active' ? cilXCircle : cilCheckCircle} className="me-2" /> 
+                                {subdealer?.status === 'active' ? 'Deactivate' : 'Activate'}
                               </MenuItem>
                             )}
-                            {hasDeletePermission && (
-                              <MenuItem onClick={() => handleDelete(subdealer.id)}>
+                            {canDeleteSubdealer && (
+                              <MenuItem onClick={() => handleDelete(subdealer?._id)}>
                                 <CIcon icon={cilTrash} className="me-2" />Delete
                               </MenuItem>
                             )}
@@ -256,7 +339,7 @@ const SubdealerList = () => {
                   ))
                 ) : (
                   <CTableRow>
-                    <CTableDataCell colSpan={showActionColumn ? "7" : "6"} className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "11" : "10"} className="text-center">
                       No subdealers available
                     </CTableDataCell>
                   </CTableRow>

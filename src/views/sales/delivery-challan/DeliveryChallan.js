@@ -33,6 +33,16 @@ import {
   CModalBody,
   CModalFooter,
 } from '@coreui/react'
+import { useNavigate } from 'react-router-dom'
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage 
+} from '../../../utils/modulePermissions'
+import { useAuth } from '../../../context/AuthContext'
+import { showSuccess } from '../../../utils/sweetAlerts'
 
 const DeliveryChallan = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([])
@@ -40,6 +50,7 @@ const DeliveryChallan = () => {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const navigate = useNavigate()
 
   const [formData, setFormData] = useState({
     chassisNumber: '',
@@ -53,9 +64,54 @@ const DeliveryChallan = () => {
   const [selectedDocuments, setSelectedDocuments] = useState([])
   const [loadingDocuments, setLoadingDocuments] = useState(false)
 
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth()
+
+  // Permission checks for Delivery Challan page under Sales module
+  // For viewing/printing, we only need VIEW permission
+  const canViewDeliveryChallan = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DELIVERY_CHALLAN)
+
   useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewDeliveryChallan) {
+      showError('You do not have permission to view Delivery Challan')
+      navigate('/dashboard')
+      return
+    }
+    
     fetchData()
   }, [])
+
+  useEffect(() => {
+    const fetchDeclarations = async () => {
+      try {
+        const response = await axiosInstance.get('/declarations?formType=delivery_challan')
+        if (response.data.status === 'success') {
+          const sortedDeclarations = response.data.data.declarations.sort(
+            (a, b) => a.priority - b.priority,
+          )
+          setDeclarations(sortedDeclarations)
+        }
+      } catch (error) {
+        const message = showError(error);
+        if (message) {
+          setError(message);
+        }
+      }
+    }
+
+    fetchDeclarations()
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.chassisNumber.trim().length > 0) {
+        fetchBookingDetails()
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [formData.chassisNumber])
 
   const fetchData = async () => {
     try {
@@ -77,38 +133,6 @@ const DeliveryChallan = () => {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    const fetchDeclarations = async () => {
-      try {
-        const response = await axiosInstance.get('/declarations?formType=delivery_challan')
-        if (response.data.status === 'success') {
-          const sortedDeclarations = response.data.data.declarations.sort(
-            (a, b) => a.priority - b.priority,
-          )
-          setDeclarations(sortedDeclarations)
-        }
-      } catch (error) {
-        const message = showError(error);
-        if (message) {
-          setError(message);
-        }
-        
-      }
-    }
-
-    fetchDeclarations()
-  }, [])
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (formData.chassisNumber.trim().length > 0) {
-        fetchBookingDetails()
-      }
-    }, 500)
-
-    return () => clearTimeout(timer)
-  }, [formData.chassisNumber])
 
   const fetchBookingDetails = async () => {
     setLoading(true)
@@ -149,7 +173,6 @@ const DeliveryChallan = () => {
       if (message) {
         setError(message);
       }
-      
     } finally {
       setLoadingDocuments(false)
     }
@@ -166,11 +189,10 @@ const DeliveryChallan = () => {
       printWindow.focus()
       
     } catch (error) {
-        const message = showError(error);
-  if (message) {
-    setError(message);
-  }
-  
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
     }
   }
 
@@ -197,6 +219,12 @@ const DeliveryChallan = () => {
   const handlePrint = (booking, type) => {
     if (!booking) {
       setError('No booking data found')
+      return
+    }
+
+    // Check VIEW permission before printing
+    if (!canViewDeliveryChallan) {
+      showError('You do not have permission to print delivery challan')
       return
     }
 
@@ -743,6 +771,14 @@ tr.data-row td:nth-child(4) {
     handleFilter(value, getDefaultSearchFields('booking'))
   }
 
+  if (!canViewDeliveryChallan) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Delivery Challan.
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -755,10 +791,10 @@ tr.data-row td:nth-child(4) {
     <div>
       <div className="title">Delivery Challan/Documents</div>
       {error && (
-    <CAlert color="danger" className="mb-3">
-      {error}
-    </CAlert>
-  )}
+        <CAlert color="danger" className="mb-3">
+          {error}
+        </CAlert>
+      )}
 
       <CCard className="table-container mt-4">
         <CCardHeader className="card-header d-flex justify-content-between align-items-center">

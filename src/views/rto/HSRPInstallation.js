@@ -17,15 +17,25 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CFormLabel
+  CFormLabel,
+  CAlert
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, showError, useTableFilter } from '../../utils/tableImports';
 import '../../css/invoice.css';
 import '../../css/table.css';
 import UpdateHSRPInstallation from './UpdateHSRPInstallation';
-import { hasPermission } from '../../utils/permissionUtils';
 import CIcon from '@coreui/icons-react';
 import { cilPencil } from '@coreui/icons';
+
+// Import the new permission utilities
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canUpdateInPage
+} from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
 function HSRPInstallation() {
@@ -35,7 +45,20 @@ function HSRPInstallation() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for HSRP Installation page under RTO module
+  const canViewHSRPInstallation = canViewPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.HSRP_INSTALLATION
+  );
+  
+  const canUpdateHSRPInstallation = canUpdateInPage(
+    permissions, 
+    MODULES.RTO, 
+    PAGES.RTO.HSRP_INSTALLATION
+  );
 
   const {
     data: pendingData,
@@ -54,11 +77,21 @@ function HSRPInstallation() {
   } = useTableFilter([]);
 
   useEffect(() => {
+    if (!canViewHSRPInstallation) {
+      setError('Permission denied');
+      setLoading(false);
+      return;
+    }
+    
     fetchData();
     fetchLocationData();
-  }, []);
+  }, [canViewHSRPInstallation]);
 
   const fetchData = async () => {
+    if (!canViewHSRPInstallation) {
+      return;
+    }
+    
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/rtoProcess/hsrpinstallationpending`);
@@ -66,28 +99,37 @@ function HSRPInstallation() {
       setFilteredPendings(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchLocationData = async () => {
+    if (!canViewHSRPInstallation) {
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/rtoProcess/hsrpinstallation`);
       setApprovedData(response.data.data);
       setFilteredApproved(response.data.data);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
   const handleAddClick = (hsrpRecord) => {
+    if (!canUpdateHSRPInstallation) {
+      showError('You do not have permission to update HSRP installation');
+      return;
+    }
+    
     setSelectedBooking(hsrpRecord);
     setShowModal(true);
   };
@@ -115,13 +157,13 @@ function HSRPInstallation() {
               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
               <CTableHeaderCell scope="col">Contact Number</CTableHeaderCell>
               <CTableHeaderCell scope="col">RTO HSRP Installation</CTableHeaderCell>
-              {hasPermission(permissions,'RTO_PROCESS_UPDATE') && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+              {canUpdateHSRPInstallation && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan={hasPermission(permissions,'RTO_PROCESS_UPDATE') ? "8" : "7"} style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canUpdateHSRPInstallation ? "8" : "7"} style={{ color: 'red', textAlign: 'center' }}>
                   No data available
                 </CTableDataCell>
               </CTableRow>
@@ -139,7 +181,7 @@ function HSRPInstallation() {
                       {item.hsrbInstallation === false ? 'PENDING' : 'INSTALLED'}
                     </CBadge>
                   </CTableDataCell>
-                  {hasPermission(permissions,'RTO_PROCESS_UPDATE') && (
+                  {canUpdateHSRPInstallation && (
                     <CTableDataCell>
                       <CButton 
                         size="sm" 
@@ -209,6 +251,15 @@ function HSRPInstallation() {
     );
   };
 
+  // Check if user has permission to view the page
+  if (!canViewHSRPInstallation) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view HSRP Installation Management.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -220,7 +271,7 @@ function HSRPInstallation() {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -230,27 +281,6 @@ function HSRPInstallation() {
       <div className='title'>HSRP Installation Management</div>
       
       <CCard className='table-container mt-4'>
-        {/* <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-          <div>
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-            >
-              <CIcon icon={cilSearch} className='icon' /> Search
-            </CButton>
-            {searchTerm && (
-              <CButton 
-                size="sm" 
-                color="secondary" 
-                className="action-btn me-1"
-                onClick={handleResetSearch}
-              >
-                <CIcon icon={cilZoomOut} className='icon' /> Reset Search
-              </CButton>
-            )}
-          </div>
-        </CCardHeader> */}
-        
         <CCardBody>
           <CNav variant="tabs" className="mb-3 border-bottom">
             <CNavItem>

@@ -28,10 +28,30 @@ import { axiosInstance, getDefaultSearchFields, SearchOutlinedIcon, useTableFilt
 import CIcon from '@coreui/icons-react';
 import { cilMagnifyingGlass } from '@coreui/icons';
 import { showError } from '../../../utils/sweetAlerts';
+import { useAuth } from '../../../context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage
+} from '../../../utils/modulePermissions';
 
 function Summary() {
   const [activeTab, setActiveTab] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Summary page under Subdealer Account module
+  const hasSummaryView = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.SUMMARY, 
+    ACTIONS.VIEW
+  );
+
+  // Using convenience function for cleaner code
+  const canViewSummary = canViewPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.SUMMARY);
 
   const {
     data: bookingsData,
@@ -55,9 +75,15 @@ function Summary() {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [filteredPendingPayments, setFilteredPendingPayments] = useState([]);
   const [error, setError] = useState(null);
+  
   useEffect(() => {
+    if (!canViewSummary) {
+      showError('You do not have permission to view Summary');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewSummary]);
 
   const fetchData = async () => {
     try {
@@ -93,9 +119,9 @@ function Summary() {
       setFilteredSubdealer(response.data.data.subdealers);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -160,13 +186,22 @@ function Summary() {
 
   const summary = getTotalSummary();
 
-  if (error) {
+  if (!canViewSummary) {
     return (
-      <div className="alert alert-danger" role="alert">
-      {error}
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Summary.
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="alert alert-danger" role="alert">
+        {error}
+      </div>
+    );
+  }
+
   const renderTable = () => {
     switch (activeTab) {
       case 0:

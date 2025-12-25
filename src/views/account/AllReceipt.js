@@ -27,8 +27,20 @@ import {
   CTableHeaderCell, 
   CTableRow,
   CTableDataCell,
-  CSpinner
+  CSpinner,
+  CAlert
 } from '@coreui/react';
+
+// Import permission utilities
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 const AllReceipt = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
@@ -36,11 +48,23 @@ const AllReceipt = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
-   
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for All Receipts under ACCOUNT module
+  const canViewAllReceipts = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.ALL_RECEIPTS);
+  const canCreateAllReceipts = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.ALL_RECEIPTS);
+  const canUpdateAllReceipts = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.ALL_RECEIPTS);
+  const canDeleteAllReceipts = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.ALL_RECEIPTS);
 
   useEffect(() => {
+    if (!canViewAllReceipts) {
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewAllReceipts]);
 
   const fetchData = async () => {
     try {
@@ -60,6 +84,11 @@ const AllReceipt = () => {
   };
 
   const handlePrintReceipt = async (id) => {
+    if (!canViewAllReceipts) {
+      showError('You do not have permission to view receipts');
+      return;
+    }
+    
     try {
       const res = await axiosInstance.get(`/vouchers/${id}`);
       const data = res.data.data;
@@ -93,6 +122,11 @@ const AllReceipt = () => {
   };
 
   const handleViewBill = (billUrl) => {
+    if (!canViewAllReceipts) {
+      showError('You do not have permission to view bills');
+      return;
+    }
+    
     if (!billUrl) return;
 
     const fullUrl = `${config.baseURL}${billUrl}`;
@@ -288,9 +322,21 @@ const AllReceipt = () => {
   };
 
   const handleSearch = (value) => {
+    if (!canViewAllReceipts) {
+      return;
+    }
+    
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('allReceipts'));
   };
+
+  if (!canViewAllReceipts) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view All Receipts.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -303,7 +349,7 @@ const AllReceipt = () => {
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
-      {error}
+        {error}
       </div>
     );
   }
@@ -311,6 +357,12 @@ const AllReceipt = () => {
   return (
     <div>
       <div className='title'>Cash Receipt</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
     
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
@@ -322,6 +374,7 @@ const AllReceipt = () => {
               className="d-inline-block square-search"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
+              disabled={!canViewAllReceipts}
             />
           </div>
         </CCardHeader>
@@ -355,17 +408,22 @@ const AllReceipt = () => {
                   currentRecords.map((item, index) => (
                     <CTableRow key={item.id || item._id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
-                      <CTableDataCell>{item.receiptNo}</CTableDataCell>
-                      <CTableDataCell>{item.accountHead}</CTableDataCell>
-                      <CTableDataCell>{item.date}</CTableDataCell>
-                      <CTableDataCell>₹{item.debit}</CTableDataCell>
-                      <CTableDataCell>₹{item.credit}</CTableDataCell>
-                      <CTableDataCell>{item.paymentMode || ''}</CTableDataCell>
-                      <CTableDataCell>{item.bankLocation || ''}</CTableDataCell>
-                      <CTableDataCell>{item.cashLocation || ''}</CTableDataCell>
+                      <CTableDataCell>{item.receiptNo || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{item.accountHead || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{item.date || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>₹{item.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                      <CTableDataCell>₹{item.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                      <CTableDataCell>{item.paymentMode || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{item.bankLocation || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{item.cashLocation || 'N/A'}</CTableDataCell>
                       <CTableDataCell>
                         {item.billUrl ? (
-                          <div className="bill-cell" onClick={() => handleViewBill(item.billUrl)}>
+                          <div 
+                            className="bill-cell" 
+                            onClick={() => handleViewBill(item.billUrl)}
+                            style={{ cursor: canViewAllReceipts ? 'pointer' : 'not-allowed' }}
+                            title={canViewAllReceipts ? "View Bill" : "No permission to view bill"}
+                          >
                             {getFileIcon(item.billUrl)}
                             <span className="bill-text">View Bill</span>
                           </div>
@@ -379,8 +437,9 @@ const AllReceipt = () => {
                           color="info"
                           className="action-btn"
                           onClick={() => handlePrintReceipt(item.id || item._id)}
+                          disabled={!canViewAllReceipts}
+                          title={canViewAllReceipts ? "View Receipt" : "No permission to view receipt"}
                         >
-                          {/* <CIcon icon={cilEye} className="me-1" /> */}
                           View
                         </CButton>
                       </CTableDataCell>

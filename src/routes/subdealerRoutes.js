@@ -18,6 +18,7 @@ const AddCommission = React.lazy(() => import('../views/subdealer/commission/Add
 const CalculateCommission = React.lazy(() => import('../views/subdealer/commission/CalculateCommission'))
 const SubdealerDeliveryChallan = React.lazy(() => import('../views/subdealer/booking/DeliveryChallan'))
 const AllBooking = React.lazy(() => import('../views/subdealer/booking/AllBooking'))
+const SubdealerManagement = React.lazy(() => import('../views/subdealer/booking/SubdealerManagement'))
 const SubdealerNewBooking = React.lazy(() => import('../views/subdealer/booking/SubdealerNewBooking'))
 
 export const subdealerRoutes = [
@@ -29,6 +30,7 @@ export const subdealerRoutes = [
     { path:'/subdealer-booking', name:'Subdealer Booking', element:SubdealerNewBooking},
     { path:'/update-subdealer-booking/:id', name:'Update Subdealer Booking', element:SubdealerNewBooking},
     { path:'/subdealer-all-bookings', name:'Subdealer All Bookings', element:AllBooking},
+    { path:'/subdealer-management', name:'Subdealer Management', element:SubdealerManagement},
     { path:'/subdealer-account/receipt', name:'Subdealer Receipt', element:SubdealerReceipts},
     { path:'/subdealer-account/add-balance', name:'Add Balance', element:AddBalance},
     { path:'/subdealer-account/onaccount-balance', name:'On Account Balance', element:OnAccountBalance},

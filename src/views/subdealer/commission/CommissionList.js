@@ -40,10 +40,17 @@ import {
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import DateRangeIcon from '@mui/icons-material/DateRange';
-import { hasPermission } from 'src/utils/permissionUtils';
 import CIcon from '@coreui/icons-react';
 import { cilPlus, cilSearch, cilZoomOut } from '@coreui/icons';
 import { useAuth } from '../../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../../utils/modulePermissions';
 
 const CommissionList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -69,32 +76,46 @@ const CommissionList = () => {
   const [dateRangeData, setDateRangeData] = useState(null);
   const [loadingDateRange, setLoadingDateRange] = useState(false);
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'SUBDEALER_COMMISSION_UPDATE');
-  const hasAddPermission = hasPermission(permissions,'SUBDEALER_COMMISSION_CREATE');
-  const hasDeletePermission = hasPermission(permissions,'SUBDEALER_COMMISSION_DELETE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Subdealer Commission page under Subdealer Master module
+  const canViewCommission = canViewPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_COMMISSION);
+  const canCreateCommission = canCreateInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_COMMISSION);
+  const canUpdateCommission = canUpdateInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_COMMISSION);
+  const canDeleteCommission = canDeleteInPage(permissions, MODULES.SUBDEALER_MASTER, PAGES.SUBDEALER_MASTER.SUBDEALER_COMMISSION);
+  
+  const showActionColumn = canUpdateCommission || canDeleteCommission;
 
   useEffect(() => {
+    if (!canViewCommission) {
+      showError('You do not have permission to view Subdealer Commission');
+      return;
+    }
+    
     fetchSubdealers();
-  }, []);
+  }, [canViewCommission]);
 
   const fetchSubdealers = async () => {
     try {
       const response = await axiosInstance.get(`/subdealers`);
-      setSubdealers(response.data.data.subdealers || []);
+      setSubdealers(response.data.data?.subdealers || []);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
   const fetchCommissionData = async (subdealerId) => {
+    if (!canViewCommission) {
+      showError('You do not have permission to view commission data');
+      return;
+    }
+    
     try {
       const response = await axiosInstance.get(`/commission-master/subdealer/${subdealerId}`);
-      const commissionData = response.data.data.commission_masters || [];
+      const commissionData = response.data.data?.commission_masters || [];
       setCommissionData(commissionData);
       setFilteredData(commissionData);
       setIsFilterApplied(true);
@@ -126,6 +147,12 @@ const CommissionList = () => {
   };
 
   const fetchDateRangeCommission = async () => {
+    // Date Range commission applies commission, so it should check CREATE permission
+    if (!canCreateCommission) {
+      showError('You do not have permission to apply date range commission');
+      return;
+    }
+    
     if (!dateRangeSubdealer) {
       showError('Please select a subdealer');
       return;
@@ -168,6 +195,11 @@ const CommissionList = () => {
   };
 
   const handleApplyFilter = () => {
+    if (!canViewCommission) {
+      showError('You do not have permission to view commission data');
+      return;
+    }
+    
     if (!selectedSubdealer) {
       showError('Please select a subdealer');
       return;
@@ -185,6 +217,12 @@ const CommissionList = () => {
   };
 
   const handleExportCSV = async () => {
+    // Exporting CSV is just viewing/downloading data, so check VIEW permission
+    if (!canViewCommission) {
+      showError('You do not have permission to export commission template');
+      return;
+    }
+    
     if (!selectedSubdealer || !selectedModelType) {
       showError('Please select both subdealer and model type');
       return;
@@ -218,6 +256,11 @@ const CommissionList = () => {
   };
 
   const handleImportCSV = async () => {
+    if (!canCreateCommission) {
+      showError('You do not have permission to import commission data');
+      return;
+    }
+    
     if (!importSubdealer || !importModelType || !selectedFile) {
       showError('Please select subdealer, model type, and choose a file');
       return;
@@ -265,6 +308,11 @@ const CommissionList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteCommission) {
+      showError('You do not have permission to delete commission');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -313,6 +361,15 @@ const CommissionList = () => {
 
     setFilteredData(filtered);
   };
+  
+  if (!canViewCommission) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Subdealer Commission.
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="alert alert-danger" role="alert">
@@ -327,9 +384,9 @@ const CommissionList = () => {
       <CCard className="table-container mt-4">
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasAddPermission && (
+            {canCreateCommission && (
               <Link to="/subdealer/add-commission">
-                <CButton size="sm" className="action-btn me-1">
+                <CButton size="sm" className="action-btn me-1" disabled={!canCreateCommission}>
                   <CIcon icon={cilPlus} className="me-1" /> Add
                 </CButton>
               </Link>
@@ -338,6 +395,7 @@ const CommissionList = () => {
               size="sm" 
               className="action-btn me-1"
               onClick={() => setFilterModalVisible(true)}
+              disabled={!canViewCommission}
             >
               <CIcon icon={cilSearch} className="me-1" /> Filter
             </CButton>
@@ -353,30 +411,34 @@ const CommissionList = () => {
               </CButton>
             )}
             
-            {hasEditPermission && (
-              <CButton 
-                size="sm" 
-                className="action-btn me-1"
-                onClick={() => setDateRangeModalVisible(true)}
-              >
-                <DateRangeIcon className="me-1" /> Date Range
-              </CButton>
-            )}
+            {/* Date Range button - CREATE permission (applying commission) */}
+            <CButton 
+              size="sm" 
+              className="action-btn me-1"
+              onClick={() => setDateRangeModalVisible(true)}
+              disabled={!canCreateCommission}
+            >
+              <DateRangeIcon className="me-1" /> Date Range
+            </CButton>
 
-            {hasAddPermission && (
+            {/* Import button - CREATE permission (importing data) */}
+            {canCreateCommission && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
                 onClick={() => setImportModalVisible(true)}
+                disabled={!canCreateCommission}
               >
                 <FileUploadIcon className="me-1" /> Import
               </CButton>
             )}
 
+            {/* Export button - VIEW permission (downloading/viewing data) */}
             <CButton 
               size="sm" 
               className="action-btn me-1"
               onClick={() => setExportModalVisible(true)}
+              disabled={!canViewCommission}
             >
               <FileDownloadIcon className="me-1" /> Export
             </CButton>
@@ -393,8 +455,8 @@ const CommissionList = () => {
               <CFormInput
                 type="text"
                 className="d-inline-block square-search"
-                // value={searchTerm}
                 onChange={(e) => handleCommissionSearch(e.target.value)}
+                disabled={!canViewCommission}
               />
             </div>
           </div>
@@ -417,19 +479,19 @@ const CommissionList = () => {
                     </CTableRow>
                   </CTableHead>
                   <CTableBody>
-                    {filteredData.length === 0 ? (
+                    {filteredData && filteredData.length === 0 ? (
                       <CTableRow>
                         <CTableDataCell colSpan={priceHeaders.length + 2} className="text-center text-muted">
                           No commission data available for this subdealer
                         </CTableDataCell>
                       </CTableRow>
                     ) : (
-                      filteredData.map((item, index) => (
+                      filteredData?.map((item, index) => (
                         <CTableRow key={index}>
-                          <CTableDataCell>{item.model_details?.model_name || 'N/A'}</CTableDataCell>
-                          <CTableDataCell>{item.model_details?.type || 'N/A'}</CTableDataCell>
+                          <CTableDataCell>{item?.model_details?.model_name || 'N/A'}</CTableDataCell>
+                          <CTableDataCell>{item?.model_details?.type || 'N/A'}</CTableDataCell>
                           {priceHeaders.map((header) => (
-                            <CTableDataCell key={header._id}>{findCommissionRate(item.model_id, header._id)}</CTableDataCell>
+                            <CTableDataCell key={header._id}>{findCommissionRate(item?.model_id, header._id)}</CTableDataCell>
                           ))}
                         </CTableRow>
                       ))
@@ -448,26 +510,26 @@ const CommissionList = () => {
                     </CTableRow>
                   </CTableHead>
                   <CTableBody>
-                    {filteredData.length === 0 ? (
+                    {filteredData && filteredData.length === 0 ? (
                       <CTableRow>
                         <CTableDataCell colSpan={showActionColumn ? 5 : 4} className="text-center text-muted">
                           No commission data available for this subdealer
                         </CTableDataCell>
                       </CTableRow>
                     ) : (
-                      filteredData.map((item, index) => (
+                      filteredData?.map((item, index) => (
                         <CTableRow key={index}>
                           <CTableDataCell>{index + 1}</CTableDataCell>
-                          <CTableDataCell>{item.model_details?.model_name || 'N/A'}</CTableDataCell>
-                          <CTableDataCell>{item.model_details?.type || 'N/A'}</CTableDataCell>
+                          <CTableDataCell>{item?.model_details?.model_name || 'N/A'}</CTableDataCell>
+                          <CTableDataCell>{item?.model_details?.type || 'N/A'}</CTableDataCell>
                           <CTableDataCell>
-                            {item.commission_rates && item.commission_rates.length > 0 ? (
+                            {item?.commission_rates && item.commission_rates.length > 0 ? (
                               <details>
                                 <summary>View Rates ({item.commission_rates.length})</summary>
                                 <div style={{ maxHeight: '200px', overflow: 'auto' }}>
                                   {item.commission_rates.map((rate, idx) => (
                                     <div key={idx} style={{ padding: '5px', borderBottom: '1px solid #eee' }}>
-                                      <strong>{rate.header_id?.header_key || 'N/A'}:</strong> {rate.commission_rate}
+                                      <strong>{rate?.header_id?.header_key || 'N/A'}:</strong> {rate.commission_rate}
                                     </div>
                                   ))}
                                 </div>
@@ -481,15 +543,20 @@ const CommissionList = () => {
                               <CButton 
                                 size="sm" 
                                 className="option-button btn-sm"
-                                onClick={(event) => handleClick(event, item._id)}
+                                onClick={(event) => handleClick(event, item?._id)}
+                                disabled={!canUpdateCommission && !canDeleteCommission}
                               >
                                 Options
                               </CButton>
-                              <Menu id={`action-menu-${item._id}`} anchorEl={anchorEl} open={menuId === item._id} onClose={handleClose}>
-                                <Link className="Link" to={`/subdealer/update-commission/${item._id}`}>
-                                  <MenuItem>Edit</MenuItem>
-                                </Link>
-                                <MenuItem onClick={() => handleDelete(item._id)}>Delete</MenuItem>
+                              <Menu id={`action-menu-${item?._id}`} anchorEl={anchorEl} open={menuId === item?._id} onClose={handleClose}>
+                                {canUpdateCommission && (
+                                  <Link className="Link" to={`/subdealer/update-commission/${item?._id}`}>
+                                    <MenuItem>Edit</MenuItem>
+                                  </Link>
+                                )}
+                                {canDeleteCommission && (
+                                  <MenuItem onClick={() => handleDelete(item?._id)}>Delete</MenuItem>
+                                )}
                               </Menu>
                             </CTableDataCell>
                           )}
@@ -512,7 +579,12 @@ const CommissionList = () => {
         <CModalBody>
           <div className="mb-3">
             <CFormLabel htmlFor="subdealerFilterSelect">Select Subdealer</CFormLabel>
-            <CFormSelect id="subdealerFilterSelect" value={selectedSubdealer} onChange={(e) => setSelectedSubdealer(e.target.value)}>
+            <CFormSelect 
+              id="subdealerFilterSelect" 
+              value={selectedSubdealer} 
+              onChange={(e) => setSelectedSubdealer(e.target.value)}
+              disabled={!canViewCommission}
+            >
               <option value="">Select Subdealer</option>
               {subdealers.map((subdealer) => (
                 <option key={subdealer._id} value={subdealer._id}>
@@ -523,12 +595,11 @@ const CommissionList = () => {
           </div>
         </CModalBody>
         <CModalFooter>
-          <CButton className='submit-button' onClick={handleApplyFilter}>
+          <CButton className='submit-button' onClick={handleApplyFilter} disabled={!canViewCommission}>
             Apply
           </CButton>
         </CModalFooter>
       </CModal>
-
 
       <CModal
         visible={dateRangeModalVisible}
@@ -554,7 +625,12 @@ const CommissionList = () => {
         <CModalBody>
           <div className="mb-3">
             <CFormLabel htmlFor="dateRangeSubdealerSelect">Select Subdealer</CFormLabel>
-            <CFormSelect id="dateRangeSubdealerSelect" value={dateRangeSubdealer} onChange={(e) => setDateRangeSubdealer(e.target.value)}>
+            <CFormSelect 
+              id="dateRangeSubdealerSelect" 
+              value={dateRangeSubdealer} 
+              onChange={(e) => setDateRangeSubdealer(e.target.value)}
+              disabled={!canCreateCommission}
+            >
               <option value="">Select Subdealer</option>
               {subdealers.map((subdealer) => (
                 <option key={subdealer._id} value={subdealer._id}>
@@ -568,13 +644,25 @@ const CommissionList = () => {
             <CCol md={6}>
               <div className="mb-3">
                 <CFormLabel htmlFor="fromDate">From Date *</CFormLabel>
-                <CFormInput type="date" id="fromDate" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                <CFormInput 
+                  type="date" 
+                  id="fromDate" 
+                  value={fromDate} 
+                  onChange={(e) => setFromDate(e.target.value)}
+                  disabled={!canCreateCommission}
+                />
               </div>
             </CCol>
             <CCol md={6}>
               <div className="mb-3">
                 <CFormLabel htmlFor="toDate">To Date (Optional)</CFormLabel>
-                <CFormInput type="date" id="toDate" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                <CFormInput 
+                  type="date" 
+                  id="toDate" 
+                  value={toDate} 
+                  onChange={(e) => setToDate(e.target.value)}
+                  disabled={!canCreateCommission}
+                />
               </div>
             </CCol>
           </CRow>
@@ -587,7 +675,7 @@ const CommissionList = () => {
           )}
         </CModalBody>
         <CModalFooter>
-          <CButton className='submit-button' onClick={fetchDateRangeCommission} disabled={loadingDateRange}>
+          <CButton className='submit-button' onClick={fetchDateRangeCommission} disabled={loadingDateRange || !canCreateCommission}>
             Apply Commission
           </CButton>
         </CModalFooter>
@@ -600,7 +688,12 @@ const CommissionList = () => {
         <CModalBody>
           <div className="mb-3">
             <CFormLabel htmlFor="subdealerSelect">Select Subdealer</CFormLabel>
-            <CFormSelect id="subdealerSelect" value={selectedSubdealer} onChange={(e) => setSelectedSubdealer(e.target.value)}>
+            <CFormSelect 
+              id="subdealerSelect" 
+              value={selectedSubdealer} 
+              onChange={(e) => setSelectedSubdealer(e.target.value)}
+              disabled={!canViewCommission}
+            >
               <option value="">Select Subdealer</option>
               {subdealers.map((subdealer) => (
                 <option key={subdealer._id} value={subdealer._id}>
@@ -611,7 +704,12 @@ const CommissionList = () => {
           </div>
           <div className="mb-3">
             <CFormLabel htmlFor="modelTypeSelect">Select Model Type</CFormLabel>
-            <CFormSelect id="modelTypeSelect" value={selectedModelType} onChange={(e) => setSelectedModelType(e.target.value)}>
+            <CFormSelect 
+              id="modelTypeSelect" 
+              value={selectedModelType} 
+              onChange={(e) => setSelectedModelType(e.target.value)}
+              disabled={!canViewCommission}
+            >
               <option value="">Select Model Type</option>
               <option value="EV">EV</option>
               <option value="ICE">ICE</option>
@@ -619,7 +717,7 @@ const CommissionList = () => {
           </div>
         </CModalBody>
         <CModalFooter>
-          <CButton className='submit-button' onClick={handleExportCSV}>
+          <CButton className='submit-button' onClick={handleExportCSV} disabled={!canViewCommission}>
             Generate CSV
           </CButton>
         </CModalFooter>
@@ -632,7 +730,12 @@ const CommissionList = () => {
         <CModalBody>
           <div className="mb-3">
             <CFormLabel htmlFor="importSubdealerSelect">Select Subdealer</CFormLabel>
-            <CFormSelect id="importSubdealerSelect" value={importSubdealer} onChange={(e) => setImportSubdealer(e.target.value)}>
+            <CFormSelect 
+              id="importSubdealerSelect" 
+              value={importSubdealer} 
+              onChange={(e) => setImportSubdealer(e.target.value)}
+              disabled={!canCreateCommission}
+            >
               <option value="">Select Subdealer</option>
               {subdealers.map((subdealer) => (
                 <option key={subdealer._id} value={subdealer._id}>
@@ -643,7 +746,12 @@ const CommissionList = () => {
           </div>
           <div className="mb-3">
             <CFormLabel htmlFor="importModelTypeSelect">Select Model Type</CFormLabel>
-            <CFormSelect id="importModelTypeSelect" value={importModelType} onChange={(e) => setImportModelType(e.target.value)}>
+            <CFormSelect 
+              id="importModelTypeSelect" 
+              value={importModelType} 
+              onChange={(e) => setImportModelType(e.target.value)}
+              disabled={!canCreateCommission}
+            >
               <option value="">Select Model Type</option>
               <option value="EV">EV</option>
               <option value="ICE">ICE</option>
@@ -651,12 +759,18 @@ const CommissionList = () => {
           </div>
           <div className="mb-3">
             <CFormLabel htmlFor="fileInput">Select CSV File</CFormLabel>
-            <CFormInput type="file" id="fileInput" accept=".csv" onChange={handleFileChange} />
+            <CFormInput 
+              type="file" 
+              id="fileInput" 
+              accept=".csv" 
+              onChange={handleFileChange}
+              disabled={!canCreateCommission}
+            />
             {selectedFile && <div className="mt-2 text-muted">Selected file: {selectedFile.name}</div>}
           </div>
         </CModalBody>
         <CModalFooter>
-          <CButton className='submit-button' onClick={handleImportCSV}>
+          <CButton className='submit-button' onClick={handleImportCSV} disabled={!canCreateCommission}>
             Import CSV
           </CButton>
         </CModalFooter>

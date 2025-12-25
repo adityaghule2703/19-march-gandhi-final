@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import '../../css/form.css';
-import { CInputGroup, CInputGroupText, CFormInput, CFormSwitch, CFormCheck } from '@coreui/react';
+import { CInputGroup, CInputGroupText, CFormInput, CFormSwitch, CFormCheck, CSpinner } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilCalendar, cilLocationPin, cilMap, cilPhone, cilUser } from '@coreui/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { showFormSubmitError, showFormSubmitToast } from '../../utils/sweetAlerts';
 import axiosInstance from '../../axiosInstance';
 import './customer.css';
+import Swal from 'sweetalert2';
 
 function AddCustomer() {
   const [activeTab, setActiveTab] = useState(1);
@@ -24,6 +24,7 @@ function AddCustomer() {
     finance_needed: false
   });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -89,12 +90,11 @@ function AddCustomer() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
-    // Validate date if it's the expected_delivery_date field
+  
     if (name === 'expected_delivery_date' && value) {
       const selectedDate = new Date(value);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Set to beginning of day for accurate comparison
+      today.setHours(0, 0, 0, 0); 
       
       if (selectedDate < today) {
         setErrors((prevErrors) => ({ 
@@ -166,39 +166,133 @@ function AddCustomer() {
     setActiveTab(1);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
 
-    if (!validateTab2()) return;
-
-    const payload = {
-      customerDetails: {
-        name: formData.name,
-        address: formData.address,
-        taluka: formData.taluka,
-        district: formData.district,
-        mobile1: formData.mobile1,
-        mobile2: formData.mobile2
-      },
-      selectedModels: selectedModels,
-      expected_delivery_date: formData.expected_delivery_date,
-      finance_needed: formData.finance_needed
+const downloadQuotationPdfInSameTab = (quotationNumber, pdfUrl) => {
+  try {
+    const baseURL = axiosInstance.defaults.baseURL;
+    const fullUrl = `${baseURL}/${pdfUrl}`;
+    
+    console.log('Opening PDF in same tab:', fullUrl);
+    
+  
+    const iframe = document.createElement('iframe');
+    iframe.src = fullUrl;
+    iframe.style.display = 'none';
+    iframe.onload = () => {
+   
+      setTimeout(() => {
+       
+        const link = document.createElement('a');
+        link.href = fullUrl;
+        link.download = `quotation_${quotationNumber}.pdf`;
+  
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+   
+        document.body.removeChild(iframe);
+      }, 500);
     };
+    document.body.appendChild(iframe);
+    
+  } catch (error) {
+    console.error('Error opening PDF:', error);
+    
+   
+    const baseURL = axiosInstance.defaults.baseURL;
+    const fullUrl = `${baseURL}/${pdfUrl}`;
+    
+    const link = document.createElement('a');
+    link.href = fullUrl;
+    link.download = `quotation_${quotationNumber}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 
-    try {
-      if (id) {
-        await axiosInstance.patch(`/customers/${id}`, payload);
-        await showFormSubmitToast('Customer updated successfully!', () => navigate('/quotation-list'));
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  if (!validateTab2()) return;
+
+  setIsSubmitting(true);
+
+  const payload = {
+    customerDetails: {
+      name: formData.name,
+      address: formData.address,
+      taluka: formData.taluka,
+      district: formData.district,
+      mobile1: formData.mobile1,
+      mobile2: formData.mobile2
+    },
+    selectedModels: selectedModels,
+    expected_delivery_date: formData.expected_delivery_date,
+    finance_needed: formData.finance_needed
+  };
+
+  try {
+    if (id) {
+      // For update - still show success message
+      await axiosInstance.patch(`/customers/${id}`, payload);
+      
+      if (typeof showFormSubmitError !== 'function') {
+        await Swal.fire({
+          title: 'Success!',
+          text: 'Customer updated successfully!',
+          icon: 'success',
+          confirmButtonText: 'OK'
+        });
       } else {
-        await axiosInstance.post('/quotations', payload);
-        await showFormSubmitToast('Customer added successfully!', () => navigate('/quotation-list'));
+        showFormSubmitError('Customer updated successfully!');
       }
       navigate('/quotation-list');
-    } catch (error) {
-      console.error('Error details:', error);
-      showFormSubmitError(error);
+      
+    } else {
+      // For new quotation - NO success message, directly show PDF
+      const response = await axiosInstance.post('/quotations', payload);
+      
+      // Get quotation data
+      const quotation = response.data?.data?.quotation || response.data?.data;
+      const quotationNumber = quotation?.quotation_number;
+      const pdfUrl = quotation?.pdfUrl;
+      
+      if (pdfUrl) {
+        console.log('PDF URL found:', pdfUrl);
+        
+        // Download PDF in SAME tab (no new tab)
+        downloadQuotationPdfInSameTab(quotationNumber || 'quotation', pdfUrl);
+        
+        // Navigate to list page after a short delay
+        setTimeout(() => {
+          navigate('/quotation-list');
+        }, 2000);
+        
+      } else {
+        // If no PDF URL, show minimal message and navigate
+        console.log('No PDF URL found, navigating to list');
+        navigate('/quotation-list');
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error:', error);
+    
+    // Show error only if something goes wrong
+    if (typeof showFormSubmitError === 'function') {
+      showFormSubmitError(error);
+    } else {
+      Swal.fire({
+        title: 'Error!',
+        text: error.response?.data?.message || error.message || 'Something went wrong',
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
+    }
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleCancel = () => {
     navigate('/quotation-list');
@@ -206,7 +300,7 @@ function AddCustomer() {
 
   return (
     <div className="form-container">
-    <div className="title">Add New</div>
+      <div className="title">Add New</div>
       <div className="form-card">
         <div className="form-body">
           <form onSubmit={handleSubmit}>
@@ -234,10 +328,20 @@ function AddCustomer() {
                   </div>
                 </div>
                 <div className="form-footer">
-                  <button type="button" className="cancel-button" onClick={handleCancel}>
+                  <button 
+                    type="button" 
+                    className="cancel-button" 
+                    onClick={handleCancel}
+                    disabled={isSubmitting}
+                  >
                     Cancel
                   </button>
-                  <button type="button" className="submit-button" onClick={handleNextTab}>
+                  <button 
+                    type="button" 
+                    className="submit-button" 
+                    onClick={handleNextTab}
+                    disabled={isSubmitting}
+                  >
                     Next
                   </button>
                 </div>
@@ -256,7 +360,13 @@ function AddCustomer() {
                       <CInputGroupText className="input-icon">
                         <CIcon icon={cilUser} />
                       </CInputGroupText>
-                      <CFormInput type="text" name="name" value={formData.name} onChange={handleChange} />
+                      <CFormInput 
+                        type="text" 
+                        name="name" 
+                        value={formData.name} 
+                        onChange={handleChange} 
+                        disabled={isSubmitting}
+                      />
                     </CInputGroup>
                     {errors.name && <p className="error">{errors.name}</p>}
                   </div>
@@ -270,7 +380,13 @@ function AddCustomer() {
                       <CInputGroupText className="input-icon">
                         <CIcon icon={cilLocationPin} />
                       </CInputGroupText>
-                      <CFormInput type="text" name="address" value={formData.address} onChange={handleChange} />
+                      <CFormInput 
+                        type="text" 
+                        name="address" 
+                        value={formData.address} 
+                        onChange={handleChange} 
+                        disabled={isSubmitting}
+                      />
                     </CInputGroup>
                     {errors.address && <p className="error">{errors.address}</p>}
                   </div>
@@ -284,7 +400,13 @@ function AddCustomer() {
                       <CInputGroupText className="input-icon">
                         <CIcon icon={cilMap} />
                       </CInputGroupText>
-                      <CFormInput type="text" name="taluka" value={formData.taluka} onChange={handleChange} />
+                      <CFormInput 
+                        type="text" 
+                        name="taluka" 
+                        value={formData.taluka} 
+                        onChange={handleChange} 
+                        disabled={isSubmitting}
+                      />
                     </CInputGroup>
                     {errors.taluka && <p className="error">{errors.taluka}</p>}
                   </div>
@@ -298,7 +420,13 @@ function AddCustomer() {
                       <CInputGroupText className="input-icon">
                         <CIcon icon={cilMap} />
                       </CInputGroupText>
-                      <CFormInput type="text" name="district" value={formData.district} onChange={handleChange} />
+                      <CFormInput 
+                        type="text" 
+                        name="district" 
+                        value={formData.district} 
+                        onChange={handleChange} 
+                        disabled={isSubmitting}
+                      />
                     </CInputGroup>
                     {errors.district && <p className="error">{errors.district}</p>}
                   </div>
@@ -312,7 +440,13 @@ function AddCustomer() {
                       <CInputGroupText className="input-icon">
                         <CIcon icon={cilPhone} />
                       </CInputGroupText>
-                      <CFormInput type="text" name="mobile1" value={formData.mobile1} onChange={handleChange} />
+                      <CFormInput 
+                        type="text" 
+                        name="mobile1" 
+                        value={formData.mobile1} 
+                        onChange={handleChange} 
+                        disabled={isSubmitting}
+                      />
                     </CInputGroup>
                     {errors.mobile1 && <p className="error">{errors.mobile1}</p>}
                   </div>
@@ -326,7 +460,13 @@ function AddCustomer() {
                       <CInputGroupText className="input-icon">
                         <CIcon icon={cilPhone} />
                       </CInputGroupText>
-                      <CFormInput type="text" name="mobile2" value={formData.mobile2} onChange={handleChange} />
+                      <CFormInput 
+                        type="text" 
+                        name="mobile2" 
+                        value={formData.mobile2} 
+                        onChange={handleChange} 
+                        disabled={isSubmitting}
+                      />
                     </CInputGroup>
                     {errors.mobile2 && <p className="error">{errors.mobile2}</p>}
                   </div>
@@ -346,6 +486,7 @@ function AddCustomer() {
                         value={formData.expected_delivery_date}
                         onChange={handleChange}
                         min={getTodayDate()} // This disables past dates in the date picker
+                        disabled={isSubmitting}
                       />
                     </CInputGroup>
                     {errors.expected_delivery_date && <p className="error">{errors.expected_delivery_date}</p>}
@@ -363,17 +504,34 @@ function AddCustomer() {
                         onChange={handleChange}
                         name="finance_needed"
                         className="custom-switch-toggle"
+                        disabled={isSubmitting}
                       />
                     </CInputGroup>
                   </div>
                 </div>
 
                 <div className="form-footer">
-                  <button type="button"className="cancel-button" onClick={handlePrevTab}>
+                  <button 
+                    type="button"
+                    className="cancel-button" 
+                    onClick={handlePrevTab}
+                    disabled={isSubmitting}
+                  >
                     Back
                   </button>
-                  <button type="submit" className="submit-button">
-                    {id ? 'Update' : 'Submit'}
+                  <button 
+                    type="submit" 
+                    className="submit-button" 
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <CSpinner component="span" size="sm" className="me-2" />
+                        {id ? 'Updating...' : 'Creating...'}
+                      </>
+                    ) : (
+                      id ? 'Update' : 'Submit'
+                    )}
                   </button>
                 </div>
               </>

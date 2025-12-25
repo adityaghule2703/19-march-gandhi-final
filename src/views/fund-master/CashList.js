@@ -12,7 +12,6 @@ import {
   axiosInstance,
   getDefaultSearchFields
 } from '../../utils/tableImports';
-import { hasPermission } from '../../utils/permissionUtils';
 import { 
   CButton, 
   CCard, 
@@ -33,6 +32,14 @@ import CIcon from '@coreui/icons-react';
 import { cilPlus, cilCheckCircle, cilXCircle, cilSettings, cilPencil, cilTrash } from '@coreui/icons';
 import AddCash from './AddCash';
 import { useAuth } from '../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../utils/modulePermissions';
 
 const CashList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -44,18 +51,27 @@ const CashList = () => {
   const [editingCash, setEditingCash] = useState(null);
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-  const { permissions} = useAuth();
-  const hasEditPermission = hasPermission(permissions,'CASH_LOCATION_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'CASH_LOCATION_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'CASH_LOCATION_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Cash Account Master page under Fund Master module
+  const canViewCash = canViewPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.CASH_ACCOUNT_MASTER);
+  const canCreateCash = canCreateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.CASH_ACCOUNT_MASTER);
+  const canUpdateCash = canUpdateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.CASH_ACCOUNT_MASTER);
+  const canDeleteCash = canDeleteInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.CASH_ACCOUNT_MASTER);
+  
+  const showActionColumn = canUpdateCash || canDeleteCash;
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const branchId = storedUser.branch?._id;
   const userRole = localStorage.getItem('userRole');
 
   useEffect(() => {
+    if (!canViewCash) {
+      showError('You do not have permission to view Cash Account Master');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewCash]);
 
   const fetchData = async () => {
     try {
@@ -91,6 +107,11 @@ const CashList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteCash) {
+      showError('You do not have permission to delete cash account');
+      return;
+    }
+    
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
@@ -105,6 +126,11 @@ const CashList = () => {
   };
 
   const handleToggleStatus = async (cashId, currentStatus) => {
+    if (!canUpdateCash) {
+      showError('You do not have permission to update cash account status');
+      return;
+    }
+    
     try {
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
       await axiosInstance.patch(`/cash-locations/${cashId}/status`, {
@@ -125,11 +151,21 @@ const CashList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateCash) {
+      showError('You do not have permission to add cash account');
+      return;
+    }
+    
     setEditingCash(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (cash) => {
+    if (!canUpdateCash) {
+      showError('You do not have permission to edit cash account');
+      return;
+    }
+    
     setEditingCash(cash);
     setShowModal(true);
   };
@@ -148,6 +184,14 @@ const CashList = () => {
     setSearchTerm(value);
     handleFilter(value, getDefaultSearchFields('cash_bank_allocation'));
   };
+
+  if (!canViewCash) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Cash Account Master.
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -172,7 +216,7 @@ const CashList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateCash && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
@@ -242,6 +286,7 @@ const CashList = () => {
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, cash.id)}
+                            disabled={!canUpdateCash && !canDeleteCash}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -252,7 +297,7 @@ const CashList = () => {
                             open={menuId === cash.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateCash && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(cash)}
                                 style={{ color: 'black' }}
@@ -260,13 +305,13 @@ const CashList = () => {
                                 <CIcon icon={cilPencil} className="me-2" />Edit
                               </MenuItem>
                             )}
-                            {hasEditPermission && (
+                            {canUpdateCash && (
                               <MenuItem onClick={() => handleToggleStatus(cash.id, cash.status)}>
                                 <CIcon icon={cash.status === 'active' ? cilXCircle : cilCheckCircle} className="me-2" /> 
                                 {cash.status === 'active' ? 'Deactivate' : 'Activate'}
                               </MenuItem>
                             )}
-                            {hasDeletePermission && (
+                            {canDeleteCash && (
                               <MenuItem onClick={() => handleDelete(cash.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />Delete
                               </MenuItem>

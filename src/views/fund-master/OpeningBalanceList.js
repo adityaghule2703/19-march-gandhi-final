@@ -12,7 +12,6 @@ import {
   axiosInstance,
   getDefaultSearchFields
 } from '../../utils/tableImports';
-import { hasPermission } from '../../utils/permissionUtils';
 import { 
   CButton, 
   CCard, 
@@ -39,6 +38,14 @@ import CIcon from '@coreui/icons-react';
 import { cilPlus, cilSettings, cilPencil, cilTrash, cilInfo } from '@coreui/icons';
 import AddOpeningBalance from './AddOpeningBalance';
 import { useAuth } from '../../context/AuthContext';
+import { 
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage,
+  MODULES,
+  PAGES 
+} from '../../utils/modulePermissions';
 
 const OpeningBalanceList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -53,16 +60,24 @@ const OpeningBalanceList = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData || []);
-  const { permissions} = useAuth();
- 
-  const hasEditPermission = hasPermission(permissions,'VEHICLE_INWARD_UPDATE');
-  const hasDeletePermission = hasPermission(permissions,'VEHICLE_INWARD_DELETE');
-  const hasCreatePermission = hasPermission(permissions,'VEHICLE_INWARD_CREATE');
-  const showActionColumn = hasEditPermission || hasDeletePermission;
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for Add Opening Balance page under Fund Master module
+  const canViewOpeningBalance = canViewPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.ADD_OPENING_BALANCE);
+  const canCreateOpeningBalance = canCreateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.ADD_OPENING_BALANCE);
+  const canUpdateOpeningBalance = canUpdateInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.ADD_OPENING_BALANCE);
+  const canDeleteOpeningBalance = canDeleteInPage(permissions, MODULES.FUND_MASTER, PAGES.FUND_MASTER.ADD_OPENING_BALANCE);
+  
+  const showActionColumn = canUpdateOpeningBalance || canDeleteOpeningBalance;
 
   useEffect(() => {
+    if (!canViewOpeningBalance) {
+      showError('You do not have permission to view Opening Balance');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewOpeningBalance]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -107,6 +122,11 @@ const OpeningBalanceList = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteOpeningBalance) {
+      showError('You do not have permission to reset opening balance');
+      return;
+    }
+    
     const branch = data.find((b) => b.id === id);
     const result = await confirmDelete(`Are you sure you want to reset the opening balance for ${branch.name}?`);
 
@@ -123,11 +143,21 @@ const OpeningBalanceList = () => {
   };
 
   const handleShowAddModal = () => {
+    if (!canCreateOpeningBalance) {
+      showError('You do not have permission to add opening balance');
+      return;
+    }
+    
     setEditingBranch(null);
     setShowModal(true);
   };
 
   const handleShowEditModal = (branch) => {
+    if (!canUpdateOpeningBalance) {
+      showError('You do not have permission to edit opening balance');
+      return;
+    }
+    
     setEditingBranch(branch);
     setShowModal(true);
   };
@@ -160,6 +190,14 @@ const OpeningBalanceList = () => {
     return new Date(dateString).toLocaleString('en-US', options);
   };
 
+  if (!canViewOpeningBalance) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Opening Balance.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -189,11 +227,12 @@ const OpeningBalanceList = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {hasCreatePermission && (
+            {canCreateOpeningBalance && (
               <CButton 
                 size="sm" 
                 className="action-btn me-1"
                 onClick={handleShowAddModal}
+                disabled={!canCreateOpeningBalance}
               >
                 <CIcon icon={cilPlus} className='icon' /> New
               </CButton>
@@ -211,6 +250,7 @@ const OpeningBalanceList = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                disabled={!canViewOpeningBalance}
               />
             </div>
           </div>
@@ -258,6 +298,7 @@ const OpeningBalanceList = () => {
                             size="sm"
                             className='option-button btn-sm'
                             onClick={(event) => handleClick(event, branch.id)}
+                            disabled={!canUpdateOpeningBalance && !canDeleteOpeningBalance}
                           >
                             <CIcon icon={cilSettings} />
                             Options
@@ -268,7 +309,7 @@ const OpeningBalanceList = () => {
                             open={menuId === branch.id} 
                             onClose={handleClose}
                           >
-                            {hasEditPermission && (
+                            {canUpdateOpeningBalance && (
                               <MenuItem 
                                 onClick={() => handleShowEditModal(branch)}
                                 style={{ color: 'black' }}
@@ -279,7 +320,7 @@ const OpeningBalanceList = () => {
                             <MenuItem onClick={() => handleViewHistory(branch.id)}>
                               <CIcon icon={cilInfo} className="me-2" />View History
                             </MenuItem>
-                            {hasDeletePermission && (
+                            {canDeleteOpeningBalance && (
                               <MenuItem onClick={() => handleDelete(branch.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />Reset Balance
                               </MenuItem>

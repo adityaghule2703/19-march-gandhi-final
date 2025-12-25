@@ -11,8 +11,6 @@ import {
   Link
 } from 'src/utils/tableImports';
 import tvsLogo from '../../../assets/images/logo.png';
-import { hasPermission } from 'src/utils/permissionUtils';
-import { cilPlus, cilPrint } from '@coreui/icons';
 import CIcon from '@coreui/icons-react';
 import {
   CCard,
@@ -30,14 +28,48 @@ import {
 } from '@coreui/react';
 import { useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
+import { 
+  hasSafePagePermission,
+  MODULES, 
+  PAGES,
+  ACTIONS,
+  canViewPage,
+  canCreateInPage
+} from '../../../utils/modulePermissions';
+import { cilPlus, cilPrint } from '@coreui/icons';
 
 const OnAccountBalance = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const [error, setError] = useState(null);
-  const { permissions} = useAuth();
+  const { permissions } = useAuth();
+  
+  // Page-level permission checks for OnAccount Balance page under Subdealer Account module
+  const hasOnAccountView = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.ONACCOUNT_BALANCE, 
+    ACTIONS.VIEW
+  );
+  
+  const hasOnAccountCreate = hasSafePagePermission(
+    permissions, 
+    MODULES.SUBDEALER_ACCOUNT, 
+    PAGES.SUBDEALER_ACCOUNT.ONACCOUNT_BALANCE, 
+    ACTIONS.CREATE
+  );
+
+  // Using convenience functions for cleaner code
+  const canViewOnAccount = canViewPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.ONACCOUNT_BALANCE);
+  const canCreateOnAccount = canCreateInPage(permissions, MODULES.SUBDEALER_ACCOUNT, PAGES.SUBDEALER_ACCOUNT.ONACCOUNT_BALANCE);
+  
   useEffect(() => {
+    if (!canViewOnAccount) {
+      showError('You do not have permission to view OnAccount Balance');
+      return;
+    }
+    
     fetchData();
-  }, []);
+  }, [canViewOnAccount]);
 
   const fetchData = async () => {
     try {
@@ -46,9 +78,9 @@ const OnAccountBalance = () => {
       setFilteredData(response.data.data.subdealers);
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     }
   };
 
@@ -274,8 +306,6 @@ const OnAccountBalance = () => {
                           `;
                         })
                         .join('')}
-
-                           
                         
                         ${accessoryBillings
                           .map((booking) => {
@@ -347,29 +377,38 @@ const OnAccountBalance = () => {
     handleFilter(searchValue, getDefaultSearchFields('subdealer'));
   };
 
-  if (error) {
+  if (!canViewOnAccount) {
     return (
-      <div className="alert alert-danger" role="alert">
-      {error}
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view OnAccount Balance.
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="alert alert-danger" role="alert">
+        {error}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className='title'>OnAccount Balance</div>
     
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-  <div>
-    {hasPermission(permissions,'SUBDEALER_ON_ACCOUNT_CREATE') && (
-      <Link to="/subdealer-account/add-amount">
-        <CButton size="sm" className="action-btn me-1">
-          <CIcon icon={cilPlus} className='icon'/> New Balance
-        </CButton>
-      </Link>
-    )}
-  </div>
-</CCardHeader>
+          <div>
+            {canCreateOnAccount && (
+              <Link to="/subdealer-account/add-amount">
+                <CButton size="sm" className="action-btn me-1">
+                  <CIcon icon={cilPlus} className='icon'/> New Balance
+                </CButton>
+              </Link>
+            )}
+          </div>
+        </CCardHeader>
         
         <CCardBody>
           <div className="d-flex justify-content-between mb-3">
@@ -380,7 +419,6 @@ const OnAccountBalance = () => {
                 type="text"
                 className="d-inline-block square-search"
                 onChange={(e) => handleSearch(e.target.value)}
-              
               />
             </div>
           </div>
@@ -396,13 +434,13 @@ const OnAccountBalance = () => {
                   <CTableHeaderCell>Total Received</CTableHeaderCell>
                   <CTableHeaderCell>Total Balance</CTableHeaderCell>
                   <CTableHeaderCell>OnAccount Balance</CTableHeaderCell>
-                  {hasPermission(permissions,'SUBDEALER_ON_ACCOUNT_CREATE') && <CTableHeaderCell>Action</CTableHeaderCell>}
+                  {canViewOnAccount && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {filteredData.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={hasPermission(permissions,'SUBDEALER_ON_ACCOUNT_CREATE') ? "8" : "7"} className="text-center">
+                    <CTableDataCell colSpan={canViewOnAccount ? "8" : "7"} className="text-center">
                       No subdealers available
                     </CTableDataCell>
                   </CTableRow>
@@ -416,7 +454,7 @@ const OnAccountBalance = () => {
                       <CTableDataCell>{subdealer.financials.bookingSummary.totalReceivedAmount}</CTableDataCell>
                       <CTableDataCell>{subdealer.financials.bookingSummary.totalBalanceAmount}</CTableDataCell>
                       <CTableDataCell>{subdealer.financials.onAccountSummary.totalBalance}</CTableDataCell>
-                      {hasPermission(permissions,'SUBDEALER_ON_ACCOUNT_CREATE') && (
+                      {canViewOnAccount && (
                         <CTableDataCell>
                           <CButton 
                             size="sm" 

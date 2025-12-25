@@ -27,6 +27,17 @@ import {
   CAlert
 } from '@coreui/react';
 
+// Import permission utilities
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage,
+  canCreateInPage,
+  canUpdateInPage,
+  canDeleteInPage 
+} from '../../../utils/modulePermissions';
+import { useAuth } from '../../../context/AuthContext';
+
 const DebitNote = () => {
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([])
   const { currentRecords, PaginationOptions } = usePagination(filteredData || [])
@@ -35,10 +46,25 @@ const DebitNote = () => {
   const [showModal, setShowModal] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+
+  const { permissions } = useAuth();
+
+  // Page-level permission checks for Debit Note under ACCOUNT module
+  const canViewDebitNote = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DEBIT_NOTE);
+  const canCreateDebitNote = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DEBIT_NOTE);
+  const canUpdateDebitNote = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DEBIT_NOTE);
+  const canDeleteDebitNote = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DEBIT_NOTE);
+  
+  const showActionColumn = canCreateDebitNote;
 
   useEffect(() => {
+    if (!canViewDebitNote) {
+      return;
+    }
+    
     fetchData()
-  }, [])
+  }, [canViewDebitNote])
 
   const fetchData = async () => {
     try {
@@ -51,15 +77,20 @@ const DebitNote = () => {
       setFilteredData(branchBookings)
     } catch (error) {
       const message = showError(error);
-  if (message) {
-    setError(message);
-  }
+      if (message) {
+        setError(message);
+      }
     } finally {
       setLoading(false)
     }
   }
 
   const handleAddClick = (booking) => {
+    if (!canCreateDebitNote) {
+      showError('You do not have permission to add debit notes');
+      return;
+    }
+    
     console.log('Selected booking:', booking)
     setSelectedBooking(booking)
     setShowModal(true)
@@ -68,6 +99,20 @@ const DebitNote = () => {
   const handleSearch = (value) => {
     setSearchTerm(value)
     handleFilter(value, getDefaultSearchFields('booking'))
+  }
+
+  const handleDebitNoteSaved = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 3000);
+    fetchData();
+  };
+
+  if (!canViewDebitNote) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Debit Notes.
+      </div>
+    );
   }
 
   if (loading) {
@@ -81,11 +126,18 @@ const DebitNote = () => {
   return (
     <div>
       <div className='title'>Debit Note</div>
+      
+      {successMessage && (
+        <CAlert color="success" className="mb-3">
+          {successMessage}
+        </CAlert>
+      )}
+      
       {error && (
-            <CAlert color="danger" className="mb-3">
-              {error}
-            </CAlert>
-          )}
+        <CAlert color="danger" className="mb-3">
+          {error}
+        </CAlert>
+      )}
           
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
@@ -97,6 +149,7 @@ const DebitNote = () => {
               className="d-inline-block square-search"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
+              disabled={!canViewDebitNote}
             />
           </div>
         </CCardHeader>
@@ -115,48 +168,50 @@ const DebitNote = () => {
                   <CTableHeaderCell>Total</CTableHeaderCell>
                   <CTableHeaderCell>Received</CTableHeaderCell>
                   <CTableHeaderCell>Balance</CTableHeaderCell>
-                  <CTableHeaderCell>Action</CTableHeaderCell>
+                  {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {currentRecords.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan="10" className="text-center">
-                      No ledger details available
+                    <CTableDataCell colSpan={showActionColumn ? "10" : "9"} className="text-center">
+                      No booking details available
                     </CTableDataCell>
                   </CTableRow>
                 ) : (
                   currentRecords.map((booking, index) => (
                     <CTableRow key={booking._id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
-                      <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
-                      <CTableDataCell>{booking.model?.model_name || ''}</CTableDataCell>
+                      <CTableDataCell>{booking.bookingNumber || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>
                         {booking.createdAt
                           ? new Date(booking.createdAt).toLocaleDateString('en-GB')
-                          : ''}
+                          : 'N/A'}
                       </CTableDataCell>
-                      <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
+                      <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>
                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-                    ? (booking.chassisNumber || '')
-                    : ''
-                  }
+                          ? (booking.chassisNumber || 'N/A')
+                          : 'N/A'
+                        }
                       </CTableDataCell>
                       <CTableDataCell>₹{booking.discountedAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                       <CTableDataCell>₹{booking.receivedAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                       <CTableDataCell>₹{booking.balanceAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-                      <CTableDataCell>
-                        <CButton
-                          size="sm"
-                          color="primary"
-                          className="action-btn"
-                          onClick={() => handleAddClick(booking)}
-                        >
-                          {/* <CIcon icon={cilPlus} className="me-1" /> */}
-                          Add
-                        </CButton>
-                      </CTableDataCell>
+                      {showActionColumn && (
+                        <CTableDataCell>
+                          <CButton
+                            size="sm"
+                            color="primary"
+                            className="action-btn"
+                            onClick={() => handleAddClick(booking)}
+                            disabled={!canCreateDebitNote}
+                          >
+                            Add
+                          </CButton>
+                        </CTableDataCell>
+                      )}
                     </CTableRow>
                   ))
                 )}
@@ -165,10 +220,13 @@ const DebitNote = () => {
           </div>
         </CCardBody>
       </CCard>
+      
       <AddDebitNote
         show={showModal}
         onClose={() => setShowModal(false)}
         bookingData={selectedBooking}
+        onDebitNoteSaved={handleDebitNoteSaved}
+        canCreateDebitNote={canCreateDebitNote}
       />
     </div>
   )

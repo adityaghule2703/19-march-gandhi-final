@@ -23,8 +23,16 @@ import {
   CTableDataCell,
   CSpinner,
   CRow,
-  CCol
+  CCol,
+  CAlert
 } from '@coreui/react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  MODULES, 
+  PAGES,
+  canViewPage 
+} from '../../utils/modulePermissions';
+import { useAuth } from '../../context/AuthContext';
 
 const SalesReport = () => {
   const [loading, setLoading] = useState(true);
@@ -33,8 +41,22 @@ const SalesReport = () => {
   const [stats, setStats] = useState({});
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const { currentRecords, PaginationOptions } = usePagination(filteredData);
+  const navigate = useNavigate();
+
+  // Get permissions from auth context
+  const { permissions = [] } = useAuth();
+
+  // Permission check for Sales Report page under Sales Report module
+  const canViewSalesReport = canViewPage(permissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE);
 
   useEffect(() => {
+    // Check if user has permission to view this page
+    if (!canViewSalesReport) {
+      showError('You do not have permission to view Sales Report');
+      navigate('/dashboard');
+      return;
+    }
+    
     fetchData();
   }, []);
 
@@ -60,6 +82,15 @@ const SalesReport = () => {
     handleFilter(value, ['salesExecutiveName']);
   };
 
+  // Check if user has permission to view this page
+  if (!canViewSalesReport) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Sales Report.
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
@@ -70,9 +101,9 @@ const SalesReport = () => {
 
   if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
-       {error}
-      </div>
+      <CAlert color="danger" className="m-3">
+        {error}
+      </CAlert>
     );
   }
 
@@ -109,7 +140,6 @@ const SalesReport = () => {
       </CRow>
     
       <CCard className='table-container mt-4'>
-        
         <CCardBody>
           <div className="d-flex justify-content-between mb-3">
             <div></div>

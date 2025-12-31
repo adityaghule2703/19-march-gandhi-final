@@ -1639,7 +1639,7 @@ const getNav = (userPermissions = []) => {
     _nav.push({
       component: CNavItem,
       name: 'Dashboard',
-      to: '/app/dashboard/analytics',
+      to: '/dashboard',
       icon: <CIcon icon={cilSpeedometer} customClassName="nav-icon" />,
       badge: {
         color: 'info',

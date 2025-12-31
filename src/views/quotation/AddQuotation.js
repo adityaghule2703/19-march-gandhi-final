@@ -170,44 +170,47 @@ function AddCustomer() {
 const downloadQuotationPdfInSameTab = (quotationNumber, pdfUrl) => {
   try {
     const baseURL = axiosInstance.defaults.baseURL;
-    const fullUrl = `${baseURL}/${pdfUrl}`;
+    let fullUrl = `${baseURL}/${pdfUrl}`;
     
-    console.log('Opening PDF in same tab:', fullUrl);
+    // Clean up any double slashes in the URL
+    fullUrl = fullUrl.replace(/([^:]\/)\/+/g, "$1");
     
-  
-    const iframe = document.createElement('iframe');
-    iframe.src = fullUrl;
-    iframe.style.display = 'none';
-    iframe.onload = () => {
-   
-      setTimeout(() => {
-       
-        const link = document.createElement('a');
-        link.href = fullUrl;
-        link.download = `quotation_${quotationNumber}.pdf`;
-  
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-   
-        document.body.removeChild(iframe);
-      }, 500);
-    };
-    document.body.appendChild(iframe);
+    console.log('Downloading PDF from:', fullUrl);
     
-  } catch (error) {
-    console.error('Error opening PDF:', error);
-    
-   
-    const baseURL = axiosInstance.defaults.baseURL;
-    const fullUrl = `${baseURL}/${pdfUrl}`;
-    
+    // Create a temporary link element
     const link = document.createElement('a');
     link.href = fullUrl;
+    link.target = '_blank'; // Use '_blank' to open in new tab
     link.download = `quotation_${quotationNumber}.pdf`;
+    
+    // Append to body
     document.body.appendChild(link);
+    
+    // Trigger click
     link.click();
-    document.body.removeChild(link);
+    
+    // Remove from body
+    setTimeout(() => {
+      document.body.removeChild(link);
+    }, 100);
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+    
+    // Fallback: Just open the URL in new tab
+    try {
+      const baseURL = axiosInstance.defaults.baseURL;
+      let fullUrl = `${baseURL}/${pdfUrl}`;
+      fullUrl = fullUrl.replace(/([^:]\/)\/+/g, "$1");
+      
+      window.open(fullUrl, '_blank');
+      return true;
+    } catch (fallbackError) {
+      console.error('Fallback also failed:', fallbackError);
+      return false;
+    }
   }
 };
 
@@ -232,63 +235,74 @@ const handleSubmit = async (e) => {
     finance_needed: formData.finance_needed
   };
 
+  console.log('Submitting payload:', payload);
+
   try {
     if (id) {
-      // For update - still show success message
+      // For update
       await axiosInstance.patch(`/customers/${id}`, payload);
-      
-      if (typeof showFormSubmitError !== 'function') {
-        await Swal.fire({
-          title: 'Success!',
-          text: 'Customer updated successfully!',
-          icon: 'success',
-          confirmButtonText: 'OK'
-        });
-      } else {
-        showFormSubmitError('Customer updated successfully!');
-      }
+      alert('Customer updated successfully!');
       navigate('/quotation-list');
       
     } else {
-      // For new quotation - NO success message, directly show PDF
+      // For new quotation - SIMPLIFIED VERSION
       const response = await axiosInstance.post('/quotations', payload);
       
+      console.log('Full API Response:', response);
+      console.log('Response data:', response.data);
+      
       // Get quotation data
-      const quotation = response.data?.data?.quotation || response.data?.data;
-      const quotationNumber = quotation?.quotation_number;
-      const pdfUrl = quotation?.pdfUrl;
+      const quotation = response.data?.data?.quotation || response.data?.data || response.data;
+      const quotationNumber = quotation?.quotation_number || 'temp';
+      let pdfUrl = quotation?.pdfUrl;
+      
+      // Try different possible locations for pdfUrl
+      if (!pdfUrl && response.data?.data?.pdfUrl) {
+        pdfUrl = response.data.data.pdfUrl;
+      }
+      if (!pdfUrl && response.data?.pdfUrl) {
+        pdfUrl = response.data.pdfUrl;
+      }
+      
+      console.log('Extracted pdfUrl:', pdfUrl);
       
       if (pdfUrl) {
-        console.log('PDF URL found:', pdfUrl);
+        console.log('PDF URL found, attempting to download...');
         
-        // Download PDF in SAME tab (no new tab)
-        downloadQuotationPdfInSameTab(quotationNumber || 'quotation', pdfUrl);
+        // SIMPLE DIRECT APPROACH
+        const baseURL = axiosInstance.defaults.baseURL;
+        let fullUrl = pdfUrl.startsWith('http') ? pdfUrl : `${baseURL}/${pdfUrl}`;
         
-        // Navigate to list page after a short delay
+        // Clean URL
+        fullUrl = fullUrl.replace(/([^:]\/)\/+/g, "$1");
+        console.log('Full PDF URL:', fullUrl);
+        
+        // Method 1: Direct window.open (simplest)
+        window.open(fullUrl, '_blank');
+        
+        // Method 2: Create link and click
         setTimeout(() => {
-          navigate('/quotation-list');
-        }, 2000);
+          const link = document.createElement('a');
+          link.href = fullUrl;
+          link.target = '_blank';
+          link.click();
+        }, 500);
         
       } else {
-        // If no PDF URL, show minimal message and navigate
-        console.log('No PDF URL found, navigating to list');
-        navigate('/quotation-list');
+        console.warn('No PDF URL found in response');
+        alert('Quotation created but PDF URL not found in response. Check console for details.');
       }
+      
+      // Navigate after delay
+      setTimeout(() => {
+        navigate('/quotation-list');
+      }, 2000);
     }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error details:', error);
+    console.error('Error response:', error.response);
     
-    // Show error only if something goes wrong
-    if (typeof showFormSubmitError === 'function') {
-      showFormSubmitError(error);
-    } else {
-      Swal.fire({
-        title: 'Error!',
-        text: error.response?.data?.message || error.message || 'Something went wrong',
-        icon: 'error',
-        confirmButtonText: 'OK'
-      });
-    }
+    alert(`Error: ${error.response?.data?.message || error.message || 'Unknown error'}`);
   } finally {
     setIsSubmitting(false);
   }

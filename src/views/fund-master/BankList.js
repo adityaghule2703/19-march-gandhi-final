@@ -237,7 +237,7 @@ const BankList = () => {
                 <CTableRow>
                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
                   <CTableHeaderCell>Account Name</CTableHeaderCell>
-                  <CTableHeaderCell>Location</CTableHeaderCell>
+               
                   <CTableHeaderCell>Status</CTableHeaderCell>
                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
@@ -254,7 +254,7 @@ const BankList = () => {
                     <CTableRow key={bank.id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
                       <CTableDataCell>{bank.name}</CTableDataCell>
-                      <CTableDataCell>{bank.branchDetails?.name || ''}</CTableDataCell>
+                  
                       <CTableDataCell>
                         <CBadge color={bank.status === 'active' ? 'success' : 'secondary'}>
                           {bank.status === 'active' ? (

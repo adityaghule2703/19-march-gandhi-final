@@ -98,7 +98,12 @@ const RatesList = () => {
 
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const branchId = storedUser.branch?._id;
-  const userRole = localStorage.getItem('userRole');
+  
+  // Check if user is superadmin from roles array
+  const isSuperAdmin = storedUser.roles?.some(role => role.isSuperAdmin === true);
+  
+  // Alternative: You could also check from meta.isSuperAdmin if available
+  // const isSuperAdmin = storedUser.meta?.isSuperAdmin || storedUser.roles?.some(role => role.isSuperAdmin === true);
   
   useEffect(() => {
     if (!canViewFinanceRates) {
@@ -117,7 +122,8 @@ const RatesList = () => {
 
       let filtered = allRates;
 
-      if (userRole !== 'SUPERADMIN' && branchId) {
+      // Only filter by branch if user is NOT a superadmin AND has a branch
+      if (!isSuperAdmin && branchId) {
         filtered = allRates.filter((rate) => rate.branchDetails?._id === branchId);
       }
 

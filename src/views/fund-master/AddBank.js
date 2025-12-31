@@ -8,17 +8,13 @@ import {
   CForm,
   CFormInput,
   CFormLabel,
-  CFormSelect,
   CButton,
   CSpinner,
   CInputGroup,
-  CInputGroupText,
   CAlert,
   CRow,
   CCol
 } from '@coreui/react';
-import CIcon from '@coreui/icons-react';
-import { cilLocationPin, cilUser } from '@coreui/icons';
 import { showError, axiosInstance } from '../../utils/tableImports';
 import '../../css/form.css';
 
@@ -28,7 +24,6 @@ const AddBank = ({ show, onClose, onBankSaved, editingBank }) => {
     branch: ''
   });
   const [formErrors, setFormErrors] = useState({});
-  const [branches, setBranches] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -44,20 +39,6 @@ const AddBank = ({ show, onClose, onBankSaved, editingBank }) => {
       resetForm();
     }
   }, [editingBank, show]);
-
-  useEffect(() => {
-    const fetchBranches = async () => {
-      try {
-        const response = await axiosInstance.get('/branches');
-        setBranches(response.data.data || []);
-      } catch (error) {
-        console.error('Error fetching branches:', error);
-        showError(error);
-      }
-    };
-
-    fetchBranches();
-  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -78,10 +59,6 @@ const AddBank = ({ show, onClose, onBankSaved, editingBank }) => {
     
     if (!formData.name.trim()) {
       errors.name = 'Account name is required';
-    }
-    
-    if (!formData.branch) {
-      errors.branch = 'Location is required';
     }
 
     setFormErrors(errors);
@@ -148,33 +125,7 @@ const AddBank = ({ show, onClose, onBankSaved, editingBank }) => {
             </CAlert>
           )}
           <CRow className="mb-3">
-            <CCol md={6}>
-              <div className="mb-3">
-                <CFormLabel htmlFor="branch">Location <span className="required">*</span></CFormLabel>
-                <CInputGroup>
-                  <CFormSelect 
-                    id="branch"
-                    name="branch" 
-                    value={formData.branch} 
-                    onChange={handleInputChange}
-                    invalid={!!formErrors.branch}
-                  >
-                    <option value="">-Select Location-</option>
-                    {branches.map((branch) => (
-                      <option key={branch._id} value={branch._id}>
-                        {branch.name}
-                      </option>
-                    ))}
-                  </CFormSelect>
-                </CInputGroup>
-                {formErrors.branch && (
-                  <div className="error-text">
-                    {formErrors.branch}
-                  </div>
-                )}
-              </div>
-            </CCol>
-            <CCol md={6}>
+            <CCol md={12}>
               <div className="mb-3">
                 <CFormLabel htmlFor="name">Account Name <span className="required">*</span></CFormLabel>
                 <CInputGroup>
@@ -185,6 +136,7 @@ const AddBank = ({ show, onClose, onBankSaved, editingBank }) => {
                     value={formData.name}
                     onChange={handleInputChange}
                     invalid={!!formErrors.name}
+                    placeholder="Enter bank account name"
                   />
                 </CInputGroup>
                 {formErrors.name && (

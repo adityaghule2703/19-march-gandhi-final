@@ -20,10 +20,21 @@ import '../../../css/form.css';
 
 const AddRates = ({ show, onClose, onRateSaved, editingRate }) => {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // Check if user has a branch
   const hasBranch = !!storedUser.branch?._id;
   
+  // Check if user is superadmin by looking at roles array
+  const isSuperAdmin = storedUser.roles?.some(role => role.isSuperAdmin === true);
+  
+  // Branch dropdown should be enabled if user is superadmin OR doesn't have a branch
+  const isBranchSelectable = isSuperAdmin || !hasBranch;
+  
+  // Default branch ID: for non-superadmin users with a branch, use their branch ID
+  const defaultBranchId = hasBranch && !isSuperAdmin ? storedUser.branch?._id : '';
+
   const [formData, setFormData] = useState({
-    branchId: hasBranch ? storedUser.branch?._id : '',
+    branchId: defaultBranchId,
     providerId: '',
     gcRate: ''
   });
@@ -137,7 +148,7 @@ const AddRates = ({ show, onClose, onRateSaved, editingRate }) => {
 
   const resetForm = () => {
     setFormData({
-      branchId: hasBranch ? storedUser.branch?._id : '',
+      branchId: defaultBranchId,
       providerId: '',
       gcRate: ''
     });
@@ -167,7 +178,7 @@ const AddRates = ({ show, onClose, onRateSaved, editingRate }) => {
                     value={formData.branchId} 
                     onChange={handleInputChange}
                     invalid={!!formErrors.branchId}
-                    disabled={hasBranch}
+                    disabled={!isBranchSelectable}
                   >
                     <option value="">-Select-</option>
                     {branches.map((branch) => (
@@ -180,6 +191,12 @@ const AddRates = ({ show, onClose, onRateSaved, editingRate }) => {
                 {formErrors.branchId && (
                   <div className="error-text">
                     {formErrors.branchId}
+                  </div>
+                )}
+                {/* Optional: Show a note for non-superadmin users */}
+                {!isSuperAdmin && hasBranch && (
+                  <div className="text-muted small mt-1">
+                    Your branch is automatically selected
                   </div>
                 )}
               </div>

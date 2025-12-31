@@ -185,8 +185,11 @@ const MinimumBookingAmountList = () => {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const formatPercentage = (amount) => {
-    return `${parseFloat(amount).toFixed(2)}%`;
+  const formatAmount = (amount) => {
+    return `₹${parseFloat(amount).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}`;
   };
 
   if (!canViewMinimumBookingAmount) {
@@ -259,7 +262,7 @@ const MinimumBookingAmountList = () => {
                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
                   <CTableHeaderCell>Model Name</CTableHeaderCell>
                   <CTableHeaderCell>Type</CTableHeaderCell>
-                  <CTableHeaderCell>Minimum Amount (%)</CTableHeaderCell>
+                  <CTableHeaderCell>Minimum Amount (₹)</CTableHeaderCell>
                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
@@ -285,7 +288,7 @@ const MinimumBookingAmountList = () => {
                         </CBadge>
                       </CTableDataCell>
                       <CTableDataCell>
-                        {formatPercentage(item?.min_amount || 0)}
+                        {formatAmount(item?.min_amount || 0)}
                       </CTableDataCell>
                       {showActionColumn && (
                       <CTableDataCell>

@@ -68,8 +68,16 @@ const DeliveryChallan = () => {
   const { permissions = [] } = useAuth()
 
   // Permission checks for Delivery Challan page under Sales module
-  // For viewing/printing, we only need VIEW permission
+  // For viewing, we need VIEW permission
   const canViewDeliveryChallan = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DELIVERY_CHALLAN)
+  
+  // For printing, we need CREATE permission
+  const canCreateDeliveryChallan = hasSafePagePermission(
+    permissions, 
+    MODULES.SALES, 
+    PAGES.SALES.DELIVERY_CHALLAN, 
+    ACTIONS.CREATE
+  )
 
   useEffect(() => {
     // Check if user has permission to view this page
@@ -222,8 +230,8 @@ const DeliveryChallan = () => {
       return
     }
 
-    // Check VIEW permission before printing
-    if (!canViewDeliveryChallan) {
+    // Check CREATE permission before printing
+    if (!canCreateDeliveryChallan) {
       showError('You do not have permission to print delivery challan')
       return
     }
@@ -841,26 +849,34 @@ tr.data-row td:nth-child(4) {
                       <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
                       <CTableDataCell>{booking.chassisNumber || ''}</CTableDataCell>
                       <CTableDataCell>
-                        <CButton
-                          size="sm"
-                          color="primary"
-                          className="action-btn"
-                          onClick={() => handlePrint(booking, 'Customer Copy')}
-                        >
-                          <CIcon icon={cilPrint} className="me-1" />
-                          Print
-                        </CButton>
+                        {canCreateDeliveryChallan ? (
+                          <CButton
+                            size="sm"
+                            color="primary"
+                            className="action-btn"
+                            onClick={() => handlePrint(booking, 'Customer Copy')}
+                          >
+                            <CIcon icon={cilPrint} className="me-1" />
+                            Print
+                          </CButton>
+                        ) : (
+                          <span className="text-muted">No permission</span>
+                        )}
                       </CTableDataCell>
                       <CTableDataCell>
-                        <CButton
-                          size="sm"
-                          color="info"
-                          className="action-btn"
-                          onClick={() => handlePrint(booking, 'Office Copy')}
-                        >
-                          <CIcon icon={cilPrint} className="me-1" />
-                          Print
-                        </CButton>
+                        {canCreateDeliveryChallan ? (
+                          <CButton
+                            size="sm"
+                            color="info"
+                            className="action-btn"
+                            onClick={() => handlePrint(booking, 'Office Copy')}
+                          >
+                            <CIcon icon={cilPrint} className="me-1" />
+                            Print
+                          </CButton>
+                        ) : (
+                          <span className="text-muted">No permission</span>
+                        )}
                       </CTableDataCell>
                       <CTableDataCell>
                         <CButton

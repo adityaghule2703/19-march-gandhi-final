@@ -598,6 +598,718 @@
 
 
 
+// import React, { useState, useEffect } from 'react';
+// import {
+//   CBadge,
+//   CNav,
+//   CNavItem,
+//   CNavLink,
+//   CTabContent,
+//   CTabPane,
+//   CModal,
+//   CModalHeader,
+//   CModalTitle,
+//   CModalBody,
+//   CModalFooter,
+//   CButton,
+//   CFormInput,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CCard,
+//   CCardBody,
+//   CFormLabel,
+//   CSpinner,
+//   CAlert
+// } from '@coreui/react';
+// import { axiosInstance, getDefaultSearchFields, Menu, MenuItem, showError, useTableFilter } from '../../utils/tableImports';
+// import '../../css/invoice.css';
+// import '../../css/table.css';
+// import '../../css/form.css';
+// import Swal from 'sweetalert2';
+// import CIcon from '@coreui/icons-react';
+// import { cilSearch, cilZoomOut, cilSettings, cilCheckCircle, cilX } from '@coreui/icons';
+
+// // Import the new permission utilities
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS,
+//   canViewPage,
+//   canCreateInPage,
+//   canDeleteInPage,
+//   canUpdateInPage
+// } from '../../utils/modulePermissions';
+// import { useAuth } from '../../context/AuthContext';
+
+// function ContraApproval() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [refreshKey, setRefreshKey] = useState(0);
+//   const [anchorEl, setAnchorEl] = useState(null);
+//   const [menuId, setMenuId] = useState(null);
+//   const [showApprovalModal, setShowApprovalModal] = useState(false);
+//   const [selectedVoucher, setSelectedVoucher] = useState(null);
+//   const [billFile, setBillFile] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [searchTerm, setSearchTerm] = useState('');
+  
+//   const { permissions } = useAuth();
+  
+//   // Tab-level VIEW permission checks
+//   const canViewPendingApprovalTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.FUND_MANAGEMENT, 
+//     PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL, 
+//     ACTIONS.VIEW,
+//     TABS.CONTRA_APPROVAL.PENDING_APPROVAL
+//   );
+  
+//   const canViewCompleteReportTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.FUND_MANAGEMENT, 
+//     PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL, 
+//     ACTIONS.VIEW,
+//     TABS.CONTRA_APPROVAL.COMPLETE_REPORT
+//   );
+  
+//   const canViewRejectReportTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.FUND_MANAGEMENT, 
+//     PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL, 
+//     ACTIONS.VIEW,
+//     TABS.CONTRA_APPROVAL.REJECT_REPORT
+//   );
+  
+//   // Check if user can view at least one tab
+//   const canViewAnyTab = canViewPendingApprovalTab || canViewCompleteReportTab || canViewRejectReportTab;
+
+//   // Tab-level CREATE permission for PENDING APPROVAL tab
+//   const canCreatePendingApproval = hasSafePagePermission(
+//     permissions, 
+//     MODULES.FUND_MANAGEMENT, 
+//     PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL, 
+//     ACTIONS.CREATE,
+//     TABS.CONTRA_APPROVAL.PENDING_APPROVAL
+//   );
+  
+//   // Tab-level DELETE permission for PENDING APPROVAL tab (for rejecting)
+//   const canDeletePendingApproval = hasSafePagePermission(
+//     permissions, 
+//     MODULES.FUND_MANAGEMENT, 
+//     PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL, 
+//     ACTIONS.DELETE,
+//     TABS.CONTRA_APPROVAL.PENDING_APPROVAL
+//   );
+  
+//   // Show action column if user can approve OR reject on PENDING APPROVAL tab
+//   const showActionColumn = (canCreatePendingApproval || canDeletePendingApproval) && canViewPendingApprovalTab;
+
+//   // Adjust activeTab based on tab-level permissions
+//   useEffect(() => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     // If current active tab is hidden due to permissions, find first visible tab
+//     const visibleTabs = [];
+//     if (canViewPendingApprovalTab) visibleTabs.push(0);
+//     if (canViewCompleteReportTab) visibleTabs.push(1);
+//     if (canViewRejectReportTab) visibleTabs.push(2);
+    
+//     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+//       setActiveTab(visibleTabs[0]);
+//     }
+//   }, [canViewAnyTab, canViewPendingApprovalTab, canViewCompleteReportTab, canViewRejectReportTab, activeTab]);
+
+//   const {
+//     data: pendingData,
+//     setData: setPendingData,
+//     filteredData: filteredPendings,
+//     setFilteredData: setFilteredPendings,
+//     handleFilter: handlePendingFilter
+//   } = useTableFilter([]);
+//   const {
+//     data: laterData,
+//     setData: setLaterData,
+//     filteredData: filteredLater,
+//     setFilteredData: setFilteredLater,
+//     handleFilter: handleLaterFilter
+//   } = useTableFilter([]);
+//   const {
+//     data: approvedData,
+//     setData: setApprovedData,
+//     filteredData: filteredApproved,
+//     setFilteredData: setFilteredApproved,
+//     handleFilter: handleApprovedFilter
+//   } = useTableFilter([]);
+
+//   const fetchData = async () => {
+//     if (!canViewAnyTab) {
+//       setError('Permission denied');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     try {
+//       setLoading(true);
+//       const response = await axiosInstance.get(`/contra-vouchers/status/pending`);
+//       setPendingData(response.data.data);
+//       setFilteredPendings(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const fetchCompleteData = async () => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     try {
+//       const response = await axiosInstance.get(`/contra-vouchers/status/approved`);
+//       setApprovedData(response.data.data);
+//       setFilteredApproved(response.data.data);
+//     } catch (error) {
+//       console.log('Error fetching approved data', error);
+//     }
+//   };
+
+//   const fetchLaterData = async () => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     try {
+//       const response = await axiosInstance.get(`/contra-vouchers/status/rejected`);
+//       setLaterData(response.data.data);
+//       setFilteredLater(response.data.data);
+//     } catch (error) {
+//       console.log('Error fetching approved data', error);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (!canViewAnyTab) {
+//       showError('You do not have permission to view any Contra Approval tabs');
+//       return;
+//     }
+    
+//     fetchData();
+//     fetchCompleteData();
+//     fetchLaterData();
+//   }, [refreshKey, canViewAnyTab]);
+
+//   const handleClick = (event, id) => {
+//     setAnchorEl(event.currentTarget);
+//     setMenuId(id);
+//   };
+
+//   const handleClose = () => {
+//     setAnchorEl(null);
+//     setMenuId(null);
+//   };
+
+//   const handleOpenApprovalModal = (voucher) => {
+//     // Check CREATE permission for approving on PENDING APPROVAL tab
+//     if (!canCreatePendingApproval) {
+//       showError('You do not have permission to approve vouchers');
+//       return;
+//     }
+    
+//     setSelectedVoucher(voucher);
+//     setShowApprovalModal(true);
+//     handleClose();
+//   };
+
+//   const handleFileChange = (e) => {
+//     setBillFile(e.target.files[0]);
+//   };
+
+//   const handleStatusUpdate = async (status) => {
+//     // Check CREATE permission for approving on PENDING APPROVAL tab
+//     if (!canCreatePendingApproval) {
+//       showError('You do not have permission to approve vouchers');
+//       return;
+//     }
+    
+//     try {
+//       const formData = new FormData();
+//       formData.append('status', status.toLowerCase());
+
+//       if (billFile) {
+//         formData.append('billUrl', billFile);
+//       }
+
+//       console.log('Submitting to:', `/contra-vouchers/${selectedVoucher._id}`);
+//       for (let [key, value] of formData.entries()) {
+//         console.log(`${key}:`, value);
+//       }
+
+//       const response = await axiosInstance.put(`/contra-vouchers/${selectedVoucher._id}`, formData, {
+//         headers: { 'Content-Type': 'multipart/form-data' }
+//       });
+
+//       console.log('Full response:', response.data);
+
+//       setShowApprovalModal(false);
+//       setBillFile(null);
+//       setRefreshKey((prev) => prev + 1);
+
+//       Swal.fire('Approved!', 'Voucher has been approved.', 'success');
+//     } catch (error) {
+//       console.error('Error:', error.response?.data || error.message);
+//       Swal.fire('Error!', 'Failed to update voucher.', 'error');
+//     }
+//   };
+
+//   const handleReject = async (voucherId) => {
+//     // Check DELETE permission for rejecting on PENDING APPROVAL tab
+//     if (!canDeletePendingApproval) {
+//       showError('You do not have permission to reject vouchers');
+//       return;
+//     }
+    
+//     try {
+//       const result = await Swal.fire({
+//         title: 'Are you sure?',
+//         text: 'You are about to reject this voucher',
+//         icon: 'warning',
+//         showCancelButton: true,
+//         confirmButtonColor: '#243c7c',
+//         cancelButtonColor: '#d33',
+//         confirmButtonText: 'Yes, reject it!'
+//       });
+
+//       if (result.isConfirmed) {
+//         await axiosInstance.put(`/contra-vouchers/${voucherId}`, {
+//           status: 'rejected'
+//         });
+
+//         // Immediately update UI
+//         const rejectedVoucher = pendingData.find((item) => item._id === voucherId);
+//         setPendingData((prev) => prev.filter((item) => item._id !== voucherId));
+//         setLaterData((prev) => [...prev, { ...rejectedVoucher, status: 'rejected' }]);
+//         setRefreshKey((prev) => prev + 1);
+//         Swal.fire('Rejected!', 'Voucher has been rejected.', 'success');
+//       }
+//     } catch (error) {
+//       console.log('Error rejecting voucher', error);
+//       Swal.fire('Error!', 'Failed to reject voucher.', 'error');
+//     }
+//   };
+
+//   const handleTabChange = (tab) => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     setActiveTab(tab);
+//     setSearchTerm('');
+//   };
+
+//   const renderPendingTable = () => {
+//     // Check if user has permission to view this tab
+//     if (!canViewPendingApprovalTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Pending Approval tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+
+//     return (
+//       <div className="responsive-table-wrapper">
+//         <CTable striped bordered hover className='responsive-table'>
+//           <CTableHead>
+//             <CTableRow>
+//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Voucher ID</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Recipient Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Voucher Type</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Debit</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Credit</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Bank Location</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+//               {showActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//             </CTableRow>
+//           </CTableHead>
+//           <CTableBody>
+//             {filteredPendings.length === 0 ? (
+//               <CTableRow>
+//                 <CTableDataCell colSpan={showActionColumn ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
+//                   No pending contra approval available
+//                 </CTableDataCell>
+//               </CTableRow>
+//             ) : (
+//               filteredPendings.map((item, index) => (
+//                 <CTableRow key={index}>
+//                   <CTableDataCell>{index + 1}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherId}</CTableDataCell>
+//                   <CTableDataCell>{item.recipientName}</CTableDataCell>
+//                   <CTableDataCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-GB') : ''}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType === 'debit' ? item.amount : 0}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType === 'credit' ? item.amount : 0}</CTableDataCell>
+//                   <CTableDataCell>{item.paymentMode}</CTableDataCell>
+//                   <CTableDataCell>{item.bankLocation}</CTableDataCell>
+//                   <CTableDataCell>
+//                     <CBadge color={item.status === 'pending' ? 'warning' : 'success'} shape="rounded-pill">
+//                       {item.status}
+//                     </CBadge>
+//                   </CTableDataCell>
+//                   {showActionColumn && (
+//                     <CTableDataCell>
+//                       <CButton
+//                         size="sm"
+//                         className='option-button btn-sm'
+//                         onClick={(event) => handleClick(event, item._id)}
+//                         disabled={!canCreatePendingApproval && !canDeletePendingApproval}
+//                       >
+//                         <CIcon icon={cilSettings} />
+//                         Options
+//                       </CButton>
+//                       <Menu id={`action-menu-${item._id}`} anchorEl={anchorEl} open={menuId === item._id} onClose={handleClose}>
+//                         {canCreatePendingApproval && (
+//                           <MenuItem onClick={() => handleOpenApprovalModal(item)} style={{ color: 'black' }}>
+//                             <CIcon icon={cilCheckCircle} className="me-2" /> Approve
+//                           </MenuItem>
+//                         )}
+//                         {canDeletePendingApproval && (
+//                           <MenuItem onClick={() => handleReject(item._id)} style={{ color: 'black' }}>
+//                             <CIcon icon={cilX} className="me-2" /> Reject
+//                           </MenuItem>
+//                         )}
+//                       </Menu>
+//                     </CTableDataCell>
+//                   )}
+//                 </CTableRow>
+//               ))
+//             )}
+//           </CTableBody>
+//         </CTable>
+//       </div>
+//     );
+//   };
+
+//   const renderCompletedTable = () => {
+//     // Check if user has permission to view this tab
+//     if (!canViewCompleteReportTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Complete Report tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+
+//     return (
+//       <div className="responsive-table-wrapper">
+//         <CTable striped bordered hover className='responsive-table'>
+//           <CTableHead>
+//             <CTableRow>
+//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Voucher ID</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Recipient Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Voucher Type</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Debit</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Credit</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Bank Location</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+//             </CTableRow>
+//           </CTableHead>
+//           <CTableBody>
+//             {filteredApproved.length === 0 ? (
+//               <CTableRow>
+//                 <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                   No data available
+//                 </CTableDataCell>
+//               </CTableRow>
+//             ) : (
+//               filteredApproved.map((item, index) => (
+//                 <CTableRow key={index}>
+//                   <CTableDataCell>{index + 1}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherId}</CTableDataCell>
+//                   <CTableDataCell>{item.recipientName}</CTableDataCell>
+//                   <CTableDataCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-GB') : ''}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType === 'debit' ? item.amount : 0}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType === 'credit' ? item.amount : 0}</CTableDataCell>
+//                   <CTableDataCell>{item.paymentMode}</CTableDataCell>
+//                   <CTableDataCell>{item.bankLocation}</CTableDataCell>
+//                   <CTableDataCell>
+//                     <CBadge color={item.status === 'approved' ? 'success' : 'danger'} shape="rounded-pill">
+//                       {item.status}
+//                     </CBadge>
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ))
+//             )}
+//           </CTableBody>
+//         </CTable>
+//       </div>
+//     );
+//   };
+
+//   const renderRejectedTable = () => {
+//     // Check if user has permission to view this tab
+//     if (!canViewRejectReportTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Reject Report tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+
+//     return (
+//       <div className="responsive-table-wrapper">
+//         <CTable striped bordered hover className='responsive-table'>
+//           <CTableHead>
+//             <CTableRow>
+//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Voucher ID</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Recipient Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Voucher Type</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Debit</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Credit</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Bank Location</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+//             </CTableRow>
+//           </CTableHead>
+//           <CTableBody>
+//             {filteredLater.length === 0 ? (
+//               <CTableRow>
+//                 <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                   No data available
+//                 </CTableDataCell>
+//               </CTableRow>
+//             ) : (
+//               filteredLater.map((item, index) => (
+//                 <CTableRow key={index}>
+//                   <CTableDataCell>{index + 1}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherId}</CTableDataCell>
+//                   <CTableDataCell>{item.recipientName}</CTableDataCell>
+//                   <CTableDataCell>{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-GB') : ''}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType === 'debit' ? item.amount : 0}</CTableDataCell>
+//                   <CTableDataCell>{item.voucherType === 'credit' ? item.amount : 0}</CTableDataCell>
+//                   <CTableDataCell>{item.paymentMode}</CTableDataCell>
+//                   <CTableDataCell>{item.bankLocation}</CTableDataCell>
+//                   <CTableDataCell>
+//                     <CBadge color={item.status === 'rejected' ? 'danger' : 'success'} shape="rounded-pill">
+//                       {item.status}
+//                     </CBadge>
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ))
+//             )}
+//           </CTableBody>
+//         </CTable>
+//       </div>
+//     );
+//   };
+
+//   if (!canViewAnyTab) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view any Contra Voucher Approval tabs.
+//       </div>
+//     );
+//   }
+
+//   if (loading) {
+//     return (
+//       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+//         <CSpinner color="primary" />
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="alert alert-danger" role="alert">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div>
+//       <div className='title'>Contra Voucher Approval</div>
+      
+//       {!showActionColumn && canViewPendingApprovalTab && (
+//         <CAlert color="warning" className="mb-3">
+//           You can view the Pending Approval tab but cannot approve or reject vouchers.
+//         </CAlert>
+//       )}
+      
+//       <CCard className='table-container mt-4'>
+//         <CCardBody>
+//           {/* Show tabs only if user has permission to view at least one */}
+//           {canViewAnyTab ? (
+//             <>
+//               <CNav variant="tabs" className="mb-3 border-bottom">
+//                 {canViewPendingApprovalTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 0}
+//                       onClick={() => handleTabChange(0)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+//                         color: 'black',
+//                         borderBottom: 'none'
+//                       }}
+//                     >
+//                       Pending Approval
+//                       {(!canCreatePendingApproval && !canDeletePendingApproval) && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewCompleteReportTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 1}
+//                       onClick={() => handleTabChange(1)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Complete Report
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewRejectReportTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 2}
+//                       onClick={() => handleTabChange(2)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 2 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Reject Report
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//               </CNav>
+
+//               <div className="d-flex justify-content-between mb-3">
+//                 <div></div>
+//                 <div className='d-flex'>
+//                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//                   <CFormInput
+//                     type="text"
+//                     style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+//                     className="d-inline-block square-search"
+//                     value={searchTerm}
+//                     onChange={(e) => {
+//                       setSearchTerm(e.target.value);
+//                       if (activeTab === 0) handlePendingFilter(e.target.value, getDefaultSearchFields('vouchers'));
+//                       else if (activeTab === 1) handleApprovedFilter(e.target.value, getDefaultSearchFields('vouchers'));
+//                       else handleLaterFilter(e.target.value, getDefaultSearchFields('vouchers'));
+//                     }}
+//                     disabled={!canViewAnyTab}
+//                   />
+//                 </div>
+//               </div>
+
+//               <CTabContent>
+//                 {canViewPendingApprovalTab && (
+//                   <CTabPane visible={activeTab === 0}>
+//                     {renderPendingTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewCompleteReportTab && (
+//                   <CTabPane visible={activeTab === 1}>
+//                     {renderCompletedTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewRejectReportTab && (
+//                   <CTabPane visible={activeTab === 2}>
+//                     {renderRejectedTable()}
+//                   </CTabPane>
+//                 )}
+//               </CTabContent>
+//             </>
+//           ) : (
+//             <CAlert color="warning" className="text-center">
+//               You don't have permission to view any tabs in Contra Voucher Approval.
+//             </CAlert>
+//           )}
+//         </CCardBody>
+//       </CCard>
+
+//       <CModal visible={showApprovalModal} onClose={() => setShowApprovalModal(false)}>
+//         <CModalHeader onClose={() => setShowApprovalModal(false)}>
+//           <CModalTitle>Approve Voucher</CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           <p><strong>Voucher ID:</strong> {selectedVoucher?.voucherId}</p>
+//           <p><strong>Amount:</strong> {selectedVoucher?.amount}</p>
+//           <p><strong>Recipient:</strong> {selectedVoucher?.recipientName}</p>
+
+//           <div className="mb-3">
+//             <CFormLabel htmlFor="billUpload">Upload Bill</CFormLabel>
+//             <CFormInput 
+//               type="file" 
+//               id="billUpload" 
+//               onChange={handleFileChange} 
+//               accept=".pdf,.jpg,.jpeg,.png" 
+//             />
+//           </div>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={() => setShowApprovalModal(false)}>
+//             Cancel
+//           </CButton>
+//           <CButton color="primary" onClick={() => handleStatusUpdate('approved')}>
+//             <CIcon icon={cilCheckCircle} className="me-1" />
+//             Approve
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+//     </div>
+//   );
+// }
+
+// export default ContraApproval;
+
+
+
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import {
   CBadge,
@@ -640,10 +1352,7 @@ import {
   PAGES,
   TABS,
   ACTIONS,
-  canViewPage,
-  canCreateInPage,
-  canDeleteInPage,
-  canUpdateInPage
+  canViewPage
 } from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
@@ -689,7 +1398,7 @@ function ContraApproval() {
   // Check if user can view at least one tab
   const canViewAnyTab = canViewPendingApprovalTab || canViewCompleteReportTab || canViewRejectReportTab;
 
-  // Tab-level CREATE permission for PENDING APPROVAL tab
+  // Tab-level CREATE permission for PENDING APPROVAL tab (for both approve and reject)
   const canCreatePendingApproval = hasSafePagePermission(
     permissions, 
     MODULES.FUND_MANAGEMENT, 
@@ -698,17 +1407,8 @@ function ContraApproval() {
     TABS.CONTRA_APPROVAL.PENDING_APPROVAL
   );
   
-  // Tab-level DELETE permission for PENDING APPROVAL tab (for rejecting)
-  const canDeletePendingApproval = hasSafePagePermission(
-    permissions, 
-    MODULES.FUND_MANAGEMENT, 
-    PAGES.FUND_MANAGEMENT.CONTRA_APPROVAL, 
-    ACTIONS.DELETE,
-    TABS.CONTRA_APPROVAL.PENDING_APPROVAL
-  );
-  
-  // Show action column if user can approve OR reject on PENDING APPROVAL tab
-  const showActionColumn = (canCreatePendingApproval || canDeletePendingApproval) && canViewPendingApprovalTab;
+  // Show action column if user can create (approve/reject) on PENDING APPROVAL tab
+  const showActionColumn = canCreatePendingApproval && canViewPendingApprovalTab;
 
   // Adjust activeTab based on tab-level permissions
   useEffect(() => {
@@ -874,8 +1574,8 @@ function ContraApproval() {
   };
 
   const handleReject = async (voucherId) => {
-    // Check DELETE permission for rejecting on PENDING APPROVAL tab
-    if (!canDeletePendingApproval) {
+    // Check CREATE permission for rejecting on PENDING APPROVAL tab
+    if (!canCreatePendingApproval) {
       showError('You do not have permission to reject vouchers');
       return;
     }
@@ -978,21 +1678,21 @@ function ContraApproval() {
                         size="sm"
                         className='option-button btn-sm'
                         onClick={(event) => handleClick(event, item._id)}
-                        disabled={!canCreatePendingApproval && !canDeletePendingApproval}
+                        disabled={!canCreatePendingApproval}
                       >
                         <CIcon icon={cilSettings} />
                         Options
                       </CButton>
                       <Menu id={`action-menu-${item._id}`} anchorEl={anchorEl} open={menuId === item._id} onClose={handleClose}>
                         {canCreatePendingApproval && (
-                          <MenuItem onClick={() => handleOpenApprovalModal(item)} style={{ color: 'black' }}>
-                            <CIcon icon={cilCheckCircle} className="me-2" /> Approve
-                          </MenuItem>
-                        )}
-                        {canDeletePendingApproval && (
-                          <MenuItem onClick={() => handleReject(item._id)} style={{ color: 'black' }}>
-                            <CIcon icon={cilX} className="me-2" /> Reject
-                          </MenuItem>
+                          <>
+                            <MenuItem onClick={() => handleOpenApprovalModal(item)} style={{ color: 'black' }}>
+                              <CIcon icon={cilCheckCircle} className="me-2" /> Approve
+                            </MenuItem>
+                            <MenuItem onClick={() => handleReject(item._id)} style={{ color: 'black' }}>
+                              <CIcon icon={cilX} className="me-2" /> Reject
+                            </MenuItem>
+                          </>
                         )}
                       </Menu>
                     </CTableDataCell>
@@ -1183,7 +1883,7 @@ function ContraApproval() {
                       }}
                     >
                       Pending Approval
-                      {(!canCreatePendingApproval && !canDeletePendingApproval) && (
+                      {!canCreatePendingApproval && (
                         <span className="ms-1 text-muted small">(View Only)</span>
                       )}
                     </CNavLink>

@@ -452,6 +452,496 @@
 
 
 
+// import React, { useState, useEffect } from 'react';
+// import { 
+//   CFormInput, 
+//   CNav, 
+//   CNavItem, 
+//   CNavLink, 
+//   CTabContent, 
+//   CTabPane,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CCard,
+//   CCardBody,
+//   CFormCheck,
+//   CSpinner,
+//   CFormLabel,
+//   CButton,
+//   CAlert
+// } from '@coreui/react';
+// import { axiosInstance, useTableFilter } from '../../utils/tableImports';
+// import '../../css/invoice.css';
+// import '../../css/table.css';
+// import { showError, showFormSubmitToast } from '../../utils/sweetAlerts';
+
+// // Import the new permission utilities
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS,
+//   canViewPage,
+//   canUpdateInPage
+// } from '../../utils/modulePermissions';
+// import { useAuth } from '../../context/AuthContext';
+
+// function RTOTax() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [receiptNoSearch, setReceiptNoSearch] = useState('');
+//   const [receiptNumber, setReceiptNumber] = useState('');
+//   const [selectedRows, setSelectedRows] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const { permissions } = useAuth();
+
+//   // Page-level permission checks for RTO Tax page under RTO module
+//   const canViewRTOTax = canViewPage(
+//     permissions, 
+//     MODULES.RTO, 
+//     PAGES.RTO.RTO_TAX
+//   );
+  
+//   const canUpdateRTOTax = canUpdateInPage(
+//     permissions, 
+//     MODULES.RTO, 
+//     PAGES.RTO.RTO_TAX
+//   );
+
+//   // Tab-level VIEW permission checks
+//   const canViewRtoPendingTaxTab = hasSafePagePermission(
+//     permissions,
+//     MODULES.RTO,
+//     PAGES.RTO.RTO_TAX,
+//     ACTIONS.VIEW,
+//     TABS.RTO_TAX.RTO_PENDING_TAX
+//   );
+  
+//   const canViewTaxPaidTab = hasSafePagePermission(
+//     permissions,
+//     MODULES.RTO,
+//     PAGES.RTO.RTO_TAX,
+//     ACTIONS.VIEW,
+//     TABS.RTO_TAX.TAX_PAID
+//   );
+
+//   // Adjust activeTab when permissions change
+//   useEffect(() => {
+//     if (!canViewRtoPendingTaxTab && activeTab === 0 && canViewTaxPaidTab) {
+//       // If RTO PENDING TAX tab is hidden and activeTab is 0, switch to TAX PAID tab
+//       setActiveTab(1);
+//     }
+//   }, [canViewRtoPendingTaxTab, canViewTaxPaidTab, activeTab]);
+
+//   const {
+//     data: pendingData,
+//     setData: setPendingData,
+//     filteredData: filteredPendings,
+//     setFilteredData: setFilteredPendings
+//   } = useTableFilter([]);
+
+//   const {
+//     data: approvedData,
+//     setData: setApprovedData,
+//     filteredData: filteredApproved,
+//     setFilteredData: setFilteredApproved,
+//     handleFilter: handleApprovedFilter
+//   } = useTableFilter([]);
+
+//   useEffect(() => {
+//     if (!canViewRTOTax) {
+//       setError('Permission denied');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     fetchData();
+//     fetchLocationData();
+//   }, [canViewRTOTax]);
+
+//   const fetchData = async () => {
+//     if (!canViewRTOTax) {
+//       return;
+//     }
+    
+//     try {
+//       setLoading(true);
+//       const response = await axiosInstance.get(`/rtoProcess/rtotaxpending`);
+//       setPendingData(response.data.data);
+//       setFilteredPendings(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const fetchLocationData = async () => {
+//     if (!canViewRTOTax) {
+//       return;
+//     }
+    
+//     try {
+//       const response = await axiosInstance.get(`/rtoProcess/rtotaxcompleted`);
+//       setApprovedData(response.data.data);
+//       setFilteredApproved(response.data.data);
+//     } catch (error) {
+//       console.log('Error fetching data', error);
+//     }
+//   };
+
+//   const handleRTOAmountChange = (id, value) => {
+//     const updatedData = filteredPendings.map((item) => (item._id === id ? { ...item, rtoAmount: value } : item));
+//     setFilteredPendings(updatedData);
+//   };
+
+//   const handleNumberPlateChange = (id, value) => {
+//     const updatedData = filteredPendings.map((item) => (item._id === id ? { ...item, numberPlate: value } : item));
+//     setFilteredPendings(updatedData);
+//   };
+
+//   const toggleRowSelection = (id) => {
+//     setSelectedRows((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+//   };
+
+//   const handleSelectAll = (e) => {
+//     if (e.target.checked) {
+//       setSelectedRows(filteredPendings.map((item) => item._id));
+//     } else {
+//       setSelectedRows([]);
+//     }
+//   };
+
+//   const handleUpdateSelected = async () => {
+//     if (!canUpdateRTOTax) {
+//       showError('You do not have permission to update RTO tax');
+//       return;
+//     }
+    
+//     if (!receiptNumber) {
+//       showError('Please enter a receipt number');
+//       return;
+//     }
+
+//     if (selectedRows.length === 0) {
+//       showError('Please select at least one record to update');
+//       return;
+//     }
+
+//     try {
+//       const updates = filteredPendings
+//         .filter((item) => selectedRows.includes(item._id))
+//         .map((item) => ({
+//           rtoId: item._id,
+//           rtoAmount: item.rtoAmount || 0,
+//           numberPlate: item.numberPlate || ''
+//         }));
+
+//       const requestBody = { receiptNumber, updates };
+
+//       const response = await axiosInstance.put('/rtoProcess/update-rto-details', requestBody);
+
+//       if (response.data.success) {
+//         showFormSubmitToast(response.data.message || 'Selected records updated successfully!');
+//       } else {
+//         showError(
+//           `${response.data.message}\n\nExceeded Records:\n${response.data.exceededUpdates
+//             .map((ex) => `RTO ID: ${ex.rtoId}, Requested: ${ex.requestedAmount}, Allowed: ${ex.allowedAmount}`)
+//             .join('\n')}`
+//         );
+//       }
+//       setReceiptNumber('');
+//       setSelectedRows([]);
+//       fetchData();
+//       fetchLocationData();
+//     } catch (error) {
+//       console.error('Error updating RTO details:', error.response?.data || error.message);
+//       showError(`Failed to update RTO details: ${error.response?.data?.message || error.message}`);
+//     }
+//   };
+
+//   const handleReceiptNoSearch = (e) => {
+//     setReceiptNoSearch(e.target.value);
+//     if (e.target.value === '') {
+//       setFilteredPendings(pendingData);
+//     } else {
+//       const filtered = pendingData.filter(
+//         (booking) =>
+//           booking.bookingId?.bookingNumber?.toString().includes(e.target.value) ||
+//           booking.bookingId?.chassisNumber?.includes(e.target.value) ||
+//           booking.bookingId?.model?.model_name.includes(e.target.value) ||
+//           booking.bookingId?.customerName.includes(e.target.value) ||
+//           booking.bookingId?.customerMobile?.includes(e.target.value)
+//       );
+//       setFilteredPendings(filtered);
+//     }
+//   };
+
+//   const handleTabChange = (tab) => {
+//     setActiveTab(tab);
+//     setSearchTerm('');
+//     setReceiptNoSearch('');
+//   };
+  
+//   const renderPendingTable = () => {
+//     return (
+//       <div className="responsive-table-wrapper">
+//         <CTable striped bordered hover className='responsive-table'>
+//           <CTableHead>
+//             <CTableRow>
+//               <CTableHeaderCell scope="col">
+//                 <CFormCheck
+//                   onChange={handleSelectAll}
+//                   checked={selectedRows.length === filteredPendings.length && filteredPendings.length > 0}
+//                 />
+//               </CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">RTO Amount</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Registration Number</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Contact Number</CTableHeaderCell>
+//             </CTableRow>
+//           </CTableHead>
+//           <CTableBody>
+//             {filteredPendings.length === 0 ? (
+//               <CTableRow>
+//                 <CTableDataCell colSpan="9" style={{ color: 'red', textAlign: 'center' }}>
+//                   No data available
+//                 </CTableDataCell>
+//               </CTableRow>
+//             ) : (
+//               filteredPendings.map((item, index) => (
+//                 <CTableRow key={item._id}>
+//                   <CTableDataCell>
+//                     <CFormCheck
+//                       checked={selectedRows.includes(item._id)}
+//                       onChange={() => toggleRowSelection(item._id)}
+//                     />
+//                   </CTableDataCell>
+//                   <CTableDataCell>{index + 1}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.bookingNumber || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>
+//                     <CFormInput
+//                       type="number"
+//                       value={item.rtoAmount || ''}
+//                       onChange={(e) => handleRTOAmountChange(item._id, e.target.value)}
+//                       size="sm"
+//                       style={{ width: '100px' }}
+//                     />
+//                   </CTableDataCell>
+//                   <CTableDataCell>
+//                     <CFormInput
+//                       type="text"
+//                       value={item.numberPlate || ''}
+//                       onChange={(e) => handleNumberPlateChange(item._id, e.target.value)}
+//                       size="sm"
+//                       style={{ width: '120px' }}
+//                     />
+//                   </CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.model?.model_name || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.chassisNumber || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.customerName || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.customerMobile || 'N/A'}</CTableDataCell>
+//                 </CTableRow>
+//               ))
+//             )}
+//           </CTableBody>
+//         </CTable>
+//       </div>
+//     );
+//   };
+
+//   const renderTaxPaidTable = () => {
+//     return (
+//       <div className="responsive-table-wrapper">
+//         <CTable striped bordered hover className='responsive-table'>
+//           <CTableHead>
+//             <CTableRow>
+//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Contact Number</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">RTO Tax</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Number Plate</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Receipt Number</CTableHeaderCell>
+//             </CTableRow>
+//           </CTableHead>
+//           <CTableBody>
+//             {filteredApproved.length === 0 ? (
+//               <CTableRow>
+//                 <CTableDataCell colSpan="9" style={{ color: 'red', textAlign: 'center' }}>
+//                   No data available
+//                 </CTableDataCell>
+//               </CTableRow>
+//             ) : (
+//               filteredApproved.map((item, index) => (
+//                 <CTableRow key={item._id}>
+//                   <CTableDataCell>{index + 1}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.bookingNumber || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.model?.model_name || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.chassisNumber || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.customerName || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.bookingId?.customerMobile || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.rtoAmount || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.numberPlate || 'N/A'}</CTableDataCell>
+//                   <CTableDataCell>{item.receiptNumber || 'N/A'}</CTableDataCell>
+//                 </CTableRow>
+//               ))
+//             )}
+//           </CTableBody>
+//         </CTable>
+//       </div>
+//     );
+//   };
+
+//   // Check if user has permission to view the page
+//   if (!canViewRTOTax) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view RTO Tax Management.
+//       </div>
+//     );
+//   }
+
+//   if (loading) {
+//     return (
+//       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+//         <CSpinner color="primary" />
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="alert alert-danger" role="alert">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div>
+//       <div className='title'>RTO Tax Management</div>
+      
+//       <CCard className='table-container mt-4'>
+//         <CCardBody>
+//           <CNav variant="tabs" className="mb-3 border-bottom">
+//             {/* Only show RTO PENDING TAX tab if user has VIEW permission for it */}
+//             {canViewRtoPendingTaxTab && (
+//               <CNavItem>
+//                 <CNavLink
+//                   active={activeTab === 0}
+//                   onClick={() => handleTabChange(0)}
+//                   style={{ 
+//                     cursor: 'pointer',
+//                     borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+//                     color: 'black',
+//                     borderBottom: 'none'
+//                   }}
+//                 >
+//                   RTO PENDING TAX
+//                 </CNavLink>
+//               </CNavItem>
+//             )}
+//             {/* Only show TAX PAID tab if user has VIEW permission for it */}
+//             {canViewTaxPaidTab && (
+//               <CNavItem>
+//                 <CNavLink
+//                   active={activeTab === 1}
+//                   onClick={() => handleTabChange(1)}
+//                   style={{ 
+//                     cursor: 'pointer',
+//                     borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+//                     borderBottom: 'none',
+//                     color: 'black'
+//                   }}
+//                 >
+//                   TAX PAID
+//                 </CNavLink>
+//               </CNavItem>
+//             )}
+//           </CNav>
+
+//           <div className="d-flex justify-content-between mb-3">
+//             <div>
+//               {activeTab === 0 && (
+//                 <div className="d-flex align-items-center gap-2">
+//                   <CFormInput
+//                     type="text"
+//                     placeholder="Receipt Number"
+//                     value={receiptNumber}
+//                     onChange={(e) => setReceiptNumber(e.target.value)}
+//                     style={{ width: '200px' }}
+//                     size="sm"
+//                   />
+//                   {canUpdateRTOTax && (
+//                     <CButton 
+//                       size="sm" 
+//                       className="action-btn"
+//                       onClick={handleUpdateSelected}
+//                     >
+//                       Update
+//                     </CButton>
+//                   )}
+//                 </div>
+//               )}
+//             </div>
+//             <div className='d-flex'>
+//               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//               <CFormInput
+//                 type="text"
+//                 style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+//                 className="d-inline-block square-search"
+//                 value={activeTab === 0 ? receiptNoSearch : searchTerm}
+//                 onChange={(e) => {
+//                   if (activeTab === 0) {
+//                     handleReceiptNoSearch(e);
+//                   } else {
+//                     setSearchTerm(e.target.value);
+//                     handleApprovedFilter(e.target.value);
+//                   }
+//                 }}
+//               />
+//             </div>
+//           </div>
+
+//           <CTabContent>
+//             <CTabPane visible={activeTab === 0}>
+//               {renderPendingTable()}
+//             </CTabPane>
+//             <CTabPane visible={activeTab === 1}>
+//               {renderTaxPaidTable()}
+//             </CTabPane>
+//           </CTabContent>
+//         </CCardBody>
+//       </CCard>
+//     </div>
+//   );
+// }
+
+// export default RTOTax;
+
+
+
+
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import { 
   CFormInput, 
@@ -479,15 +969,13 @@ import '../../css/invoice.css';
 import '../../css/table.css';
 import { showError, showFormSubmitToast } from '../../utils/sweetAlerts';
 
-// Import the new permission utilities
+// Import the permission utilities
 import { 
   hasSafePagePermission,
   MODULES, 
   PAGES,
   TABS,
-  ACTIONS,
-  canViewPage,
-  canUpdateInPage
+  ACTIONS
 } from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 
@@ -501,17 +989,12 @@ function RTOTax() {
   const [searchTerm, setSearchTerm] = useState('');
   const { permissions } = useAuth();
 
-  // Page-level permission checks for RTO Tax page under RTO module
-  const canViewRTOTax = canViewPage(
+  // Page-level VIEW permission check for RTO Tax page
+  const canViewRTOTax = hasSafePagePermission(
     permissions, 
     MODULES.RTO, 
-    PAGES.RTO.RTO_TAX
-  );
-  
-  const canUpdateRTOTax = canUpdateInPage(
-    permissions, 
-    MODULES.RTO, 
-    PAGES.RTO.RTO_TAX
+    PAGES.RTO.RTO_TAX, 
+    ACTIONS.VIEW
   );
 
   // Tab-level VIEW permission checks
@@ -530,14 +1013,34 @@ function RTOTax() {
     ACTIONS.VIEW,
     TABS.RTO_TAX.TAX_PAID
   );
+  
+  // Tab-level CREATE permission for RTO PENDING TAX tab (for Update button)
+  const canCreateInRtoPendingTaxTab = hasSafePagePermission(
+    permissions,
+    MODULES.RTO,
+    PAGES.RTO.RTO_TAX,
+    ACTIONS.CREATE,
+    TABS.RTO_TAX.RTO_PENDING_TAX
+  );
+
+  // Check if user can view at least one tab
+  const canViewAnyTab = canViewRtoPendingTaxTab || canViewTaxPaidTab;
 
   // Adjust activeTab when permissions change
   useEffect(() => {
-    if (!canViewRtoPendingTaxTab && activeTab === 0 && canViewTaxPaidTab) {
-      // If RTO PENDING TAX tab is hidden and activeTab is 0, switch to TAX PAID tab
-      setActiveTab(1);
+    if (!canViewAnyTab) {
+      return;
     }
-  }, [canViewRtoPendingTaxTab, canViewTaxPaidTab, activeTab]);
+    
+    // If current active tab is hidden due to permissions, find first visible tab
+    const visibleTabs = [];
+    if (canViewRtoPendingTaxTab) visibleTabs.push(0);
+    if (canViewTaxPaidTab) visibleTabs.push(1);
+    
+    if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+      setActiveTab(visibleTabs[0]);
+    }
+  }, [canViewAnyTab, canViewRtoPendingTaxTab, canViewTaxPaidTab, activeTab]);
 
   const {
     data: pendingData,
@@ -556,7 +1059,7 @@ function RTOTax() {
 
   useEffect(() => {
     if (!canViewRTOTax) {
-      setError('Permission denied');
+      showError('You do not have permission to view RTO Tax');
       setLoading(false);
       return;
     }
@@ -622,7 +1125,8 @@ function RTOTax() {
   };
 
   const handleUpdateSelected = async () => {
-    if (!canUpdateRTOTax) {
+    // Check CREATE permission for the RTO PENDING TAX tab
+    if (!canCreateInRtoPendingTaxTab) {
       showError('You do not have permission to update RTO tax');
       return;
     }
@@ -693,17 +1197,30 @@ function RTOTax() {
   };
   
   const renderPendingTable = () => {
+    // Check if user has permission to view this tab
+    if (!canViewRtoPendingTaxTab) {
+      return (
+        <div className="text-center py-4">
+          <CAlert color="warning">
+            You do not have permission to view the RTO PENDING TAX tab.
+          </CAlert>
+        </div>
+      );
+    }
+
     return (
       <div className="responsive-table-wrapper">
         <CTable striped bordered hover className='responsive-table'>
           <CTableHead>
             <CTableRow>
-              <CTableHeaderCell scope="col">
-                <CFormCheck
-                  onChange={handleSelectAll}
-                  checked={selectedRows.length === filteredPendings.length && filteredPendings.length > 0}
-                />
-              </CTableHeaderCell>
+              {canCreateInRtoPendingTaxTab && (
+                <CTableHeaderCell scope="col">
+                  <CFormCheck
+                    onChange={handleSelectAll}
+                    checked={selectedRows.length === filteredPendings.length && filteredPendings.length > 0}
+                  />
+                </CTableHeaderCell>
+              )}
               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
               <CTableHeaderCell scope="col">RTO Amount</CTableHeaderCell>
@@ -717,38 +1234,48 @@ function RTOTax() {
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="9" style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan={canCreateInRtoPendingTaxTab ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}>
                   No data available
                 </CTableDataCell>
               </CTableRow>
             ) : (
               filteredPendings.map((item, index) => (
                 <CTableRow key={item._id}>
-                  <CTableDataCell>
-                    <CFormCheck
-                      checked={selectedRows.includes(item._id)}
-                      onChange={() => toggleRowSelection(item._id)}
-                    />
-                  </CTableDataCell>
+                  {canCreateInRtoPendingTaxTab && (
+                    <CTableDataCell>
+                      <CFormCheck
+                        checked={selectedRows.includes(item._id)}
+                        onChange={() => toggleRowSelection(item._id)}
+                      />
+                    </CTableDataCell>
+                  )}
                   <CTableDataCell>{index + 1}</CTableDataCell>
                   <CTableDataCell>{item.bookingId?.bookingNumber || 'N/A'}</CTableDataCell>
                   <CTableDataCell>
-                    <CFormInput
-                      type="number"
-                      value={item.rtoAmount || ''}
-                      onChange={(e) => handleRTOAmountChange(item._id, e.target.value)}
-                      size="sm"
-                      style={{ width: '100px' }}
-                    />
+                    {canCreateInRtoPendingTaxTab ? (
+                      <CFormInput
+                        type="number"
+                        value={item.rtoAmount || ''}
+                        onChange={(e) => handleRTOAmountChange(item._id, e.target.value)}
+                        size="sm"
+                        style={{ width: '100px' }}
+                      />
+                    ) : (
+                      <span>{item.rtoAmount || 'N/A'}</span>
+                    )}
                   </CTableDataCell>
                   <CTableDataCell>
-                    <CFormInput
-                      type="text"
-                      value={item.numberPlate || ''}
-                      onChange={(e) => handleNumberPlateChange(item._id, e.target.value)}
-                      size="sm"
-                      style={{ width: '120px' }}
-                    />
+                    {canCreateInRtoPendingTaxTab ? (
+                      <CFormInput
+                        type="text"
+                        value={item.numberPlate || ''}
+                        onChange={(e) => handleNumberPlateChange(item._id, e.target.value)}
+                        size="sm"
+                        style={{ width: '120px' }}
+                      />
+                    ) : (
+                      <span>{item.numberPlate || 'N/A'}</span>
+                    )}
                   </CTableDataCell>
                   <CTableDataCell>{item.bookingId?.model?.model_name || 'N/A'}</CTableDataCell>
                   <CTableDataCell>{item.bookingId?.chassisNumber || 'N/A'}</CTableDataCell>
@@ -764,6 +1291,17 @@ function RTOTax() {
   };
 
   const renderTaxPaidTable = () => {
+    // Check if user has permission to view this tab
+    if (!canViewTaxPaidTab) {
+      return (
+        <div className="text-center py-4">
+          <CAlert color="warning">
+            You do not have permission to view the TAX PAID tab.
+          </CAlert>
+        </div>
+      );
+    }
+
     return (
       <div className="responsive-table-wrapper">
         <CTable striped bordered hover className='responsive-table'>
@@ -839,94 +1377,110 @@ function RTOTax() {
       
       <CCard className='table-container mt-4'>
         <CCardBody>
-          <CNav variant="tabs" className="mb-3 border-bottom">
-            {/* Only show RTO PENDING TAX tab if user has VIEW permission for it */}
-            {canViewRtoPendingTaxTab && (
-              <CNavItem>
-                <CNavLink
-                  active={activeTab === 0}
-                  onClick={() => handleTabChange(0)}
-                  style={{ 
-                    cursor: 'pointer',
-                    borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
-                    color: 'black',
-                    borderBottom: 'none'
-                  }}
-                >
-                  RTO PENDING TAX
-                </CNavLink>
-              </CNavItem>
-            )}
-            {/* Only show TAX PAID tab if user has VIEW permission for it */}
-            {canViewTaxPaidTab && (
-              <CNavItem>
-                <CNavLink
-                  active={activeTab === 1}
-                  onClick={() => handleTabChange(1)}
-                  style={{ 
-                    cursor: 'pointer',
-                    borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
-                    borderBottom: 'none',
-                    color: 'black'
-                  }}
-                >
-                  TAX PAID
-                </CNavLink>
-              </CNavItem>
-            )}
-          </CNav>
-
-          <div className="d-flex justify-content-between mb-3">
-            <div>
-              {activeTab === 0 && (
-                <div className="d-flex align-items-center gap-2">
-                  <CFormInput
-                    type="text"
-                    placeholder="Receipt Number"
-                    value={receiptNumber}
-                    onChange={(e) => setReceiptNumber(e.target.value)}
-                    style={{ width: '200px' }}
-                    size="sm"
-                  />
-                  {canUpdateRTOTax && (
-                    <CButton 
-                      size="sm" 
-                      className="action-btn"
-                      onClick={handleUpdateSelected}
+          {/* Show tabs only if user has permission to view at least one tab */}
+          {canViewAnyTab ? (
+            <>
+              <CNav variant="tabs" className="mb-3 border-bottom">
+                {canViewRtoPendingTaxTab && (
+                  <CNavItem>
+                    <CNavLink
+                      active={activeTab === 0}
+                      onClick={() => handleTabChange(0)}
+                      style={{ 
+                        cursor: 'pointer',
+                        borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+                        color: 'black',
+                        borderBottom: 'none'
+                      }}
                     >
-                      Update
-                    </CButton>
+                      RTO PENDING TAX
+                      {!canCreateInRtoPendingTaxTab && (
+                        <span className="ms-1 text-muted small">(View Only)</span>
+                      )}
+                    </CNavLink>
+                  </CNavItem>
+                )}
+                {canViewTaxPaidTab && (
+                  <CNavItem>
+                    <CNavLink
+                      active={activeTab === 1}
+                      onClick={() => handleTabChange(1)}
+                      style={{ 
+                        cursor: 'pointer',
+                        borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+                        borderBottom: 'none',
+                        color: 'black'
+                      }}
+                    >
+                      TAX PAID
+                    </CNavLink>
+                  </CNavItem>
+                )}
+              </CNav>
+
+              <div className="d-flex justify-content-between mb-3">
+                <div>
+                  {activeTab === 0 && (
+                    <div className="d-flex align-items-center gap-2">
+                      <CFormInput
+                        type="text"
+                        placeholder="Receipt Number"
+                        value={receiptNumber}
+                        onChange={(e) => setReceiptNumber(e.target.value)}
+                        style={{ width: '200px' }}
+                        size="sm"
+                        disabled={!canCreateInRtoPendingTaxTab}
+                      />
+                      {canCreateInRtoPendingTaxTab && (
+                        <CButton 
+                          size="sm" 
+                          className="action-btn"
+                          onClick={handleUpdateSelected}
+                        >
+                          Update
+                        </CButton>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-            <div className='d-flex'>
-              <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
-              <CFormInput
-                type="text"
-                style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
-                className="d-inline-block square-search"
-                value={activeTab === 0 ? receiptNoSearch : searchTerm}
-                onChange={(e) => {
-                  if (activeTab === 0) {
-                    handleReceiptNoSearch(e);
-                  } else {
-                    setSearchTerm(e.target.value);
-                    handleApprovedFilter(e.target.value);
-                  }
-                }}
-              />
-            </div>
-          </div>
+                <div className='d-flex'>
+                  <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+                  <CFormInput
+                    type="text"
+                    style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+                    className="d-inline-block square-search"
+                    value={activeTab === 0 ? receiptNoSearch : searchTerm}
+                    onChange={(e) => {
+                      if (activeTab === 0) {
+                        handleReceiptNoSearch(e);
+                      } else {
+                        setSearchTerm(e.target.value);
+                        handleApprovedFilter(e.target.value);
+                      }
+                    }}
+                    disabled={!canViewAnyTab}
+                  />
+                </div>
+              </div>
 
-          <CTabContent>
-            <CTabPane visible={activeTab === 0}>
-              {renderPendingTable()}
-            </CTabPane>
-            <CTabPane visible={activeTab === 1}>
-              {renderTaxPaidTable()}
-            </CTabPane>
-          </CTabContent>
+              <CTabContent>
+                {canViewRtoPendingTaxTab && (
+                  <CTabPane visible={activeTab === 0}>
+                    {renderPendingTable()}
+                  </CTabPane>
+                )}
+                {canViewTaxPaidTab && (
+                  <CTabPane visible={activeTab === 1}>
+                    {renderTaxPaidTable()}
+                  </CTabPane>
+                )}
+              </CTabContent>
+            </>
+          ) : (
+            <CAlert color="warning" className="text-center">
+              You don't have permission to view any tabs in RTO Tax.
+            </CAlert>
+          )}
         </CCardBody>
       </CCard>
     </div>

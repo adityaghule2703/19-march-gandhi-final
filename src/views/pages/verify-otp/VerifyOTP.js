@@ -333,7 +333,7 @@ const VerifyOTP = () => {
         });
 
         // Navigate to dashboard
-        navigate('/dashboard');
+        navigate('/inward-list');
       } else {
         setErrorMessage('Invalid OTP. Please try again.');
       }

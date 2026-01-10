@@ -21,7 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 
 function ContraVoucher() {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const hasBranch = !!storedUser.branch?._id;
+  // Remove hasBranch variable since we're not using it
   const [formData, setFormData] = useState({
     recipientName: '',
     voucherType: 'credit',
@@ -29,7 +29,7 @@ function ContraVoucher() {
     amount: '',
     remark: '',
     bankLocation: '',
-    branch: hasBranch ? storedUser.branch?._id : ''
+    branch: '' // Initialize with empty string instead of user's branch
   });
   const [errors, setErrors] = useState({});
   const [banks, setBanks] = useState([]);
@@ -202,7 +202,7 @@ function ContraVoucher() {
                     name="branch" 
                     value={formData.branch} 
                     onChange={handleChange}
-                    disabled={!canCreateContraVoucher || hasBranch}
+                    disabled={!canCreateContraVoucher} // Removed the hasBranch condition
                   >
                     <option value="">-Select-</option>
                     {branches.map((branch) => (

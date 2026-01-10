@@ -120,6 +120,8 @@ const DocumentsList = React.lazy(() => import('../views/masters/documents/Docume
 const AddCondition = React.lazy(() => import('../views/masters/terms&conditions/AddCondition'))
 const ConditionList = React.lazy(() => import('../views/masters/terms&conditions/ConditionList'))
 
+const BranchAuditList = React.lazy(()=>import('../views/masters/branchauditlist/BranchAuditList'))
+
 const TemplateList = React.lazy(() => import('../views/masters/templateform/TemplateList'))
 const TemplateForm = React.lazy(() => import('../views/masters/templateform/TemplateForm'))
 const TemplatePreview = React.lazy(() => import('../views/masters/templateform/TemplatePreview'))
@@ -157,6 +159,8 @@ export const masterRoutes = [
     { path:'/branch/branch-list',name: 'Branch List', element: BranchList},
     { path:'/branch/add-branch',name: 'Add Branch', element: AddBranch},
     { path:'/branch/update-branch/:id',name: 'Add Branch', element: AddBranch},
+
+     { path:'/branchauditlist/branch-audit-list',name: 'Branch Audit List', element: BranchAuditList},
   
     { path:'/headers/headers-list', name:'Headers List', element:HeadersList},
     { path:'/headers/add-header', name:'Add Headers', element:AddHeader},

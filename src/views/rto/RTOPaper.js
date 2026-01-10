@@ -414,6 +414,453 @@
 
 
 
+// import React, { useState, useEffect } from 'react';
+// import { 
+//   CBadge, 
+//   CNav, 
+//   CNavItem, 
+//   CNavLink, 
+//   CTabContent, 
+//   CTabPane,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CCard,
+//   CCardBody,
+//   CButton,
+//   CFormInput,
+//   CSpinner,
+//   CFormLabel,
+//   CAlert
+// } from '@coreui/react';
+// import { Link } from 'react-router-dom';
+// import CIcon from '@coreui/icons-react';
+// import { cilCloudUpload, cilZoom } from '@coreui/icons';
+// import { axiosInstance, getDefaultSearchFields, showError, useTableFilter } from '../../utils/tableImports';
+// import '../../css/invoice.css';
+// import '../../css/table.css';
+// import KYCDocuments from './KYCDocuments';
+
+// // Import the new permission utilities
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS,
+//   canViewPage,
+//   canUpdateInPage,
+//   canCreateInPage
+// } from '../../utils/modulePermissions';
+// import { useAuth } from '../../context/AuthContext';
+
+// function RTOPaper() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [showKycModal, setShowKycModal] = useState(false);
+//   const [kycData, setKycData] = useState(null);
+//   const [selectedRtoId, setSelectedRtoId] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const { permissions } = useAuth();
+
+//   // Page-level permission checks for RTO Paper page under RTO module
+//   const canViewRTOPaper = canViewPage(
+//     permissions, 
+//     MODULES.RTO, 
+//     PAGES.RTO.RTO_PAPER
+//   );
+  
+//   const canUpdateRTOPaper = canUpdateInPage(
+//     permissions, 
+//     MODULES.RTO, 
+//     PAGES.RTO.RTO_PAPER
+//   );
+  
+//   const canCreateRTOPaper = canCreateInPage(
+//     permissions, 
+//     MODULES.RTO, 
+//     PAGES.RTO.RTO_PAPER
+//   );
+
+//   // Tab-level VIEW permission checks
+//   const canViewRtoPaperPendingTab = hasSafePagePermission(
+//     permissions,
+//     MODULES.RTO,
+//     PAGES.RTO.RTO_PAPER,
+//     ACTIONS.VIEW,
+//     TABS.RTO_PAPER.RTO_PAPER_PENDING
+//   );
+  
+//   const canViewCompletedTab = hasSafePagePermission(
+//     permissions,
+//     MODULES.RTO,
+//     PAGES.RTO.RTO_PAPER,
+//     ACTIONS.VIEW,
+//     TABS.RTO_PAPER.COMPLETED
+//   );
+
+//   // Adjust activeTab when permissions change
+//   useEffect(() => {
+//     if (!canViewRtoPaperPendingTab && activeTab === 0 && canViewCompletedTab) {
+//       // If RTO PAPER PENDING tab is hidden and activeTab is 0, switch to COMPLETED tab
+//       setActiveTab(1);
+//     }
+//   }, [canViewRtoPaperPendingTab, canViewCompletedTab, activeTab]);
+
+//   const {
+//     data: pendingData,
+//     setData: setPendingData,
+//     filteredData: filteredPendings,
+//     setFilteredData: setFilteredPendings,
+//     handleFilter: handlePendingFilter
+//   } = useTableFilter([]);
+
+//   const {
+//     data: approvedData,
+//     setData: setApprovedData,
+//     filteredData: filteredApproved,
+//     setFilteredData: setFilteredApproved,
+//     handleFilter: handleApprovedFilter
+//   } = useTableFilter([]);
+
+//   useEffect(() => {
+//     if (!canViewRTOPaper) {
+//       setError('Permission denied');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     fetchData();
+//     fetchLocationData();
+//   }, [canViewRTOPaper]);
+
+//   const fetchData = async () => {
+//     if (!canViewRTOPaper) {
+//       return;
+//     }
+    
+//     try {
+//       setLoading(true);
+//       const response = await axiosInstance.get(`/rtoProcess/rtopaperspending`);
+//       setPendingData(response.data.data);
+//       setFilteredPendings(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   const fetchLocationData = async () => {
+//     if (!canViewRTOPaper) {
+//       return;
+//     }
+    
+//     try {
+//       const response = await axiosInstance.get(`/rtoProcess/rtopaperapproved`);
+//       setApprovedData(response.data.data);
+//       setFilteredApproved(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const handleViewKYC = async (rtoItem) => {
+//     if (!canViewRTOPaper) {  // Changed from canUpdateRTOPaper to canViewRTOPaper
+//       showError('You do not have permission to view KYC documents');
+//       return;
+//     }
+    
+//     try {
+//       const bookingId = rtoItem.bookingId?.id;
+//       setSelectedRtoId(rtoItem._id);
+
+//       if (!bookingId) {
+//         showError('Booking ID not found');
+//         return;
+//       }
+
+//       const response = await axiosInstance.get(`/kyc/${bookingId}/documents`);
+
+//       const kycDataWithStatus = {
+//         ...response.data.data,
+//         status: rtoItem.documentStatus?.kyc?.status || 'PENDING',
+//         chassisNumber: rtoItem.bookingId?.chassisNumber,
+//         bookingNumber: rtoItem.bookingId?.bookingNumber,
+//         customerName: rtoItem.bookingId?.customerName
+//       };
+
+//       setKycData(kycDataWithStatus);
+//       setShowKycModal(true);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const refreshData = () => {
+//     fetchData();
+//     fetchLocationData();
+//   };
+
+//   const handleTabChange = (tab) => {
+//     setActiveTab(tab);
+//     setSearchTerm('');
+//   };
+
+//   const renderPendingTable = () => {
+//     return (
+//       <div className="responsive-table-wrapper">
+//         <CTable striped bordered hover className='responsive-table'>
+//           <CTableHead>
+//             <CTableRow>
+//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Contact Number1</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">RTO Paper</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Upload KYC</CTableHeaderCell>
+//               {canViewRTOPaper && <CTableHeaderCell scope="col">Action</CTableHeaderCell>} {/* Changed to canViewRTOPaper */}
+//             </CTableRow>
+//           </CTableHead>
+//           <CTableBody>
+//             {filteredPendings.length === 0 ? (
+//               <CTableRow>
+//                 <CTableDataCell colSpan={canViewRTOPaper ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}> {/* Changed to canViewRTOPaper */}
+//                   No data available
+//                 </CTableDataCell>
+//               </CTableRow>
+//             ) : (
+//               filteredPendings.map((rtoItem, index) => (
+//                 <CTableRow key={index}>
+//                   <CTableDataCell>{index + 1}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.bookingNumber || ''}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.model?.model_name || ''}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.chassisNumber || ''}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.customerName || ''}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.customerMobile || ''}</CTableDataCell>
+//                   <CTableDataCell>
+//                     <CBadge color={rtoItem.rtoPaperStatus === 'Not Submitted' ? 'danger' : 'secondary'} shape="rounded-pill">
+//                       {rtoItem.rtoPaperStatus || 'Pending'}
+//                     </CBadge>
+//                   </CTableDataCell>
+//                   <CTableDataCell>
+//                     {!rtoItem.kycStatus || rtoItem.kycStatus === 'NOT_UPLOADED' || rtoItem.kycStatus === 'REJECTED' ? (
+//                       canCreateRTOPaper ? (
+//                         <Link
+//                           to={`/upload-kyc/${rtoItem.bookingId?.id}`}
+//                           state={{
+//                             bookingId: rtoItem.bookingId?.id,
+//                             customerName: rtoItem.bookingId?.customerName,
+//                             address: `${rtoItem.bookingId?.customerAddress || ''}`,
+//                             chassisNumber: rtoItem.bookingId?.chassisNumber
+//                           }}
+//                         >
+//                           <CButton size="sm" className="upload-kyc-btn icon-only">
+//                             <CIcon icon={cilCloudUpload} />
+//                           </CButton>
+//                         </Link>
+//                       ) : (
+//                         <span className="text-muted">No permission</span>
+//                       )
+//                     ) : (
+//                       <span className={`status-badge ${(rtoItem.kycStatus || '').toLowerCase()}`}>
+//                         {rtoItem.kycStatus || 'N/A'}
+//                       </span>
+//                     )}
+//                   </CTableDataCell>
+//                   {canViewRTOPaper && (  // Changed to canViewRTOPaper
+//                     <CTableDataCell>
+//                       <CButton 
+//                         size="sm" 
+//                         className="action-btn"
+//                         onClick={() => handleViewKYC(rtoItem)}
+//                       >
+//                         <CIcon icon={cilZoom} className="me-1" />
+//                         View
+//                       </CButton>
+//                     </CTableDataCell>
+//                   )}
+//                 </CTableRow>
+//               ))
+//             )}
+//           </CTableBody>
+//         </CTable>
+//       </div>
+//     );
+//   };
+
+//   const renderCompletedTable = () => {
+//     return (
+//       <div className="responsive-table-wrapper">
+//         <CTable striped bordered hover className='responsive-table'>
+//           <CTableHead>
+//             <CTableRow>
+//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Contact Number1</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">RTO Paper</CTableHeaderCell>
+//             </CTableRow>
+//           </CTableHead>
+//           <CTableBody>
+//             {filteredApproved.length === 0 ? (
+//               <CTableRow>
+//                 <CTableDataCell colSpan="7" style={{ color: 'red', textAlign: 'center' }}>
+//                   No data available
+//                 </CTableDataCell>
+//               </CTableRow>
+//             ) : (
+//               filteredApproved.map((rtoItem, index) => (
+//                 <CTableRow key={index}>
+//                   <CTableDataCell>{index + 1}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.bookingNumber || ''}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.model?.model_name || ''}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.chassisNumber || ''}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.customerName || ''}</CTableDataCell>
+//                   <CTableDataCell>{rtoItem.bookingId?.customerMobile || ''}</CTableDataCell>
+//                   <CTableDataCell>
+//                     <CBadge color={rtoItem.rtoPaperStatus === 'Submitted' ? 'success' : 'danger'} shape="rounded-pill">
+//                       {rtoItem.rtoPaperStatus || 'Pending'}
+//                     </CBadge>
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ))
+//             )}
+//           </CTableBody>
+//         </CTable>
+//       </div>
+//     );
+//   };
+
+//   // Check if user has permission to view the page
+//   if (!canViewRTOPaper) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view RTO Paper Management.
+//       </div>
+//     );
+//   }
+
+//   if (loading) {
+//     return (
+//       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+//         <CSpinner color="primary" />
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="alert alert-danger" role="alert">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div>
+//       <div className='title'>RTO Paper Management</div>
+      
+//       <CCard className='table-container mt-4'>
+//         <CCardBody>
+//           <CNav variant="tabs" className="mb-3 border-bottom">
+//             {/* Only show RTO PAPER PENDING tab if user has VIEW permission for it */}
+//             {canViewRtoPaperPendingTab && (
+//               <CNavItem>
+//                 <CNavLink
+//                   active={activeTab === 0}
+//                   onClick={() => handleTabChange(0)}
+//                   style={{ 
+//                     cursor: 'pointer',
+//                     borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+//                     color: 'black',
+//                     borderBottom: 'none'
+//                   }}
+//                 >
+//                   RTO PAPER PENDING
+//                 </CNavLink>
+//               </CNavItem>
+//             )}
+//             {/* Only show COMPLETED tab if user has VIEW permission for it */}
+//             {canViewCompletedTab && (
+//               <CNavItem>
+//                 <CNavLink
+//                   active={activeTab === 1}
+//                   onClick={() => handleTabChange(1)}
+//                   style={{ 
+//                     cursor: 'pointer',
+//                     borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+//                     borderBottom: 'none',
+//                     color: 'black'
+//                   }}
+//                 >
+//                   COMPLETED
+//                 </CNavLink>
+//               </CNavItem>
+//             )}
+//           </CNav>
+
+//           <div className="d-flex justify-content-between mb-3">
+//             <div></div>
+//             <div className='d-flex'>
+//               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//               <CFormInput
+//                 type="text"
+//                 style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+//                 className="d-inline-block square-search"
+//                 value={searchTerm}
+//                 onChange={(e) => {
+//                   setSearchTerm(e.target.value);
+//                   if (activeTab === 0) handlePendingFilter(e.target.value, getDefaultSearchFields('rto'));
+//                   else handleApprovedFilter(e.target.value, getDefaultSearchFields('rto'));
+//                 }}
+//               />
+//             </div>
+//           </div>
+
+//           <CTabContent>
+//             <CTabPane visible={activeTab === 0}>
+//               {renderPendingTable()}
+//             </CTabPane>
+//             <CTabPane visible={activeTab === 1}>
+//               {renderCompletedTable()}
+//             </CTabPane>
+//           </CTabContent>
+//         </CCardBody>
+//       </CCard>
+
+//       <KYCDocuments
+//         open={showKycModal}
+//         onClose={() => setShowKycModal(false)}
+//         kycData={kycData}
+//         refreshData={refreshData}
+//         rtoId={selectedRtoId}
+//       />
+//     </div>
+//   );
+// }
+
+// export default RTOPaper;
+
+
+
 import React, { useState, useEffect } from 'react';
 import { 
   CBadge, 
@@ -444,18 +891,15 @@ import '../../css/invoice.css';
 import '../../css/table.css';
 import KYCDocuments from './KYCDocuments';
 
-// Import the new permission utilities
+// Import the permission utilities
 import { 
   hasSafePagePermission,
   MODULES, 
   PAGES,
   TABS,
-  ACTIONS,
-  canViewPage,
-  canUpdateInPage,
-  canCreateInPage
+  ACTIONS
 } from '../../utils/modulePermissions';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext'; // FIXED IMPORT PATH
 
 function RTOPaper() {
   const [activeTab, setActiveTab] = useState(0);
@@ -467,23 +911,12 @@ function RTOPaper() {
   const [searchTerm, setSearchTerm] = useState('');
   const { permissions } = useAuth();
 
-  // Page-level permission checks for RTO Paper page under RTO module
-  const canViewRTOPaper = canViewPage(
+  // Page-level VIEW permission check for RTO Paper page
+  const canViewRTOPaper = hasSafePagePermission(
     permissions, 
     MODULES.RTO, 
-    PAGES.RTO.RTO_PAPER
-  );
-  
-  const canUpdateRTOPaper = canUpdateInPage(
-    permissions, 
-    MODULES.RTO, 
-    PAGES.RTO.RTO_PAPER
-  );
-  
-  const canCreateRTOPaper = canCreateInPage(
-    permissions, 
-    MODULES.RTO, 
-    PAGES.RTO.RTO_PAPER
+    PAGES.RTO.RTO_PAPER, 
+    ACTIONS.VIEW
   );
 
   // Tab-level VIEW permission checks
@@ -502,14 +935,43 @@ function RTOPaper() {
     ACTIONS.VIEW,
     TABS.RTO_PAPER.COMPLETED
   );
+  
+  // Tab-level CREATE permission for RTO PAPER PENDING tab (for Upload KYC)
+  const canCreateInRtoPaperPendingTab = hasSafePagePermission(
+    permissions,
+    MODULES.RTO,
+    PAGES.RTO.RTO_PAPER,
+    ACTIONS.CREATE,
+    TABS.RTO_PAPER.RTO_PAPER_PENDING
+  );
+  
+  // Tab-level VIEW permission for RTO PAPER PENDING tab (for View button)
+  const canViewInRtoPaperPendingTab = hasSafePagePermission(
+    permissions,
+    MODULES.RTO,
+    PAGES.RTO.RTO_PAPER,
+    ACTIONS.VIEW,
+    TABS.RTO_PAPER.RTO_PAPER_PENDING
+  );
+
+  // Check if user can view at least one tab
+  const canViewAnyTab = canViewRtoPaperPendingTab || canViewCompletedTab;
 
   // Adjust activeTab when permissions change
   useEffect(() => {
-    if (!canViewRtoPaperPendingTab && activeTab === 0 && canViewCompletedTab) {
-      // If RTO PAPER PENDING tab is hidden and activeTab is 0, switch to COMPLETED tab
-      setActiveTab(1);
+    if (!canViewAnyTab) {
+      return;
     }
-  }, [canViewRtoPaperPendingTab, canViewCompletedTab, activeTab]);
+    
+    // If current active tab is hidden due to permissions, find first visible tab
+    const visibleTabs = [];
+    if (canViewRtoPaperPendingTab) visibleTabs.push(0);
+    if (canViewCompletedTab) visibleTabs.push(1);
+    
+    if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+      setActiveTab(visibleTabs[0]);
+    }
+  }, [canViewAnyTab, canViewRtoPaperPendingTab, canViewCompletedTab, activeTab]);
 
   const {
     data: pendingData,
@@ -529,7 +991,7 @@ function RTOPaper() {
 
   useEffect(() => {
     if (!canViewRTOPaper) {
-      setError('Permission denied');
+      showError('You do not have permission to view RTO Paper');
       setLoading(false);
       return;
     }
@@ -576,7 +1038,8 @@ function RTOPaper() {
   };
 
   const handleViewKYC = async (rtoItem) => {
-    if (!canViewRTOPaper) {  // Changed from canUpdateRTOPaper to canViewRTOPaper
+    // Check VIEW permission for the RTO PAPER PENDING tab
+    if (!canViewInRtoPaperPendingTab) {
       showError('You do not have permission to view KYC documents');
       return;
     }
@@ -621,6 +1084,17 @@ function RTOPaper() {
   };
 
   const renderPendingTable = () => {
+    // Check if user has permission to view this tab
+    if (!canViewRtoPaperPendingTab) {
+      return (
+        <div className="text-center py-4">
+          <CAlert color="warning">
+            You do not have permission to view the RTO PAPER PENDING tab.
+          </CAlert>
+        </div>
+      );
+    }
+
     return (
       <div className="responsive-table-wrapper">
         <CTable striped bordered hover className='responsive-table'>
@@ -634,13 +1108,13 @@ function RTOPaper() {
               <CTableHeaderCell scope="col">Contact Number1</CTableHeaderCell>
               <CTableHeaderCell scope="col">RTO Paper</CTableHeaderCell>
               <CTableHeaderCell scope="col">Upload KYC</CTableHeaderCell>
-              {canViewRTOPaper && <CTableHeaderCell scope="col">Action</CTableHeaderCell>} {/* Changed to canViewRTOPaper */}
+              {canViewInRtoPaperPendingTab && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan={canViewRTOPaper ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}> {/* Changed to canViewRTOPaper */}
+                <CTableDataCell colSpan={canViewInRtoPaperPendingTab ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}>
                   No data available
                 </CTableDataCell>
               </CTableRow>
@@ -660,7 +1134,7 @@ function RTOPaper() {
                   </CTableDataCell>
                   <CTableDataCell>
                     {!rtoItem.kycStatus || rtoItem.kycStatus === 'NOT_UPLOADED' || rtoItem.kycStatus === 'REJECTED' ? (
-                      canCreateRTOPaper ? (
+                      canCreateInRtoPaperPendingTab ? (
                         <Link
                           to={`/upload-kyc/${rtoItem.bookingId?.id}`}
                           state={{
@@ -683,7 +1157,7 @@ function RTOPaper() {
                       </span>
                     )}
                   </CTableDataCell>
-                  {canViewRTOPaper && (  // Changed to canViewRTOPaper
+                  {canViewInRtoPaperPendingTab && (
                     <CTableDataCell>
                       <CButton 
                         size="sm" 
@@ -705,6 +1179,17 @@ function RTOPaper() {
   };
 
   const renderCompletedTable = () => {
+    // Check if user has permission to view this tab
+    if (!canViewCompletedTab) {
+      return (
+        <div className="text-center py-4">
+          <CAlert color="warning">
+            You do not have permission to view the COMPLETED tab.
+          </CAlert>
+        </div>
+      );
+    }
+
     return (
       <div className="responsive-table-wrapper">
         <CTable striped bordered hover className='responsive-table'>
@@ -780,69 +1265,84 @@ function RTOPaper() {
       
       <CCard className='table-container mt-4'>
         <CCardBody>
-          <CNav variant="tabs" className="mb-3 border-bottom">
-            {/* Only show RTO PAPER PENDING tab if user has VIEW permission for it */}
-            {canViewRtoPaperPendingTab && (
-              <CNavItem>
-                <CNavLink
-                  active={activeTab === 0}
-                  onClick={() => handleTabChange(0)}
-                  style={{ 
-                    cursor: 'pointer',
-                    borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
-                    color: 'black',
-                    borderBottom: 'none'
-                  }}
-                >
-                  RTO PAPER PENDING
-                </CNavLink>
-              </CNavItem>
-            )}
-            {/* Only show COMPLETED tab if user has VIEW permission for it */}
-            {canViewCompletedTab && (
-              <CNavItem>
-                <CNavLink
-                  active={activeTab === 1}
-                  onClick={() => handleTabChange(1)}
-                  style={{ 
-                    cursor: 'pointer',
-                    borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
-                    borderBottom: 'none',
-                    color: 'black'
-                  }}
-                >
-                  COMPLETED
-                </CNavLink>
-              </CNavItem>
-            )}
-          </CNav>
+          {/* Show tabs only if user has permission to view at least one tab */}
+          {canViewAnyTab ? (
+            <>
+              <CNav variant="tabs" className="mb-3 border-bottom">
+                {canViewRtoPaperPendingTab && (
+                  <CNavItem>
+                    <CNavLink
+                      active={activeTab === 0}
+                      onClick={() => handleTabChange(0)}
+                      style={{ 
+                        cursor: 'pointer',
+                        borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+                        color: 'black',
+                        borderBottom: 'none'
+                      }}
+                    >
+                      RTO PAPER PENDING
+                      {!canCreateInRtoPaperPendingTab && (
+                        <span className="ms-1 text-muted small">(View Only)</span>
+                      )}
+                    </CNavLink>
+                  </CNavItem>
+                )}
+                {canViewCompletedTab && (
+                  <CNavItem>
+                    <CNavLink
+                      active={activeTab === 1}
+                      onClick={() => handleTabChange(1)}
+                      style={{ 
+                        cursor: 'pointer',
+                        borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+                        borderBottom: 'none',
+                        color: 'black'
+                      }}
+                    >
+                      COMPLETED
+                    </CNavLink>
+                  </CNavItem>
+                )}
+              </CNav>
 
-          <div className="d-flex justify-content-between mb-3">
-            <div></div>
-            <div className='d-flex'>
-              <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
-              <CFormInput
-                type="text"
-                style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
-                className="d-inline-block square-search"
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  if (activeTab === 0) handlePendingFilter(e.target.value, getDefaultSearchFields('rto'));
-                  else handleApprovedFilter(e.target.value, getDefaultSearchFields('rto'));
-                }}
-              />
-            </div>
-          </div>
+              <div className="d-flex justify-content-between mb-3">
+                <div></div>
+                <div className='d-flex'>
+                  <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+                  <CFormInput
+                    type="text"
+                    style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+                    className="d-inline-block square-search"
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      if (activeTab === 0) handlePendingFilter(e.target.value, getDefaultSearchFields('rto'));
+                      else handleApprovedFilter(e.target.value, getDefaultSearchFields('rto'));
+                    }}
+                    disabled={!canViewAnyTab}
+                  />
+                </div>
+              </div>
 
-          <CTabContent>
-            <CTabPane visible={activeTab === 0}>
-              {renderPendingTable()}
-            </CTabPane>
-            <CTabPane visible={activeTab === 1}>
-              {renderCompletedTable()}
-            </CTabPane>
-          </CTabContent>
+              <CTabContent>
+                {canViewRtoPaperPendingTab && (
+                  <CTabPane visible={activeTab === 0}>
+                    {renderPendingTable()}
+                  </CTabPane>
+                )}
+                {canViewCompletedTab && (
+                  <CTabPane visible={activeTab === 1}>
+                    {renderCompletedTable()}
+                  </CTabPane>
+                )}
+              </CTabContent>
+            </>
+          ) : (
+            <CAlert color="warning" className="text-center">
+              You don't have permission to view any tabs in RTO Paper.
+            </CAlert>
+          )}
         </CCardBody>
       </CCard>
 

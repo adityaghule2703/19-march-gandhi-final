@@ -21,7 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 
 function CashVoucher() {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const hasBranch = !!storedUser.branch?._id;
+  // Remove the hasBranch logic if you want to show all branches
   const [formData, setFormData] = useState({
     recipientName: '',
     voucherType: 'credit',
@@ -29,7 +29,7 @@ function CashVoucher() {
     amount: '',
     remark: '',
     cashLocation: '',
-    branch: hasBranch ? storedUser.branch?._id : ''
+    branch: '' // Initialize with empty string instead of user's branch
   });
   const [errors, setErrors] = useState({});
   const [cashLocations, setCashLocations] = useState([]);
@@ -212,7 +212,7 @@ function CashVoucher() {
                     name="branch" 
                     value={formData.branch} 
                     onChange={handleChange}
-                    disabled={!canCreateCashVoucher || hasBranch}
+                    disabled={!canCreateCashVoucher} // Remove the hasBranch condition
                   >
                     <option value="">-Select-</option>
                     {branches.map((branch) => (

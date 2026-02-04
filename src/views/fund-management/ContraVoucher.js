@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../../css/form.css';
-import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CAlert } from '@coreui/react';
+import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CAlert, CSpinner } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilBank, cilDollar, cilList, cilLocationPin, cilUser } from '@coreui/icons';
 import { useNavigate } from 'react-router-dom';
@@ -10,10 +10,8 @@ import FormButtons from '../../utils/FormButtons';
 
 // Import the new permission utilities
 import { 
-  hasSafePagePermission,
   MODULES, 
   PAGES,
-  ACTIONS,
   canViewPage,
   canCreateInPage
 } from '../../utils/modulePermissions';
@@ -21,7 +19,6 @@ import { useAuth } from '../../context/AuthContext';
 
 function ContraVoucher() {
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-  // Remove hasBranch variable since we're not using it
   const [formData, setFormData] = useState({
     recipientName: '',
     voucherType: 'credit',
@@ -29,17 +26,19 @@ function ContraVoucher() {
     amount: '',
     remark: '',
     bankLocation: '',
-    branch: '' // Initialize with empty string instead of user's branch
+    branch: ''
   });
   const [errors, setErrors] = useState({});
   const [banks, setBanks] = useState([]);
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [showPdfLoader, setShowPdfLoader] = useState(false);
   const navigate = useNavigate();
   
   const { permissions } = useAuth();
   
-  // Page-level permission checks for Contra Voucher page under Fund Management module
   const canViewContraVoucher = canViewPage(
     permissions, 
     MODULES.FUND_MANAGEMENT, 
@@ -94,6 +93,49 @@ function ContraVoucher() {
     fetchAllData();
   }, [canViewContraVoucher]);
 
+  const openPdfInNewTab = (pdfBlob) => {
+    // Hide PDF loader
+    setShowPdfLoader(false);
+    setGeneratingPdf(false);
+    
+    // Create a blob URL for the PDF
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    
+    // Open the PDF in a new tab
+    const newTab = window.open(pdfUrl, '_blank');
+    
+    // Release the blob URL after the tab is loaded
+    if (newTab) {
+      newTab.onload = () => {
+        URL.revokeObjectURL(pdfUrl);
+      };
+    } else {
+      // If popup blocked, fall back to download
+      showFormSubmitError('Popup blocked! Please allow popups to view the PDF.');
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = `contra_voucher_${new Date().getTime()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(pdfUrl), 100);
+    }
+  };
+
+  const showPdfGenerationLoader = () => {
+    setGeneratingPdf(true);
+    setShowPdfLoader(true);
+    
+    // Auto-hide the loader after 30 seconds as a safety measure
+    setTimeout(() => {
+      if (generatingPdf) {
+        setShowPdfLoader(false);
+        setGeneratingPdf(false);
+        showFormSubmitError('PDF generation is taking too long. Please check from the list later.');
+      }
+    }, 30000);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -117,13 +159,111 @@ function ContraVoucher() {
     }
 
     try {
-      await axiosInstance.post('/contra-vouchers', formData);
-      await showFormSubmitToast('Contra Voucher added successfully!', () => navigate('/contra-approval'));
-
-      navigate('/contra-approval');
+      setSubmitting(true);
+      
+      // Submit the contra voucher
+      const response = await axiosInstance.post('/contra-vouchers', formData);
+      
+      // Show success message
+      await showFormSubmitToast('Contra Voucher added successfully! Generating PDF...');
+      
+      // Show PDF generation loader
+      showPdfGenerationLoader();
+      
+      // Try to get the PDF from the response
+      const voucherId = response.data.data?._id || response.data.data?.id;
+      const receiptNo = response.data.data?.receiptNo || response.data.data?.receiptNumber;
+      
+      if (receiptNo) {
+        // Try to get PDF using receipt number
+        try {
+          const pdfResponse = await axiosInstance.get(`/contra-vouchers/receipt/${receiptNo}`, {
+            responseType: 'blob'
+          });
+          openPdfInNewTab(pdfResponse.data);
+        } catch (pdfError) {
+          console.error('Error fetching PDF with receiptNo:', pdfError);
+          // Try alternative endpoint
+          await tryAlternativePdfEndpoints(voucherId, receiptNo);
+        }
+      } else if (voucherId) {
+        // Try alternative endpoint with voucher ID
+        await tryAlternativePdfEndpoints(voucherId, receiptNo);
+      } else {
+        showFormSubmitError('Voucher created but could not generate PDF. Please view it from the list.');
+        setGeneratingPdf(false);
+        setShowPdfLoader(false);
+      }
+      
+      // Reset form after successful submission
+      setFormData({
+        recipientName: '',
+        voucherType: 'credit',
+        contraType: '',
+        amount: '',
+        remark: '',
+        bankLocation: '',
+        branch: ''
+      });
+      
     } catch (error) {
       console.error('Error details:', error);
       showFormSubmitError(error);
+      setGeneratingPdf(false);
+      setShowPdfLoader(false);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const tryAlternativePdfEndpoints = async (voucherId, receiptNo) => {
+    if (!voucherId && !receiptNo) {
+      showFormSubmitError('Voucher created but could not generate PDF. Please view it from the list.');
+      setGeneratingPdf(false);
+      setShowPdfLoader(false);
+      return;
+    }
+
+    const endpoints = [
+      `/contra-vouchers/receipt/${voucherId}`,
+      `/vouchers/receipt/${voucherId}`,
+      `/contra-vouchers/print/${voucherId}`,
+      `/vouchers/print/${voucherId}`,
+      `/receipts/contra-voucher/${voucherId}`,
+    ];
+
+    if (receiptNo) {
+      endpoints.unshift(
+        `/contra-vouchers/receipt/${receiptNo}`,
+        `/vouchers/receipt/${receiptNo}`,
+        `/receipts/${receiptNo}`
+      );
+    }
+
+    let pdfFound = false;
+    
+    for (const endpoint of endpoints) {
+      try {
+        const pdfResponse = await axiosInstance.get(endpoint, {
+          responseType: 'blob'
+        });
+        
+        // Check if response is actually a PDF
+        if (pdfResponse.data && pdfResponse.data.type === 'application/pdf') {
+          openPdfInNewTab(pdfResponse.data);
+          pdfFound = true;
+          break;
+        }
+      } catch (error) {
+        console.log(`Endpoint ${endpoint} failed:`, error.message);
+        continue;
+      }
+    }
+    
+    if (!pdfFound) {
+      showFormSubmitError('Voucher created but PDF generation failed. Please view it from the list.');
+      setGeneratingPdf(false);
+      setShowPdfLoader(false);
     }
   };
 
@@ -166,6 +306,41 @@ function ContraVoucher() {
         </CAlert>
       )}
       
+      {/* PDF Generation Loader Overlay */}
+      {showPdfLoader && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(3px)'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            padding: '30px 40px',
+            borderRadius: '10px',
+            textAlign: 'center',
+            boxShadow: '0 5px 20px rgba(0, 0, 0, 0.3)',
+            maxWidth: '400px',
+            width: '90%'
+          }}>
+            <CSpinner color="primary" size="lg" />
+            <p style={{ marginTop: '15px', marginBottom: '5px', fontSize: '16px', fontWeight: '500' }}>
+              Generating PDF, please wait...
+            </p>
+            <p style={{ margin: 0, fontSize: '14px', color: '#6c757d' }}>
+              This may take a few seconds
+            </p>
+          </div>
+        </div>
+      )}
+      
       <div className="form-card">
         <div className="form-body">
           <form onSubmit={handleSubmit}>
@@ -184,7 +359,8 @@ function ContraVoucher() {
                     name="recipientName" 
                     value={formData.recipientName} 
                     onChange={handleChange}
-                    disabled={!canCreateContraVoucher}
+                    disabled={!canCreateContraVoucher || submitting || generatingPdf}
+                    style={!canCreateContraVoucher || submitting || generatingPdf ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
                   />
                 </CInputGroup>
                 {errors.recipientName && <p className="error">{errors.recipientName}</p>}
@@ -202,7 +378,8 @@ function ContraVoucher() {
                     name="branch" 
                     value={formData.branch} 
                     onChange={handleChange}
-                    disabled={!canCreateContraVoucher} // Removed the hasBranch condition
+                    disabled={!canCreateContraVoucher || submitting || generatingPdf}
+                    style={!canCreateContraVoucher || submitting || generatingPdf ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
                   >
                     <option value="">-Select-</option>
                     {branches.map((branch) => (
@@ -228,7 +405,8 @@ function ContraVoucher() {
                     name="contraType" 
                     value={formData.contraType} 
                     onChange={handleChange}
-                    disabled={!canCreateContraVoucher}
+                    disabled={!canCreateContraVoucher || submitting || generatingPdf}
+                    style={!canCreateContraVoucher || submitting || generatingPdf ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
                   >
                     <option value="">-Select</option>
                     <option value="cash_at_bank">Cash At Bank</option>
@@ -251,7 +429,8 @@ function ContraVoucher() {
                     name="amount" 
                     value={formData.amount} 
                     onChange={handleChange}
-                    disabled={!canCreateContraVoucher}
+                    disabled={!canCreateContraVoucher || submitting || generatingPdf}
+                    style={!canCreateContraVoucher || submitting || generatingPdf ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
                   />
                 </CInputGroup>
                 {errors.amount && <p className="error">{errors.amount}</p>}
@@ -267,7 +446,8 @@ function ContraVoucher() {
                     name="remark" 
                     value={formData.remark} 
                     onChange={handleChange}
-                    disabled={!canCreateContraVoucher}
+                    disabled={!canCreateContraVoucher || submitting || generatingPdf}
+                    style={!canCreateContraVoucher || submitting || generatingPdf ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
                   />
                 </CInputGroup>
               </div>
@@ -285,7 +465,8 @@ function ContraVoucher() {
                       name="bankLocation" 
                       value={formData.bankLocation} 
                       onChange={handleChange}
-                      disabled={!canCreateContraVoucher}
+                      disabled={!canCreateContraVoucher || submitting || generatingPdf}
+                      style={!canCreateContraVoucher || submitting || generatingPdf ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
                     >
                       <option value="">-Select-</option>
                       {banks.map((bank) => (
@@ -301,8 +482,19 @@ function ContraVoucher() {
             </div>
             <FormButtons 
               onCancel={handleCancel} 
-              submitDisabled={!canCreateContraVoucher}
-              submitTooltip={!canCreateContraVoucher ? "You don't have permission to create contra vouchers" : ""}
+              submitDisabled={!canCreateContraVoucher || submitting || generatingPdf}
+              submitTooltip={
+                !canCreateContraVoucher ? "You don't have permission to create contra vouchers" : 
+                generatingPdf ? "PDF is being generated..." : ""
+              }
+              submitLabel={
+                submitting ? "Creating..." : 
+                generatingPdf ? "Generating PDF..." : 
+                "Create"
+              }
+              cancelDisabled={submitting || generatingPdf}
+              cancelStyle={submitting || generatingPdf ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
+              submitStyle={!canCreateContraVoucher || submitting || generatingPdf ? { cursor: 'not-allowed', opacity: 0.7 } : {}}
             />
           </form>
         </div>

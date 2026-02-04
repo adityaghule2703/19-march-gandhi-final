@@ -4251,6 +4251,13 @@ const sidebarStructure = {
     ],
     availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
   },
+
+"BRANCH STOCK AUDIT": {
+  pages: [
+    { name: "Branch Stock Audit", tabs: null }
+  ],
+  availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+},
   "Fund Master": {
     pages: [
       { name: "Cash Account Master", tabs: null },
@@ -4363,6 +4370,7 @@ const moduleNameMap = {
   "RTO": ["RTO"],
   "Fund Management": ["FUND MANAGEMENT", "FUND_MANAGEMENT"],
   "Masters": ["MASTERS"],
+  "BRANCH STOCK AUDIT": ["BRANCH STOCK AUDIT"],
   "Fund Master": ["FUND MASTER", "FUND_MASTER"],
   "Accessories Billing": ["ACCESSORIES BILLING", "ACCESSORIES_BILLING"],
   "Customers": ["CUSTOMERS"],
@@ -4747,6 +4755,15 @@ const permissionDescriptions = {
       "DELETE": "Delete"
     }
   },
+
+"BRANCH STOCK AUDIT": {
+  "Branch Stock Audit": {
+    "CREATE": "Create new branch stock audits",
+    "VIEW": "View branch stock audit list and details",
+    "UPDATE": "Edit branch stock audit details, Approve/Reject audits",
+    "DELETE": "Delete branch stock audit records"
+  }
+},
   "Fund Master": {
     "Cash Account Master": {
       "CREATE": "New, Deactivate",

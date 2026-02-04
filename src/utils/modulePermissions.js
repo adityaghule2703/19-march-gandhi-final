@@ -2833,7 +2833,8 @@ export const MODULES = {
   ROLES: 'ROLES',
   USER: 'USER',
   BUFFER_REPORT: 'BUFFER REPORT',
-  MANAGER_DEVIATION: 'MANAGER DEVIATION'
+  MANAGER_DEVIATION: 'MANAGER DEVIATION',
+  BRANCH_STOCK_AUDIT: 'BRANCH STOCK AUDIT'
 };
 
 // All page name constants (matching your API response and sidebar)
@@ -3021,7 +3022,14 @@ export const PAGES = {
   // Manager Deviation module pages
   MANAGER_DEVIATION: {
     MANAGER_DEVIATION: 'Manager Deviation'
-  }
+  },
+
+  BRANCH_STOCK_AUDIT: {
+    LIST: 'Branch Stock Audit',
+    // You can add more if needed
+    // VIEW: 'View Branch Stock Audit',
+    // APPROVE_REJECT: 'Approve/Reject Branch Stock Audit',
+  },
 };
 
 // Tab constants for pages with tabs
@@ -3304,7 +3312,9 @@ export const getPageFromRoute = (routePath) => {
     '/buffer/buffer-list': PAGES.BUFFER_REPORT.BUFFER_LIST,
     
     // Manager Deviation
-    '/manager-deviation': PAGES.MANAGER_DEVIATION.MANAGER_DEVIATION
+    '/manager-deviation': PAGES.MANAGER_DEVIATION.MANAGER_DEVIATION,
+
+    '/branch-stock-audit': PAGES.BRANCH_STOCK_AUDIT.LIST
   };
   
   return routeMap[routePath] || null;
@@ -3451,7 +3461,9 @@ export const getModuleFromRoute = (routePath) => {
     '/buffer/buffer-list': MODULES.BUFFER_REPORT,
     
     // Manager Deviation
-    '/manager-deviation': MODULES.MANAGER_DEVIATION
+    '/manager-deviation': MODULES.MANAGER_DEVIATION,
+
+    '/branch-stock-audit': MODULES.BRANCH_STOCK_AUDIT,
   };
   
   return moduleMap[routePath] || null;

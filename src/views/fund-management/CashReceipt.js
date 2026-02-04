@@ -45,6 +45,45 @@ const CashReceipt = () => {
   // Page-level permission check for All Cash Receipt page under Fund Management module
   const canViewCashReceipt = canViewPage(permissions, MODULES.FUND_MANAGEMENT, PAGES.FUND_MANAGEMENT.ALL_CASH_RECEIPT);
 
+  // Helper function to parse the date in DD-MM-YYYY format
+  const parseDate = (dateString) => {
+    if (!dateString) return null;
+    
+    try {
+      // Split the date and time parts
+      const [datePart, timePart] = dateString.split(' ');
+      const [day, month, year] = datePart.split('-').map(Number);
+      
+      if (timePart) {
+        const [hours, minutes] = timePart.split(':').map(Number);
+        // Month is 0-indexed in JavaScript Date (0 = January, 11 = December)
+        return new Date(year, month - 1, day, hours, minutes);
+      } else {
+        return new Date(year, month - 1, day);
+      }
+    } catch (error) {
+      console.error('Error parsing date:', dateString, error);
+      return null;
+    }
+  };
+
+  // Helper function to format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = parseDate(dateString);
+    if (!date || isNaN(date.getTime())) {
+      return 'Invalid Date';
+    }
+    
+    // Format as DD/MM/YYYY
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${day}/${month}/${year}`;
+  };
+
   useEffect(() => {
     if (!canViewCashReceipt) {
       showError('You do not have permission to view Cash Receipts');
@@ -184,7 +223,8 @@ const CashReceipt = () => {
                       <CTableDataCell>{item.receiptNo}</CTableDataCell>
                       <CTableDataCell>{item.accountHead}</CTableDataCell>
                       <CTableDataCell>
-                        {item.date ? new Date(item.date).toLocaleDateString('en-GB') : ''}
+                        {/* Use the formatDate function instead of new Date().toLocaleDateString() */}
+                        {formatDate(item.date)}
                       </CTableDataCell>
                       <CTableDataCell>{item.type}</CTableDataCell>
                       <CTableDataCell>{item.voucherCategory}</CTableDataCell>

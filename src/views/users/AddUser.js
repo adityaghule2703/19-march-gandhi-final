@@ -20020,7 +20020,7 @@ import {
   CModalFooter
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilDollar, cilEnvelopeClosed, cilLocationPin, cilPhone, cilUser, cilPeople, cilTag, cilCheck, cilX, cilFolder, cilListRich, cilWarning, cilBuilding, cilInfo } from '@coreui/icons';
+import { cilDollar, cilEnvelopeClosed, cilLocationPin, cilPhone, cilUser, cilPeople, cilTag, cilCheck, cilX, cilFolder, cilListRich, cilWarning, cilBuilding, cilInfo, cilShieldAlt } from '@coreui/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { showError, showFormSubmitError, showFormSubmitToast } from 'src/utils/sweetAlerts';
 import axiosInstance from 'src/axiosInstance';
@@ -20087,9 +20087,9 @@ const permissionDescriptions = {
       "DELETE": "Delete"
     },
     "All Booking": {
-      "CREATE": "New Booking, Upload Finance, Upload KYC, Print,Approve Chassis,Reject Chassis,Back To Normal, Approve, Reject",
+      "CREATE": "New Booking, Upload Finance, Upload KYC, Print,Approve Chassis,Reject Chassis,Back To Normal, Approve, Reject, Allocate Chassis",
       "VIEW": "View Booking, Available Documents, View Finance Letter, View KYC",
-      "UPDATE": "Edit, Allocate Chassis, Change Vehicle",
+      "UPDATE": "Edit, Change Vehicle",
       "DELETE": "Delete"
     },
     "Self Insurance": {
@@ -20400,6 +20400,15 @@ const permissionDescriptions = {
       "VIEW": "View, Filter",
       "UPDATE": "Edit",
       "DELETE": "Delete"
+    }
+  },
+  // ===== ADD BRANCH STOCK AUDIT PERMISSION DESCRIPTIONS =====
+  "BRANCH STOCK AUDIT": {
+    "Branch Stock Audit": {
+      "CREATE": "Create new branch stock audits",
+      "VIEW": "View branch stock audit list and details",
+      "UPDATE": "Edit branch stock audit details, Approve/Reject audits",
+      "DELETE": "Delete branch stock audit records"
     }
   },
   "Fund Master": {
@@ -20754,6 +20763,13 @@ const sidebarStructure = {
     ],
     availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
   },
+  // ===== ADD BRANCH STOCK AUDIT HERE =====
+  "BRANCH STOCK AUDIT": {
+    pages: [
+      { name: "Branch Stock Audit", tabs: null }
+    ],
+    availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
+  },
   "Fund Master": {
     pages: [
       { name: "Cash Account Master", tabs: null },
@@ -20866,6 +20882,8 @@ const moduleNameMap = {
   "RTO": ["RTO"],
   "Fund Management": ["FUND MANAGEMENT", "FUND_MANAGEMENT"],
   "Masters": ["MASTERS"],
+  // Add this new module mapping
+  "BRANCH STOCK AUDIT": ["BRANCH STOCK AUDIT"],
   "Fund Master": ["FUND MASTER", "FUND_MASTER"],
   "Accessories Billing": ["ACCESSORIES BILLING", "ACCESSORIES_BILLING"],
   "Customers": ["CUSTOMERS"],
@@ -20946,7 +20964,8 @@ function AddUser() {
     permissions: [],
     totalDeviationAmount: '',
     perTransactionDeviationLimit: '',
-    verticles: []
+    verticles: [],
+    isStockTransferOTP: false // Added new field with default value false
   });
 
   const [roles, setRoles] = useState([]);
@@ -21195,6 +21214,12 @@ function AddUser() {
     // Extract branchAccess
     let userBranchAccess = userData.branchAccess || 'OWN';
     
+    // Extract isStockTransferOTP field - default to false if not present
+    let userIsStockTransferOTP = false;
+    if (userData.isStockTransferOTP !== undefined) {
+      userIsStockTransferOTP = Boolean(userData.isStockTransferOTP);
+    }
+    
     setFormData({
       name: userData.name || '',
       type: userType,
@@ -21210,7 +21235,8 @@ function AddUser() {
       permissions: userPermissions,
       totalDeviationAmount: userData.totalDeviationAmount !== undefined && userData.totalDeviationAmount !== null ? String(userData.totalDeviationAmount) : '',
       perTransactionDeviationLimit: userData.perTransactionDeviationLimit !== undefined && userData.perTransactionDeviationLimit !== null ? String(userData.perTransactionDeviationLimit) : '',
-      verticles: userVerticles
+      verticles: userVerticles,
+      isStockTransferOTP: userIsStockTransferOTP // Set the new field from fetched data
     });
 
     if (userRoleId) {
@@ -21725,7 +21751,12 @@ const extractPermissionIdsFromState = () => {
     if (type === 'checkbox') {
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      // For select dropdowns, convert string 'true'/'false' to boolean for isStockTransferOTP
+      if (name === 'isStockTransferOTP') {
+        setFormData(prev => ({ ...prev, [name]: value === 'true' }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      }
     }
     
     setErrors(prev => ({ ...prev, [name]: '' }));
@@ -22689,6 +22720,7 @@ const handlePagePermissionChange = (mainHeader, page, permissionType, value) => 
       branchAccess: formData.branchAccess,
       permissions: validPermissions,
       verticles: formData.verticles,
+      isStockTransferOTP: formData.isStockTransferOTP, // Added new field
       ...(formData.discount !== '' && { discount: Number(formData.discount) }),
       ...(formData.type === 'employee' && formData.branch && { branch: formData.branch }),
       ...(formData.type === 'subdealer' && formData.subdealer && { subdealer: formData.subdealer }),
@@ -22703,6 +22735,7 @@ const handlePagePermissionChange = (mainHeader, page, permissionType, value) => 
 
     console.log('Submitting payload:', payload);
     console.log('Permission count:', validPermissions.length);
+    console.log('isStockTransferOTP:', formData.isStockTransferOTP);
 
     if (id) {
       await axiosInstance.put(`/users/${id}`, payload);
@@ -23220,6 +23253,30 @@ const handlePagePermissionChange = (mainHeader, page, permissionType, value) => 
                     </small>
                   </div>
                 )}
+
+                {/* New Stock Transfer OTP Field - Added here */}
+                <div className="input-box">
+                  <div className="details-container">
+                    <span className="details">Stock Transfer OTP</span>
+                  </div>
+                  <CInputGroup>
+                    <CInputGroupText className="input-icon">
+                      <CIcon icon={cilShieldAlt} />
+                    </CInputGroupText>
+                    <CFormSelect 
+                      name="isStockTransferOTP" 
+                      value={formData.isStockTransferOTP} 
+                      onChange={handleChange}
+                      disabled={isLoading}
+                    >
+                      <option value="false">False - No OTP required for stock transfer</option>
+                      <option value="true">True - OTP required for stock transfer</option>
+                    </CFormSelect>
+                  </CInputGroup>
+                  <small className="text-muted">
+                    Enable OTP verification for stock transfer operations
+                  </small>
+                </div>
 
                 {isManager && (
                   <>

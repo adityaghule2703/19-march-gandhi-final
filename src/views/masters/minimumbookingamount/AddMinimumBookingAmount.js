@@ -17,6 +17,7 @@ import {
 } from '@coreui/react';
 import { showError, axiosInstance } from '../../../utils/tableImports';
 import '../../../css/form.css';
+import Select from "react-select"; // Add this import
 
 const AddMinimumBookingAmount = ({ show, onClose, onSaved, editingItem }) => {
   const [formData, setFormData] = useState({
@@ -29,6 +30,7 @@ const AddMinimumBookingAmount = ({ show, onClose, onSaved, editingItem }) => {
   const [models, setModels] = useState([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelType, setModelType] = useState('');
+  const [filteredModels, setFilteredModels] = useState([]); // Add this state
 
   useEffect(() => {
     if (editingItem) {
@@ -60,6 +62,7 @@ const AddMinimumBookingAmount = ({ show, onClose, onSaved, editingItem }) => {
   const fetchModelsByType = async (type) => {
     if (!type) {
       setModels([]);
+      setFilteredModels([]); // Clear filtered models too
       return;
     }
 
@@ -70,9 +73,11 @@ const AddMinimumBookingAmount = ({ show, onClose, onSaved, editingItem }) => {
       });
       const modelsData = response.data.data?.models || response.data.data || [];
       setModels(modelsData);
+      setFilteredModels(modelsData); // Initialize filtered models with all models
     } catch (error) {
       console.error('Error fetching models:', error);
       setModels([]);
+      setFilteredModels([]);
     } finally {
       setLoadingModels(false);
     }
@@ -89,6 +94,21 @@ const AddMinimumBookingAmount = ({ show, onClose, onSaved, editingItem }) => {
       setFormErrors(prev => ({
         ...prev,
         [name]: ''
+      }));
+    }
+  };
+
+  // Add this handler for react-select
+  const handleModelChange = (selectedOption) => {
+    setFormData(prev => ({
+      ...prev,
+      model_id: selectedOption ? selectedOption.value : ''
+    }));
+    
+    if (formErrors.model_id) {
+      setFormErrors(prev => ({
+        ...prev,
+        model_id: ''
       }));
     }
   };
@@ -158,6 +178,7 @@ const AddMinimumBookingAmount = ({ show, onClose, onSaved, editingItem }) => {
     });
     setFormErrors({});
     setModels([]);
+    setFilteredModels([]);
     setModelType('');
   };
 
@@ -216,21 +237,55 @@ const AddMinimumBookingAmount = ({ show, onClose, onSaved, editingItem }) => {
             <CCol md={6}>
               <div className="mb-3">
                 <CFormLabel htmlFor="model_id">Model <span className="required">*</span></CFormLabel>
-                <CFormSelect
-                  id="model_id"
-                  name="model_id"
-                  value={formData.model_id}
-                  onChange={handleInputChange}
-                  invalid={!!formErrors.model_id}
-                  disabled={!formData.type || loadingModels || submitting}
-                >
-                  <option value="">Select Model</option>
-                  {models.map(model => (
-                    <option key={model._id || model.id} value={model._id || model.id}>
-                      {model.model_name}
-                    </option>
-                  ))}
-                </CFormSelect>
+                <div className={`react-select-container ${formErrors.model_id ? 'error-input' : ''}`}>
+                  <Select
+                    id="model_id"
+                    name="model_id"
+                    isDisabled={!formData.type || loadingModels || submitting}
+                    placeholder={
+                      !formData.type ? "Select type first" :
+                      loadingModels ? "Loading models..." :
+                      filteredModels.length === 0 ? "No models available" :
+                      "Search Model"
+                    }
+                    value={
+                      filteredModels.find((m) => m._id === formData.model_id)
+                        ? {
+                            label: filteredModels.find(
+                              (m) => m._id === formData.model_id
+                            ).model_name,
+                            value: formData.model_id,
+                          }
+                        : null
+                    }
+                    onChange={handleModelChange}
+                    options={
+                      filteredModels.length > 0
+                        ? filteredModels.map((model) => ({
+                            label: model.model_name,
+                            value: model._id,
+                          }))
+                        : []
+                    }
+                    noOptionsMessage={() => {
+                      if (!formData.type) return "Please select type first";
+                      if (loadingModels) return "Loading models...";
+                      return "No models available";
+                    }}
+                    classNamePrefix="react-select"
+                    isLoading={loadingModels}
+                    isClearable={true}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        borderColor: formErrors.model_id ? '#dc3545' : base.borderColor,
+                        '&:hover': {
+                          borderColor: formErrors.model_id ? '#dc3545' : base.borderColor,
+                        }
+                      })
+                    }}
+                  />
+                </div>
                 {loadingModels && (
                   <div className="text-muted small mt-1">
                     <CSpinner size="sm" /> Loading models...

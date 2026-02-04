@@ -180,7 +180,7 @@ const ConditionList = () => {
 
   return (
     <div>
-      <div className='title'>Terms and Conditions</div>
+      <div className='title'>Terms and Conditions for Quotation</div>
     
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>

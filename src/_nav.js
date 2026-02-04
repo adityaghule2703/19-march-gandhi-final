@@ -3338,6 +3338,17 @@ const getNav = (userPermissions = []) => {
     });
   }
 
+  // ===== ADD BRANCH STOCK AUDIT HERE =====
+  // Branch Stock Audit (Single Menu Item)
+  if (canViewPage(userPermissions, MODULES.BRANCH_STOCK_AUDIT, PAGES.BRANCH_STOCK_AUDIT.LIST)) {
+    _nav.push({
+      component: CNavItem,
+      name: 'Branch Stock Audit',
+      to: '/branch-stock-audit',
+      icon: <CIcon icon={cilInbox} customClassName="nav-icon" />,
+    });
+  }
+
   // Fund Master Group
   const fundMasterItems = []
   

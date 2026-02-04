@@ -345,7 +345,6 @@
 
 
 
-
 import '../../css/table.css'
 import {
   React,
@@ -427,13 +426,10 @@ const CashList = () => {
       const response = await axiosInstance.get(`/cash-locations`);
       const allCashLocations = response.data.data.cashLocations;
 
-      let filtered = allCashLocations;
-      if (userRole !== 'SUPERADMIN' && branchId) {
-        filtered = allCashLocations.filter((loc) => loc.branchDetails?._id === branchId);
-      }
-
-      setData(filtered);
-      setFilteredData(filtered);
+      // REMOVED: Branch filtering logic
+      // Show all cash locations to all users
+      setData(allCashLocations);
+      setFilteredData(allCashLocations);
     } catch (error) {
       const message = showError(error);
       if (message) {

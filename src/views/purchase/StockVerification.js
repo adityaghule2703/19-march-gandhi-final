@@ -2221,9 +2221,18 @@ import {
   CSpinner,
   CFormLabel,
   CFormCheck,
-  CAlert
+  CAlert,
+  CBadge
 } from '@coreui/react';
-import { axiosInstance, getDefaultSearchFields, showError, showSuccess, useTableFilter } from '../../utils/tableImports';
+import { 
+  axiosInstance, 
+  getDefaultSearchFields, 
+  showError, 
+  showSuccess, 
+  useTableFilter,
+  Menu,
+  MenuItem
+} from '../../utils/tableImports';
 import '../../css/invoice.css';
 import '../../css/table.css';
 import Swal from 'sweetalert2';
@@ -2232,12 +2241,12 @@ import {
   PAGES,
   TABS,
   ACTIONS,
-  hasSafePagePermission,
-  canCreateInPage
+  hasSafePagePermission
 } from '../../utils/modulePermissions';
 import CIcon from '@coreui/icons-react';
-import { cilCheckCircle, cilZoomOut } from '@coreui/icons';
+import { cilCheckCircle, cilZoomOut, cilSettings, cilPencil } from '@coreui/icons';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 function StockVerification() {
   const [activeTab, setActiveTab] = useState(0);
@@ -2246,7 +2255,13 @@ function StockVerification() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // New states for options menu
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuId, setMenuId] = useState(null);
+  
   const { permissions = [] } = useAuth();
+  const navigate = useNavigate();
   
   // Get user data from localStorage
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -2295,53 +2310,14 @@ function StockVerification() {
     TABS.STOCK_VERIFICATION.PENDING_VERIFICATION
   );
 
-  // Check if user can delete in PENDING VERIFICATION tab
-  const canDeleteInPendingTab = hasSafePagePermission(
-    permissions,
-    MODULES.PURCHASE,
-    PAGES.PURCHASE.STOCK_VERIFICATION,
-    ACTIONS.DELETE,
-    TABS.STOCK_VERIFICATION.PENDING_VERIFICATION
-  );
-
-  // Check specific actions for VERIFIED STOCK tab
-  const canCreateInVerifiedTab = hasSafePagePermission(
-    permissions,
-    MODULES.PURCHASE,
-    PAGES.PURCHASE.STOCK_VERIFICATION,
-    ACTIONS.CREATE,
-    TABS.STOCK_VERIFICATION.VERIFIED_STOCK
-  );
-
-  const canUpdateInVerifiedTab = hasSafePagePermission(
-    permissions,
-    MODULES.PURCHASE,
-    PAGES.PURCHASE.STOCK_VERIFICATION,
-    ACTIONS.UPDATE,
-    TABS.STOCK_VERIFICATION.VERIFIED_STOCK
-  );
-
-  const canDeleteInVerifiedTab = hasSafePagePermission(
-    permissions,
-    MODULES.PURCHASE,
-    PAGES.PURCHASE.STOCK_VERIFICATION,
-    ACTIONS.DELETE,
-    TABS.STOCK_VERIFICATION.VERIFIED_STOCK
-  );
-
-  // Only check page-level CREATE permission if we don't want it to be a fallback
-  // Remove this line if you don't want page-level fallback
-  // const canVerifyStock = canCreateInPage(
-  //   permissions, 
-  //   MODULES.PURCHASE, 
-  //   PAGES.PURCHASE.STOCK_VERIFICATION
-  // );
-
   // Final permission check: ONLY tab-level CREATE permission
-  const canVerify = canVerifyInPendingTab; // NOT using page-level fallback
+  const canVerify = canVerifyInPendingTab;
 
   // Determine if verification button should be shown
   const shouldShowVerifyButton = canVerify;
+
+  // Check if user can edit in pending tab
+  const canEditInPendingTab = canUpdateInPendingTab;
 
   // Adjust activeTab based on tab-level permissions
   useEffect(() => {
@@ -2440,6 +2416,17 @@ function StockVerification() {
     }
   };
 
+  // Options menu handlers
+  const handleClick = (event, id) => {
+    setAnchorEl(event.currentTarget);
+    setMenuId(id);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setMenuId(null);
+  };
+
   const verifyVehicles = async () => {
     if (!canVerify) {
       showError('You do not have permission to verify vehicles in PENDING VERIFICATION tab');
@@ -2513,7 +2500,22 @@ function StockVerification() {
       showError(error);
     } finally {
       setIsVerifying(false);
+      handleClose();
     }
+  };
+
+  // Function to handle edit click - ALWAYS redirects back to stock verification
+  const handleEditClick = (vehicleId) => {
+    if (!canEditInPendingTab) {
+      showError('You do not have permission to edit vehicles in PENDING VERIFICATION tab');
+      return;
+    }
+    
+    // ALWAYS pass returnUrl as stock-verification so after edit we come back here
+    navigate(`/update-inward/${vehicleId}`, {
+      state: { returnUrl: '/stock-verification' }
+    });
+    handleClose();
   };
 
   const handleTabChange = (tab) => {
@@ -2555,16 +2557,15 @@ function StockVerification() {
               <CTableHeaderCell scope="col">Color</CTableHeaderCell>
               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
               <CTableHeaderCell scope="col">Load Location</CTableHeaderCell>
-              {shouldShowVerifyButton && (
-                <CTableHeaderCell scope="col">Action</CTableHeaderCell>
-              )}
+              <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Action</CTableHeaderCell>
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredPendings.length === 0 ? (
               <CTableRow>
                 <CTableDataCell 
-                  colSpan={shouldShowVerifyButton ? "8" : "7"} 
+                  colSpan={shouldShowVerifyButton ? "9" : "8"} 
                   style={{ color: 'red', textAlign: 'center' }}
                 >
                   No pending verification data available
@@ -2587,19 +2588,40 @@ function StockVerification() {
                   <CTableDataCell>{vehicle.color?.name || ''}</CTableDataCell>
                   <CTableDataCell>{vehicle.chassisNumber}</CTableDataCell>
                   <CTableDataCell>{vehicle.unloadLocation?.name || ''}</CTableDataCell>
-                  {shouldShowVerifyButton && (
-                    <CTableDataCell>
-                      <CButton 
-                        size="sm" 
-                        className="action-btn"
-                        onClick={() => handleVerifySingle(vehicle._id)} 
-                        disabled={isVerifying}
-                      >
-                        <CIcon icon={cilCheckCircle} className="me-1" />
-                        {isVerifying ? 'Verifying...' : 'Verify'}
-                      </CButton>
-                    </CTableDataCell>
-                  )}
+                  <CTableDataCell>
+                    <CBadge color="warning">
+                      Pending
+                    </CBadge>
+                  </CTableDataCell>
+                  <CTableDataCell>
+                    <CButton
+                      size="sm"
+                      className='option-button btn-sm'
+                      onClick={(event) => handleClick(event, vehicle._id)}
+                      disabled={!canVerify && !canEditInPendingTab}
+                    >
+                      <CIcon icon={cilSettings} />
+                      Options
+                    </CButton>
+                    <Menu 
+                      id={`action-menu-${vehicle._id}`} 
+                      anchorEl={anchorEl} 
+                      open={menuId === vehicle._id} 
+                      onClose={handleClose}
+                    >
+                      {canVerify && (
+                        <MenuItem onClick={() => handleVerifySingle(vehicle._id)}>
+                          <CIcon icon={cilCheckCircle} className="me-2" />Verify
+                        </MenuItem>
+                      )}
+                      
+                      {canEditInPendingTab && (
+                        <MenuItem onClick={() => handleEditClick(vehicle._id)}>
+                          <CIcon icon={cilPencil} className="me-2" />Edit
+                        </MenuItem>
+                      )}
+                    </Menu>
+                  </CTableDataCell>
                 </CTableRow>
               ))
             )}
@@ -2632,12 +2654,13 @@ function StockVerification() {
               <CTableHeaderCell scope="col">Color</CTableHeaderCell>
               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
               <CTableHeaderCell scope="col">Load Location</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Status</CTableHeaderCell>
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredApproved.length === 0 ? (
               <CTableRow>
-                <CTableDataCell colSpan="6" style={{ color: 'red', textAlign: 'center' }}>
+                <CTableDataCell colSpan="7" style={{ color: 'red', textAlign: 'center' }}>
                   No verified stock data available
                 </CTableDataCell>
               </CTableRow>
@@ -2650,6 +2673,11 @@ function StockVerification() {
                   <CTableDataCell>{vehicle.color?.name || ''}</CTableDataCell>
                   <CTableDataCell>{vehicle.chassisNumber}</CTableDataCell>
                   <CTableDataCell>{vehicle.unloadLocation?.name || ''}</CTableDataCell>
+                  <CTableDataCell>
+                    <CBadge color="success">
+                      Verified
+                    </CBadge>
+                  </CTableDataCell>
                 </CTableRow>
               ))
             )}
@@ -2715,8 +2743,6 @@ function StockVerification() {
         </CCardHeader>
         
         <CCardBody>
-          
-          
           {/* Show tabs only if user has permission to view at least one */}
           {canViewAnyTab ? (
             <>

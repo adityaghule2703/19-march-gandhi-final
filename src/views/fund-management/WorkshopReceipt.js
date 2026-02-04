@@ -1,3 +1,225 @@
+// import React, { useState, useEffect } from 'react';
+// import '../../css/form.css';
+// import { CInputGroup, CInputGroupText, CFormInput, CFormSelect } from '@coreui/react';
+// import CIcon from '@coreui/icons-react';
+// import { cilBank, cilDollar, cilList, cilLocationPin, cilUser } from '@coreui/icons';
+// import { useNavigate } from 'react-router-dom';
+// import { showFormSubmitError, showFormSubmitToast } from '../../utils/sweetAlerts';
+// import axiosInstance from '../../axiosInstance';
+// import FormButtons from '../../utils/FormButtons';
+
+// function WorkshopReceipt() {
+//   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+//   const hasBranch = !!storedUser.branch?._id;
+//   const [formData, setFormData] = useState({
+//     recipientName: '',
+//     voucherType: 'debit',
+//     receiptType: '',
+//     amount: '',
+//     remark: '',
+//     bankLocation: '',
+//     branch: hasBranch ? storedUser.branch?._id : ''
+//   });
+//   const [errors, setErrors] = useState({});
+//   const [branches, setBranches] = useState([]);
+//   const [banks, setBanks] = useState([]);
+//   const navigate = useNavigate();
+
+//   const handleChange = (e) => {
+//     const { name, value } = e.target;
+//     setFormData((prevData) => ({ ...prevData, [name]: value }));
+//     setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
+//   };
+//   useEffect(() => {
+//     const fetchBranches = async () => {
+//       try {
+//         const response = await axiosInstance.get('/branches');
+//         setBranches(response.data.data || []);
+//       } catch (error) {
+//         console.error('Error fetching branches:', error);
+//         showError(error);
+//       }
+//     };
+
+//     fetchBranches();
+//   }, []);
+//   useEffect(() => {
+//     const fetchBanks = async () => {
+//       try {
+//         const response = await axiosInstance.get('/banks');
+//         setBanks(response.data.data.banks || []);
+//       } catch (error) {
+//         console.error('Error fetching banks:', error);
+//         showError(error);
+//       }
+//     };
+
+//     fetchBanks();
+//   }, []);
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     let formErrors = {};
+
+//     if (!formData.recipientName) formErrors.recipientName = 'This field is required';
+//     if (!formData.receiptType) formErrors.receiptType = 'This field is required';
+//     if (!formData.amount) formErrors.amount = 'This field is required';
+//     // if (!formData.voucherType) formErrors.voucherType = 'This field is required';
+//     if (!formData.bankLocation) formErrors.bankLocation = 'This field is required';
+
+//     if (Object.keys(formErrors).length > 0) {
+//       setErrors(formErrors);
+//       return;
+//     }
+
+//     try {
+//       await axiosInstance.post('/workshop-receipts', formData);
+//       await showFormSubmitToast('Data added successfully!', () => navigate('/cash-receipt'));
+
+//       navigate('/cash-receipt');
+//     } catch (error) {
+//       console.error('Error details:', error);
+//       showFormSubmitError(error);
+//     }
+//   };
+
+//   const handleCancel = () => {
+//     navigate('/cash-receipt');
+//   };
+//   return (
+//     <div className="form-container">
+//        <div className="title">Workshop Cash Receipt</div>
+//       <div className="form-card">
+//         <div className="form-body">
+//           <form onSubmit={handleSubmit}>
+//             <div className="user-details">
+//               <div className="input-box">
+//                 <div className="details-container">
+//                   <span className="details">Receipant Name</span>
+//                   <span className="required">*</span>
+//                 </div>
+//                 <CInputGroup>
+//                   <CInputGroupText className="input-icon">
+//                     <CIcon icon={cilUser} />
+//                   </CInputGroupText>
+//                   <CFormInput type="text" name="recipientName" value={formData.recipientName} onChange={handleChange} />
+//                 </CInputGroup>
+//                 {errors.recipientName && <p className="error">{errors.recipientName}</p>}
+//               </div>
+//               <div className="input-box">
+//                 <div className="details-container">
+//                   <span className="details">Branch</span>
+//                   <span className="required">*</span>
+//                 </div>
+//                 <CInputGroup>
+//                   <CInputGroupText className="input-icon">
+//                     <CIcon icon={cilLocationPin} />
+//                   </CInputGroupText>
+//                   <CFormSelect name="branch" value={formData.branch} onChange={handleChange}>
+//                     <option value="">-Select-</option>
+//                     {branches.map((branch) => (
+//                       <option key={branch._id} value={branch._id}>
+//                         {branch.name}
+//                       </option>
+//                     ))}
+//                   </CFormSelect>
+//                 </CInputGroup>
+//                 {errors.branch && <p className="error">{errors.branch}</p>}
+//               </div>
+//               {/* <div className="input-box">
+//                 <div className="details-container">
+//                   <span className="details">Voucher Type</span>
+//                   <span className="required">*</span>
+//                 </div>
+//                 <CInputGroup>
+//                   <CInputGroupText className="input-icon">
+//                     <CIcon icon={cilUser} />
+//                   </CInputGroupText>
+//                   <CFormSelect type="text" name="voucherType" value={formData.voucherType} onChange={handleChange}>
+//                     <option value="">-Select</option>
+//                     <option value="credit">Credit</option>
+//                     <option value="debit">Debit</option>
+//                   </CFormSelect>
+//                 </CInputGroup>
+//                 {errors.voucherType && <p className="error">{errors.voucherType}</p>}
+//               </div> */}
+//               <div className="input-box">
+//                 <div className="details-container">
+//                   <span className="details">Receipt Type</span>
+//                   <span className="required">*</span>
+//                 </div>
+//                 <CInputGroup>
+//                   <CInputGroupText className="input-icon">
+//                     <CIcon icon={cilUser} />
+//                   </CInputGroupText>
+//                   <CFormSelect type="text" name="receiptType" value={formData.receiptType} onChange={handleChange}>
+//                     <option value="">-Select</option>
+//                     <option value="Workshop">Workshop</option>
+//                     <option value="Other">Other</option>
+//                   </CFormSelect>
+//                 </CInputGroup>
+//                 {errors.receiptType && <p className="error">{errors.receiptType}</p>}
+//               </div>
+//               <div className="input-box">
+//                 <div className="details-container">
+//                   <span className="details">Amount</span>
+//                   <span className="required">*</span>
+//                 </div>
+//                 <CInputGroup>
+//                   <CInputGroupText className="input-icon">
+//                     <CIcon icon={cilDollar} />
+//                   </CInputGroupText>
+//                   <CFormInput type="text" name="amount" value={formData.amount} onChange={handleChange} />
+//                 </CInputGroup>
+//                 {errors.amount && <p className="error">{errors.amount}</p>}
+//               </div>
+//               <div className="input-box">
+//                 <span className="details">Remark</span>
+//                 <CInputGroup>
+//                   <CInputGroupText className="input-icon">
+//                     <CIcon icon={cilList} />
+//                   </CInputGroupText>
+//                   <CFormInput type="text" name="remark" value={formData.remark} onChange={handleChange} />
+//                 </CInputGroup>
+//               </div>
+//               <div className="input-box">
+//                 <div className="details-container">
+//                   <span className="details">Bank Location</span>
+//                   <span className="required">*</span>
+//                 </div>
+//                 <CInputGroup>
+//                   <CInputGroupText className="input-icon">
+//                     <CIcon icon={cilBank} />
+//                   </CInputGroupText>
+//                   <CFormSelect name="bankLocation" value={formData.bankLocation} onChange={handleChange}>
+//                     <option value="">-Select-</option>
+//                     {banks.map((bank) => (
+//                       <option key={bank._id} value={bank.name}>
+//                         {bank.name}
+//                       </option>
+//                     ))}
+//                   </CFormSelect>
+//                 </CInputGroup>
+//                 {errors.bankLocation && <p className="error">{errors.bankLocation}</p>}
+//               </div>
+//             </div>
+//             <FormButtons onCancel={handleCancel} />
+//           </form>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+// export default WorkshopReceipt;
+
+
+
+
+
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import '../../css/form.css';
 import { CInputGroup, CInputGroupText, CFormInput, CFormSelect } from '@coreui/react';
@@ -17,12 +239,12 @@ function WorkshopReceipt() {
     receiptType: '',
     amount: '',
     remark: '',
-    bankLocation: '',
+    cashLocation: '', // Changed from bankLocation to cashLocation (this will store the ID)
     branch: hasBranch ? storedUser.branch?._id : ''
   });
   const [errors, setErrors] = useState({});
   const [branches, setBranches] = useState([]);
-  const [banks, setBanks] = useState([]);
+  const [cashLocations, setCashLocations] = useState([]); // Changed from banks to cashLocations
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -30,6 +252,7 @@ function WorkshopReceipt() {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
     setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
   };
+  
   useEffect(() => {
     const fetchBranches = async () => {
       try {
@@ -43,18 +266,19 @@ function WorkshopReceipt() {
 
     fetchBranches();
   }, []);
+  
   useEffect(() => {
-    const fetchBanks = async () => {
+    const fetchCashLocations = async () => {
       try {
-        const response = await axiosInstance.get('/banks');
-        setBanks(response.data.data.banks || []);
+        const response = await axiosInstance.get('/cash-locations'); // Changed endpoint
+        setCashLocations(response.data.data.cashLocations || []); // Changed data path
       } catch (error) {
-        console.error('Error fetching banks:', error);
+        console.error('Error fetching cash locations:', error);
         showError(error);
       }
     };
 
-    fetchBanks();
+    fetchCashLocations();
   }, []);
 
   const handleSubmit = async (e) => {
@@ -65,7 +289,7 @@ function WorkshopReceipt() {
     if (!formData.receiptType) formErrors.receiptType = 'This field is required';
     if (!formData.amount) formErrors.amount = 'This field is required';
     // if (!formData.voucherType) formErrors.voucherType = 'This field is required';
-    if (!formData.bankLocation) formErrors.bankLocation = 'This field is required';
+    if (!formData.cashLocation) formErrors.cashLocation = 'This field is required'; // Changed from bankLocation
 
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
@@ -86,6 +310,7 @@ function WorkshopReceipt() {
   const handleCancel = () => {
     navigate('/cash-receipt');
   };
+  
   return (
     <div className="form-container">
        <div className="title">Workshop Cash Receipt</div>
@@ -184,23 +409,23 @@ function WorkshopReceipt() {
               </div>
               <div className="input-box">
                 <div className="details-container">
-                  <span className="details">Bank Location</span>
+                  <span className="details">Cash Location</span> {/* Changed label */}
                   <span className="required">*</span>
                 </div>
                 <CInputGroup>
                   <CInputGroupText className="input-icon">
                     <CIcon icon={cilBank} />
                   </CInputGroupText>
-                  <CFormSelect name="bankLocation" value={formData.bankLocation} onChange={handleChange}>
+                  <CFormSelect name="cashLocation" value={formData.cashLocation} onChange={handleChange}> {/* Changed name */}
                     <option value="">-Select-</option>
-                    {banks.map((bank) => (
-                      <option key={bank._id} value={bank.name}>
-                        {bank.name}
+                    {cashLocations.map((location) => ( // Changed from banks to cashLocations
+                      <option key={location._id} value={location._id}> {/* Store ID instead of name */}
+                        {location.name}
                       </option>
                     ))}
                   </CFormSelect>
                 </CInputGroup>
-                {errors.bankLocation && <p className="error">{errors.bankLocation}</p>}
+                {errors.cashLocation && <p className="error">{errors.cashLocation}</p>} {/* Changed from bankLocation */}
               </div>
             </div>
             <FormButtons onCancel={handleCancel} />

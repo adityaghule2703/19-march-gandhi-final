@@ -1,0 +1,1 @@
+import{j as t}from"./index-CD-UhOJ2.js";import"./index.esm-BML82zAk.js";import"./WidgetsDropdown-AbHkzxWx.js";import"./CRow--g2qTLFu.js";import"./CCardBody-BS7SU2uX.js";import"./CCardHeader-CGdtZMoU.js";import"./cil-calendar-B69zOQSH.js";import"./DefaultLayout-GrycDKjh.js";import"./CNavItem-C1bzmovJ.js";const d=()=>t.jsx("div",{});export{d as default};

@@ -1,0 +1,1 @@
+.bill-cell{display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--cui-primary)}.bill-cell:hover{text-decoration:underline}.file-icon{font-size:1.2rem}.file-icon.pdf{color:#d32f2f}.file-icon.image{color:#388e3c}.file-icon.other{color:#616161}.bill-text{font-size:.9rem}

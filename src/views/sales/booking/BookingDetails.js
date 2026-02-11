@@ -5679,7 +5679,7 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
   const [currentAction, setCurrentAction] = useState(null);
   const [showChassisModal, setShowChassisModal] = useState(false);
   const [chassisLoading, setChassisLoading] = useState(false);
-  const { permissions } = useAuth(); 
+  const { permissions, user} = useAuth(); 
   const userRole = localStorage.getItem('userRole');
   
   // Determine which tab this booking belongs to based on status
@@ -6112,10 +6112,17 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
     return <CBadge color="secondary">{status}</CBadge>;
   };
 
+  // const shouldShowAwaitingApproval = () => {
+  //   return userRole === 'SALES_EXECUTIVE' && booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)';
+  // };
   const shouldShowAwaitingApproval = () => {
-    return userRole === 'SALES_EXECUTIVE' && booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)';
-  };
-
+  const isSalesExecutive = 
+    user?.is_sales_executive || 
+    user?.roles?.some(role => role.name === 'SALES_EXECUTIVE') || 
+    localStorage.getItem('userRole') === 'SALES_EXECUTIVE';
+  
+  return isSalesExecutive && booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)';
+};
   const shouldShowApproveRejectButtons = () => {
     return (booking?.status === 'PENDING_APPROVAL' || 
             booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)') &&
@@ -6302,7 +6309,7 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                         <div className="amount-value">₹{parseFloat(booking.totalAmount).toFixed(2)}</div>
                         {booking.discountedAmount !== booking.totalAmount && (
                           <div className="discounted-amount">
-                            After Discount: ₹{parseFloat(booking.discountedAmount).toFixed(2)}
+                            <b>After Discount: ₹{parseFloat(booking.discountedAmount).toFixed(2)}</b>
                           </div>
                         )}
                       </div>
@@ -6498,7 +6505,7 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                           <span className="detail-value">{renderDocumentStatus(booking.financeLetterStatus, 'finance')}</span>
                         </div>
                       )}
-                      <div className="detail-row">
+                      {/* <div className="detail-row">
                         <span className="detail-label">Booking Form:</span>
                         <span className="detail-value">
                           {booking.formGenerated ? (
@@ -6520,7 +6527,31 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                             <span>Not Generated</span>
                           )}
                         </span>
-                      </div>
+                      </div> */}
+
+                      <div className="detail-row">
+  <span className="detail-label">Booking Form:</span>
+  <span className="detail-value">
+    {booking.formGenerated ? (
+      <>
+        {shouldShowAwaitingApproval() ? (
+          <span className="awaiting-approval-text">Awaiting for Approval</span>
+        ) : (
+          <a
+            href={`${config.baseURL}${booking.formPath}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="form-link"
+          >
+            VIEW
+          </a>
+        )}
+      </>
+    ) : (
+      <span>Not Generated</span>
+    )}
+  </span>
+</div>
                     </CCardBody>
                   </CCard>
 

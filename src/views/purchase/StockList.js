@@ -80,7 +80,7 @@ const StockList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState('');
+
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [filterModalOpen, setFilterModalOpen] = useState(false);
@@ -121,13 +121,14 @@ const StockList = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [selectedReportBranchId, setSelectedReportBranchId] = useState('');
+  const [selectedType, setSelectedType] = useState('');
   const [exportReportError, setExportReportError] = useState('');
   const [exportReportLoading, setExportReportLoading] = useState(false);
 
-  const { permissions = [] } = useAuth();
+  const { permissions = [], user } = useAuth();
+  const hasAllBranchAccess = user?.branchAccess === "ALL";
   const navigate = useNavigate();
 
-  // Format date to DD-MM-YYYY
   const formatDate = (dateString) => {
     if (!dateString) return '';
     
@@ -368,8 +369,8 @@ const StockList = () => {
 
   // Reset Export Report modal
   const resetExportReportModal = () => {
-    setStartDate(null);
-    setEndDate(null);
+    // setStartDate(null);
+    // setEndDate(null);
     setSelectedReportBranchId('');
     setExportReportError('');
     setExportReportModalOpen(false);
@@ -390,10 +391,10 @@ const StockList = () => {
       return;
     }
 
-    if (!startDate || !endDate) {
-      setExportReportError('Please select both start and end dates');
-      return;
-    }
+    // if (!startDate || !endDate) {
+    //   setExportReportError('Please select both start and end dates');
+    //   return;
+    // }
 
     if (startDate > endDate) {
       setExportReportError('Start date cannot be after end date');
@@ -409,11 +410,11 @@ const StockList = () => {
       // Build query parameters for the stock report API
       const params = new URLSearchParams({
         branchId: selectedReportBranchId,
-        startDate: formattedStartDate,
-        endDate: formattedEndDate,
+        modelType:selectedType,
+        // startDate: formattedStartDate,
+        // endDate: formattedEndDate,
         format: 'excel'
       });
-
       const response = await axiosInstance.get(
         `/reports/stock/current?${params.toString()}`,
         { responseType: 'blob' }
@@ -462,9 +463,6 @@ const StockList = () => {
       link.remove();
       
       window.URL.revokeObjectURL(url);
-      
-      // Show success message
-      showSuccess('Stock report exported successfully!');
 
       resetExportReportModal();
       
@@ -1699,7 +1697,7 @@ const StockList = () => {
           </CModalTitle>
         </CModalHeader>
         <CModalBody>
-          {/* Display export error */}
+
           {exportReportError && (
             <CAlert color="warning" className="mb-3">
               {exportReportError}
@@ -1708,60 +1706,49 @@ const StockList = () => {
           
           <LocalizationProvider 
             dateAdapter={AdapterDateFns} 
-            adapterLocale={enIN} // Add Indian locale
+            adapterLocale={enIN} 
           >
-            <div className="mb-3">
-              <DatePicker
-                label="Start Date"
-                value={startDate}
-                onChange={(newValue) => {
-                  setStartDate(newValue);
-                  setExportReportError(''); // Clear error when user changes date
-                }}
-                renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-                inputFormat="dd/MM/yyyy" // Use slash format for display
-                mask="__/__/____" // Add mask for better UX
-                views={['day', 'month', 'year']} // Show day-month-year in that order
-                disabled={!canExportReport}
-              />
-            </div>
-            <div className="mb-3">
-              <DatePicker
-                label="End Date"
-                value={endDate}
-                onChange={(newValue) => {
-                  setEndDate(newValue);
-                  setExportReportError(''); // Clear error when user changes date
-                }}
-                renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-                inputFormat="dd/MM/yyyy" // Use slash format for display
-                mask="__/__/____" // Add mask for better UX
-                minDate={startDate}
-                views={['day', 'month', 'year']} // Show day-month-year in that order
-                disabled={!canExportReport}
-              />
-            </div>
+    
           </LocalizationProvider>
+          <div className="mb-3">
+      <label className="form-label">Model Type:</label>
+      <CFormSelect
+        value={selectedType}
+        onChange={(e) => {
+          setSelectedType(e.target.value);
+          setExportReportError('');
+        }}
+        disabled={!canExportReport}
+      >
+        <option value="">-- Select Model Type --</option>
+        <option value="EV">EV</option>
+        <option value="ICE">ICE</option>
+      </CFormSelect>
+    </div>
           
-          <TextField
-            select
-            value={selectedReportBranchId}
-            onChange={(e) => {
-              setSelectedReportBranchId(e.target.value);
-              setExportReportError(''); // Clear error when user changes branch
-            }}
-            fullWidth
-            size="small"
-            SelectProps={{ native: true }}
-            disabled={!canExportReport}
-          >
-            <option value="">-- Select Branch --</option>
-            {branches.map((branch) => (
-              <option key={branch._id} value={branch._id}>
-                {branch.name}
-              </option>
-            ))}
-          </TextField>
+
+
+           <div className="mb-3">
+      <label className="form-label">Branch:</label>
+      <CFormSelect
+        value={selectedReportBranchId}
+        onChange={(e) => {
+          setSelectedReportBranchId(e.target.value);
+          setExportReportError('');
+        }}
+        disabled={!canExportReport}
+      >
+        <option value="">-- Select Branch --</option>
+        {hasAllBranchAccess && (
+          <option value="all">All Branches</option>
+        )}
+        {branches.map((branch) => (
+          <option key={branch._id} value={branch._id}>
+            {branch.name}
+          </option>
+        ))}
+      </CFormSelect>
+    </div>
         </CModalBody>
         <CModalFooter>
           <CButton 
@@ -1774,7 +1761,7 @@ const StockList = () => {
           <CButton 
             className="submit-button"
             onClick={handleExportReport}
-            disabled={!startDate || !endDate || !selectedReportBranchId || !canExportReport || exportReportLoading}
+            disabled={!selectedReportBranchId || !canExportReport || exportReportLoading}
           >
             {exportReportLoading ? (
               <>

@@ -12,7 +12,7 @@ import {
 } from '../../utils/modulePermissions';
 import { useAuth } from '../../context/AuthContext';
 import { showError } from '../../utils/sweetAlerts';
-import { CFormSelect, CSpinner, CAlert } from '@coreui/react';
+import { CFormSelect, CSpinner, CAlert, CCard, CCardBody, CCardHeader, CNav, CNavItem, CNavLink, CTabContent, CTabPane, CTabs } from '@coreui/react';
 
 const PeriodicReport = () => {
   const [fromDate, setFromDate] = useState(null);
@@ -22,15 +22,16 @@ const PeriodicReport = () => {
   const [selectedBranch, setSelectedBranch] = useState('');
   const [branchLoading, setBranchLoading] = useState(true);
   const [apiError, setApiError] = useState('');
+  const [activeTab, setActiveTab] = useState('sales');
+  const [selectedType, setSelectedType] = useState('');
   const navigate = useNavigate();
 
-  // Get permissions from auth context
   const { permissions = [], user } = useAuth();
 
-  // Permission check for Periodic Report page under Sales Report module
   const canViewPeriodicReport = canViewPage(permissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.PERIODIC_REPORT);
-
-  // Format date to DD-MM-YYYY
+   
+  const hasAllBranchAccess = user?.branchAccess === "ALL";
+  
   const formatDate = (dateString) => {
     if (!dateString) return '';
     
@@ -49,7 +50,6 @@ const PeriodicReport = () => {
     }
   };
 
-  // Format date to YYYY-MM-DD for API
   const formatDateForAPI = (date) => {
     if (!date) return '';
     const year = date.getFullYear();
@@ -59,9 +59,8 @@ const PeriodicReport = () => {
   };
 
   useEffect(() => {
-    // Check if user has permission to view this page
     if (!canViewPeriodicReport) {
-      showError('You do not have permission to view Periodic Report');
+      showError('You do not have permission to view Periodic Reports');
       navigate('/dashboard');
       return;
     }
@@ -74,18 +73,15 @@ const PeriodicReport = () => {
       const response = await axiosInstance.get('/branches');
       
       if (response.data.success) {
-        // Filter only active branches
         const activeBranches = response.data.data.filter(branch => branch.is_active);
         setBranches(activeBranches);
-        
-        // If user has an assigned branch, preselect it
+      
         if (user?.branchId) {
           const userBranch = activeBranches.find(b => b.id === user.branchId);
           if (userBranch) {
             setSelectedBranch(userBranch.id);
           }
         } else if (activeBranches.length > 0) {
-          // Otherwise select the first branch
           setSelectedBranch(activeBranches[0].id);
         }
       }
@@ -97,12 +93,41 @@ const PeriodicReport = () => {
     }
   };
 
+  const getReportName = (tab) => {
+    switch(tab) {
+      case 'sales': return 'Sales Report';
+      case 'outstanding': return 'Outstanding Report';
+      case 'booking': return 'Booking Report';
+      case 'gc': return 'GC Report';
+      default: return 'Report';
+    }
+  };
+
+  const getAPIEndpoint = () => {
+    switch(activeTab) {
+      case 'sales':
+        return '/reports/branch-sales';
+      case 'outstanding':
+        return '/reports/outstanding';
+      case 'booking':
+        return '/reports/bookings';
+      case 'gc':
+        return '/reports/gc';
+      default:
+        return '/reports/branch-sales';
+    }
+  };
+
+  const getFileName = (branchName, fromDateStr, toDateStr) => {
+    const reportType = getReportName(activeTab).replace(' ', '_');
+    return `${reportType}_${branchName}_${fromDateStr}_to_${toDateStr}.xlsx`;
+  };
+
   const handleExportToExcel = async () => {
-    // Clear previous errors
     setApiError('');
 
     if (!canViewPeriodicReport) {
-      showError('You do not have permission to export Periodic Report');
+      showError('You do not have permission to export Periodic Reports');
       return;
     }
 
@@ -110,7 +135,9 @@ const PeriodicReport = () => {
       toast.error('Please select a branch');
       return;
     }
-
+    //  if (selectedType) {
+    //   params.append('type', selectedType);
+    //   }
     if (!fromDate || !toDate) {
       toast.error('Please select both from and to dates');
       return;
@@ -126,25 +153,25 @@ const PeriodicReport = () => {
       
       const formattedFromDate = formatDateForAPI(fromDate);
       const formattedToDate = formatDateForAPI(toDate);
+      const apiEndpoint = getAPIEndpoint();
 
-      // Build query parameters
       const params = new URLSearchParams({
         branchId: selectedBranch,
+        modelType:selectedType,
         startDate: formattedFromDate,
         endDate: formattedToDate,
         format: 'excel'
       });
 
       const response = await axiosInstance.get(
-        `/reports/branch-sales?${params.toString()}`,
+        `${apiEndpoint}?${params.toString()}`,
         { responseType: 'blob' }
       );
 
-      // Check content type to see if it's an error
       const contentType = response.headers['content-type'];
       
       if (contentType && contentType.includes('application/json')) {
-        // It's a JSON error response, parse it
+
         const text = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
@@ -154,7 +181,6 @@ const PeriodicReport = () => {
         
         const errorData = JSON.parse(text);
         
-        // Show the exact error message from API
         if (!errorData.success && errorData.message) {
           setApiError(errorData.message);
           toast.error(errorData.message);
@@ -162,7 +188,6 @@ const PeriodicReport = () => {
         }
       }
 
-      // Handle Excel file download
       const blob = new Blob([response.data], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
@@ -174,7 +199,7 @@ const PeriodicReport = () => {
       const branchName = branches.find(b => b.id === selectedBranch)?.name || 'Branch';
       const fromDateStr = fromDate ? formatDate(fromDate) : '';
       const toDateStr = toDate ? formatDate(toDate) : '';
-      const fileName = `Periodic_Report_${branchName}_${fromDateStr}_to_${toDateStr}.xlsx`;
+      const fileName = getFileName(branchName, fromDateStr, toDateStr);
       link.setAttribute('download', fileName);
       
       document.body.appendChild(link);
@@ -182,7 +207,7 @@ const PeriodicReport = () => {
       link.remove();
       
       window.URL.revokeObjectURL(url);
-      toast.success('Report exported successfully');
+      toast.success(`${getReportName(activeTab)} exported successfully`);
 
     } catch (error) {
       console.error('Error exporting report:', error);
@@ -230,107 +255,468 @@ const PeriodicReport = () => {
   // Clear error when user changes filters
   useEffect(() => {
     setApiError('');
-  }, [selectedBranch, fromDate, toDate]);
+  }, [selectedBranch, fromDate, toDate,selectedType, activeTab]);
 
   // Check if user has permission to view this page
   if (!canViewPeriodicReport) {
     return (
       <div className="alert alert-danger m-3" role="alert">
-        You do not have permission to view Periodic Report.
+        You do not have permission to view Periodic Reports.
       </div>
     );
   }
 
   return (
     <div className="rto-report-container">
-      <h4 className="rto-report-title">Periodic Report</h4>
+      <h4 className="rto-report-title">Periodic Reports</h4>
 
       <div className="rto-report-card">
         {/* Display API Error at the top - only shows the exact error message */}
         {apiError && (
-          <CAlert color="warning" className="mb-3">
+          <CAlert color="danger" className="mb-3">
             {apiError}
           </CAlert>
         )}
 
-        <div className="date-filter-container">
-          {/* Branch Selection */}
-          <div className="date-filter-group">
-            <label className="date-filter-label">Select Branch:</label>
-            {branchLoading ? (
-              <div className="date-picker">
-                <CSpinner size="sm" />
-              </div>
-            ) : (
-              <CFormSelect
-                value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
-                className="date-picker"
-                disabled={branches.length === 0}
-              >
-                <option value="">Select Branch</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </CFormSelect>
-            )}
-          </div>
+        {/* Tabs for different report types - all visible since they use same permission */}
+        <CCard>
+          <CCardHeader>
+            <CNav variant="tabs" className="card-header-tabs">
+              <CNavItem>
+                <CNavLink
+                  active={activeTab === 'sales'}
+                  onClick={() => setActiveTab('sales')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  Sales Report
+                </CNavLink>
+              </CNavItem>
+              <CNavItem>
+                <CNavLink
+                  active={activeTab === 'outstanding'}
+                  onClick={() => setActiveTab('outstanding')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  Outstanding Report
+                </CNavLink>
+              </CNavItem>
+              <CNavItem>
+                <CNavLink
+                  active={activeTab === 'booking'}
+                  onClick={() => setActiveTab('booking')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  Booking Report
+                </CNavLink>
+              </CNavItem>
+              <CNavItem>
+                <CNavLink
+                  active={activeTab === 'gc'}
+                  onClick={() => setActiveTab('gc')}
+                  style={{ cursor: 'pointer' }}
+                >
+                  GC Report
+                </CNavLink>
+              </CNavItem>
+            </CNav>
+          </CCardHeader>
+          <CCardBody>
+            <CTabContent>
+              <CTabPane visible={activeTab === 'sales'}>
+                   <h5 className="mb-3">Sales Report</h5>
+                <div className="date-filter-container mt-3">
 
-          {/* From Date */}
-          <div className="date-filter-group">
-            <label className="date-filter-label">From Date:</label>
-            <DatePicker
-              selected={fromDate}
-              onChange={(date) => setFromDate(date)}
-              className="date-picker"
-              maxDate={new Date()}
-              selectsStart
-              startDate={fromDate}
-              endDate={toDate}
-              placeholderText="DD-MM-YYYY"
-              dateFormat="dd-MM-yyyy"
-              showYearDropdown
-              scrollableYearDropdown
-              yearDropdownItemNumber={15}
-            />
-          </div>
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">Model Type:</label>
+                   
+                      <CFormSelect
+                        value={selectedType}
+                        onChange={(e) => setSelectedType(e.target.value)}
+                        className="date-picker"
+      
+                      >
+                        <option value="">Select</option>
+                         <option value="EV">EV</option>
+                          <option value="ICE">ICE</option>
+                      
+                      </CFormSelect>
+                  
+                  </div>
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">Select Branch:</label>
+                    {branchLoading ? (
+                      <div className="date-picker">
+                        <CSpinner size="sm" />
+                      </div>
+                    ) : (
+                      <CFormSelect
+                        value={selectedBranch}
+                        onChange={(e) => setSelectedBranch(e.target.value)}
+                        className="date-picker"
+                        disabled={branches.length === 0}
+                      >
+                        <option value="">Select Branch</option>
+                        {hasAllBranchAccess && (
+                          <option value="all">All Branch</option>
+                        )}
+                        {branches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </CFormSelect>
+                    )}
+                  </div>
 
-          {/* To Date */}
-          <div className="date-filter-group">
-            <label className="date-filter-label">To Date:</label>
-            <DatePicker
-              selected={toDate}
-              onChange={(date) => setToDate(date)}
-              className="date-picker"
-              maxDate={new Date()}
-              selectsEnd
-              startDate={fromDate}
-              endDate={toDate}
-              minDate={fromDate}
-              placeholderText="DD-MM-YYYY"
-              dateFormat="dd-MM-yyyy"
-              showYearDropdown
-              scrollableYearDropdown
-              yearDropdownItemNumber={15}
-            />
-          </div>
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">From Date:</label>
+                    <DatePicker
+                      selected={fromDate}
+                      onChange={(date) => setFromDate(date)}
+                      className="date-picker"
+                      maxDate={new Date()}
+                      selectsStart
+                      startDate={fromDate}
+                      endDate={toDate}
+                      placeholderText="DD-MM-YYYY"
+                      dateFormat="dd-MM-yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={15}
+                    />
+                  </div>
 
-          {/* Export to Excel Button */}
-          <button 
-            className="export-button" 
-            onClick={handleExportToExcel} 
-            disabled={exportLoading || !selectedBranch || !fromDate || !toDate}
-          >
-            {exportLoading ? (
-              <>
-                <CSpinner size="sm" className="me-2" />
-                Exporting...
-              </>
-            ) : 'Export to Excel'}
-          </button>
-        </div>
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">To Date:</label>
+                    <DatePicker
+                      selected={toDate}
+                      onChange={(date) => setToDate(date)}
+                      className="date-picker"
+                      maxDate={new Date()}
+                      selectsEnd
+                      startDate={fromDate}
+                      endDate={toDate}
+                      minDate={fromDate}
+                      placeholderText="DD-MM-YYYY"
+                      dateFormat="dd-MM-yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={15}
+                    />
+                  </div>
+
+                  <button 
+                    className="export-button" 
+                    onClick={handleExportToExcel} 
+                    disabled={exportLoading || !selectedBranch || !fromDate || !toDate}
+                  >
+                    {exportLoading ? (
+                      <>
+                        <CSpinner size="sm" className="me-2" />
+                        Exporting...
+                      </>
+                    ) : 'Export to Excel'}
+                  </button>
+                </div>
+              </CTabPane>
+
+           
+              <CTabPane visible={activeTab === 'outstanding'}>
+                  <h5>Outstanding Report</h5>
+                <div className="date-filter-container mt-3">
+                   <div className="date-filter-group">
+                    <label className="date-filter-label">Model Type:</label>
+                   
+                      <CFormSelect
+                        value={selectedType}
+                        onChange={(e) => setSelectedType(e.target.value)}
+                        className="date-picker"
+      
+                      >
+                        <option value="">Select</option>
+                         <option value="EV">EV</option>
+                          <option value="ICE">ICE</option>
+                      
+                      </CFormSelect>
+                  
+                  </div>
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">Select Branch:</label>
+                    {branchLoading ? (
+                      <div className="date-picker">
+                        <CSpinner size="sm" />
+                      </div>
+                    ) : (
+                      <CFormSelect
+                        value={selectedBranch}
+                        onChange={(e) => setSelectedBranch(e.target.value)}
+                        className="date-picker"
+                        disabled={branches.length === 0}
+                      >
+                        <option value="">Select Branch</option>
+                        {hasAllBranchAccess && (
+                          <option value="all">All Branch</option>
+                        )}
+                        {branches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </CFormSelect>
+                    )}
+                  </div>
+
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">From Date:</label>
+                    <DatePicker
+                      selected={fromDate}
+                      onChange={(date) => setFromDate(date)}
+                      className="date-picker"
+                      maxDate={new Date()}
+                      selectsStart
+                      startDate={fromDate}
+                      endDate={toDate}
+                      placeholderText="DD-MM-YYYY"
+                      dateFormat="dd-MM-yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={15}
+                    />
+                  </div>
+
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">To Date:</label>
+                    <DatePicker
+                      selected={toDate}
+                      onChange={(date) => setToDate(date)}
+                      className="date-picker"
+                      maxDate={new Date()}
+                      selectsEnd
+                      startDate={fromDate}
+                      endDate={toDate}
+                      minDate={fromDate}
+                      placeholderText="DD-MM-YYYY"
+                      dateFormat="dd-MM-yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={15}
+                    />
+                  </div>
+
+                  <button 
+                    className="export-button" 
+                    onClick={handleExportToExcel} 
+                    disabled={exportLoading || !selectedBranch || !fromDate || !toDate}
+                  >
+                    {exportLoading ? (
+                      <>
+                        <CSpinner size="sm" className="me-2" />
+                        Exporting...
+                      </>
+                    ) : 'Export to Excel'}
+                  </button>
+                </div>
+              </CTabPane>
+
+              {/* Booking Report Tab */}
+              <CTabPane visible={activeTab === 'booking'}>
+                 <h5>Booking Report</h5>
+                <div className="date-filter-container mt-3">
+                   <div className="date-filter-group">
+                    <label className="date-filter-label">Model Type:</label>
+                   
+                      <CFormSelect
+                        value={selectedType}
+                        onChange={(e) => setSelectedType(e.target.value)}
+                        className="date-picker"
+      
+                      >
+                        <option value="">Select</option>
+                         <option value="EV">EV</option>
+                          <option value="ICE">ICE</option>
+                      
+                      </CFormSelect>
+                  
+                  </div>
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">Select Branch:</label>
+                    {branchLoading ? (
+                      <div className="date-picker">
+                        <CSpinner size="sm" />
+                      </div>
+                    ) : (
+                      <CFormSelect
+                        value={selectedBranch}
+                        onChange={(e) => setSelectedBranch(e.target.value)}
+                        className="date-picker"
+                        disabled={branches.length === 0}
+                      >
+                        <option value="">Select Branch</option>
+                        {hasAllBranchAccess && (
+                          <option value="all">All Branch</option>
+                        )}
+                        {branches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </CFormSelect>
+                    )}
+                  </div>
+
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">From Date:</label>
+                    <DatePicker
+                      selected={fromDate}
+                      onChange={(date) => setFromDate(date)}
+                      className="date-picker"
+                      maxDate={new Date()}
+                      selectsStart
+                      startDate={fromDate}
+                      endDate={toDate}
+                      placeholderText="DD-MM-YYYY"
+                      dateFormat="dd-MM-yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={15}
+                    />
+                  </div>
+
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">To Date:</label>
+                    <DatePicker
+                      selected={toDate}
+                      onChange={(date) => setToDate(date)}
+                      className="date-picker"
+                      maxDate={new Date()}
+                      selectsEnd
+                      startDate={fromDate}
+                      endDate={toDate}
+                      minDate={fromDate}
+                      placeholderText="DD-MM-YYYY"
+                      dateFormat="dd-MM-yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={15}
+                    />
+                  </div>
+
+                  <button 
+                    className="export-button" 
+                    onClick={handleExportToExcel} 
+                    disabled={exportLoading || !selectedBranch || !fromDate || !toDate}
+                  >
+                    {exportLoading ? (
+                      <>
+                        <CSpinner size="sm" className="me-2" />
+                        Exporting...
+                      </>
+                    ) : 'Export to Excel'}
+                  </button>
+                </div>
+              </CTabPane>
+
+              {/* GC Report Tab */}
+              <CTabPane visible={activeTab === 'gc'}>
+                 <h5>GC Report</h5>
+                <div className="date-filter-container mt-3">
+            
+                    <div className="date-filter-group">
+                    <label className="date-filter-label">Model Type:</label>
+                   
+                      <CFormSelect
+                        value={selectedType}
+                        onChange={(e) => setSelectedType(e.target.value)}
+                        className="date-picker"
+      
+                      >
+                        <option value="">Select</option>
+                         <option value="EV">EV</option>
+                          <option value="ICE">ICE</option>
+                      
+                      </CFormSelect>
+                  
+                  </div>
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">Select Branch:</label>
+                    {branchLoading ? (
+                      <div className="date-picker">
+                        <CSpinner size="sm" />
+                      </div>
+                    ) : (
+                      <CFormSelect
+                        value={selectedBranch}
+                        onChange={(e) => setSelectedBranch(e.target.value)}
+                        className="date-picker"
+                        disabled={branches.length === 0}
+                      >
+                        <option value="">Select Branch</option>
+                        {hasAllBranchAccess && (
+                          <option value="all">All Branch</option>
+                        )}
+                        {branches.map((branch) => (
+                          <option key={branch.id} value={branch.id}>
+                            {branch.name}
+                          </option>
+                        ))}
+                      </CFormSelect>
+                    )}
+                  </div>
+
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">From Date:</label>
+                    <DatePicker
+                      selected={fromDate}
+                      onChange={(date) => setFromDate(date)}
+                      className="date-picker"
+                      maxDate={new Date()}
+                      selectsStart
+                      startDate={fromDate}
+                      endDate={toDate}
+                      placeholderText="DD-MM-YYYY"
+                      dateFormat="dd-MM-yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={15}
+                    />
+                  </div>
+
+                  <div className="date-filter-group">
+                    <label className="date-filter-label">To Date:</label>
+                    <DatePicker
+                      selected={toDate}
+                      onChange={(date) => setToDate(date)}
+                      className="date-picker"
+                      maxDate={new Date()}
+                      selectsEnd
+                      startDate={fromDate}
+                      endDate={toDate}
+                      minDate={fromDate}
+                      placeholderText="DD-MM-YYYY"
+                      dateFormat="dd-MM-yyyy"
+                      showYearDropdown
+                      scrollableYearDropdown
+                      yearDropdownItemNumber={15}
+                    />
+                  </div>
+
+                  <button 
+                    className="export-button" 
+                    onClick={handleExportToExcel} 
+                    disabled={exportLoading || !selectedBranch || !fromDate || !toDate}
+                  >
+                    {exportLoading ? (
+                      <>
+                        <CSpinner size="sm" className="me-2" />
+                        Exporting...
+                      </>
+                    ) : 'Export to Excel'}
+                  </button>
+                </div>
+              </CTabPane>
+            </CTabContent>
+          </CCardBody>
+        </CCard>
       </div>
     </div>
   );

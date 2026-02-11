@@ -99,50 +99,103 @@ function AddAccessories() {
     fetchCategories();
   }, []);
 
-  useEffect(() => {
-    if (formData.category && categories.length > 0) {
-      const selectedCategory = categories.find(cat => cat._id === formData.category);
+  // useEffect(() => {
+  //   if (formData.category && categories.length > 0) {
+  //     const selectedCategory = categories.find(cat => cat._id === formData.category);
       
-      if (selectedCategory && selectedCategory.type) {
-        const matchingModels = models.filter(model => 
-          model.type && model.type === selectedCategory.type
-        );
-        setFilteredModels(matchingModels);
-        if (formData.applicable_models.length > 0) {
-          const validModelIds = matchingModels.map(model => model._id || model.id);
-          const filteredApplicableModels = formData.applicable_models.filter(modelId => 
-            validModelIds.includes(modelId)
-          );
+  //     if (selectedCategory && selectedCategory.type) {
+  //       const matchingModels = models.filter(model => 
+  //         model.type && model.type === selectedCategory.type
+  //       );
+  //       setFilteredModels(matchingModels);
+  //       if (formData.applicable_models.length > 0) {
+  //         const validModelIds = matchingModels.map(model => model._id || model.id);
+  //         const filteredApplicableModels = formData.applicable_models.filter(modelId => 
+  //           validModelIds.includes(modelId)
+  //         );
           
-          if (filteredApplicableModels.length !== formData.applicable_models.length) {
-            setFormData(prev => ({
-              ...prev,
-              applicable_models: filteredApplicableModels
-            }));
-          }
+  //         if (filteredApplicableModels.length !== formData.applicable_models.length) {
+  //           setFormData(prev => ({
+  //             ...prev,
+  //             applicable_models: filteredApplicableModels
+  //           }));
+  //         }
+  //       }
+  //     } else {
+  //       setFilteredModels(models);
+  //     }
+  //   } else {
+  //     setFilteredModels(models);
+  //   }
+  // }, [formData.category, categories, models, formData.applicable_models]);
+
+
+
+
+  useEffect(() => {
+  if (formData.category && categories.length > 0) {
+    const selectedCategory = categories.find(cat => cat._id === formData.category);
+    
+    if (selectedCategory && selectedCategory.type) {
+      const matchingModels = models.filter(model => 
+        model.type && model.type === selectedCategory.type
+      );
+      setFilteredModels(matchingModels);
+      
+      // Don't filter out previously selected models
+      // Just filter what's displayed
+      if (formData.applicable_models.length > 0) {
+        // Optional: You might want to add a warning if some models don't match the category
+        const validModelIds = matchingModels.map(model => String(model._id || model.id));
+        const nonMatchingModels = formData.applicable_models.filter(modelId => 
+          !validModelIds.includes(String(modelId))
+        );
+        
+        if (nonMatchingModels.length > 0) {
+          console.warn('Some selected models do not match the current category type:', nonMatchingModels);
         }
-      } else {
-        setFilteredModels(models);
       }
     } else {
       setFilteredModels(models);
     }
-  }, [formData.category, categories, models, formData.applicable_models]);
+  } else {
+    setFilteredModels(models);
+  }
+}, [formData.category, categories, models]);
+  // const fetchAccessory = async (id) => {
+  //   try {
+  //     setLoading(true);
+  //     const accessory = await fetchAccessoryByIdService(id);
+  //     setFormData({
+  //       ...accessory,
+  //       applicable_models: accessory.applicable_models || [],
+  //     });
+  //   } catch (error) {
+  //     showFormSubmitError(error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
 
   const fetchAccessory = async (id) => {
-    try {
-      setLoading(true);
-      const accessory = await fetchAccessoryByIdService(id);
-      setFormData({
-        ...accessory,
-        applicable_models: accessory.applicable_models || [],
-      });
-    } catch (error) {
-      showFormSubmitError(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const accessory = await fetchAccessoryByIdService(id);
+    
+    // Convert all model IDs to strings
+    const applicableModels = (accessory.applicable_models || []).map(id => String(id));
+    
+    setFormData({
+      ...accessory,
+      applicable_models: applicableModels,
+    });
+  } catch (error) {
+    showFormSubmitError(error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -153,23 +206,46 @@ function AddAccessories() {
     }
   };
 
+  // const handleModelSelect = (modelId) => {
+  //   setFormData((prevData) => {
+  //     const isSelected = prevData.applicable_models.includes(modelId);
+  //     return {
+  //       ...prevData,
+  //       applicable_models: isSelected ? prevData.applicable_models.filter((id) => id !== modelId) : [...prevData.applicable_models, modelId]
+  //     };
+  //   });
+  //   // Clear error when user selects at least one model
+  //   if (errors.applicable_models) {
+  //     setErrors(prev => ({ ...prev, applicable_models: '' }));
+  //   }
+  // };
+
+
   const handleModelSelect = (modelId) => {
-    setFormData((prevData) => {
-      const isSelected = prevData.applicable_models.includes(modelId);
-      return {
-        ...prevData,
-        applicable_models: isSelected ? prevData.applicable_models.filter((id) => id !== modelId) : [...prevData.applicable_models, modelId]
-      };
-    });
-    // Clear error when user selects at least one model
-    if (errors.applicable_models) {
-      setErrors(prev => ({ ...prev, applicable_models: '' }));
-    }
-  };
+  // Ensure modelId is a string
+  const idString = String(modelId);
+  
+  setFormData((prevData) => {
+    // Convert all IDs in the array to strings for consistent comparison
+    const selectedIds = prevData.applicable_models.map(id => String(id));
+    const isSelected = selectedIds.includes(idString);
+    
+    return {
+      ...prevData,
+      applicable_models: isSelected 
+        ? prevData.applicable_models.filter((id) => String(id) !== idString) 
+        : [...prevData.applicable_models, idString]
+    };
+  });
+  
+  if (errors.applicable_models) {
+    setErrors(prev => ({ ...prev, applicable_models: '' }));
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted'); // Debug log
+    console.log('Form submitted');
     
     let formErrors = {};
 
@@ -421,24 +497,45 @@ function AddAccessories() {
                         : 'Please select a category first to see compatible models.'}
                     </div>
                   ) : (
+                    // filteredModels.map((model) => {
+                    //   const modelId = model._id || model.id;
+                    //   const isSelected = formData.applicable_models.includes(modelId);
+                    //   return (
+                    //     <div key={modelId} className="permission-item">
+                    //       <label style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
+                    //         <input 
+                    //           type="checkbox" 
+                    //           checked={isSelected} 
+                    //           onChange={() => !loading && handleModelSelect(modelId)}
+                    //           disabled={loading}
+                    //         />
+                    //         {model.model_name}
+                    //         <span className="model-type"> ({model.type})</span>
+                    //       </label>
+                    //     </div>
+                    //   );
+                    // })
+
                     filteredModels.map((model) => {
-                      const modelId = model._id || model.id;
-                      const isSelected = formData.applicable_models.includes(modelId);
-                      return (
-                        <div key={modelId} className="permission-item">
-                          <label style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={isSelected} 
-                              onChange={() => !loading && handleModelSelect(modelId)}
-                              disabled={loading}
-                            />
-                            {model.model_name}
-                            <span className="model-type"> ({model.type})</span>
-                          </label>
-                        </div>
-                      );
-                    })
+  const modelId = String(model._id || model.id);
+  const selectedIds = formData.applicable_models.map(id => String(id));
+  const isSelected = selectedIds.includes(modelId);
+  
+  return (
+    <div key={modelId} className="permission-item">
+      <label style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
+        <input 
+          type="checkbox" 
+          checked={isSelected} 
+          onChange={() => !loading && handleModelSelect(modelId)}
+          disabled={loading}
+        />
+        {model.model_name}
+        <span className="model-type"> ({model.type})</span>
+      </label>
+    </div>
+  );
+})
                   )}
 
                   {errors.applicable_models && <p className="error">{errors.applicable_models}</p>}

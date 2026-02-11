@@ -15888,6 +15888,8 @@ function SubdealerNewBooking() {
                         <option value="Business">Business</option>
                         <option value="Service">Service</option>
                         <option value="Farmer">Farmer</option>
+                        <option value="Self Employed">Self Employed</option>
+                        <option value="Government Servant">Government Servant</option>
                       </CFormSelect>
                     </CInputGroup>
                     {errors.occupation && <p className="error">{errors.occupation}</p>}

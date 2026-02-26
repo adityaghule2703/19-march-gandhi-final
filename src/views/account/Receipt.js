@@ -1,5 +1,4 @@
-
-// import React, { useState, useEffect } from 'react';
+// import React, { useState, useEffect, useCallback, useMemo } from 'react';
 // import { 
 //   CBadge, 
 //   CNav, 
@@ -28,7 +27,10 @@
 //   CModalHeader,
 //   CModalTitle,
 //   CModalBody,
-//   CModalFooter
+//   CModalFooter,
+//   CPagination,
+//   CPaginationItem,
+//   CFormSelect
 // } from '@coreui/react';
 // import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../utils/tableImports';
 // import '../../css/invoice.css';
@@ -36,7 +38,7 @@
 // import ReceiptModal from './ReceiptModal';
 // import { confirmVerify } from '../../utils/sweetAlerts';
 // import CIcon from '@coreui/icons-react';
-// import { cilCheckCircle, cilPrint, cilSettings, cilPlus } from '@coreui/icons';
+// import { cilCheckCircle, cilPrint, cilSettings, cilPlus, cilChevronLeft, cilChevronRight, cilCloudDownload } from '@coreui/icons';
 // import { numberToWords } from '../../utils/numberToWords';
 // import { Menu, MenuItem } from '@mui/material';
 // import { useAuth } from '../../context/AuthContext';
@@ -50,18 +52,12 @@
 // import TextField from '@mui/material/TextField';
 // import { enIN } from 'date-fns/locale';
 
-// // Import permission utilities
 // import { 
 //   hasSafePagePermission,
 //   MODULES, 
 //   PAGES,
 //   TABS,
-//   ACTIONS,
-//   canViewPage,
-//   canCreateInPage,
-//   canUpdateInPage,
-//   canDeleteInPage,
-//   SafePagePermissionGuard 
+//   ACTIONS
 // } from '../../utils/modulePermissions';
 
 // function Receipt() {
@@ -77,10 +73,20 @@
 //   const [anchorEl, setAnchorEl] = useState(null);
 //   const [menuBookingId, setMenuBookingId] = useState(null);
 //   const [successMessage, setSuccessMessage] = useState('');
-//   const [bookingReceipts, setBookingReceipts] = useState({}); // Store receipts for each booking
-//   const [cashLocations, setCashLocations] = useState([]); // Add state for cash locations
   
-//   // Excel Export states
+//   // ============ ON-DEMAND RECEIPTS FETCHING ============
+//   const [bookingReceipts, setBookingReceipts] = useState({});
+//   const [loadingReceipts, setLoadingReceipts] = useState({});
+//   const [receiptsFetched, setReceiptsFetched] = useState({});
+  
+//   const [cashLocations, setCashLocations] = useState([]);
+  
+//   // ============ CLIENT-SIDE PAGINATION STATES ============
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const [recordsPerPage, setRecordsPerPage] = useState(100);
+//   const [totalPages, setTotalPages] = useState(1);
+//   const [displayedPages, setDisplayedPages] = useState([]);
+  
 //   const [openExportModal, setOpenExportModal] = useState(false);
 //   const [startDate, setStartDate] = useState(null);
 //   const [endDate, setEndDate] = useState(null);
@@ -89,10 +95,8 @@
 //   const [exportError, setExportError] = useState('');
 //   const [branches, setBranches] = useState([]);
 
-// //   const { permissions } = useAuth();
 //   const { permissions = [], user } = useAuth();
 //   const hasAllBranchAccess = user?.branchAccess === "ALL";
-//   // Page-level VIEW permission check for Receipts page
 //   const canViewReceipts = hasSafePagePermission(
 //     permissions, 
 //     MODULES.ACCOUNT, 
@@ -100,7 +104,6 @@
 //     ACTIONS.VIEW
 //   );
 
-//   // Page-level CREATE permission check for Excel export
 //   const canCreateReceipts = hasSafePagePermission(
 //     permissions, 
 //     MODULES.ACCOUNT, 
@@ -108,7 +111,6 @@
 //     ACTIONS.CREATE
 //   );
 
-//   // Tab-level VIEW permission checks (based on TABS.RECEIPTS constants)
 //   const canViewCustomerTab = hasSafePagePermission(
 //     permissions, 
 //     MODULES.ACCOUNT, 
@@ -149,7 +151,6 @@
 //     TABS.RECEIPTS.VERIFIED_LIST
 //   );
   
-//   // Tab-level CREATE permission checks
 //   const canCreateInCustomerTab = hasSafePagePermission(
 //     permissions, 
 //     MODULES.ACCOUNT, 
@@ -190,7 +191,6 @@
 //     TABS.RECEIPTS.VERIFIED_LIST
 //   );
   
-//   // Tab-level UPDATE permission checks (if needed for Update buttons)
 //   const canUpdateInCustomerTab = hasSafePagePermission(
 //     permissions, 
 //     MODULES.ACCOUNT, 
@@ -207,207 +207,19 @@
 //     TABS.RECEIPTS.PAYMENT_VERIFICATION
 //   );
   
-//   // Tab-level VIEW permission for Print functionality
 //   const canPrintInCustomerTab = hasSafePagePermission(
 //     permissions, 
 //     MODULES.ACCOUNT, 
 //     PAGES.ACCOUNT.RECEIPTS, 
 //     ACTIONS.VIEW,
 //     TABS.RECEIPTS.CUSTOMER
-//   ) || canViewCustomerTab; // VIEW permission includes print/view capabilities
+//   ) || canViewCustomerTab; 
   
-//   // Check if user can view at least one tab
 //   const canViewAnyTab = canViewCustomerTab || canViewPaymentVerificationTab || 
 //                        canViewCompletePaymentTab || canViewPendingListTab || 
 //                        canViewVerifiedListTab;
 
-//   // Adjust activeTab based on tab-level permissions
-//   useEffect(() => {
-//     if (!canViewAnyTab) {
-//       return;
-//     }
-    
-//     // If current active tab is hidden due to permissions, find first visible tab
-//     const visibleTabs = [];
-//     if (canViewCustomerTab) visibleTabs.push(0);
-//     if (canViewPaymentVerificationTab) visibleTabs.push(1);
-//     if (canViewCompletePaymentTab) visibleTabs.push(2);
-//     if (canViewPendingListTab) visibleTabs.push(3);
-//     if (canViewVerifiedListTab) visibleTabs.push(4);
-    
-//     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
-//       setActiveTab(visibleTabs[0]);
-//     }
-//   }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab, 
-//       canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab, activeTab]);
-
-//   useEffect(() => {
-//     if (!canViewReceipts) {
-//       showError('You do not have permission to view Receipts');
-//       setLoading(false);
-//       return;
-//     }
-    
-//     if (!canViewAnyTab) {
-//       showError('You do not have permission to view any Receipt tabs');
-//       setLoading(false);
-//       return;
-//     }
-    
-//     fetchData();
-//     fetchPendingPayments();
-//     fetchVerifiedPayments();
-//     fetchCashLocations(); // Fetch cash locations when component loads
-//     fetchBranches(); // Fetch branches for export
-//   }, [canViewReceipts, canViewAnyTab]);
-
-//   useEffect(() => {
-//     // Make the printReceiptInvoice function available globally for ReceiptModal to call
-//     window.printReceiptCallback = printReceiptInvoice;
-    
-//     return () => {
-//       // Clean up when component unmounts
-//       delete window.printReceiptCallback;
-//     };
-//   }, []); // Empty dependency array ensures this runs only once
-
-//   const fetchCashLocations = async () => {
-//     try {
-//       // Try different endpoints - adjust based on your API
-//       const endpoints = [
-//         '/cash-locations',
-//         '/cashlocations',
-//         '/settings/cash-locations',
-//         '/master/cash-locations'
-//       ];
-      
-//       for (const endpoint of endpoints) {
-//         try {
-//           const response = await axiosInstance.get(endpoint);
-//           if (response.data.success && response.data.data) {
-//             setCashLocations(response.data.data);
-//             console.log('Cash locations loaded:', response.data.data);
-//             return;
-//           }
-//         } catch (err) {
-//           // Continue to next endpoint
-//           console.log(`Endpoint ${endpoint} not available`);
-//         }
-//       }
-      
-//       // If no endpoint works, create a fallback
-//       console.warn('Could not fetch cash locations from any endpoint');
-//       setCashLocations([]);
-//     } catch (error) {
-//       console.error('Error fetching cash locations:', error);
-//       setCashLocations([]);
-//     }
-//   };
-
-//   const fetchBranches = async () => {
-//     try {
-//       const response = await axiosInstance.get('/branches');
-//       setBranches(response.data.data);
-//     } catch (error) {
-//       const message = showError(error);
-//       if (message) {
-//         setError(message);
-//       }
-//     }
-//   };
-
-//   const fetchData = async () => {
-//     try {
-//       setLoading(true);
-//       const response = await axiosInstance.get(`/bookings`);
-//       const branchBookings = response.data.data.bookings.filter((booking) => booking.bookingType === 'BRANCH');
-//       setBookingsData(branchBookings);
-      
-//       // Fetch receipts for each booking
-//       const receiptsPromises = branchBookings.map(async (booking) => {
-//         try {
-//           const receiptsResponse = await axiosInstance.get(`/ledger/booking/${booking._id}`);
-//           return {
-//             bookingId: booking._id,
-//             receipts: receiptsResponse.data.data.allReceipts || []
-//           };
-//         } catch (error) {
-//           console.error(`Error fetching receipts for booking ${booking._id}:`, error);
-//           return {
-//             bookingId: booking._id,
-//             receipts: []
-//           };
-//         }
-//       });
-      
-//       const receiptsResults = await Promise.all(receiptsPromises);
-//       const receiptsMap = {};
-//       receiptsResults.forEach(result => {
-//         receiptsMap[result.bookingId] = result.receipts;
-//       });
-      
-//       setBookingReceipts(receiptsMap);
-//     } catch (error) {
-//       const message = showError(error);
-//       if (message) {
-//         setError(message);
-//       }
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const fetchPendingPayments = async () => {
-//     if (!canViewReceipts || !canViewPaymentVerificationTab) {
-//       return;
-//     }
-    
-//     try {
-//       const response = await axiosInstance.get(`/ledger/pending`);
-//       setPendingPaymentsData(response.data.data.ledgerEntries);
-//     } catch (error) {
-//       const message = showError(error);
-//       if (message) {
-//         setError(message);
-//       }
-//     }
-//   };
-
-//   const fetchVerifiedPayments = async () => {
-//     if (!canViewReceipts || !canViewVerifiedListTab) {
-//       return;
-//     }
-    
-//     try {
-//       const response = await axiosInstance.get(`/payment/verified/bank/ledger`);
-//       setVerifiedPaymentsData(response.data.data.ledgerEntries);
-//     } catch (error) {
-//       const message = showError(error);
-//       if (message) {
-//         setError(message);
-//       }
-//     }
-//   };
-
-//   // Format date to DD-MM-YYYY for display
-//   const formatDateDDMMYYYY = (date) => {
-//     if (!date) return '';
-//     const day = String(date.getDate()).padStart(2, '0');
-//     const month = String(date.getMonth() + 1).padStart(2, '0');
-//     const year = date.getFullYear();
-//     return `${day}-${month}-${year}`;
-//   };
-
-//   // Format date to YYYY-MM-DD for API
-//   const formatDateForAPI = (date) => {
-//     if (!date) return '';
-//     const year = date.getFullYear();
-//     const month = String(date.getMonth() + 1).padStart(2, '0');
-//     const day = String(date.getDate()).padStart(2, '0');
-//     return `${year}-${month}-${day}`;
-//   };
-
-
+//   // ============ FILTER FUNCTIONS - DEFINED BEFORE useEffect ============
 //   const filterData = (data, searchTerm) => {
 //     if (!searchTerm) return data;
 
@@ -438,53 +250,357 @@
 //     );
 //   };
 
-
 //   const filterPendingPayments = (data, searchTerm) => {
-//   if (!searchTerm) return data;
-  
-//   const term = searchTerm.toLowerCase();
-  
-//   return data.filter((entry) => {
-//     return (
-//       (entry.bookingDetails?.bookingNumber || '').toLowerCase().includes(term) ||
-//       (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
-//       (entry.paymentMode || '').toLowerCase().includes(term) ||
-//       String(entry.amount || '').includes(term) ||
-//       (entry.transactionReference || '').toLowerCase().includes(term)
-//     );
-//   });
-// };
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.bookingDetails?.bookingNumber || '').toLowerCase().includes(term) ||
+//         (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
 
-// const filterVerifiedPayments = (data, searchTerm) => {
-//   if (!searchTerm) return data;
-  
-//   const term = searchTerm.toLowerCase();
-  
-//   return data.filter((entry) => {
-//     return (
-//       (entry.booking || '').toLowerCase().includes(term) ||
-//       (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
-//       (entry.paymentMode || '').toLowerCase().includes(term) ||
-//       String(entry.amount || '').includes(term) ||
-//       (entry.transactionReference || '').toLowerCase().includes(term) ||
-//       (entry.receivedByDetails?.name || '').toLowerCase().includes(term)
-//     );
-//   });
-// };
-//   const filteredBookings = filterData(bookingsData, searchTerm);
-//   const completePayments = filterData(
-//     bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) === 0),
-//     searchTerm
+//   const filterVerifiedPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.booking || '').toLowerCase().includes(term) ||
+//         (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term) ||
+//         (entry.receivedByDetails?.name || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   // ============ DERIVED DATA - USE useMemo FOR PERFORMANCE ============
+//   const filteredBookings = useMemo(() => 
+//     filterData(bookingsData, searchTerm), 
+//     [bookingsData, searchTerm]
 //   );
-//   const pendingPayments = filterData(
-//     bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) !== 0),
-//     searchTerm
+  
+//   const completePayments = useMemo(() => 
+//     filterData(
+//       bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) === 0),
+//       searchTerm
+//     ),
+//     [bookingsData, searchTerm]
 //   );
-//   // const filteredPendingLedgerEntries = filterData(pendingPaymentsData, searchTerm);
+  
+//   const pendingPayments = useMemo(() => 
+//     filterData(
+//       bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) !== 0),
+//       searchTerm
+//     ),
+//     [bookingsData, searchTerm]
+//   );
 
-//   const filteredPendingLedgerEntries = filterPendingPayments(pendingPaymentsData, searchTerm);
-//   const filteredVerifiedLedgerEntries = filterVerifiedPayments(verifiedPaymentsData, searchTerm);
+//   const filteredPendingLedgerEntries = useMemo(() => 
+//     filterPendingPayments(pendingPaymentsData, searchTerm),
+//     [pendingPaymentsData, searchTerm]
+//   );
+  
+//   const filteredVerifiedLedgerEntries = useMemo(() => 
+//     filterVerifiedPayments(verifiedPaymentsData, searchTerm),
+//     [verifiedPaymentsData, searchTerm]
+//   );
 
+//   // ============ EFFECTS - NOW SAFE TO USE filteredBookings ============
+//   useEffect(() => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     const visibleTabs = [];
+//     if (canViewCustomerTab) visibleTabs.push(0);
+//     if (canViewPaymentVerificationTab) visibleTabs.push(1);
+//     if (canViewCompletePaymentTab) visibleTabs.push(2);
+//     if (canViewPendingListTab) visibleTabs.push(3);
+//     if (canViewVerifiedListTab) visibleTabs.push(4);
+    
+//     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+//       setActiveTab(visibleTabs[0]);
+//     }
+//   }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab, 
+//       canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab, activeTab]);
+
+//   useEffect(() => {
+//     if (!canViewReceipts) {
+//       showError('You do not have permission to view Receipts');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     if (!canViewAnyTab) {
+//       showError('You do not have permission to view any Receipt tabs');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     fetchAllData();
+//     fetchCashLocations();
+//     fetchBranches();
+//   }, [canViewReceipts, canViewAnyTab]);
+
+//   useEffect(() => {
+//     window.printReceiptCallback = printReceiptInvoice;
+    
+//     return () => {
+//       delete window.printReceiptCallback;
+//     };
+//   }, []);
+
+//   // ============ PAGINATION CALCULATION ============
+//   const calculatePagination = useCallback((filteredDataLength) => {
+//     const total = filteredDataLength;
+//     const totalPagesCount = Math.ceil(total / recordsPerPage);
+//     setTotalPages(totalPagesCount);
+    
+//     const pages = [];
+//     let startPage = Math.max(1, currentPage - 2);
+//     let endPage = Math.min(totalPagesCount, currentPage + 2);
+    
+//     if (currentPage <= 3) {
+//       endPage = Math.min(5, totalPagesCount);
+//     }
+    
+//     if (currentPage >= totalPagesCount - 2) {
+//       startPage = Math.max(1, totalPagesCount - 4);
+//     }
+    
+//     for (let i = startPage; i <= endPage; i++) {
+//       pages.push(i);
+//     }
+    
+//     setDisplayedPages(pages);
+//   }, [currentPage, recordsPerPage]);
+
+//   useEffect(() => {
+//     const getFilteredDataLength = () => {
+//       switch(activeTab) {
+//         case 0: return filteredBookings.length;
+//         case 1: return filteredPendingLedgerEntries.length;
+//         case 2: return completePayments.length;
+//         case 3: return pendingPayments.length;
+//         case 4: return filteredVerifiedLedgerEntries.length;
+//         default: return 0;
+//       }
+//     };
+    
+//     calculatePagination(getFilteredDataLength());
+//   }, [filteredBookings, filteredPendingLedgerEntries, completePayments, 
+//       pendingPayments, filteredVerifiedLedgerEntries, activeTab, calculatePagination]);
+
+//   // ============ GET CURRENT RECORDS FOR PAGE ============
+//   const getCurrentRecords = useCallback((filteredDataArray) => {
+//     const indexOfLastRecord = currentPage * recordsPerPage;
+//     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+//     return filteredDataArray.slice(indexOfFirstRecord, indexOfLastRecord);
+//   }, [currentPage, recordsPerPage]);
+
+//   // ============ HANDLE PAGE CHANGE ============
+//   const handlePageChange = (pageNumber) => {
+//     if (pageNumber < 1 || pageNumber > totalPages) return;
+//     setCurrentPage(pageNumber);
+//     window.scrollTo({ top: 0, behavior: 'smooth' });
+//   };
+
+//   // ============ HANDLE RECORDS PER PAGE CHANGE ============
+//   const handleRecordsPerPageChange = (e) => {
+//     setRecordsPerPage(parseInt(e.target.value, 10));
+//     setCurrentPage(1);
+//   };
+
+//   // ============ FETCH FUNCTIONS ============
+//   const fetchAllData = async () => {
+//     try {
+//       setLoading(true);
+//       await Promise.all([
+//         fetchData(),
+//         fetchPendingPayments(),
+//         fetchVerifiedPayments()
+//       ]);
+//       setLoading(false);
+//     } catch (error) {
+//       console.log('Error fetching data', error);
+//       setError(error.message);
+//       setLoading(false);
+//     }
+//   };
+
+//   // ============ ON-DEMAND RECEIPTS FETCHING ============
+//   const fetchReceiptsForBooking = useCallback(async (bookingId) => {
+//     if (receiptsFetched[bookingId] || loadingReceipts[bookingId]) {
+//       return;
+//     }
+
+//     try {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: true }));
+      
+//       const receiptsResponse = await axiosInstance.get(`/ledger/booking/${bookingId}`);
+//       const receipts = receiptsResponse.data.data.allReceipts || [];
+      
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [bookingId]: receipts
+//       }));
+      
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [bookingId]: true
+//       }));
+//     } catch (error) {
+//       console.error(`Error fetching receipts for booking ${bookingId}:`, error);
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [bookingId]: []
+//       }));
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [bookingId]: true
+//       }));
+//     } finally {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: false }));
+//     }
+//   }, [loadingReceipts, receiptsFetched]);
+
+//   // Pre-fetch receipts for visible bookings only
+//   useEffect(() => {
+//     if (activeTab === 0 && filteredBookings.length > 0) {
+//       const currentRecords = getCurrentRecords(filteredBookings);
+//       currentRecords.forEach(booking => {
+//         if (!receiptsFetched[booking._id] && !loadingReceipts[booking._id]) {
+//           fetchReceiptsForBooking(booking._id);
+//         }
+//       });
+//     }
+//   }, [activeTab, currentPage, filteredBookings, getCurrentRecords, 
+//       receiptsFetched, loadingReceipts, fetchReceiptsForBooking]);
+
+//   const fetchCashLocations = async () => {
+//     try {
+//       const endpoints = [
+//         '/settings/cash-locations',
+//         '/master/cash-locations'
+//       ];
+      
+//       for (const endpoint of endpoints) {
+//         try {
+//           const response = await axiosInstance.get(endpoint);
+//           if (response.data.success && response.data.data) {
+//             setCashLocations(response.data.data);
+//             return;
+//           }
+//         } catch (err) {
+//           console.log(`Endpoint ${endpoint} not available`);
+//         }
+//       }
+//       console.warn('Could not fetch cash locations from any endpoint');
+//       setCashLocations([]);
+//     } catch (error) {
+//       console.error('Error fetching cash locations:', error);
+//       setCashLocations([]);
+//     }
+//   };
+
+//   const fetchBranches = async () => {
+//     try {
+//       const response = await axiosInstance.get('/branches');
+//       setBranches(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchData = async () => {
+//     try {
+//       const params = {
+//         bookingType: 'BRANCH'
+//       };
+      
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const branchBookings = response.data.data.bookings;
+//       setBookingsData(branchBookings);
+      
+//       const initialReceiptsMap = {};
+//       branchBookings.forEach(booking => {
+//         initialReceiptsMap[booking._id] = [];
+//       });
+//       setBookingReceipts(initialReceiptsMap);
+      
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchPendingPayments = async () => {
+//     if (!canViewReceipts || !canViewPaymentVerificationTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/ledger/pending`, { params });
+//       setPendingPaymentsData(response.data.data.ledgerEntries || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchVerifiedPayments = async () => {
+//     if (!canViewReceipts || !canViewVerifiedListTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/payment/verified/bank/ledger`, { params });
+//       setVerifiedPaymentsData(response.data.data.ledgerEntries || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   // Format date functions
+//   const formatDateDDMMYYYY = (date) => {
+//     if (!date) return '';
+//     const day = String(date.getDate()).padStart(2, '0');
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const year = date.getFullYear();
+//     return `${day}-${month}-${year}`;
+//   };
+
+//   const formatDateForAPI = (date) => {
+//     if (!date) return '';
+//     const year = date.getFullYear();
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const day = String(date.getDate()).padStart(2, '0');
+//     return `${year}-${month}-${day}`;
+//   };
+
+//   // ============ EVENT HANDLERS ============
 //   const handleMenuClick = (event, bookingId) => {
 //     setAnchorEl(event.currentTarget);
 //     setMenuBookingId(bookingId);
@@ -496,7 +612,6 @@
 //   };
 
 //   const handleAddClick = (booking) => {
-//     // Check CREATE permission for the CUSTOMER tab
 //     if (!canCreateInCustomerTab) {
 //       showError('You do not have permission to add payments');
 //       return;
@@ -508,7 +623,6 @@
 //   };
 
 //   const handleVerifyPayment = async (entry) => {
-//     // Check CREATE permission for the PAYMENT VERIFICATION tab
 //     if (!canCreateInPaymentVerificationTab) {
 //       showError('You do not have permission to verify payments');
 //       return;
@@ -527,8 +641,7 @@
 //         });
 //         setSuccessMessage('Payment verified successfully!');
 //         setTimeout(() => setSuccessMessage(''), 3000);
-//         fetchPendingPayments();
-//         fetchVerifiedPayments();
+//         fetchAllData();
 //       }
 //     } catch (error) {
 //       console.error('Error verifying payment:', error);
@@ -543,9 +656,15 @@
     
 //     setActiveTab(tab);
 //     setSearchTerm('');
+//     setCurrentPage(1);
 //   };
+  
+//   const handleSearch = (value) => {
+//     setSearchTerm(value);
+//     setCurrentPage(1);
+//   };
+  
 //   const handleOpenExportModal = () => {
-
 //     if (!canCreateReceipts) {
 //       showError('You do not have permission to export data');
 //       return;
@@ -564,13 +683,11 @@
 //   };
 
 //   const handleExcelExport = async () => {
-//     // Check CREATE permission for Excel export
 //     if (!canCreateReceipts) {
 //       showError('You do not have permission to export data');
 //       return;
 //     }
     
-//     // Clear previous errors
 //     setExportError('');
     
 //     if (!selectedBranchId) {
@@ -594,7 +711,6 @@
 //       const formattedStartDate = formatDateForAPI(startDate);
 //       const formattedEndDate = formatDateForAPI(endDate);
 
-//       // Build query parameters for the receipts API
 //       const params = new URLSearchParams({
 //         branchId: selectedBranchId,
 //         startDate: formattedStartDate,
@@ -602,17 +718,14 @@
 //         format: 'excel'
 //       });
 
-//       // Use the provided API endpoint for receipts
 //       const response = await axiosInstance.get(
 //         `/reports/receipts?${params.toString()}`,
 //         { responseType: 'blob' }
 //       );
 
-//       // Check content type to see if it's an error
 //       const contentType = response.headers['content-type'];
       
 //       if (contentType && contentType.includes('application/json')) {
-//         // It's a JSON error response, parse it
 //         const text = await new Promise((resolve, reject) => {
 //           const reader = new FileReader();
 //           reader.onload = () => resolve(reader.result);
@@ -622,7 +735,6 @@
         
 //         const errorData = JSON.parse(text);
         
-//         // Show the exact error message from API
 //         if (!errorData.success && errorData.message) {
 //           setExportError(errorData.message);
 //           Swal.fire({
@@ -634,7 +746,6 @@
 //         }
 //       }
 
-//       // Handle Excel file download
 //       const blob = new Blob([response.data], { 
 //         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
 //       });
@@ -643,7 +754,6 @@
 //       const link = document.createElement('a');
 //       link.href = url;
       
-//       // Generate filename with DD-MM-YYYY format
 //       const branchName = branches.find(b => b._id === selectedBranchId)?.name || 'Branch';
 //       const startDateStr = formatDateDDMMYYYY(startDate);
 //       const endDateStr = formatDateDDMMYYYY(endDate);
@@ -656,7 +766,6 @@
       
 //       window.URL.revokeObjectURL(url);
       
-//       // Show success message
 //       Swal.fire({
 //         toast: true,
 //         position: 'top-end',
@@ -672,7 +781,6 @@
 //     } catch (error) {
 //       console.error('Error exporting report:', error);
       
-//       // For blob errors, we need to read the blob
 //       if (error.response && error.response.data instanceof Blob) {
 //         try {
 //           const text = await new Promise((resolve, reject) => {
@@ -684,7 +792,6 @@
           
 //           const errorData = JSON.parse(text);
           
-//           // Show the exact error message from API
 //           if (errorData.message) {
 //             setExportError(errorData.message);
 //             Swal.fire({
@@ -703,7 +810,6 @@
 //           });
 //         }
 //       } else if (error.response?.data?.message) {
-//         // Regular error with message in response
 //         setExportError(error.response.data.message);
 //         Swal.fire({
 //           icon: 'error',
@@ -711,7 +817,6 @@
 //           text: error.response.data.message,
 //         });
 //       } else if (error.message) {
-//         // Network or other errors
 //         setExportError(error.message);
 //         Swal.fire({
 //           icon: 'error',
@@ -732,237 +837,78 @@
 //     }
 //   };
 
-  
-// //   const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
-// //     // Check VIEW permission for the CUSTOMER tab (print is a view action)
-// //     if (!canPrintInCustomerTab) {
-// //       showError('You do not have permission to print invoices');
-// //       return;
-// //     }
+//   const handlePaymentSuccess = () => {
+//     fetchAllData();
+//     if (selectedBooking) {
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [selectedBooking._id]: false
+//       }));
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [selectedBooking._id]: []
+//       }));
+//     }
+//   };
+
+//   const handleLoadReceipts = (bookingId) => {
+//     fetchReceiptsForBooking(bookingId);
+//   };
+
+//   // ============ PRINT FUNCTIONS ============
+//   const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
+//     if (!canPrintInCustomerTab) {
+//       showError('You do not have permission to print invoices');
+//       return;
+//     }
     
-// //     try {
-// //       // Fetch receipt details
-// //       const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
-// //       const receiptData = receiptResponse.data.data.receipt;
+//     try {
+//       const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
+//       const receiptData = receiptResponse.data.data.receipt;
       
-// //       // Fetch booking details
-// //       const bookingResponse = await axiosInstance.get(`/ledger/booking/${bookingId}`);
-// //       const bookingData = bookingResponse.data.data.bookingDetails;
-// //       const finalStatus = bookingResponse.data.data.finalStatus || '';
-// //       const qrCodeData = receiptData.qrCodeData || {};
+//       const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
+//       const bookingData = bookingResponse.data.data.bookingDetails;
+//       const finalStatus = bookingResponse.data.data.finalStatus || '';
+//       const qrCodeData = receiptData.qrCodeData || {};
       
-// //       // Get booking totals
-// //       const priceComponents = bookingData.priceComponents || [];
-// //       const filteredPriceComponents = priceComponents.filter((comp) => {
-// //         const headerKey = comp.header?.header_key?.toUpperCase() || '';
-
-// //         const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
-// //         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
-// //         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
-
-// //         return !(isInsurance || isRTO || isHypothecation);
-// //       });
-
-// //       const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+//       const subsidyAmount = bookingData.subsidyAmount || 0;
+//       const isEV = bookingData.model?.type === 'EV';
       
-// //       const findComponentByKeywords = (keywords) => {
-// //         return priceComponents.find((comp) => {
-// //           const headerKey = comp.header?.header_key?.toUpperCase() || '';
-// //           return keywords.some((keyword) => headerKey.includes(keyword));
-// //         });
-// //       };
-
-// //       const insuranceComponent = findComponentByKeywords([
-// //         'INSURANCE', 'INSURCANCE', 'INSURANCE CHARGES', 'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
-// //       ]);
-// //       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
-
-// //       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
-// //       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
-
-// //       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
-// //       const hpCharges = hpComponent ? hpComponent.originalValue : bookingData.hypothecationCharges || 0;
-
-// //       const totalB = insuranceCharges + rtoCharges + hpCharges;
-// //       const grandTotal = totalA + totalB;
-
-// //       // Create QR code text data
-// //       const qrText = `GANDHI MOTORS PVT LTD
-// // Booking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}
-// // Customer: ${qrCodeData.customerName || bookingData.customerDetails?.name}
-// // Mobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}
-// // Model: ${qrCodeData.modelName || bookingData.model?.model_name}
-// // Chassis: ${qrCodeData.chassisNo || bookingData.chassisNumber || 'Not allocated'}
-// // Payment Type: ${qrCodeData.paymentType || bookingData.payment?.type}
-// // Total Amount: ₹${grandTotal.toFixed(2)}
-// // Receipt: ${receiptData.receiptNumber || 'N/A'}
-// // Amount: ${receiptData.display?.amount || `₹${receiptData.amount?.toFixed(2) || '0'}`}
-// // Payment Mode: ${receiptData.paymentMode || 'Cash'}
-// // Reference: ${receiptData.transactionReference || 'N/A'}
-// // Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
-
-// //       // Generate QR code as data URL
-// //       let qrCodeImage = '';
-// //       try {
-// //         qrCodeImage = await QRCode.toDataURL(qrText, {
-// //           width: 250,
-// //           margin: 3,
-// //           color: {
-// //             dark: '#000000',
-// //             light: '#FFFFFF'
-// //           },
-// //           errorCorrectionLevel: 'H'
-// //         });
-// //       } catch (error) {
-// //         console.error('Error generating QR code:', error);
-// //         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
-// //           <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250">
-// //             <rect width="250" height="250" fill="white"/>
-// //             <rect x="20" y="20" width="210" height="210" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
-// //             <text x="125" y="115" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">QR CODE</text>
-// //             <text x="125" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">Receipt: ${receiptData.receiptNumber}</text>
-// //             <text x="125" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Scan for details</text>
-// //           </svg>
-// //         `);
-// //       }
-
-// //       const transformedData = {
-// //         bookingNumber: bookingData.bookingNumber,
-// //         bookingType: bookingData.bookingType,
-// //         rto: bookingData.rto,
-// //         hpa: bookingData.hpa,
-// //         hypothecationCharges: bookingData.hypothecationCharges || 0,
-// //         gstin: bookingData.gstin || '',
-// //         model: {
-// //           model_name: bookingData.model?.model_name || 'N/A'
-// //         },
-// //         chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
-// //         engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
-// //         batteryNumber: bookingData.vehicle?.batteryNumber || '',
-// //         keyNumber: bookingData.vehicle?.keyNumber || '',
-// //         color: {
-// //           name: bookingData.color?.name || ''
-// //         },
-// //         customerDetails: {
-// //           name: bookingData.customerDetails?.name || 'N/A',
-// //           address: bookingData.customerDetails?.address || '',
-// //           taluka: bookingData.customerDetails?.taluka || '',
-// //           district: bookingData.customerDetails?.district || '',
-// //           pincode: bookingData.customerDetails?.pincode || '',
-// //           mobile1: bookingData.customerDetails?.mobile1 || '',
-// //           dob: bookingData.customerDetails?.dob || '',
-// //           aadharNumber: bookingData.customerDetails?.aadharNumber || ''
-// //         },
-// //         exchange: bookingData.exchange,
-// //         exchangeDetails: bookingData.exchangeDetails,
-// //         payment: {
-// //           type: bookingData.payment?.type || 'CASH',
-// //           financer: bookingData.payment?.financer
-// //         },
-// //         salesExecutive: bookingData.salesExecutive,
-// //         branch: {
-// //           gst_number: bookingData.branch?.gst_number || ''
-// //         },
-// //         accessories: bookingData.accessories || [],
-// //         priceComponents: bookingData.priceComponents || [],
-// //         subdealer: bookingData.subdealer || '',
-// //         receivedAmount: bookingData.receivedAmount || 0,
-// //         finalStatus: finalStatus || '',
-// //         recentPayment: receiptData,
-// //         qrCodeData: qrCodeData,
-// //         qrCodeImage: qrCodeImage,
-// //         qrCodeText: qrText,
-// //         recentPaymentAmount: receiptData.amount || 0,
-// //         calculatedTotals: {
-// //           totalA,
-// //           totalB,
-// //           grandTotal,
-// //           insuranceCharges,
-// //           rtoCharges,
-// //           hpCharges
-// //         }
-// //       };
-
-// //       // Check if this is the first receipt or subsequent receipts
-// //       const isFirstReceipt = receiptIndex === 0;
-      
-// //       const invoiceHTML = generateReceiptInvoiceHTML(transformedData, isFirstReceipt);
-
-// //       const printWindow = window.open('', '_blank');
-// //       printWindow.document.write(invoiceHTML);
-// //       printWindow.document.close();
-      
-// //       // Wait for content to load then trigger browser print dialog
-// //       printWindow.onload = function() {
-// //         printWindow.focus();
-// //         printWindow.print();
-// //       };
-      
-// //     } catch (error) {
-// //       console.error('Error generating receipt invoice:', error);
-// //       showError(error, 'Failed to generate receipt invoice');
-// //     }
-// //   };
-
- 
-// const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
-//   if (!canPrintInCustomerTab) {
-//     showError('You do not have permission to print invoices');
-//     return;
-//   }
-  
-//   try {
-//     const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
-//     const receiptData = receiptResponse.data.data.receipt;
-    
-//     const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
-//     const bookingData = bookingResponse.data.data.bookingDetails;
-//     const finalStatus = bookingResponse.data.data.finalStatus || '';
-//     const qrCodeData = receiptData.qrCodeData || {};
-    
-//     const subsidyAmount = bookingData.subsidyAmount || 0;
-//     const isEV = bookingData.model?.type === 'EV';
-    
-//     // Get booking totals
-//     const priceComponents = bookingData.priceComponents || [];
-//     const filteredPriceComponents = priceComponents.filter((comp) => {
-//       const headerKey = comp.header?.header_key?.toUpperCase() || '';
-
-//       const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
-//       const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
-//       const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
-
-//       return !(isInsurance || isRTO || isHypothecation);
-//     });
-
-//     const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
-    
-//     const findComponentByKeywords = (keywords) => {
-//       return priceComponents.find((comp) => {
+//       const priceComponents = bookingData.priceComponents || [];
+//       const filteredPriceComponents = priceComponents.filter((comp) => {
 //         const headerKey = comp.header?.header_key?.toUpperCase() || '';
-//         return keywords.some((keyword) => headerKey.includes(keyword));
+//         const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+//         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+//         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+//         return !(isInsurance || isRTO || isHypothecation);
 //       });
-//     };
 
-//     const insuranceComponent = findComponentByKeywords([
-//       'INSURANCE', 'INSURCANCE', 'INSURANCE CHARGES', 'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
-//     ]);
-//     const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+//       const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+      
+//       const findComponentByKeywords = (keywords) => {
+//         return priceComponents.find((comp) => {
+//           const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//           return keywords.some((keyword) => headerKey.includes(keyword));
+//         });
+//       };
 
-//     const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
-//     const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+//       const insuranceComponent = findComponentByKeywords([
+//         'INSURANCE', 'INSURCANCE', 'INSURANCE CHARGES', 'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+//       ]);
+//       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
 
-//     const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
-//     const hpCharges = hpComponent ? hpComponent.originalValue : bookingData.hypothecationCharges || 0;
+//       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+//       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
 
-//     const totalB = insuranceCharges + rtoCharges + hpCharges;
-    
-//     // Apply subsidy only for EV models
-//     const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
-//     const grandTotal = totalA + totalB - subsidyDisplay;
+//       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+//       const hpCharges = hpComponent ? hpComponent.originalValue : bookingData.hypothecationCharges || 0;
 
-//     // Create QR code text data
-//     const qrText = `GANDHI MOTORS PVT LTD
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+      
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       const qrText = `GANDHI MOTORS PVT LTD
 // Booking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}
 // Customer: ${qrCodeData.customerName || bookingData.customerDetails?.name}
 // Mobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}
@@ -978,203 +924,189 @@
 // Reference: ${receiptData.transactionReference || 'N/A'}
 // Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
 
-//     // Generate QR code as data URL
-//     let qrCodeImage = '';
-//     try {
-//       qrCodeImage = await QRCode.toDataURL(qrText, {
-//         width: 250,
-//         margin: 3,
-//         color: {
-//           dark: '#000000',
-//           light: '#FFFFFF'
-//         },
-//         errorCorrectionLevel: 'H'
-//       });
-//     } catch (error) {
-//       console.error('Error generating QR code:', error);
-//       qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
-//         <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250">
-//           <rect width="250" height="250" fill="white"/>
-//           <rect x="20" y="20" width="210" height="210" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
-//           <text x="125" y="115" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">QR CODE</text>
-//           <text x="125" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">Receipt: ${receiptData.receiptNumber}</text>
-//           <text x="125" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Scan for details</text>
-//         </svg>
-//       `);
-//     }
-
-//     const transformedData = {
-//       bookingNumber: bookingData.bookingNumber,
-//       bookingType: bookingData.bookingType,
-//       rto: bookingData.rto,
-//       hpa: bookingData.hpa,
-//       hypothecationCharges: bookingData.hypothecationCharges || 0,
-//       gstin: bookingData.gstin || '',
-//       model: {
-//         model_name: bookingData.model?.model_name || 'N/A',
-//         type: bookingData.model?.type || 'N/A' // Add type to model
-//       },
-//       chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
-//       engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
-//       batteryNumber: bookingData.vehicle?.batteryNumber || '',
-//       keyNumber: bookingData.vehicle?.keyNumber || '',
-//       color: {
-//         name: bookingData.color?.name || ''
-//       },
-//       customerDetails: {
-//         name: bookingData.customerDetails?.name || 'N/A',
-//         address: bookingData.customerDetails?.address || '',
-//         taluka: bookingData.customerDetails?.taluka || '',
-//         district: bookingData.customerDetails?.district || '',
-//         pincode: bookingData.customerDetails?.pincode || '',
-//         mobile1: bookingData.customerDetails?.mobile1 || '',
-//         dob: bookingData.customerDetails?.dob || '',
-//         aadharNumber: bookingData.customerDetails?.aadharNumber || ''
-//       },
-//       exchange: bookingData.exchange,
-//       exchangeDetails: bookingData.exchangeDetails,
-//       payment: {
-//         type: bookingData.payment?.type || 'CASH',
-//         financer: bookingData.payment?.financer
-//       },
-//       salesExecutive: bookingData.salesExecutive,
-//       branch: {
-//         gst_number: bookingData.branch?.gst_number || ''
-//       },
-//       accessories: bookingData.accessories || [],
-//       priceComponents: bookingData.priceComponents || [],
-//       subdealer: bookingData.subdealer || '',
-//       receivedAmount: bookingData.receivedAmount || 0,
-//       finalStatus: finalStatus || '',
-//       recentPayment: receiptData,
-//       qrCodeData: qrCodeData,
-//       qrCodeImage: qrCodeImage,
-//       qrCodeText: qrText,
-//       recentPaymentAmount: receiptData.amount || 0,
-//       bookingDetails: bookingData, // Pass entire booking details
-//       subsidyAmount: subsidyAmount, // Add subsidy amount
-//       calculatedTotals: {
-//         totalA,
-//         totalB,
-//         grandTotal,
-//         insuranceCharges,
-//         rtoCharges,
-//         hpCharges,
-//         subsidyDisplay
-//       }
-//     };
-
-//     // Check if this is the first receipt or subsequent receipts
-//     const isFirstReceipt = receiptIndex === 0;
-    
-//     const invoiceHTML = generateReceiptInvoiceHTML(transformedData, isFirstReceipt);
-
-//     const printWindow = window.open('', '_blank');
-//     printWindow.document.write(invoiceHTML);
-//     printWindow.document.close();
-    
-//     printWindow.onload = function() {
-//       printWindow.focus();
-//       printWindow.print();
-//     };
-    
-//   } catch (error) {
-//     console.error('Error generating receipt invoice:', error);
-//     showError(error, 'Failed to generate receipt invoice');
-//   }
-// };
-//   const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
-
-
-//     const exchangeBrokerName = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
-//     const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
-
-//     const currentDate = new Date().toLocaleDateString('en-GB');
-//     const receiptDate = data.recentPayment?.receiptDate 
-//       ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB')
-//       : currentDate;
-    
-//     const recentPaymentAmount = data.recentPaymentAmount || 0;
-//     const recentPaymentAmountRef = data.recentPayment?.transactionReference || "-";
-//     const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
-//     const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
-//     const receiptNumber = data.recentPayment?.receiptNumber || "-";
-
-//     // Get QR code data
-//     const qrCodeData = data.qrCodeData || {};
-//     const qrCodeImage = data.qrCodeImage || '';
-    
-//      const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
-//      const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
-  
-//     if (isFirstReceipt) {
-//       const filteredPriceComponents = data.priceComponents.filter((comp) => {
-//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
-
-//         const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
-//         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
-//         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
-
-//         return !(isInsurance || isRTO || isHypothecation);
-//       });
-
-//       const priceComponentsWithGST = filteredPriceComponents.map((component) => {
-//         const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
-
-//         const unitCost = component.originalValue;
-//         // const discount = component.discountedValue < component.originalValue ? component.originalValue - component.discountedValue : 0;
-//         const discount = 0;
-//         // const lineTotal = component.discountedValue;
-//          const lineTotal = component.originalValue;
-//         const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
-
-//         const totalGST = lineTotal - taxableValue;
-//         const cgstAmount = totalGST / 2;
-//         const sgstAmount = totalGST / 2;
-//         const gstAmount = cgstAmount + sgstAmount;
-
-//         return {
-//           ...component,
-//           unitCost,
-//           taxableValue,
-//           cgstAmount,
-//           sgstAmount,
-//           gstAmount,
-//           gstRatePercentage: gstRatePercentage,
-//           discount,
-//           lineTotal
-//         };
-//       });
-      
- 
-
-//       const findComponentByKeywords = (keywords) => {
-//         return data.priceComponents.find((comp) => {
-//           const headerKey = comp.header?.header_key?.toUpperCase() || '';
-//           return keywords.some((keyword) => headerKey.includes(keyword));
+//       let qrCodeImage = '';
+//       try {
+//         qrCodeImage = await QRCode.toDataURL(qrText, {
+//           width: 250,
+//           margin: 3,
+//           color: {
+//             dark: '#000000',
+//             light: '#FFFFFF'
+//           },
+//           errorCorrectionLevel: 'H'
 //         });
+//       } catch (error) {
+//         console.error('Error generating QR code:', error);
+//         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
+//           <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250">
+//             <rect width="250" height="250" fill="white"/>
+//             <rect x="20" y="20" width="210" height="210" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+//             <text x="125" y="115" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">QR CODE</text>
+//             <text x="125" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">Receipt: ${receiptData.receiptNumber}</text>
+//             <text x="125" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Scan for details</text>
+//           </svg>
+//         `);
+//       }
+
+//       const transformedData = {
+//         bookingNumber: bookingData.bookingNumber,
+//         bookingType: bookingData.bookingType,
+//         rto: bookingData.rto,
+//         hpa: bookingData.hpa,
+//         hypothecationCharges: bookingData.hypothecationCharges || 0,
+//         gstin: bookingData.gstin || '',
+//         model: {
+//           model_name: bookingData.model?.model_name || 'N/A',
+//           type: bookingData.model?.type || 'N/A'
+//         },
+//         chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
+//         engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
+//         batteryNumber: bookingData.vehicle?.batteryNumber || '',
+//         keyNumber: bookingData.vehicle?.keyNumber || '',
+//         color: {
+//           name: bookingData.color?.name || ''
+//         },
+//         customerDetails: {
+//           name: bookingData.customerDetails?.name || 'N/A',
+//           address: bookingData.customerDetails?.address || '',
+//           taluka: bookingData.customerDetails?.taluka || '',
+//           district: bookingData.customerDetails?.district || '',
+//           pincode: bookingData.customerDetails?.pincode || '',
+//           mobile1: bookingData.customerDetails?.mobile1 || '',
+//           dob: bookingData.customerDetails?.dob || '',
+//           aadharNumber: bookingData.customerDetails?.aadharNumber || ''
+//         },
+//         exchange: bookingData.exchange,
+//         exchangeDetails: bookingData.exchangeDetails,
+//         payment: {
+//           type: bookingData.payment?.type || 'CASH',
+//           financer: bookingData.payment?.financer
+//         },
+//         salesExecutive: bookingData.salesExecutive,
+//         branch: {
+//           gst_number: bookingData.branch?.gst_number || ''
+//         },
+//         accessories: bookingData.accessories || [],
+//         priceComponents: bookingData.priceComponents || [],
+//         subdealer: bookingData.subdealer || '',
+//         receivedAmount: bookingData.receivedAmount || 0,
+//         finalStatus: finalStatus || '',
+//         recentPayment: receiptData,
+//         qrCodeData: qrCodeData,
+//         qrCodeImage: qrCodeImage,
+//         qrCodeText: qrText,
+//         recentPaymentAmount: receiptData.amount || 0,
+//         bookingDetails: bookingData,
+//         subsidyAmount: subsidyAmount,
+//         calculatedTotals: {
+//           totalA,
+//           totalB,
+//           grandTotal,
+//           insuranceCharges,
+//           rtoCharges,
+//           hpCharges,
+//           subsidyDisplay
+//         }
 //       };
 
-//       const insuranceComponent = findComponentByKeywords([
-//         'INSURANCE',
-//         'INSURCANCE',
-//         'INSURANCE CHARGES',
-//         'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
-//       ]);
-//       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+//       const isFirstReceipt = receiptIndex === 0;
+      
+//       const invoiceHTML = generateReceiptInvoiceHTML(transformedData, isFirstReceipt);
 
-//       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
-//       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+//       const printWindow = window.open('', '_blank');
+//       printWindow.document.write(invoiceHTML);
+//       printWindow.document.close();
+      
+//       printWindow.onload = function() {
+//         printWindow.focus();
+//         printWindow.print();
+//       };
+      
+//     } catch (error) {
+//       console.error('Error generating receipt invoice:', error);
+//       showError(error, 'Failed to generate receipt invoice');
+//     }
+//   };
+  
+//  const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+//   const exchangeBrokerName = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+//   const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
 
-//       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
-//       const hpCharges = hpComponent ? hpComponent.originalValue : data.hypothecationCharges || 0;
+//   const currentDate = new Date().toLocaleDateString('en-GB');
+//   const receiptDate = data.recentPayment?.receiptDate 
+//     ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB')
+//     : currentDate;
+  
+//   const recentPaymentAmount = data.recentPaymentAmount || 0;
+//   const recentPaymentAmountRef = data.recentPayment?.transactionReference || "-";
+//   const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+//   const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+//   const receiptNumber = data.recentPayment?.receiptNumber || "-";
 
-//       const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
-//       const totalB = insuranceCharges + rtoCharges + hpCharges;
-//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
-//       const grandTotal = totalA + totalB;
+//   const qrCodeImage = data.qrCodeImage || '';
+  
+//   const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+//   const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
 
-//       return `
+//   if (isFirstReceipt) {
+//     const filteredPriceComponents = data.priceComponents.filter((comp) => {
+//       const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//       const isInsurance = /INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+//       const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+//       const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+//       return !(isInsurance || isRTO || isHypothecation);
+//     });
+
+//     const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+//       const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+//       const unitCost = component.originalValue;
+//       const discount = 0;
+//       const lineTotal = component.originalValue;
+//       const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+//       const totalGST = lineTotal - taxableValue;
+//       const cgstAmount = totalGST / 2;
+//       const sgstAmount = totalGST / 2;
+      
+//       return {
+//         ...component,
+//         unitCost,
+//         taxableValue,
+//         cgstAmount,
+//         sgstAmount,
+//         gstAmount: cgstAmount + sgstAmount,
+//         gstRatePercentage,
+//         discount,
+//         lineTotal
+//       };
+//     });
+    
+//     const findComponentByKeywords = (keywords) => {
+//       return data.priceComponents.find((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         return keywords.some((keyword) => headerKey.includes(keyword));
+//       });
+//     };
+
+//     const insuranceComponent = findComponentByKeywords([
+//       'INSURANCE',
+//       'INSURCANCE',
+//       'INSURANCE CHARGES',
+//       'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+//     ]);
+//     const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+//     const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+//     const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+//     const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+//     const hpCharges = hpComponent ? hpComponent.originalValue : data.hypothecationCharges || 0;
+
+//     const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+//     const totalB = insuranceCharges + rtoCharges + hpCharges;
+//     const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//     const grandTotal = totalA + totalB - subsidyDisplay;
+
+//     return `
 // <!DOCTYPE html>
 // <html>
 // <head>
@@ -1233,7 +1165,6 @@
 //       display: flex;
 //       font-size:14px;
 //     }
-
 //     .customer-info-left {
 //       width: 50%;
 //     }
@@ -1329,13 +1260,10 @@
 //       color: #333;
 //       padding: 5px;
 //     }
-
 //     .note{
 //       padding:1px;
 //       margin:2px;
 //     }
-    
-//     /* QR Code at bottom - even bigger */
 //     .qr-bottom-section {
 //       margin-top: 10mm;
 //       text-align: center;
@@ -1353,7 +1281,6 @@
 //       color: #777;
 //       margin-top: 3mm;
 //     }
-    
 //     .receipt-info {
 //       background-color: #f8f9fa;
 //       border: 1px solid #dee2e6;
@@ -1361,7 +1288,6 @@
 //       padding: 10px;
 //       margin: 10px 0;
 //     }
-    
 //     @page {
 //       size: A4;
 //       margin: 0;
@@ -1378,7 +1304,6 @@
 // </head>
 // <body>
 //   <div class="page">
-//     <!-- Header Section with QR Code -->
 //     <div class="header-container">
 //       <div class="header-left">
 //         <h2 style="margin:3;font-size:15pt;">GANDHI MOTORS PVT LTD</h2>
@@ -1391,7 +1316,6 @@
 //         </div>
 //       </div>
 //       <div class="header-right">
-//         <!-- Logo and QR code side by side -->
 //         <div class="logo-qr-container">
 //           <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
 //           ${
@@ -1408,41 +1332,36 @@
 //           data.bookingType === 'SUBDEALER'
 //             ? `<div style="font-size: 12px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
 //         <div style="font-size: 11px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>
-          
-//           `
+//         `
 //             : ''
 //         }
-        
 //       </div>
 //     </div>
 //     <div class="divider"></div>
 
-//     <!-- Receipt Information -->
 //     <div class="receipt-info">
 //       <div><strong>Payment Receipt</strong></div>
 //       <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
 //       <div><strong>Receipt Date:</strong> ${receiptDate}</div>
 //     </div>
 
-//     <!-- Customer Information -->
 //     <div class="customer-info-container">
 //       <div class="customer-info-left">
 //         <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
 //         <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
 //         <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</div>
 //         <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
-//           <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//         <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
 //       </div>
 //       <div class="customer-info-right">
 //         <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
-//        <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//         <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
 //         <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
-//          <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//         <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
 //         <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
 //       </div>
 //     </div>
 
-//     <!-- Received Amount Section -->
 //     <div class="payment-info-box">
 //       <div class="receipt-info">
 //         <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
@@ -1455,7 +1374,6 @@
 //         <strong>(In Words):</strong> ${recentPaymentAmountInWords} Only
 //       </div>
 //     </div>
-//     <!-- Price Breakdown Table -->
 //     <table>
 //       <tr>
 //         <th style="width:25%">Particulars</th>
@@ -1490,8 +1408,7 @@
 //         .join('')}
 //     </table>
 
-//     <!-- Totals Section - No Borders -->
-//      <table class="totals-table">
+//     <table class="totals-table">
 //       <tr>
 //         <td class="no-border" style="width:80%"><strong>Total(A)</strong></td>
 //         <td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td>
@@ -1544,11 +1461,8 @@
 //     </div>
 //     <div class="divider"></div>
 
-//     <!-- BIG QR Code at Bottom -->
-    
 //     <div class="divider" style="margin-top: 5mm;"></div>
 
-//     <!-- Signature Section - Adjusted to fit properly -->
 //     <div class="signature-box">
 //       <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
 //         <div style="text-align:center; width: 22%;">
@@ -1573,10 +1487,8 @@
 // </body>
 // </html>
 //   `;
-//     } else {
-//      // For subsequent receipts (2nd onwards) - Simplified version without price breakdown
-// // Show the same receipt twice with cutting line in between
-// return `
+//   } else {
+//     return `
 // <!DOCTYPE html>
 // <html>
 // <head>
@@ -1595,7 +1507,7 @@
 //       margin: 0 auto;
 //     }
 //     .receipt-copy {
-//       height: 138mm; /* Half of A4 page */
+//       height: 138mm;
 //       page-break-inside: avoid;
 //     }
 //     .header-container {
@@ -1696,7 +1608,6 @@
 //       margin:2px;
 //       font-size: 11px;
 //     }
-    
 //     @page {
 //       size: A4;
 //       margin: 0;
@@ -1713,9 +1624,7 @@
 // </head>
 // <body>
 //   <div class="page">
-//     <!-- First Copy -->
 //     <div class="receipt-copy">
-//       <!-- Header Section with QR Code -->
 //       <div class="header-container">
 //         <div class="header-left">
 //           <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
@@ -1728,7 +1637,6 @@
 //           </div>
 //         </div>
 //         <div class="header-right">
-//           <!-- Logo and QR code side by side -->
 //           <div class="logo-qr-container">
 //             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
 //             ${
@@ -1751,14 +1659,12 @@
 //       </div>
 //       <div class="divider"></div>
 
-//       <!-- Receipt Information -->
 //       <div class="receipt-info">
 //         <div><strong>Payment Receipt</strong></div>
 //         <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
 //         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
 //       </div>
 
-//       <!-- Customer Information -->
 //       <div class="customer-info-container">
 //         <div class="customer-info-left">
 //           <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
@@ -1776,7 +1682,6 @@
 //         </div>
 //       </div>
 
-//       <!-- Received Amount Section -->
 //       <div class="payment-info-box">
 //         <div class="receipt-info">
 //           <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
@@ -1790,7 +1695,6 @@
 //       <div class="note"><strong>Notes:</strong></div>
 //       <div class="divider"></div>
 
-//       <!-- Signature Section -->
 //       <div class="signature-box">
 //         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
 //           <div style="text-align:center; width: 22%;">
@@ -1813,12 +1717,9 @@
 //       </div>
 //     </div>
 
-//     <!-- Cutting Line -->
 //     <div class="cutting-line"></div>
 
-//     <!-- Second Copy (Duplicate) -->
 //     <div class="receipt-copy">
-//       <!-- Header Section with QR Code -->
 //       <div class="header-container">
 //         <div class="header-left">
 //           <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
@@ -1831,7 +1732,6 @@
 //           </div>
 //         </div>
 //         <div class="header-right">
-//           <!-- Logo and QR code side by side -->
 //           <div class="logo-qr-container">
 //             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
 //             ${
@@ -1854,14 +1754,12 @@
 //       </div>
 //       <div class="divider"></div>
 
-//       <!-- Receipt Information -->
 //       <div class="receipt-info">
 //         <div><strong>Payment Receipt (DUPLICATE)</strong></div>
 //         <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
 //         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
 //       </div>
 
-//       <!-- Customer Information -->
 //       <div class="customer-info-container">
 //         <div class="customer-info-left">
 //           <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
@@ -1879,7 +1777,6 @@
 //         </div>
 //       </div>
 
-//       <!-- Received Amount Section -->
 //       <div class="payment-info-box">
 //         <div class="receipt-info">
 //           <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
@@ -1893,7 +1790,6 @@
 //       <div class="note"><strong>Notes:</strong></div>
 //       <div class="divider"></div>
 
-//       <!-- Signature Section -->
 //       <div class="signature-box">
 //         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
 //           <div style="text-align:center; width: 22%;">
@@ -1919,363 +1815,401 @@
 // </body>
 // </html>
 //   `;
-// }
+//   }
+// };
+
+//   // ============ PAGINATION RENDER FUNCTION ============
+//   const renderPagination = (filteredDataArray) => {
+//     if (filteredDataArray.length <= recordsPerPage) {
+//       return null;
+//     }
+    
+//     return (
+//       <div className="mt-4">
+//         <div className="d-flex justify-content-between align-items-center mb-2">
+//           <div className="d-flex align-items-center">
+//             <CFormLabel className="me-2 mb-0">Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={recordsPerPage}
+//               onChange={handleRecordsPerPageChange}
+//               style={{ width: '80px' }}
+//               size="sm"
+//             >
+//               <option value={50}>50</option>
+//               <option value={100}>100</option>
+//               <option value={200}>200</option>
+//               <option value={500}>500</option>
+//             </CFormSelect>
+//           </div>
+//           <div className="text-muted">
+//             Showing {(currentPage - 1) * recordsPerPage + 1} to {Math.min(currentPage * recordsPerPage, filteredDataArray.length)} of {filteredDataArray.length} entries
+//           </div>
+//         </div>
+        
+//         <CPagination align="center" aria-label="Page navigation example">
+//           <CPaginationItem 
+//             aria-label="Previous" 
+//             onClick={() => handlePageChange(currentPage - 1)}
+//             disabled={currentPage === 1}
+//           >
+//             <CIcon icon={cilChevronLeft} />
+//           </CPaginationItem>
+          
+//           {currentPage > 3 && totalPages > 5 && (
+//             <>
+//               <CPaginationItem onClick={() => handlePageChange(1)}>
+//                 1
+//               </CPaginationItem>
+//               {currentPage > 4 && <CPaginationItem disabled>...</CPaginationItem>}
+//             </>
+//           )}
+          
+//           {displayedPages.map(page => (
+//             <CPaginationItem 
+//               key={page}
+//               onClick={() => handlePageChange(page)}
+//               active={currentPage === page}
+//             >
+//               {page}
+//             </CPaginationItem>
+//           ))}
+          
+//           {currentPage < totalPages - 2 && totalPages > 5 && (
+//             <>
+//               {currentPage < totalPages - 3 && <CPaginationItem disabled>...</CPaginationItem>}
+//               <CPaginationItem onClick={() => handlePageChange(totalPages)}>
+//                 {totalPages}
+//               </CPaginationItem>
+//             </>
+//           )}
+          
+//           <CPaginationItem 
+//             aria-label="Next" 
+//             onClick={() => handlePageChange(currentPage + 1)}
+//             disabled={currentPage === totalPages}
+//           >
+//             <CIcon icon={cilChevronRight} />
+//           </CPaginationItem>
+//         </CPagination>
+//       </div>
+//     );
 //   };
 
+//   // ============ RENDER TABLE FUNCTIONS ============
+//   const renderCustomerTable = () => {
+//     if (!canViewCustomerTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Customer tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
 
-//  const renderCustomerTable = () => {
-//   // Check if user has permission to view this tab
-//   if (!canViewCustomerTab) {
+//     const canShowActionColumn = canCreateInCustomerTab || canPrintInCustomerTab;
+//     const canShowAddPayment = canCreateInCustomerTab;
+//     const canShowPrint = canPrintInCustomerTab;
+    
+//     const currentRecords = getCurrentRecords(filteredBookings);
+
 //     return (
-//       <div className="text-center py-4">
-//         <CAlert color="warning">
-//           You do not have permission to view the Customer tab.
-//         </CAlert>
-//       </div>
-//     );
-//   }
-
-//   // Check if user has permission to add payments (CREATE permission) or view receipts (VIEW permission)
-//   const canShowActionColumn = canCreateInCustomerTab || canPrintInCustomerTab;
-//   const canShowAddPayment = canCreateInCustomerTab;
-//   const canShowPrint = canPrintInCustomerTab;
-
-//   return (
-//     <div className="responsive-table-wrapper">
-//       <CTable striped bordered hover className='responsive-table'>
-//         <CTableHead>
-//           <CTableRow>
-//             <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Total</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Received</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Receipts</CTableHeaderCell>
-//             {canShowActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
-//           </CTableRow>
-//         </CTableHead>
-//         <CTableBody>
-//           {filteredBookings.length === 0 ? (
-//             <CTableRow>
-//               <CTableDataCell colSpan={canShowActionColumn ? "12" : "11"} style={{ color: 'red', textAlign: 'center' }}>
-//                 {searchTerm ? 'No matching bookings found' : 'No booking available'}
-//               </CTableDataCell>
-//             </CTableRow>
-//           ) : (
-//             filteredBookings.map((booking, index) => {
-//               const receipts = bookingReceipts[booking._id] || [];
-              
-//               // Sort receipts by date in ascending order (oldest first)
-//               const sortedReceipts = [...receipts].sort((a, b) => {
-//                 const dateA = new Date(a.receiptDate || a.createdAt || 0);
-//                 const dateB = new Date(b.receiptDate || b.createdAt || 0);
-//                 return dateA - dateB; // Ascending order
-//               });
-              
-//               return (
-//                 <CTableRow key={index}>
-//                   <CTableDataCell>{index + 1}</CTableDataCell>
-//                   <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
-//                   <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-//                   <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>
-//                     {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-//                       ? (booking.chassisNumber || '')
-//                       : ''
-//                     }
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Receipts</CTableHeaderCell>
+//                 {canShowActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan={canShowActionColumn ? "12" : "11"} style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching bookings found' : 'No booking available'}
 //                   </CTableDataCell>
-//                   <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
-//                   <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
-//                   <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
-//                   <CTableDataCell>
-//                     {sortedReceipts.length > 0 ? (
-//                       <CDropdown>
-//                         <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canShowPrint}>
-//                           {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
-//                         </CDropdownToggle>
-//                         <CDropdownMenu>
-//                           {sortedReceipts.map((receipt, receiptIndex) => (
-//                             <CDropdownItem 
-//                               key={receipt.id} 
-//                               onClick={() => printReceiptInvoice(receipt.id, booking._id, receiptIndex)}
-//                             >
-//                               <div className="d-flex align-items-center">
-//                                 <CIcon icon={cilPrint} className="me-2" />
-//                                 <div>
-//                                   <div><strong>Receipt #{receiptIndex + 1}</strong></div>
-//                                   <small>
-//                                     {receipt.display?.amount || `₹${receipt.amount}`} - 
-//                                     {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}
-//                                   </small>
-//                                 </div>
-//                               </div>
-//                             </CDropdownItem>
-//                           ))}
-//                         </CDropdownMenu>
-//                       </CDropdown>
-//                     ) : (
-//                       <span className="text-muted">No receipts</span>
-//                     )}
-//                   </CTableDataCell>
-
-//                   {canShowActionColumn && (
-//                     <CTableDataCell>
-//                       <CButton
-//                         size="sm"
-//                         className='option-button btn-sm'
-//                         onClick={(event) => handleMenuClick(event, booking._id)}
-//                         disabled={!canShowAddPayment}
-//                       >
-//                         <CIcon icon={cilSettings} />
-//                         Options
-//                       </CButton>
-
-//                       <Menu
-//                         id={`action-menu-${booking._id}`}
-//                         anchorEl={anchorEl}
-//                         open={menuBookingId === booking._id}
-//                         onClose={handleMenuClose}
-//                         anchorOrigin={{
-//                           vertical: 'bottom',
-//                           horizontal: 'right',
-//                         }}
-//                         transformOrigin={{
-//                           vertical: 'top',
-//                           horizontal: 'right',
-//                         }}
-//                       >
-//                         {canShowAddPayment && (
-//                           <MenuItem onClick={() => {
-//                             handleAddClick(booking);
-//                             handleMenuClose();
-//                           }}>
-//                             <CIcon icon={cilPlus} className="me-2" />
-//                             Add Payment
-//                           </MenuItem>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   const hasReceipts = receiptsFetched[booking._id] && bookingReceipts[booking._id]?.length > 0;
+//                   const isLoading = loadingReceipts[booking._id];
+//                   const receipts = bookingReceipts[booking._id] || [];
+                  
+//                   const sortedReceipts = [...receipts].sort((a, b) => {
+//                     const dateA = new Date(a.receiptDate || a.createdAt || 0);
+//                     const dateB = new Date(b.receiptDate || b.createdAt || 0);
+//                     return dateA - dateB;
+//                   });
+                  
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : hasReceipts ? (
+//                           <CDropdown>
+//                             <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canShowPrint}>
+//                               {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
+//                             </CDropdownToggle>
+//                             <CDropdownMenu>
+//                               {sortedReceipts.map((receipt, receiptIndex) => (
+//                                 <CDropdownItem 
+//                                   key={receipt.id} 
+//                                   onClick={() => printReceiptInvoice(receipt.id, booking._id, receiptIndex)}
+//                                 >
+//                                   <div className="d-flex align-items-center">
+//                                     <CIcon icon={cilPrint} className="me-2" />
+//                                     <div>
+//                                       <div><strong>Receipt #{receiptIndex + 1}</strong></div>
+//                                       <small>
+//                                         {receipt.display?.amount || `₹${receipt.amount}`} - 
+//                                         {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}
+//                                       </small>
+//                                     </div>
+//                                   </div>
+//                                 </CDropdownItem>
+//                               ))}
+//                             </CDropdownMenu>
+//                           </CDropdown>
+//                         ) : receiptsFetched[booking._id] ? (
+//                           <span className="text-muted">No receipts</span>
+//                         ) : (
+//                           <CButton
+//                             size="sm"
+//                             color="light"
+//                             onClick={() => handleLoadReceipts(booking._id)}
+//                             disabled={isLoading}
+//                           >
+//                             <CIcon icon={cilCloudDownload} className="me-1" />
+//                             Load Receipts
+//                           </CButton>
 //                         )}
-//                       </Menu>
-//                     </CTableDataCell>
-//                   )}
-//                 </CTableRow>
-//               );
-//             })
-//           )}
-//         </CTableBody>
-//       </CTable>
-//     </div>
-//   );
-// };
+//                       </CTableDataCell>
 
-//   // const renderPaymentVerificationTable = () => {
-   
-//   //   if (!canViewPaymentVerificationTab) {
-//   //     return (
-//   //       <div className="text-center py-4">
-//   //         <CAlert color="warning">
-//   //           You do not have permission to view the Payment Verification tab.
-//   //         </CAlert>
-//   //       </div>
-//   //     );
-//   //   }
+//                       {canShowActionColumn && (
+//                         <CTableDataCell>
+//                           <CButton
+//                             size="sm"
+//                             className='option-button btn-sm'
+//                             onClick={(event) => handleMenuClick(event, booking._id)}
+//                             disabled={!canShowAddPayment}
+//                           >
+//                             <CIcon icon={cilSettings} />
+//                             Options
+//                           </CButton>
 
-//   //   return (
-//   //     <div className="responsive-table-wrapper">
-//   //       <CTable striped bordered hover className='responsive-table'>
-//   //         <CTableHead>
-//   //           <CTableRow>
-//   //             <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-//   //             <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-//   //             <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-//   //             <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
-//   //             <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
-//   //             <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
-//   //             <CTableHeaderCell scope="col">Date</CTableHeaderCell>
-//   //             <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-//   //             {canCreateInPaymentVerificationTab && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
-//   //           </CTableRow>
-//   //         </CTableHead>
-//   //         <CTableBody>
-//   //           {filteredPendingLedgerEntries.length === 0 ? (
-//   //             <CTableRow>
-//   //               <CTableDataCell colSpan={canCreateInPaymentVerificationTab ? "8" : "7"} style={{ color: 'red', textAlign: 'center' }}>
-//   //                 {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
-//   //               </CTableDataCell>
-//   //             </CTableRow>
-//   //           ) : (
-//   //             filteredPendingLedgerEntries.map((entry, index) => (
-//   //               <CTableRow key={index}>
-//   //                 <CTableDataCell>{index + 1}</CTableDataCell>
-//   //                 <CTableDataCell>{entry.bookingDetails?.bookingNumber || entry.booking || ''}</CTableDataCell>
-//   //                  <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
-//   //                 <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
-//   //                 <CTableDataCell>{entry.amount || ''}</CTableDataCell>
-//   //                 <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
-//   //                 <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-//   //                 <CTableDataCell>
-//   //                   <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
-//   //                     {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
-//   //                   </CBadge>
-//   //                 </CTableDataCell>
-//   //                 {canCreateInPaymentVerificationTab && (
-//   //                   <CTableDataCell>
-//   //                     {entry.approvalStatus === 'Pending' ? (
-//   //                       <CButton
-//   //                         size="sm"
-//   //                         className="action-btn"
-//   //                         onClick={() => handleVerifyPayment(entry)}
-//   //                       >
-//   //                         <CIcon icon={cilCheckCircle} className="me-1" />
-//   //                         Verify
-//   //                       </CButton>
-//   //                     ) : (
-//   //                       <span className="text-muted">Verified</span>
-//   //                     )}
-//   //                   </CTableDataCell>
-//   //                 )}
-//   //               </CTableRow>
-//   //             ))
-//   //           )}
-//   //         </CTableBody>
-//   //       </CTable>
-//   //     </div>
-//   //   );
-//   // };
-
-// const renderPaymentVerificationTable = () => {
-//   // Check if user has permission to view this tab
-//   if (!canViewPaymentVerificationTab) {
-//     return (
-//       <div className="text-center py-4">
-//         <CAlert color="warning">
-//           You do not have permission to view the Payment Verification tab.
-//         </CAlert>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="responsive-table-wrapper">
-//       <CTable striped bordered hover className='responsive-table'>
-//         <CTableHead>
-//           <CTableRow>
-//             <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Date</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Bank Receipts</CTableHeaderCell>
-//             <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-//             {canCreateInPaymentVerificationTab && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
-//           </CTableRow>
-//         </CTableHead>
-//         <CTableBody>
-//           {filteredPendingLedgerEntries.length === 0 ? (
-//             <CTableRow>
-//               <CTableDataCell colSpan={canCreateInPaymentVerificationTab ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
-//                 {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
-//               </CTableDataCell>
-//             </CTableRow>
-//           ) : (
-//             filteredPendingLedgerEntries.map((entry, index) => {
-//               // Fetch receipts for the booking associated with this ledger entry
-//               const bookingId = entry.bookingDetails?._id || entry.booking;
-//               const receipts = bookingReceipts[bookingId] || [];
-              
-//               // Filter only BANK payment mode receipts
-//               const bankReceipts = receipts.filter(receipt => 
-//                 receipt.paymentMode && 
-//                 receipt.paymentMode.toUpperCase() === 'BANK'
-//               );
-              
-//               // Sort bank receipts by date in ascending order (oldest first)
-//               const sortedBankReceipts = [...bankReceipts].sort((a, b) => {
-//                 const dateA = new Date(a.receiptDate || a.createdAt || 0);
-//                 const dateB = new Date(b.receiptDate || b.createdAt || 0);
-//                 return dateA - dateB; // Ascending order
-//               });
-              
-//               return (
-//                 <CTableRow key={index}>
-//                   <CTableDataCell>{index + 1}</CTableDataCell>
-//                   <CTableDataCell>{entry.bookingDetails?.bookingNumber || entry.booking || ''}</CTableDataCell>
-//                   <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
-//                   <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
-//                   <CTableDataCell>{entry.amount || ''}</CTableDataCell>
-//                   <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
-//                   <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-//                   <CTableDataCell>
-//                     {sortedBankReceipts.length > 0 ? (
-//                       <CDropdown>
-//                         <CDropdownToggle size="sm" color="info" variant="outline">
-//                           {sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}
-//                         </CDropdownToggle>
-//                         <CDropdownMenu>
-//                           {sortedBankReceipts.map((receipt, receiptIndex) => (
-//                             <CDropdownItem 
-//                               key={receipt.id} 
-//                               onClick={() => printReceiptInvoice(receipt.id, bookingId, receiptIndex)}
-//                               disabled={!canPrintInCustomerTab} // Use same print permission
-//                             >
-//                               <div className="d-flex align-items-center">
-//                                 <CIcon icon={cilPrint} className="me-2" />
-//                                 <div>
-//                                   <div><strong>Bank Receipt #{receiptIndex + 1}</strong></div>
-//                                   <small>
-//                                     {receipt.display?.amount || `₹${receipt.amount}`} - 
-//                                     {receipt.display?.date || (receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('en-GB') : 'N/A')}
-//                                   </small>
-//                                 </div>
-//                               </div>
-//                             </CDropdownItem>
-//                           ))}
-//                         </CDropdownMenu>
-//                       </CDropdown>
-//                     ) : (
-//                       <span className="text-muted">No bank receipts</span>
-//                     )}
-//                   </CTableDataCell>
-//                   <CTableDataCell>
-//                     <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
-//                       {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
-//                     </CBadge>
-//                   </CTableDataCell>
-//                   {canCreateInPaymentVerificationTab && (
-//                     <CTableDataCell>
-//                       {entry.approvalStatus === 'Pending' ? (
-//                         <CButton
-//                           size="sm"
-//                           className="action-btn"
-//                           onClick={() => handleVerifyPayment(entry)}
-//                         >
-//                           <CIcon icon={cilCheckCircle} className="me-1" />
-//                           Verify
-//                         </CButton>
-//                       ) : (
-//                         <span className="text-muted">Verified</span>
+//                           <Menu
+//                             id={`action-menu-${booking._id}`}
+//                             anchorEl={anchorEl}
+//                             open={menuBookingId === booking._id}
+//                             onClose={handleMenuClose}
+//                             anchorOrigin={{
+//                               vertical: 'bottom',
+//                               horizontal: 'right',
+//                             }}
+//                             transformOrigin={{
+//                               vertical: 'top',
+//                               horizontal: 'right',
+//                             }}
+//                           >
+//                             {canShowAddPayment && (
+//                               <MenuItem onClick={() => {
+//                                 handleAddClick(booking);
+//                                 handleMenuClose();
+//                               }}>
+//                                 <CIcon icon={cilPlus} className="me-2" />
+//                                 Add Payment
+//                               </MenuItem>
+//                             )}
+//                           </Menu>
+//                         </CTableDataCell>
 //                       )}
-//                     </CTableDataCell>
-//                   )}
-//                 </CTableRow>
-//               );
-//             })
-//           )}
-//         </CTableBody>
-//       </CTable>
-//     </div>
-//   );
-// };
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredBookings)}
+//       </>
+//     );
+//   };
+  
+//   const renderPaymentVerificationTable = () => {
+//     if (!canViewPaymentVerificationTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Payment Verification tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredPendingLedgerEntries);
 
-//  const renderCompletePaymentTable = () => {
-//     // Check if user has permission to view this tab
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Bank Receipts</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+//                 {canCreateInPaymentVerificationTab && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan={canCreateInPaymentVerificationTab ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   const bookingId = entry.bookingDetails?._id || entry.booking;
+//                   const isLoading = loadingReceipts[bookingId];
+//                   const hasReceipts = receiptsFetched[bookingId] && bookingReceipts[bookingId]?.length > 0;
+//                   const receipts = bookingReceipts[bookingId] || [];
+                  
+//                   const bankReceipts = receipts.filter(receipt => 
+//                     receipt.paymentMode && 
+//                     receipt.paymentMode.toUpperCase() === 'BANK'
+//                   );
+                  
+//                   const sortedBankReceipts = [...bankReceipts].sort((a, b) => {
+//                     const dateA = new Date(a.receiptDate || a.createdAt || 0);
+//                     const dateB = new Date(b.receiptDate || b.createdAt || 0);
+//                     return dateA - dateB;
+//                   });
+                  
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || entry.booking || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : hasReceipts ? (
+//                           sortedBankReceipts.length > 0 ? (
+//                             <CDropdown>
+//                               <CDropdownToggle size="sm" color="info" variant="outline">
+//                                 {sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}
+//                               </CDropdownToggle>
+//                               <CDropdownMenu>
+//                                 {sortedBankReceipts.map((receipt, receiptIndex) => (
+//                                   <CDropdownItem 
+//                                     key={receipt.id} 
+//                                     onClick={() => printReceiptInvoice(receipt.id, bookingId, receiptIndex)}
+//                                     disabled={!canPrintInCustomerTab}
+//                                   >
+//                                     <div className="d-flex align-items-center">
+//                                       <CIcon icon={cilPrint} className="me-2" />
+//                                       <div>
+//                                         <div><strong>Bank Receipt #{receiptIndex + 1}</strong></div>
+//                                         <small>
+//                                           {receipt.display?.amount || `₹${receipt.amount}`} - 
+//                                           {receipt.display?.date || (receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('en-GB') : 'N/A')}
+//                                         </small>
+//                                       </div>
+//                                     </div>
+//                                   </CDropdownItem>
+//                                 ))}
+//                               </CDropdownMenu>
+//                             </CDropdown>
+//                           ) : (
+//                             <span className="text-muted">No bank receipts</span>
+//                           )
+//                         ) : receiptsFetched[bookingId] ? (
+//                           <span className="text-muted">No bank receipts</span>
+//                         ) : (
+//                           <CButton
+//                             size="sm"
+//                             color="light"
+//                             onClick={() => handleLoadReceipts(bookingId)}
+//                             disabled={isLoading}
+//                           >
+//                             <CIcon icon={cilCloudDownload} className="me-1" />
+//                             Load Receipts
+//                           </CButton>
+//                         )}
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
+//                           {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       {canCreateInPaymentVerificationTab && (
+//                         <CTableDataCell>
+//                           {entry.approvalStatus === 'Pending' ? (
+//                             <CButton
+//                               size="sm"
+//                               className="action-btn"
+//                               onClick={() => handleVerifyPayment(entry)}
+//                             >
+//                               <CIcon icon={cilCheckCircle} className="me-1" />
+//                               Verify
+//                             </CButton>
+//                           ) : (
+//                             <span className="text-muted">Verified</span>
+//                           )}
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredPendingLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   const renderCompletePaymentTable = () => {
 //     if (!canViewCompletePaymentTab) {
 //       return (
 //         <div className="text-center py-4">
@@ -2285,60 +2219,67 @@
 //         </div>
 //       );
 //     }
+    
+//     const currentRecords = getCurrentRecords(completePayments);
 
 //     return (
-//       <div className="responsive-table-wrapper">
-//         <CTable striped bordered hover className='responsive-table'>
-//           <CTableHead>
-//             <CTableRow>
-//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Total</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Received</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-//             </CTableRow>
-//           </CTableHead>
-//           <CTableBody>
-//             {completePayments.length === 0 ? (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
 //               <CTableRow>
-//                 <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
-//                   {searchTerm ? 'No matching complete payments found' : 'No complete payments available'}
-//                 </CTableDataCell>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
 //               </CTableRow>
-//             ) : (
-//               completePayments.map((booking, index) => (
-//                 <CTableRow key={index}>
-//                   <CTableDataCell>{index + 1}</CTableDataCell>
-//                   <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
-//                   <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-//                   <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>
-//                     {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-//                       ? (booking.chassisNumber || '')
-//                       : ''
-//                     }
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching complete payments found' : 'No complete payments available'}
 //                   </CTableDataCell>
-//                   <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
-//                   <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
-//                   <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
 //                 </CTableRow>
-//               ))
-//             )}
-//           </CTableBody>
-//         </CTable>
-//       </div>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(completePayments)}
+//       </>
 //     );
 //   };
 
-// const renderPendingListTable = () => {
-//     // Check if user has permission to view this tab
+//   const renderPendingListTable = () => {
 //     if (!canViewPendingListTab) {
 //       return (
 //         <div className="text-center py-4">
@@ -2348,60 +2289,67 @@
 //         </div>
 //       );
 //     }
+    
+//     const currentRecords = getCurrentRecords(pendingPayments);
 
 //     return (
-//       <div className="responsive-table-wrapper">
-//         <CTable striped bordered hover className='responsive-table'>
-//           <CTableHead>
-//             <CTableRow>
-//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Total</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Received</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-//             </CTableRow>
-//           </CTableHead>
-//           <CTableBody>
-//             {pendingPayments.length === 0 ? (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
 //               <CTableRow>
-//                 <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
-//                   {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
-//                 </CTableDataCell>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
 //               </CTableRow>
-//             ) : (
-//               pendingPayments.map((booking, index) => (
-//                 <CTableRow key={index}>
-//                   <CTableDataCell>{index + 1}</CTableDataCell>
-//                   <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
-//                   <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-//                   <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
-//                   <CTableDataCell>
-//                     {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-//                       ? (booking.chassisNumber || '')
-//                       : ''
-//                     }
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
 //                   </CTableDataCell>
-//                   <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
-//                   <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
-//                   <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
 //                 </CTableRow>
-//               ))
-//             )}
-//           </CTableBody>
-//         </CTable>
-//       </div>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(pendingPayments)}
+//       </>
 //     );
 //   };
 
 //   const renderVerifiedListTable = () => {
-//     // Check if user has permission to view this tab
 //     if (!canViewVerifiedListTab) {
 //       return (
 //         <div className="text-center py-4">
@@ -2411,49 +2359,58 @@
 //         </div>
 //       );
 //     }
+    
+//     const currentRecords = getCurrentRecords(filteredVerifiedLedgerEntries);
 
 //     return (
-//       <div className="responsive-table-wrapper">
-//         <CTable striped bordered hover className='responsive-table'>
-//           <CTableHead>
-//             <CTableRow>
-//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Date</CTableHeaderCell>
-//               <CTableHeaderCell scope="col">Verified By</CTableHeaderCell>
-//             </CTableRow>
-//           </CTableHead>
-//           <CTableBody>
-//             {filteredVerifiedLedgerEntries.length === 0 ? (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
 //               <CTableRow>
-//                 <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
-//                   {searchTerm ? 'No matching verified payments found' : 'No verified payments available'}
-//                 </CTableDataCell>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Verified By</CTableHeaderCell>
 //               </CTableRow>
-//             ) : (
-//               filteredVerifiedLedgerEntries.map((entry, index) => (
-//                 <CTableRow key={index}>
-//                   <CTableDataCell>{index + 1}</CTableDataCell>
-//                   <CTableDataCell>{entry.bookingDetails?.bookingNumber || ''}</CTableDataCell>
-//                   <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
-//                   <CTableDataCell>{entry.paymentMode}</CTableDataCell>
-//                   <CTableDataCell>{entry.amount}</CTableDataCell>
-//                   <CTableDataCell>{entry.transactionReference}</CTableDataCell>
-//                   <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-//                   <CTableDataCell>{entry.receivedByDetails?.name || ''}</CTableDataCell>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching verified payments found' : 'No verified payments available'}
+//                   </CTableDataCell>
 //                 </CTableRow>
-//               ))
-//             )}
-//           </CTableBody>
-//         </CTable>
-//       </div>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedByDetails?.name || ''}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredVerifiedLedgerEntries)}
+//       </>
 //     );
 //   };
 
+//   // ============ EARLY RETURNS FOR PERMISSIONS ============
 //   if (!canViewReceipts) {
 //     return (
 //       <div className="alert alert-danger m-3" role="alert">
@@ -2486,6 +2443,7 @@
 //     );
 //   }
 
+//   // ============ MAIN RENDER ============
 //   return (
 //     <div>
 //       <div className='title'>Receipt Management</div>
@@ -2498,10 +2456,8 @@
       
 //       <CCard className='table-container mt-4'>
 //         <CCardBody>
-//           {/* Show tabs only if user has permission to view at least one */}
 //           {canViewAnyTab ? (
 //             <>
-//               {/* Excel Export Button - MOVED TO LEFT SIDE */}
 //               {canCreateReceipts && (
 //                 <div className="d-flex mb-3">
 //                   <CButton 
@@ -2536,7 +2492,6 @@
 //                     </CNavLink>
 //                   </CNavItem>
 //                 )}
-//                 {/* Payment Verification tab - Only show if user has VIEW permission */}
 //                 {canViewPaymentVerificationTab && (
 //                   <CNavItem>
 //                     <CNavLink
@@ -2616,9 +2571,7 @@
 //               </CNav>
 
 //               <div className="d-flex justify-content-between mb-3">
-//                 <div>
-//                   {/* This div is now empty since Excel button moved above */}
-//                 </div>
+//                 <div></div>
 //                 <div className='d-flex'>
 //                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
 //                   <CFormInput
@@ -2626,7 +2579,7 @@
 //                     style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
 //                     className="d-inline-block square-search"
 //                     value={searchTerm}
-//                     onChange={(e) => setSearchTerm(e.target.value)}
+//                     onChange={(e) => handleSearch(e.target.value)}
 //                     disabled={!canViewAnyTab}
 //                   />
 //                 </div>
@@ -2672,11 +2625,11 @@
 //         show={showModal} 
 //         onClose={() => setShowModal(false)} 
 //         bookingData={selectedBooking} 
-//         canCreateReceipts={canCreateInCustomerTab} // Pass tab-specific CREATE permission
-//         cashLocations={cashLocations} // Pass cash locations to modal
+//         canCreateReceipts={canCreateInCustomerTab}
+//         cashLocations={cashLocations}
+//         onPaymentSuccess={handlePaymentSuccess} 
 //       />
 
-//       {/* Date Range Modal for Excel Export */}
 //       <CModal alignment="center" visible={openExportModal} onClose={handleCloseExportModal}>
 //         <CModalHeader>
 //           <CModalTitle>
@@ -2685,7 +2638,6 @@
 //           </CModalTitle>
 //         </CModalHeader>
 //         <CModalBody>
-//           {/* Display export error */}
 //           {exportError && (
 //             <CAlert color="warning" className="mb-3">
 //               {exportError}
@@ -2694,7 +2646,7 @@
           
 //           <LocalizationProvider 
 //             dateAdapter={AdapterDateFns} 
-//             adapterLocale={enIN} // Add Indian locale
+//             adapterLocale={enIN}
 //           >
 //             <div className="mb-3">
 //               <DatePicker
@@ -2702,12 +2654,12 @@
 //                 value={startDate}
 //                 onChange={(newValue) => {
 //                   setStartDate(newValue);
-//                   setExportError(''); // Clear error when user changes date
+//                   setExportError('');
 //                 }}
 //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-//                 inputFormat="dd/MM/yyyy" // Use slash format for display
-//                 mask="__/__/____" // Add mask for better UX
-//                 views={['day', 'month', 'year']} // Show day-month-year in that order
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
 //                 disabled={!canCreateReceipts}
 //               />
 //             </div>
@@ -2717,13 +2669,13 @@
 //                 value={endDate}
 //                 onChange={(newValue) => {
 //                   setEndDate(newValue);
-//                   setExportError(''); // Clear error when user changes date
+//                   setExportError('');
 //                 }}
 //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-//                 inputFormat="dd/MM/yyyy" // Use slash format for display
-//                 mask="__/__/____" // Add mask for better UX
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
 //                 minDate={startDate}
-//                 views={['day', 'month', 'year']} // Show day-month-year in that order
+//                 views={['day', 'month', 'year']}
 //                 disabled={!canCreateReceipts}
 //               />
 //             </div>
@@ -2734,7 +2686,7 @@
 //             value={selectedBranchId}
 //             onChange={(e) => {
 //               setSelectedBranchId(e.target.value);
-//               setExportError(''); // Clear error when user changes branch
+//               setExportError('');
 //             }}
 //             fullWidth
 //             size="small"
@@ -2777,10 +2729,11033 @@
 // export default Receipt;
 
 
-//**************************** Harshali Changes *********/
 
 
-import React, { useState, useEffect } from 'react';
+
+
+
+
+
+
+
+
+
+
+
+
+// import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// import { 
+//   CBadge, 
+//   CNav, 
+//   CNavItem, 
+//   CNavLink, 
+//   CTabContent, 
+//   CTabPane,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CCard,
+//   CCardBody,
+//   CButton,
+//   CFormInput,
+//   CSpinner,
+//   CFormLabel,
+//   CAlert,
+//   CDropdown,
+//   CDropdownToggle,
+//   CDropdownMenu,
+//   CDropdownItem,
+//   CModal,
+//   CModalHeader,
+//   CModalTitle,
+//   CModalBody,
+//   CModalFooter,
+//   CPagination,
+//   CPaginationItem,
+//   CFormSelect
+// } from '@coreui/react';
+// import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../utils/tableImports';
+// import '../../css/invoice.css';
+// import '../../css/table.css';
+// import ReceiptModal from './ReceiptModal';
+// import { confirmVerify } from '../../utils/sweetAlerts';
+// import CIcon from '@coreui/icons-react';
+// import { cilCheckCircle, cilPrint, cilSettings, cilPlus, cilChevronLeft, cilChevronRight, cilCloudDownload } from '@coreui/icons';
+// import { numberToWords } from '../../utils/numberToWords';
+// import { Menu, MenuItem } from '@mui/material';
+// import { useAuth } from '../../context/AuthContext';
+// import QRCode from 'qrcode';
+// import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import Swal from 'sweetalert2';
+// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// import TextField from '@mui/material/TextField';
+// import { enIN } from 'date-fns/locale';
+
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS
+// } from '../../utils/modulePermissions';
+
+// function Receipt() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [showModal, setShowModal] = useState(false);
+//   const [selectedBooking, setSelectedBooking] = useState(null);
+//   const [bookingsData, setBookingsData] = useState([]);
+//   const [pendingPaymentsData, setPendingPaymentsData] = useState([]);
+//   const [verifiedPaymentsData, setVerifiedPaymentsData] = useState([]);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [anchorEl, setAnchorEl] = useState(null);
+//   const [menuBookingId, setMenuBookingId] = useState(null);
+//   const [successMessage, setSuccessMessage] = useState('');
+  
+//   // ============ ON-DEMAND RECEIPTS FETCHING ============
+//   const [bookingReceipts, setBookingReceipts] = useState({});
+//   const [loadingReceipts, setLoadingReceipts] = useState({});
+//   const [receiptsFetched, setReceiptsFetched] = useState({});
+  
+//   const [cashLocations, setCashLocations] = useState([]);
+  
+//   // ============ CLIENT-SIDE PAGINATION STATES ============
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const [recordsPerPage, setRecordsPerPage] = useState(100);
+//   const [totalPages, setTotalPages] = useState(1);
+//   const [displayedPages, setDisplayedPages] = useState([]);
+  
+//   // ============ EXPORT MODAL STATES ============
+//   const [openExportModal, setOpenExportModal] = useState(false);
+//   const [startDate, setStartDate] = useState(null);
+//   const [endDate, setEndDate] = useState(null);
+//   const [selectedBranchId, setSelectedBranchId] = useState('');
+//   const [exportLoading, setExportLoading] = useState(false);
+//   const [exportError, setExportError] = useState('');
+  
+//   // ============ VERIFIED OUTSTANDING EXPORT STATES ============
+//   const [openVerifiedOutstandingModal, setOpenVerifiedOutstandingModal] = useState(false);
+//   const [verifiedOutstandingStartDate, setVerifiedOutstandingStartDate] = useState(null);
+//   const [verifiedOutstandingEndDate, setVerifiedOutstandingEndDate] = useState(null);
+//   const [verifiedOutstandingBranchId, setVerifiedOutstandingBranchId] = useState('');
+//   const [verifiedOutstandingExportLoading, setVerifiedOutstandingExportLoading] = useState(false);
+//   const [verifiedOutstandingExportError, setVerifiedOutstandingExportError] = useState('');
+  
+//   // ============ PENDING VERIFICATION EXPORT STATES ============
+//   const [openPendingVerificationModal, setOpenPendingVerificationModal] = useState(false);
+//   const [pendingVerificationStartDate, setPendingVerificationStartDate] = useState(null);
+//   const [pendingVerificationEndDate, setPendingVerificationEndDate] = useState(null);
+//   const [pendingVerificationBranchId, setPendingVerificationBranchId] = useState('');
+//   const [pendingVerificationExportLoading, setPendingVerificationExportLoading] = useState(false);
+//   const [pendingVerificationExportError, setPendingVerificationExportError] = useState('');
+  
+//   const [branches, setBranches] = useState([]);
+
+//   const { permissions = [], user } = useAuth();
+//   const hasAllBranchAccess = user?.branchAccess === "ALL";
+//   const canViewReceipts = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW
+//   );
+
+//   const canCreateReceipts = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE
+//   );
+
+//   const canViewCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canViewPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canViewCompletePaymentTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.COMPLETE_PAYMENT
+//   );
+  
+//   const canViewPendingListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.PENDING_LIST
+//   );
+  
+//   const canViewVerifiedListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.VERIFIED_LIST
+//   );
+  
+//   const canCreateInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canCreateInPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canCreateInCompletePaymentTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.COMPLETE_PAYMENT
+//   );
+  
+//   const canCreateInPendingListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.PENDING_LIST
+//   );
+  
+//   const canCreateInVerifiedListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.VERIFIED_LIST
+//   );
+  
+//   const canUpdateInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.UPDATE,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canUpdateInPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.UPDATE,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canPrintInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.CUSTOMER
+//   ) || canViewCustomerTab; 
+  
+//   const canViewAnyTab = canViewCustomerTab || canViewPaymentVerificationTab || 
+//                        canViewCompletePaymentTab || canViewPendingListTab || 
+//                        canViewVerifiedListTab;
+
+//   // ============ FILTER FUNCTIONS - DEFINED BEFORE useEffect ============
+//   const filterData = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+
+//     const searchFields = getDefaultSearchFields('receipts');
+//     const term = searchTerm.toLowerCase();
+
+//     return data.filter((row) =>
+//       searchFields.some((field) => {
+//         const value = field.split('.').reduce((obj, key) => {
+//           if (!obj) return '';
+//           if (key.match(/^\d+$/)) return obj[parseInt(key)];
+//           return obj[key];
+//         }, row);
+
+//         if (value === undefined || value === null) return false;
+
+//         if (typeof value === 'boolean') {
+//           return (value ? 'yes' : 'no').includes(term);
+//         }
+//         if (field === 'createdAt' && value instanceof Date) {
+//           return value.toLocaleDateString('en-GB').includes(term);
+//         }
+//         if (typeof value === 'number') {
+//           return String(value).includes(term);
+//         }
+//         return String(value).toLowerCase().includes(term);
+//       })
+//     );
+//   };
+
+//   const filterPendingPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.bookingDetails?.bookingNumber || '').toLowerCase().includes(term) ||
+//         (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   const filterVerifiedPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.booking || '').toLowerCase().includes(term) ||
+//         (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term) ||
+//         (entry.receivedByDetails?.name || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   // ============ DERIVED DATA - USE useMemo FOR PERFORMANCE ============
+//   const filteredBookings = useMemo(() => 
+//     filterData(bookingsData, searchTerm), 
+//     [bookingsData, searchTerm]
+//   );
+  
+//   const completePayments = useMemo(() => 
+//     filterData(
+//       bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) === 0),
+//       searchTerm
+//     ),
+//     [bookingsData, searchTerm]
+//   );
+  
+//   const pendingPayments = useMemo(() => 
+//     filterData(
+//       bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) !== 0),
+//       searchTerm
+//     ),
+//     [bookingsData, searchTerm]
+//   );
+
+//   const filteredPendingLedgerEntries = useMemo(() => 
+//     filterPendingPayments(pendingPaymentsData, searchTerm),
+//     [pendingPaymentsData, searchTerm]
+//   );
+  
+//   const filteredVerifiedLedgerEntries = useMemo(() => 
+//     filterVerifiedPayments(verifiedPaymentsData, searchTerm),
+//     [verifiedPaymentsData, searchTerm]
+//   );
+
+//   // ============ EFFECTS - NOW SAFE TO USE filteredBookings ============
+//   useEffect(() => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     const visibleTabs = [];
+//     if (canViewCustomerTab) visibleTabs.push(0);
+//     if (canViewPaymentVerificationTab) visibleTabs.push(1);
+//     if (canViewCompletePaymentTab) visibleTabs.push(2);
+//     if (canViewPendingListTab) visibleTabs.push(3);
+//     if (canViewVerifiedListTab) visibleTabs.push(4);
+    
+//     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+//       setActiveTab(visibleTabs[0]);
+//     }
+//   }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab, 
+//       canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab, activeTab]);
+
+//   useEffect(() => {
+//     if (!canViewReceipts) {
+//       showError('You do not have permission to view Receipts');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     if (!canViewAnyTab) {
+//       showError('You do not have permission to view any Receipt tabs');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     fetchAllData();
+//     fetchCashLocations();
+//     fetchBranches();
+//   }, [canViewReceipts, canViewAnyTab]);
+
+//   useEffect(() => {
+//     window.printReceiptCallback = printReceiptInvoice;
+    
+//     return () => {
+//       delete window.printReceiptCallback;
+//     };
+//   }, []);
+
+//   // ============ PAGINATION CALCULATION ============
+//   const calculatePagination = useCallback((filteredDataLength) => {
+//     const total = filteredDataLength;
+//     const totalPagesCount = Math.ceil(total / recordsPerPage);
+//     setTotalPages(totalPagesCount);
+    
+//     const pages = [];
+//     let startPage = Math.max(1, currentPage - 2);
+//     let endPage = Math.min(totalPagesCount, currentPage + 2);
+    
+//     if (currentPage <= 3) {
+//       endPage = Math.min(5, totalPagesCount);
+//     }
+    
+//     if (currentPage >= totalPagesCount - 2) {
+//       startPage = Math.max(1, totalPagesCount - 4);
+//     }
+    
+//     for (let i = startPage; i <= endPage; i++) {
+//       pages.push(i);
+//     }
+    
+//     setDisplayedPages(pages);
+//   }, [currentPage, recordsPerPage]);
+
+//   useEffect(() => {
+//     const getFilteredDataLength = () => {
+//       switch(activeTab) {
+//         case 0: return filteredBookings.length;
+//         case 1: return filteredPendingLedgerEntries.length;
+//         case 2: return completePayments.length;
+//         case 3: return pendingPayments.length;
+//         case 4: return filteredVerifiedLedgerEntries.length;
+//         default: return 0;
+//       }
+//     };
+    
+//     calculatePagination(getFilteredDataLength());
+//   }, [filteredBookings, filteredPendingLedgerEntries, completePayments, 
+//       pendingPayments, filteredVerifiedLedgerEntries, activeTab, calculatePagination]);
+
+//   // ============ GET CURRENT RECORDS FOR PAGE ============
+//   const getCurrentRecords = useCallback((filteredDataArray) => {
+//     const indexOfLastRecord = currentPage * recordsPerPage;
+//     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+//     return filteredDataArray.slice(indexOfFirstRecord, indexOfLastRecord);
+//   }, [currentPage, recordsPerPage]);
+
+//   // ============ HANDLE PAGE CHANGE ============
+//   const handlePageChange = (pageNumber) => {
+//     if (pageNumber < 1 || pageNumber > totalPages) return;
+//     setCurrentPage(pageNumber);
+//     window.scrollTo({ top: 0, behavior: 'smooth' });
+//   };
+
+//   // ============ HANDLE RECORDS PER PAGE CHANGE ============
+//   const handleRecordsPerPageChange = (e) => {
+//     setRecordsPerPage(parseInt(e.target.value, 10));
+//     setCurrentPage(1);
+//   };
+
+//   // ============ FETCH FUNCTIONS ============
+//   const fetchAllData = async () => {
+//     try {
+//       setLoading(true);
+//       await Promise.all([
+//         fetchData(),
+//         fetchPendingPayments(),
+//         fetchVerifiedPayments()
+//       ]);
+//       setLoading(false);
+//     } catch (error) {
+//       console.log('Error fetching data', error);
+//       setError(error.message);
+//       setLoading(false);
+//     }
+//   };
+
+//   // ============ ON-DEMAND RECEIPTS FETCHING ============
+//   const fetchReceiptsForBooking = useCallback(async (bookingId) => {
+//     if (receiptsFetched[bookingId] || loadingReceipts[bookingId]) {
+//       return;
+//     }
+
+//     try {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: true }));
+      
+//       const receiptsResponse = await axiosInstance.get(`/ledger/booking/${bookingId}`);
+//       const receipts = receiptsResponse.data.data.allReceipts || [];
+      
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [bookingId]: receipts
+//       }));
+      
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [bookingId]: true
+//       }));
+//     } catch (error) {
+//       console.error(`Error fetching receipts for booking ${bookingId}:`, error);
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [bookingId]: []
+//       }));
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [bookingId]: true
+//       }));
+//     } finally {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: false }));
+//     }
+//   }, [loadingReceipts, receiptsFetched]);
+
+//   // Pre-fetch receipts for visible bookings only
+//   useEffect(() => {
+//     if (activeTab === 0 && filteredBookings.length > 0) {
+//       const currentRecords = getCurrentRecords(filteredBookings);
+//       currentRecords.forEach(booking => {
+//         if (!receiptsFetched[booking._id] && !loadingReceipts[booking._id]) {
+//           fetchReceiptsForBooking(booking._id);
+//         }
+//       });
+//     }
+//   }, [activeTab, currentPage, filteredBookings, getCurrentRecords, 
+//       receiptsFetched, loadingReceipts, fetchReceiptsForBooking]);
+
+//   const fetchCashLocations = async () => {
+//     try {
+//       const endpoints = [
+//         '/settings/cash-locations',
+//         '/master/cash-locations'
+//       ];
+      
+//       for (const endpoint of endpoints) {
+//         try {
+//           const response = await axiosInstance.get(endpoint);
+//           if (response.data.success && response.data.data) {
+//             setCashLocations(response.data.data);
+//             return;
+//           }
+//         } catch (err) {
+//           console.log(`Endpoint ${endpoint} not available`);
+//         }
+//       }
+//       console.warn('Could not fetch cash locations from any endpoint');
+//       setCashLocations([]);
+//     } catch (error) {
+//       console.error('Error fetching cash locations:', error);
+//       setCashLocations([]);
+//     }
+//   };
+
+//   const fetchBranches = async () => {
+//     try {
+//       const response = await axiosInstance.get('/branches');
+//       setBranches(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchData = async () => {
+//     try {
+//       const params = {
+//         bookingType: 'BRANCH'
+//       };
+      
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const branchBookings = response.data.data.bookings;
+//       setBookingsData(branchBookings);
+      
+//       const initialReceiptsMap = {};
+//       branchBookings.forEach(booking => {
+//         initialReceiptsMap[booking._id] = [];
+//       });
+//       setBookingReceipts(initialReceiptsMap);
+      
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchPendingPayments = async () => {
+//     if (!canViewReceipts || !canViewPaymentVerificationTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/ledger/pending`, { params });
+//       setPendingPaymentsData(response.data.data.ledgerEntries || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchVerifiedPayments = async () => {
+//     if (!canViewReceipts || !canViewVerifiedListTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/payment/verified/bank/ledger`, { params });
+//       setVerifiedPaymentsData(response.data.data.ledgerEntries || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   // Format date functions
+//   const formatDateDDMMYYYY = (date) => {
+//     if (!date) return '';
+//     const day = String(date.getDate()).padStart(2, '0');
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const year = date.getFullYear();
+//     return `${day}-${month}-${year}`;
+//   };
+
+//   const formatDateForAPI = (date) => {
+//     if (!date) return '';
+//     const year = date.getFullYear();
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const day = String(date.getDate()).padStart(2, '0');
+//     return `${year}-${month}-${day}`;
+//   };
+
+//   // ============ EVENT HANDLERS ============
+//   const handleMenuClick = (event, bookingId) => {
+//     setAnchorEl(event.currentTarget);
+//     setMenuBookingId(bookingId);
+//   };
+
+//   const handleMenuClose = () => {
+//     setAnchorEl(null);
+//     setMenuBookingId(null);
+//   };
+
+//   const handleAddClick = (booking) => {
+//     if (!canCreateInCustomerTab) {
+//       showError('You do not have permission to add payments');
+//       return;
+//     }
+    
+//     setSelectedBooking(booking);
+//     setShowModal(true);
+//     handleMenuClose();
+//   };
+
+//   const handleVerifyPayment = async (entry) => {
+//     if (!canCreateInPaymentVerificationTab) {
+//       showError('You do not have permission to verify payments');
+//       return;
+//     }
+    
+//     try {
+//       const result = await confirmVerify({
+//         title: 'Confirm Payment Verification',
+//         text: `Are you sure you want to verify the payment of ₹${entry.amount} for booking ${entry.bookingDetails?.bookingNumber || entry.booking}?`,
+//         confirmButtonText: 'Yes, verify it!'
+//       });
+
+//       if (result.isConfirmed) {
+//         await axiosInstance.patch(`/ledger/approve/${entry._id}`, {
+//           remark: ''
+//         });
+//         setSuccessMessage('Payment verified successfully!');
+//         setTimeout(() => setSuccessMessage(''), 3000);
+//         fetchAllData();
+//       }
+//     } catch (error) {
+//       console.error('Error verifying payment:', error);
+//       showError(error, 'Failed to verify payment');
+//     }
+//   };
+
+//   const handleTabChange = (tab) => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     setActiveTab(tab);
+//     setSearchTerm('');
+//     setCurrentPage(1);
+//   };
+  
+//   const handleSearch = (value) => {
+//     setSearchTerm(value);
+//     setCurrentPage(1);
+//   };
+  
+//   // ============ EXPORT HANDLERS ============
+//   const handleOpenExportModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setOpenExportModal(true);
+//     setExportError('');
+//   };
+
+//   const handleCloseExportModal = () => {
+//     setOpenExportModal(false);
+//     setStartDate(null);
+//     setEndDate(null);
+//     setSelectedBranchId('');
+//     setExportError('');
+//   };
+
+//   const handleOpenVerifiedOutstandingModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+//     setOpenVerifiedOutstandingModal(true);
+//     setVerifiedOutstandingExportError('');
+//   };
+
+//   const handleCloseVerifiedOutstandingModal = () => {
+//     setOpenVerifiedOutstandingModal(false);
+//     setVerifiedOutstandingStartDate(null);
+//     setVerifiedOutstandingEndDate(null);
+//     setVerifiedOutstandingBranchId('');
+//     setVerifiedOutstandingExportError('');
+//   };
+
+//   const handleOpenPendingVerificationModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+//     setOpenPendingVerificationModal(true);
+//     setPendingVerificationExportError('');
+//   };
+
+//   const handleClosePendingVerificationModal = () => {
+//     setOpenPendingVerificationModal(false);
+//     setPendingVerificationStartDate(null);
+//     setPendingVerificationEndDate(null);
+//     setPendingVerificationBranchId('');
+//     setPendingVerificationExportError('');
+//   };
+
+//   const handleExcelExport = async () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setExportError('');
+    
+//     if (!selectedBranchId) {
+//       setExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!startDate || !endDate) {
+//       setExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (startDate > endDate) {
+//       setExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setExportLoading(true);
+      
+//       const formattedStartDate = formatDateForAPI(startDate);
+//       const formattedEndDate = formatDateForAPI(endDate);
+
+//       const params = new URLSearchParams({
+//         branchId: selectedBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate,
+//         format: 'excel'
+//       });
+
+//       const response = await axiosInstance.get(
+//         `/reports/receipts?${params.toString()}`,
+//         { responseType: 'blob' }
+//       );
+
+//       const contentType = response.headers['content-type'];
+      
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (!errorData.success && errorData.message) {
+//           setExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { 
+//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//       });
+      
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+      
+//       const branchName = branches.find(b => b._id === selectedBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(startDate);
+//       const endDateStr = formatDateDDMMYYYY(endDate);
+//       const fileName = `Receipts_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+      
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+      
+//       window.URL.revokeObjectURL(url);
+      
+//       Swal.fire({
+//         toast: true,
+//         position: 'top-end',
+//         icon: 'success',
+//         title: 'Excel exported successfully!',
+//         showConfirmButton: false,
+//         timer: 3000,
+//         timerProgressBar: true
+//       });
+
+//       handleCloseExportModal();
+      
+//     } catch (error) {
+//       console.error('Error exporting report:', error);
+      
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+          
+//           const errorData = JSON.parse(text);
+          
+//           if (errorData.message) {
+//             setExportError(errorData.message);
+//             Swal.fire({
+//               icon: 'error',
+//               title: 'Export Failed',
+//               text: errorData.message,
+//             });
+//           }
+//         } catch (parseError) {
+//           console.error('Error parsing error response:', parseError);
+//           setExportError('Failed to export report');
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: 'Failed to export report',
+//           });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setExportError(error.response.data.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.response.data.message,
+//         });
+//       } else if (error.message) {
+//         setExportError(error.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.message,
+//         });
+//       } else {
+//         setExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+      
+//     } finally {
+//       setExportLoading(false);
+//     }
+//   };
+
+//   const handleVerifiedOutstandingExport = async () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setVerifiedOutstandingExportError('');
+    
+//     if (!verifiedOutstandingBranchId) {
+//       setVerifiedOutstandingExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!verifiedOutstandingStartDate || !verifiedOutstandingEndDate) {
+//       setVerifiedOutstandingExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (verifiedOutstandingStartDate > verifiedOutstandingEndDate) {
+//       setVerifiedOutstandingExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setVerifiedOutstandingExportLoading(true);
+      
+//       const formattedStartDate = formatDateForAPI(verifiedOutstandingStartDate);
+//       const formattedEndDate = formatDateForAPI(verifiedOutstandingEndDate);
+
+//       const params = new URLSearchParams({
+//         branchId: verifiedOutstandingBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate,
+//         format: 'excel'
+//       });
+
+//       const response = await axiosInstance.get(
+//         `/reports/outstanding/verified?${params.toString()}`,
+//         { responseType: 'blob' }
+//       );
+
+//       const contentType = response.headers['content-type'];
+      
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (!errorData.success && errorData.message) {
+//           setVerifiedOutstandingExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { 
+//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//       });
+      
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+      
+//       const branchName = branches.find(b => b._id === verifiedOutstandingBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(verifiedOutstandingStartDate);
+//       const endDateStr = formatDateDDMMYYYY(verifiedOutstandingEndDate);
+//       const fileName = `Verified_Outstanding_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+      
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+      
+//       window.URL.revokeObjectURL(url);
+      
+//       Swal.fire({
+//         toast: true,
+//         position: 'top-end',
+//         icon: 'success',
+//         title: 'Verified Outstanding Report exported successfully!',
+//         showConfirmButton: false,
+//         timer: 3000,
+//         timerProgressBar: true
+//       });
+
+//       handleCloseVerifiedOutstandingModal();
+      
+//     } catch (error) {
+//       console.error('Error exporting verified outstanding report:', error);
+      
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+          
+//           const errorData = JSON.parse(text);
+          
+//           if (errorData.message) {
+//             setVerifiedOutstandingExportError(errorData.message);
+//             Swal.fire({
+//               icon: 'error',
+//               title: 'Export Failed',
+//               text: errorData.message,
+//             });
+//           }
+//         } catch (parseError) {
+//           console.error('Error parsing error response:', parseError);
+//           setVerifiedOutstandingExportError('Failed to export report');
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: 'Failed to export report',
+//           });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setVerifiedOutstandingExportError(error.response.data.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.response.data.message,
+//         });
+//       } else if (error.message) {
+//         setVerifiedOutstandingExportError(error.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.message,
+//         });
+//       } else {
+//         setVerifiedOutstandingExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+      
+//     } finally {
+//       setVerifiedOutstandingExportLoading(false);
+//     }
+//   };
+
+//   const handlePendingVerificationExport = async () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setPendingVerificationExportError('');
+    
+//     if (!pendingVerificationBranchId) {
+//       setPendingVerificationExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!pendingVerificationStartDate || !pendingVerificationEndDate) {
+//       setPendingVerificationExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (pendingVerificationStartDate > pendingVerificationEndDate) {
+//       setPendingVerificationExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setPendingVerificationExportLoading(true);
+      
+//       const formattedStartDate = formatDateForAPI(pendingVerificationStartDate);
+//       const formattedEndDate = formatDateForAPI(pendingVerificationEndDate);
+
+//       const params = new URLSearchParams({
+//         branchId: pendingVerificationBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate,
+//         format: 'excel'
+//       });
+
+//       const response = await axiosInstance.get(
+//         `/reports/outstanding/pending-verification?${params.toString()}`,
+//         { responseType: 'blob' }
+//       );
+
+//       const contentType = response.headers['content-type'];
+      
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (!errorData.success && errorData.message) {
+//           setPendingVerificationExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { 
+//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//       });
+      
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+      
+//       const branchName = branches.find(b => b._id === pendingVerificationBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(pendingVerificationStartDate);
+//       const endDateStr = formatDateDDMMYYYY(pendingVerificationEndDate);
+//       const fileName = `Pending_Verification_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+      
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+      
+//       window.URL.revokeObjectURL(url);
+      
+//       Swal.fire({
+//         toast: true,
+//         position: 'top-end',
+//         icon: 'success',
+//         title: 'Pending Verification Report exported successfully!',
+//         showConfirmButton: false,
+//         timer: 3000,
+//         timerProgressBar: true
+//       });
+
+//       handleClosePendingVerificationModal();
+      
+//     } catch (error) {
+//       console.error('Error exporting pending verification report:', error);
+      
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+          
+//           const errorData = JSON.parse(text);
+          
+//           if (errorData.message) {
+//             setPendingVerificationExportError(errorData.message);
+//             Swal.fire({
+//               icon: 'error',
+//               title: 'Export Failed',
+//               text: errorData.message,
+//             });
+//           }
+//         } catch (parseError) {
+//           console.error('Error parsing error response:', parseError);
+//           setPendingVerificationExportError('Failed to export report');
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: 'Failed to export report',
+//           });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setPendingVerificationExportError(error.response.data.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.response.data.message,
+//         });
+//       } else if (error.message) {
+//         setPendingVerificationExportError(error.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.message,
+//         });
+//       } else {
+//         setPendingVerificationExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+      
+//     } finally {
+//       setPendingVerificationExportLoading(false);
+//     }
+//   };
+
+//   const handlePaymentSuccess = () => {
+//     fetchAllData();
+//     if (selectedBooking) {
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [selectedBooking._id]: false
+//       }));
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [selectedBooking._id]: []
+//       }));
+//     }
+//   };
+
+//   const handleLoadReceipts = (bookingId) => {
+//     fetchReceiptsForBooking(bookingId);
+//   };
+
+//   // ============ PRINT FUNCTIONS ============
+//   const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
+//     if (!canPrintInCustomerTab) {
+//       showError('You do not have permission to print invoices');
+//       return;
+//     }
+    
+//     try {
+//       const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
+//       const receiptData = receiptResponse.data.data.receipt;
+      
+//       const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
+//       const bookingData = bookingResponse.data.data.bookingDetails;
+//       const finalStatus = bookingResponse.data.data.finalStatus || '';
+//       const qrCodeData = receiptData.qrCodeData || {};
+      
+//       const subsidyAmount = bookingData.subsidyAmount || 0;
+//       const isEV = bookingData.model?.type === 'EV';
+      
+//       const priceComponents = bookingData.priceComponents || [];
+//       const filteredPriceComponents = priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+//         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+//         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+//         return !(isInsurance || isRTO || isHypothecation);
+//       });
+
+//       const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+      
+//       const findComponentByKeywords = (keywords) => {
+//         return priceComponents.find((comp) => {
+//           const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//           return keywords.some((keyword) => headerKey.includes(keyword));
+//         });
+//       };
+
+//       const insuranceComponent = findComponentByKeywords([
+//         'INSURANCE', 'INSURCANCE', 'INSURANCE CHARGES', 'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+//       ]);
+//       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+//       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+//       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+//       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+//       const hpCharges = hpComponent ? hpComponent.originalValue : bookingData.hypothecationCharges || 0;
+
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+      
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       const qrText = `GANDHI MOTORS PVT LTD
+// Booking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}
+// Customer: ${qrCodeData.customerName || bookingData.customerDetails?.name}
+// Mobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}
+// Model: ${qrCodeData.modelName || bookingData.model?.model_name}
+// Type: ${bookingData.model?.type || 'N/A'}
+// Chassis: ${qrCodeData.chassisNo || bookingData.chassisNumber || 'Not allocated'}
+// Payment Type: ${qrCodeData.paymentType || bookingData.payment?.type}
+// Total Amount: ₹${grandTotal.toFixed(2)}
+// ${isEV && subsidyAmount > 0 ? `Subsidy: -₹${subsidyAmount.toFixed(2)}` : ''}
+// Receipt: ${receiptData.receiptNumber || 'N/A'}
+// Amount: ${receiptData.display?.amount || `₹${receiptData.amount?.toFixed(2) || '0'}`}
+// Payment Mode: ${receiptData.paymentMode || 'Cash'}
+// Reference: ${receiptData.transactionReference || 'N/A'}
+// Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
+
+//       let qrCodeImage = '';
+//       try {
+//         qrCodeImage = await QRCode.toDataURL(qrText, {
+//           width: 250,
+//           margin: 3,
+//           color: {
+//             dark: '#000000',
+//             light: '#FFFFFF'
+//           },
+//           errorCorrectionLevel: 'H'
+//         });
+//       } catch (error) {
+//         console.error('Error generating QR code:', error);
+//         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
+//           <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250">
+//             <rect width="250" height="250" fill="white"/>
+//             <rect x="20" y="20" width="210" height="210" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+//             <text x="125" y="115" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">QR CODE</text>
+//             <text x="125" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">Receipt: ${receiptData.receiptNumber}</text>
+//             <text x="125" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Scan for details</text>
+//           </svg>
+//         `);
+//       }
+
+//       const transformedData = {
+//         bookingNumber: bookingData.bookingNumber,
+//         bookingType: bookingData.bookingType,
+//         rto: bookingData.rto,
+//         hpa: bookingData.hpa,
+//         hypothecationCharges: bookingData.hypothecationCharges || 0,
+//         gstin: bookingData.gstin || '',
+//         model: {
+//           model_name: bookingData.model?.model_name || 'N/A',
+//           type: bookingData.model?.type || 'N/A'
+//         },
+//         chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
+//         engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
+//         batteryNumber: bookingData.vehicle?.batteryNumber || '',
+//         keyNumber: bookingData.vehicle?.keyNumber || '',
+//         color: {
+//           name: bookingData.color?.name || ''
+//         },
+//         customerDetails: {
+//           name: bookingData.customerDetails?.name || 'N/A',
+//           address: bookingData.customerDetails?.address || '',
+//           taluka: bookingData.customerDetails?.taluka || '',
+//           district: bookingData.customerDetails?.district || '',
+//           pincode: bookingData.customerDetails?.pincode || '',
+//           mobile1: bookingData.customerDetails?.mobile1 || '',
+//           dob: bookingData.customerDetails?.dob || '',
+//           aadharNumber: bookingData.customerDetails?.aadharNumber || ''
+//         },
+//         exchange: bookingData.exchange,
+//         exchangeDetails: bookingData.exchangeDetails,
+//         payment: {
+//           type: bookingData.payment?.type || 'CASH',
+//           financer: bookingData.payment?.financer
+//         },
+//         salesExecutive: bookingData.salesExecutive,
+//         branch: {
+//           gst_number: bookingData.branch?.gst_number || ''
+//         },
+//         accessories: bookingData.accessories || [],
+//         priceComponents: bookingData.priceComponents || [],
+//         subdealer: bookingData.subdealer || '',
+//         receivedAmount: bookingData.receivedAmount || 0,
+//         finalStatus: finalStatus || '',
+//         recentPayment: receiptData,
+//         qrCodeData: qrCodeData,
+//         qrCodeImage: qrCodeImage,
+//         qrCodeText: qrText,
+//         recentPaymentAmount: receiptData.amount || 0,
+//         bookingDetails: bookingData,
+//         subsidyAmount: subsidyAmount,
+//         calculatedTotals: {
+//           totalA,
+//           totalB,
+//           grandTotal,
+//           insuranceCharges,
+//           rtoCharges,
+//           hpCharges,
+//           subsidyDisplay
+//         }
+//       };
+
+//       const isFirstReceipt = receiptIndex === 0;
+      
+//       const invoiceHTML = generateReceiptInvoiceHTML(transformedData, isFirstReceipt);
+
+//       const printWindow = window.open('', '_blank');
+//       printWindow.document.write(invoiceHTML);
+//       printWindow.document.close();
+      
+//       printWindow.onload = function() {
+//         printWindow.focus();
+//         printWindow.print();
+//       };
+      
+//     } catch (error) {
+//       console.error('Error generating receipt invoice:', error);
+//       showError(error, 'Failed to generate receipt invoice');
+//     }
+//   };
+  
+//   const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+//     const exchangeBrokerName = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+//     const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
+
+//     const currentDate = new Date().toLocaleDateString('en-GB');
+//     const receiptDate = data.recentPayment?.receiptDate 
+//       ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB')
+//       : currentDate;
+    
+//     const recentPaymentAmount = data.recentPaymentAmount || 0;
+//     const recentPaymentAmountRef = data.recentPayment?.transactionReference || "-";
+//     const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+//     const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+//     const receiptNumber = data.recentPayment?.receiptNumber || "-";
+
+//     const qrCodeImage = data.qrCodeImage || '';
+    
+//     const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+//     const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
+
+//     if (isFirstReceipt) {
+//       const filteredPriceComponents = data.priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         const isInsurance = /INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+//         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+//         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+//         return !(isInsurance || isRTO || isHypothecation);
+//       });
+
+//       const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+//         const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+//         const unitCost = component.originalValue;
+//         const discount = 0;
+//         const lineTotal = component.originalValue;
+//         const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+//         const totalGST = lineTotal - taxableValue;
+//         const cgstAmount = totalGST / 2;
+//         const sgstAmount = totalGST / 2;
+        
+//         return {
+//           ...component,
+//           unitCost,
+//           taxableValue,
+//           cgstAmount,
+//           sgstAmount,
+//           gstAmount: cgstAmount + sgstAmount,
+//           gstRatePercentage,
+//           discount,
+//           lineTotal
+//         };
+//       });
+      
+//       const findComponentByKeywords = (keywords) => {
+//         return data.priceComponents.find((comp) => {
+//           const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//           return keywords.some((keyword) => headerKey.includes(keyword));
+//         });
+//       };
+
+//       const insuranceComponent = findComponentByKeywords([
+//         'INSURANCE',
+//         'INSURCANCE',
+//         'INSURANCE CHARGES',
+//         'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+//       ]);
+//       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+//       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+//       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+//       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+//       const hpCharges = hpComponent ? hpComponent.originalValue : data.hypothecationCharges || 0;
+
+//       const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       return `
+// <!DOCTYPE html>
+// <html>
+// <head>
+//   <title>Payment Receipt - ${receiptNumber}</title>
+//   <style>
+//     body {
+//       font-family: "Courier New", Courier, monospace;
+//       margin: 0;
+//       padding: 10mm;
+//       font-size: 14px;
+//       color: #555555;
+//     }
+//     .page {
+//       width: 210mm;
+//       height: 297mm;
+//       margin: 0 auto;
+//     }
+//     .header-container {
+//       display: flex;
+//       justify-content: space-between;
+//       margin-bottom: 2mm;
+//       align-items: flex-start;
+//     }
+//     .header-left {
+//       width: 60%;
+//     }
+//     .header-right {
+//       width: 40%;
+//       text-align: right;
+//       display: flex;
+//       flex-direction: column;
+//       align-items: flex-end;
+//     }
+//     .logo-qr-container {
+//       display: flex;
+//       align-items: center;
+//       gap: 20px;
+//       justify-content: flex-end;
+//       margin-bottom: 10px;
+//       width: 100%;
+//     }
+//     .logo {
+//       height: 80px;
+//     }
+//     .qr-code-extra-big {
+//       width: 150px;
+//       height: 150px;
+//       border: 1px solid #ccc;
+//     }
+//     .dealer-info {
+//       text-align: left;
+//       font-size: 14px;
+//       line-height: 1.2;
+//     }
+//     .customer-info-container {
+//       display: flex;
+//       font-size:14px;
+//     }
+//     .customer-info-left {
+//       width: 50%;
+//     }
+//     .customer-info-right {
+//       width: 50%;
+//     }
+//     .customer-info-row {
+//       margin: 1mm 0;
+//       line-height: 1.2;
+//     }
+//     table {
+//       width: 100%;
+//       border-collapse: collapse;
+//       font-size: 9pt;
+//       margin: 2mm 0;
+//     }
+//     th, td {
+//       padding: 1mm;
+//       border: 1px solid #000;
+//       vertical-align: top;
+//     }
+//     .no-border { 
+//       border: none !important; 
+//       font-size:14px;
+//     }
+//     .text-right { text-align: right; }
+//     .text-center { text-align: center; }
+//     .bold { 
+//       font-weight: bold; 
+//     }
+//     .section-title {
+//       font-weight: bold;
+//       margin: 1mm 0;
+//     }
+//     .signature-box {
+//       margin-top: 5mm;
+//       font-size: 9pt;
+//     }
+//     .signature-line {
+//       border-top: 1px dashed #000;
+//       width: 40mm;
+//       display: inline-block;
+//       margin: 0 5mm;
+//     }
+//     .footer {
+//       font-size: 8pt;
+//       text-align: justify;
+//       line-height: 1.2;
+//       margin-top: 3mm;
+//     }
+//     .divider {
+//       border-top: 2px solid #AAAAAA;
+//     }
+//     .totals-table {
+//       width: 100%;
+//       border-collapse: collapse;
+//       margin: 2mm 0;
+//     }
+//     .totals-table td {
+//       border: none;
+//       padding: 1mm;
+//     }
+//     .total-divider {
+//       border-top: 2px solid #AAAAAA;
+//       height: 1px;
+//       margin: 2px 0;
+//     }
+//     .broker-info{
+//       display:flex;
+//       justify-content:space-between;
+//       padding:1px;
+//     }
+//     .status-box {
+//       background-color: #e8f5e8;
+//       border: 2px solid #c3e6c3;
+//       border-radius: 4px;
+//       padding: 15px;
+//       margin: 10px 0;
+//       text-align: center;
+//       font-weight: bold;
+//       font-size: 20px;
+//       color: #495057;
+//     }
+//     .payment-info-title {
+//       font-weight: bold;
+//       margin-bottom: 5px;
+//       color: #155724;
+//       font-size: 16px;
+//     }
+//     .amount-in-words {
+//       font-style: italic;
+//       margin-top: 5px;
+//       color: #333;
+//       padding: 5px;
+//     }
+//     .note{
+//       padding:1px;
+//       margin:2px;
+//     }
+//     .qr-bottom-section {
+//       margin-top: 10mm;
+//       text-align: center;
+//       page-break-inside: avoid;
+//     }
+//     .qr-bottom-big {
+//       width: 180px;
+//       height: 180px;
+//       border: 1px solid #ccc;
+//       margin: 0 auto;
+//       display: block;
+//     }
+//     .qr-scan-text {
+//       font-size: 10pt;
+//       color: #777;
+//       margin-top: 3mm;
+//     }
+//     .receipt-info {
+//       background-color: #f8f9fa;
+//       border: 1px solid #dee2e6;
+//       border-radius: 4px;
+//       padding: 10px;
+//       margin: 10px 0;
+//     }
+//     @page {
+//       size: A4;
+//       margin: 0;
+//     }
+//     @media print {
+//       body {
+//         padding: 5mm;
+//       }
+//       .qr-bottom-section {
+//         page-break-inside: avoid;
+//       }
+//     }
+//   </style>
+// </head>
+// <body>
+//   <div class="page">
+//     <div class="header-container">
+//       <div class="header-left">
+//         <h2 style="margin:3;font-size:15pt;">GANDHI MOTORS PVT LTD</h2>
+//         <div class="dealer-info">
+//           Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//           Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//           Upnagar, Nashik Road, Nashik, 7498993672<br>
+//           GSTIN: ${data.branch?.gst_number || ''}<br>
+//           GANDHI TVS PIMPALGAON
+//         </div>
+//       </div>
+//       <div class="header-right">
+//         <div class="logo-qr-container">
+//           <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//           ${
+//             qrCodeImage 
+//               ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />`
+//               : ''
+//           }
+//         </div>
+        
+//         <div style="margin-top: 5px; font-size: 13px;">Date: ${receiptDate}</div>
+//         <div style="margin-top: 5px; font-size: 13px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//         ${
+//           data.bookingType === 'SUBDEALER'
+//             ? `<div style="font-size: 12px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//         <div style="font-size: 11px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>
+//         `
+//             : ''
+//         }
+//       </div>
+//     </div>
+//     <div class="divider"></div>
+
+//     <div class="receipt-info">
+//       <div><strong>Payment Receipt</strong></div>
+//       <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//       <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//     </div>
+
+//     <div class="customer-info-container">
+//       <div class="customer-info-left">
+//         <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//         <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</div>
+//         <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//         <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//       </div>
+//       <div class="customer-info-right">
+//         <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//         <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//         <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//         <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//         <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//       </div>
+//     </div>
+
+//     <div class="payment-info-box">
+//       <div class="receipt-info">
+//         <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//         <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//         <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//         <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+//       <div class="amount-in-words">
+//         <strong>(In Words):</strong> ${recentPaymentAmountInWords} Only
+//       </div>
+//     </div>
+//     <table>
+//       <tr>
+//         <th style="width:25%">Particulars</th>
+//         <th style="width:8%">HSN CODE</th>
+//         <th style="width:8%">Unit Cost</th>
+//         <th style="width:8%">Taxable</th>
+//         <th style="width:5%">CGST</th>
+//         <th style="width:8%">CGST AMOUNT</th>
+//         <th style="width:5%">SGST</th>
+//         <th style="width:8%">SGST AMOUNT</th>
+//         <th style="width:7%">DISCOUNT</th>
+//         <th style="width:10%">LINE TOTAL</th>
+//       </tr>
+
+//       ${priceComponentsWithGST
+//         .map(
+//           (component) => `
+//         <tr>
+//           <td>${component.header?.header_key || ''}</td>
+//           <td>${component.header?.metadata?.hsn_code || ''}</td>
+//           <td >${component.unitCost.toFixed(2)}</td>
+//           <td >${component.taxableValue.toFixed(2)}</td>
+//           <td >${(component.gstRatePercentage / 2).toFixed(2)}%</td>
+//           <td >${component.cgstAmount.toFixed(2)}</td>
+//           <td >${(component.gstRatePercentage / 2).toFixed(2)}%</td>
+//           <td >${component.sgstAmount.toFixed(2)}</td>
+//           <td >${component.discount.toFixed(2)}</td>
+//           <td >${component.lineTotal.toFixed(2)}</td>
+//         </tr>
+//       `
+//         )
+//         .join('')}
+//     </table>
+
+//     <table class="totals-table">
+//       <tr>
+//         <td class="no-border" style="width:80%"><strong>Total(A)</strong></td>
+//         <td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td colspan="2" class="no-border"><div class="total-divider"></div></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>INSURANCE CHARGES</strong></td>
+//         <td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td>
+//         <td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>HP CHARGES</strong></td>
+//         <td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td>
+//       </tr>
+//         ${isEV && subsidyAmount > 0 ? `
+//       <tr>
+//         <td class="no-border"><strong>SUBSIDY AMOUNT</strong></td>
+//         <td class="no-border text-right" style="color: green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td>
+//       </tr>
+//       ` : ''}
+//       <tr>
+//         <td colspan="2" class="no-border"><div class="total-divider"></div></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>TOTAL(B)</strong></td>
+//         <td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td>
+//         <td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td>
+//       </tr>
+//     </table>
+//     <div class="broker-info">
+//       <div><strong>Ex. Broker/ Sub Dealer:</strong>${exchangeBrokerName}</div>
+//       <div><strong>Ex. Veh No:</strong>${exchangeVehicleNumber}</div>
+//     </div>
+//     <div class="note"><strong>Notes:Booking Awaiting approval as discount exceed</strong></div>
+//     <div class="divider"></div>
+//     <div style="margin-top:2mm;">
+//       <div><strong>Booking Status: </strong>
+//       </div>
+//       <div class="status-box">
+//         ${data.finalStatus || 'Status: Not Available'}
+//       </div>
+//     </div>
+//     <div class="divider"></div>
+
+//     <div class="divider" style="margin-top: 5mm;"></div>
+
+//     <div class="signature-box">
+//       <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Customer's Signature</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Sales Executive</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Manager</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Accountant</div>
+//         </div>
+//       </div>
+//     </div>
+//   </div>
+// </body>
+// </html>
+//   `;
+//     } else {
+//       return `
+// <!DOCTYPE html>
+// <html>
+// <head>
+//   <title>Payment Receipt - ${receiptNumber}</title>
+//   <style>
+//     body {
+//       font-family: "Courier New", Courier, monospace;
+//       margin: 0;
+//       padding: 10mm;
+//       font-size: 14px;
+//       color: #555555;
+//     }
+//     .page {
+//       width: 210mm;
+//       height: 297mm;
+//       margin: 0 auto;
+//     }
+//     .receipt-copy {
+//       height: 138mm;
+//       page-break-inside: avoid;
+//     }
+//     .header-container {
+//       display: flex;
+//       justify-content: space-between;
+//       margin-bottom: 2mm;
+//       align-items: flex-start;
+//     }
+//     .header-left {
+//       width: 60%;
+//     }
+//     .header-right {
+//       width: 40%;
+//       text-align: right;
+//       display: flex;
+//       flex-direction: column;
+//       align-items: flex-end;
+//     }
+//     .logo-qr-container {
+//       display: flex;
+//       align-items: center;
+//       gap: 10px;
+//       justify-content: flex-end;
+//       margin-bottom: 5px;
+//       width: 100%;
+//     }
+//     .logo {
+//       height: 60px;
+//     }
+//     .qr-code-small {
+//       width: 100px;
+//       height: 100px;
+//       border: 1px solid #ccc;
+//     }
+//     .dealer-info {
+//       text-align: left;
+//       font-size: 12px;
+//       line-height: 1.1;
+//     }
+//     .customer-info-container {
+//       display: flex;
+//       font-size:12px;
+//     }
+//     .customer-info-left {
+//       width: 50%;
+//     }
+//     .customer-info-right {
+//       width: 50%;
+//     }
+//     .customer-info-row {
+//       margin: 0.5mm 0;
+//       line-height: 1.1;
+//     }
+//     .divider {
+//       border-top: 1px solid #AAAAAA;
+//       margin: 2mm 0;
+//     }
+//     .receipt-info {
+//       background-color: #f8f9fa;
+//       border: 1px solid #dee2e6;
+//       border-radius: 4px;
+//       padding: 8px;
+//       margin: 8px 0;
+//       font-size: 12px;
+//     }
+//     .payment-info-box {
+//       margin: 5px 0;
+//     }
+//     .signature-box {
+//       margin-top: 3mm;
+//       font-size: 8pt;
+//     }
+//     .signature-line {
+//       border-top: 1px dashed #000;
+//       width: 35mm;
+//       display: inline-block;
+//       margin: 0 3mm;
+//     }
+//     .cutting-line {
+//       border-top: 2px dashed #333;
+//       margin: 10mm 0;
+//       text-align: center;
+//       position: relative;
+//     }
+//     .cutting-line::before {
+//       content: "✂ Cut Here ✂";
+//       position: absolute;
+//       top: -10px;
+//       left: 50%;
+//       transform: translateX(-50%);
+//       background: white;
+//       padding: 0 10px;
+//       font-size: 10px;
+//       color: #666;
+//     }
+//     .note{
+//       padding:1px;
+//       margin:2px;
+//       font-size: 11px;
+//     }
+//     @page {
+//       size: A4;
+//       margin: 0;
+//     }
+//     @media print {
+//       body {
+//         padding: 5mm;
+//       }
+//       .receipt-copy {
+//         page-break-inside: avoid;
+//       }
+//     }
+//   </style>
+// </head>
+// <body>
+//   <div class="page">
+//     <div class="receipt-copy">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
+//           <div class="dealer-info">
+//             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//             Upnagar, Nashik Road, Nashik, 7498993672<br>
+//             GSTIN: ${data.branch?.gst_number || ''}<br>
+//             GANDHI TVS PIMPALGAON
+//           </div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//             ${
+//               qrCodeImage 
+//                 ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />`
+//                 : ''
+//             }
+//           </div>
+          
+//           <div style="margin-top: 3px; font-size: 11px;">Date: ${receiptDate}</div>
+//           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//           ${
+//             data.bookingType === 'SUBDEALER'
+//               ? `<div style="font-size: 10px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//           <div style="font-size: 9px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
+//               : ''
+//           }
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+
+//       <div class="receipt-info">
+//         <div><strong>Payment Receipt</strong></div>
+//         <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+
+//       <div class="customer-info-container">
+//         <div class="customer-info-left">
+//           <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//           <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//           <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka}</div>
+//           <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//           <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//         </div>
+//         <div class="customer-info-right">
+//           <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//           <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//           <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//           <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//           <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//         </div>
+//       </div>
+
+//       <div class="payment-info-box">
+//         <div class="receipt-info">
+//           <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//           <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//           <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//           <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//           <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//         </div>
+//       </div>
+
+//       <div class="note"><strong>Notes:</strong></div>
+//       <div class="divider"></div>
+
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Customer's Signature</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Sales Executive</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Manager</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Accountant</div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+
+//     <div class="cutting-line"></div>
+
+//     <div class="receipt-copy">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
+//           <div class="dealer-info">
+//             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//             Upnagar, Nashik Road, Nashik, 7498993672<br>
+//             GSTIN: ${data.branch?.gst_number || ''}<br>
+//             GANDHI TVS PIMPALGAON
+//           </div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//             ${
+//               qrCodeImage 
+//                 ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />`
+//                 : ''
+//             }
+//           </div>
+          
+//           <div style="margin-top: 3px; font-size: 11px;">Date: ${receiptDate}</div>
+//           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//           ${
+//             data.bookingType === 'SUBDEALER'
+//               ? `<div style="font-size: 10px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//           <div style="font-size: 9px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
+//               : ''
+//           }
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+
+//       <div class="receipt-info">
+//         <div><strong>Payment Receipt (DUPLICATE)</strong></div>
+//         <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+
+//       <div class="customer-info-container">
+//         <div class="customer-info-left">
+//           <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//           <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//           <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka}</div>
+//           <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//           <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//         </div>
+//         <div class="customer-info-right">
+//           <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//           <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//           <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//           <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//           <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//         </div>
+//       </div>
+
+//       <div class="payment-info-box">
+//         <div class="receipt-info">
+//           <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//           <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//           <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//           <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//           <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//         </div>
+//       </div>
+
+//       <div class="note"><strong>Notes:</strong></div>
+//       <div class="divider"></div>
+
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Customer's Signature</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Sales Executive</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Manager</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Accountant</div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   </div>
+// </body>
+// </html>
+//   `;
+//     }
+//   };
+
+//   // ============ PAGINATION RENDER FUNCTION ============
+//   const renderPagination = (filteredDataArray) => {
+//     if (filteredDataArray.length <= recordsPerPage) {
+//       return null;
+//     }
+    
+//     return (
+//       <div className="mt-4">
+//         <div className="d-flex justify-content-between align-items-center mb-2">
+//           <div className="d-flex align-items-center">
+//             <CFormLabel className="me-2 mb-0">Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={recordsPerPage}
+//               onChange={handleRecordsPerPageChange}
+//               style={{ width: '80px' }}
+//               size="sm"
+//             >
+//               <option value={50}>50</option>
+//               <option value={100}>100</option>
+//               <option value={200}>200</option>
+//               <option value={500}>500</option>
+//             </CFormSelect>
+//           </div>
+//           <div className="text-muted">
+//             Showing {(currentPage - 1) * recordsPerPage + 1} to {Math.min(currentPage * recordsPerPage, filteredDataArray.length)} of {filteredDataArray.length} entries
+//           </div>
+//         </div>
+        
+//         <CPagination align="center" aria-label="Page navigation example">
+//           <CPaginationItem 
+//             aria-label="Previous" 
+//             onClick={() => handlePageChange(currentPage - 1)}
+//             disabled={currentPage === 1}
+//           >
+//             <CIcon icon={cilChevronLeft} />
+//           </CPaginationItem>
+          
+//           {currentPage > 3 && totalPages > 5 && (
+//             <>
+//               <CPaginationItem onClick={() => handlePageChange(1)}>
+//                 1
+//               </CPaginationItem>
+//               {currentPage > 4 && <CPaginationItem disabled>...</CPaginationItem>}
+//             </>
+//           )}
+          
+//           {displayedPages.map(page => (
+//             <CPaginationItem 
+//               key={page}
+//               onClick={() => handlePageChange(page)}
+//               active={currentPage === page}
+//             >
+//               {page}
+//             </CPaginationItem>
+//           ))}
+          
+//           {currentPage < totalPages - 2 && totalPages > 5 && (
+//             <>
+//               {currentPage < totalPages - 3 && <CPaginationItem disabled>...</CPaginationItem>}
+//               <CPaginationItem onClick={() => handlePageChange(totalPages)}>
+//                 {totalPages}
+//               </CPaginationItem>
+//             </>
+//           )}
+          
+//           <CPaginationItem 
+//             aria-label="Next" 
+//             onClick={() => handlePageChange(currentPage + 1)}
+//             disabled={currentPage === totalPages}
+//           >
+//             <CIcon icon={cilChevronRight} />
+//           </CPaginationItem>
+//         </CPagination>
+//       </div>
+//     );
+//   };
+
+//   // ============ RENDER TABLE FUNCTIONS ============
+//   const renderCustomerTable = () => {
+//     if (!canViewCustomerTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Customer tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+
+//     const canShowActionColumn = canCreateInCustomerTab || canPrintInCustomerTab;
+//     const canShowAddPayment = canCreateInCustomerTab;
+//     const canShowPrint = canPrintInCustomerTab;
+    
+//     const currentRecords = getCurrentRecords(filteredBookings);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Receipts</CTableHeaderCell>
+//                 {canShowActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan={canShowActionColumn ? "12" : "11"} style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching bookings found' : 'No booking available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   const hasReceipts = receiptsFetched[booking._id] && bookingReceipts[booking._id]?.length > 0;
+//                   const isLoading = loadingReceipts[booking._id];
+//                   const receipts = bookingReceipts[booking._id] || [];
+                  
+//                   const sortedReceipts = [...receipts].sort((a, b) => {
+//                     const dateA = new Date(a.receiptDate || a.createdAt || 0);
+//                     const dateB = new Date(b.receiptDate || b.createdAt || 0);
+//                     return dateA - dateB;
+//                   });
+                  
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : hasReceipts ? (
+//                           <CDropdown>
+//                             <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canShowPrint}>
+//                               {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
+//                             </CDropdownToggle>
+//                             <CDropdownMenu>
+//                               {sortedReceipts.map((receipt, receiptIndex) => (
+//                                 <CDropdownItem 
+//                                   key={receipt.id} 
+//                                   onClick={() => printReceiptInvoice(receipt.id, booking._id, receiptIndex)}
+//                                 >
+//                                   <div className="d-flex align-items-center">
+//                                     <CIcon icon={cilPrint} className="me-2" />
+//                                     <div>
+//                                       <div><strong>Receipt #{receiptIndex + 1}</strong></div>
+//                                       <small>
+//                                         {receipt.display?.amount || `₹${receipt.amount}`} - 
+//                                         {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}
+//                                       </small>
+//                                     </div>
+//                                   </div>
+//                                 </CDropdownItem>
+//                               ))}
+//                             </CDropdownMenu>
+//                           </CDropdown>
+//                         ) : receiptsFetched[booking._id] ? (
+//                           <span className="text-muted">No receipts</span>
+//                         ) : (
+//                           <CButton
+//                             size="sm"
+//                             color="light"
+//                             onClick={() => handleLoadReceipts(booking._id)}
+//                             disabled={isLoading}
+//                           >
+//                             <CIcon icon={cilCloudDownload} className="me-1" />
+//                             Load Receipts
+//                           </CButton>
+//                         )}
+//                       </CTableDataCell>
+
+//                       {canShowActionColumn && (
+//                         <CTableDataCell>
+//                           <CButton
+//                             size="sm"
+//                             className='option-button btn-sm'
+//                             onClick={(event) => handleMenuClick(event, booking._id)}
+//                             disabled={!canShowAddPayment}
+//                           >
+//                             <CIcon icon={cilSettings} />
+//                             Options
+//                           </CButton>
+
+//                           <Menu
+//                             id={`action-menu-${booking._id}`}
+//                             anchorEl={anchorEl}
+//                             open={menuBookingId === booking._id}
+//                             onClose={handleMenuClose}
+//                             anchorOrigin={{
+//                               vertical: 'bottom',
+//                               horizontal: 'right',
+//                             }}
+//                             transformOrigin={{
+//                               vertical: 'top',
+//                               horizontal: 'right',
+//                             }}
+//                           >
+//                             {canShowAddPayment && (
+//                               <MenuItem onClick={() => {
+//                                 handleAddClick(booking);
+//                                 handleMenuClose();
+//                               }}>
+//                                 <CIcon icon={cilPlus} className="me-2" />
+//                                 Add Payment
+//                               </MenuItem>
+//                             )}
+//                           </Menu>
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredBookings)}
+//       </>
+//     );
+//   };
+  
+//   const renderPaymentVerificationTable = () => {
+//     if (!canViewPaymentVerificationTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Payment Verification tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredPendingLedgerEntries);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Bank Receipts</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+//                 {canCreateInPaymentVerificationTab && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan={canCreateInPaymentVerificationTab ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   const bookingId = entry.bookingDetails?._id || entry.booking;
+//                   const isLoading = loadingReceipts[bookingId];
+//                   const hasReceipts = receiptsFetched[bookingId] && bookingReceipts[bookingId]?.length > 0;
+//                   const receipts = bookingReceipts[bookingId] || [];
+                  
+//                   const bankReceipts = receipts.filter(receipt => 
+//                     receipt.paymentMode && 
+//                     receipt.paymentMode.toUpperCase() === 'BANK'
+//                   );
+                  
+//                   const sortedBankReceipts = [...bankReceipts].sort((a, b) => {
+//                     const dateA = new Date(a.receiptDate || a.createdAt || 0);
+//                     const dateB = new Date(b.receiptDate || b.createdAt || 0);
+//                     return dateA - dateB;
+//                   });
+                  
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || entry.booking || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : hasReceipts ? (
+//                           sortedBankReceipts.length > 0 ? (
+//                             <CDropdown>
+//                               <CDropdownToggle size="sm" color="info" variant="outline">
+//                                 {sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}
+//                               </CDropdownToggle>
+//                               <CDropdownMenu>
+//                                 {sortedBankReceipts.map((receipt, receiptIndex) => (
+//                                   <CDropdownItem 
+//                                     key={receipt.id} 
+//                                     onClick={() => printReceiptInvoice(receipt.id, bookingId, receiptIndex)}
+//                                     disabled={!canPrintInCustomerTab}
+//                                   >
+//                                     <div className="d-flex align-items-center">
+//                                       <CIcon icon={cilPrint} className="me-2" />
+//                                       <div>
+//                                         <div><strong>Bank Receipt #{receiptIndex + 1}</strong></div>
+//                                         <small>
+//                                           {receipt.display?.amount || `₹${receipt.amount}`} - 
+//                                           {receipt.display?.date || (receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('en-GB') : 'N/A')}
+//                                         </small>
+//                                       </div>
+//                                     </div>
+//                                   </CDropdownItem>
+//                                 ))}
+//                               </CDropdownMenu>
+//                             </CDropdown>
+//                           ) : (
+//                             <span className="text-muted">No bank receipts</span>
+//                           )
+//                         ) : receiptsFetched[bookingId] ? (
+//                           <span className="text-muted">No bank receipts</span>
+//                         ) : (
+//                           <CButton
+//                             size="sm"
+//                             color="light"
+//                             onClick={() => handleLoadReceipts(bookingId)}
+//                             disabled={isLoading}
+//                           >
+//                             <CIcon icon={cilCloudDownload} className="me-1" />
+//                             Load Receipts
+//                           </CButton>
+//                         )}
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
+//                           {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       {canCreateInPaymentVerificationTab && (
+//                         <CTableDataCell>
+//                           {entry.approvalStatus === 'Pending' ? (
+//                             <CButton
+//                               size="sm"
+//                               className="action-btn"
+//                               onClick={() => handleVerifyPayment(entry)}
+//                             >
+//                               <CIcon icon={cilCheckCircle} className="me-1" />
+//                               Verify
+//                             </CButton>
+//                           ) : (
+//                             <span className="text-muted">Verified</span>
+//                           )}
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredPendingLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   const renderCompletePaymentTable = () => {
+//     if (!canViewCompletePaymentTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Complete Payment tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(completePayments);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching complete payments found' : 'No complete payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(completePayments)}
+//       </>
+//     );
+//   };
+
+//   const renderPendingListTable = () => {
+//     if (!canViewPendingListTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Pending List tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(pendingPayments);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(pendingPayments)}
+//       </>
+//     );
+//   };
+
+//   const renderVerifiedListTable = () => {
+//     if (!canViewVerifiedListTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Verified List tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredVerifiedLedgerEntries);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Verified By</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching verified payments found' : 'No verified payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedByDetails?.name || ''}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredVerifiedLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   // ============ EARLY RETURNS FOR PERMISSIONS ============
+//   if (!canViewReceipts) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view Receipts.
+//       </div>
+//     );
+//   }
+
+//   if (!canViewAnyTab) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view any tabs in Receipts.
+//       </div>
+//     );
+//   }
+
+//   if (loading) {
+//     return (
+//       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+//         <CSpinner color="primary" />
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="alert alert-danger" role="alert">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   // ============ MAIN RENDER ============
+//   return (
+//     <div>
+//       <div className='title'>Receipt Management</div>
+      
+//       {successMessage && (
+//         <CAlert color="success" className="mb-3">
+//           {successMessage}
+//         </CAlert>
+//       )}
+      
+//       <CCard className='table-container mt-4'>
+//         <CCardBody>
+//           {canViewAnyTab ? (
+//             <>
+//               {canCreateReceipts && (
+//                 <div className="d-flex mb-3 gap-2">
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenExportModal}
+//                     title="Export Receipts Excel"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Export Receipts
+//                   </CButton>
+                  
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenVerifiedOutstandingModal}
+//                     title="Export Verified Outstanding Report"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Verified Outstanding
+//                   </CButton>
+                  
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenPendingVerificationModal}
+//                     title="Export Pending Verification Report"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Pending Verification
+//                   </CButton>
+//                 </div>
+//               )}
+
+//               <CNav variant="tabs" className="mb-3 border-bottom">
+//                 {canViewCustomerTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 0}
+//                       onClick={() => handleTabChange(0)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+//                         color: 'black',
+//                         borderBottom: 'none'
+//                       }}
+//                     >
+//                       Customer
+//                       {!canCreateInCustomerTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewPaymentVerificationTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 1}
+//                       onClick={() => handleTabChange(1)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Payment Verification
+//                       {!canCreateInPaymentVerificationTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewCompletePaymentTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 2}
+//                       onClick={() => handleTabChange(2)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 2 ? '4px solid #2759a2' : '3px solid transparent',
+//                           borderBottom: 'none',
+//                           color: 'black'
+//                       }}
+//                     >
+//                       Complete Payment
+//                       {!canCreateInCompletePaymentTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewPendingListTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 3}
+//                       onClick={() => handleTabChange(3)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 3 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Pending List
+//                       {!canCreateInPendingListTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewVerifiedListTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 4}
+//                       onClick={() => handleTabChange(4)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 4 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Verified List
+//                       {!canCreateInVerifiedListTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//               </CNav>
+
+//               <div className="d-flex justify-content-between mb-3">
+//                 <div></div>
+//                 <div className='d-flex'>
+//                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//                   <CFormInput
+//                     type="text"
+//                     style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+//                     className="d-inline-block square-search"
+//                     value={searchTerm}
+//                     onChange={(e) => handleSearch(e.target.value)}
+//                     disabled={!canViewAnyTab}
+//                   />
+//                 </div>
+//               </div>
+
+//               <CTabContent>
+//                 {canViewCustomerTab && (
+//                   <CTabPane visible={activeTab === 0}>
+//                     {renderCustomerTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewPaymentVerificationTab && (
+//                   <CTabPane visible={activeTab === 1}>
+//                     {renderPaymentVerificationTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewCompletePaymentTab && (
+//                   <CTabPane visible={activeTab === 2}>
+//                     {renderCompletePaymentTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewPendingListTab && (
+//                   <CTabPane visible={activeTab === 3}>
+//                     {renderPendingListTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewVerifiedListTab && (
+//                   <CTabPane visible={activeTab === 4}>
+//                     {renderVerifiedListTable()}
+//                   </CTabPane>
+//                 )}
+//               </CTabContent>
+//             </>
+//           ) : (
+//             <CAlert color="warning" className="text-center">
+//               You don't have permission to view any tabs in Receipts.
+//             </CAlert>
+//           )}
+//         </CCardBody>
+//       </CCard>
+
+//       <ReceiptModal 
+//         show={showModal} 
+//         onClose={() => setShowModal(false)} 
+//         bookingData={selectedBooking} 
+//         canCreateReceipts={canCreateInCustomerTab}
+//         cashLocations={cashLocations}
+//         onPaymentSuccess={handlePaymentSuccess} 
+//       />
+
+//       {/* Export Receipts Modal */}
+//       <CModal alignment="center" visible={openExportModal} onClose={handleCloseExportModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Receipts - Select Date Range
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {exportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {exportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={startDate}
+//                 onChange={(newValue) => {
+//                   setStartDate(newValue);
+//                   setExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={endDate}
+//                 onChange={(newValue) => {
+//                   setEndDate(newValue);
+//                   setExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={startDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={selectedBranchId}
+//             onChange={(e) => {
+//               setSelectedBranchId(e.target.value);
+//               setExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseExportModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handleExcelExport}
+//             disabled={!startDate || !endDate || !selectedBranchId || !canCreateReceipts || exportLoading}
+//           >
+//             {exportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Verified Outstanding Export Modal */}
+//       <CModal alignment="center" visible={openVerifiedOutstandingModal} onClose={handleCloseVerifiedOutstandingModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Verified Outstanding Report
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {verifiedOutstandingExportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {verifiedOutstandingExportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={verifiedOutstandingStartDate}
+//                 onChange={(newValue) => {
+//                   setVerifiedOutstandingStartDate(newValue);
+//                   setVerifiedOutstandingExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={verifiedOutstandingEndDate}
+//                 onChange={(newValue) => {
+//                   setVerifiedOutstandingEndDate(newValue);
+//                   setVerifiedOutstandingExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={verifiedOutstandingStartDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={verifiedOutstandingBranchId}
+//             onChange={(e) => {
+//               setVerifiedOutstandingBranchId(e.target.value);
+//               setVerifiedOutstandingExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseVerifiedOutstandingModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handleVerifiedOutstandingExport}
+//             disabled={!verifiedOutstandingStartDate || !verifiedOutstandingEndDate || !verifiedOutstandingBranchId || !canCreateReceipts || verifiedOutstandingExportLoading}
+//           >
+//             {verifiedOutstandingExportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Pending Verification Export Modal */}
+//       <CModal alignment="center" visible={openPendingVerificationModal} onClose={handleClosePendingVerificationModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Pending Verification Report
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {pendingVerificationExportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {pendingVerificationExportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={pendingVerificationStartDate}
+//                 onChange={(newValue) => {
+//                   setPendingVerificationStartDate(newValue);
+//                   setPendingVerificationExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={pendingVerificationEndDate}
+//                 onChange={(newValue) => {
+//                   setPendingVerificationEndDate(newValue);
+//                   setPendingVerificationExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={pendingVerificationStartDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={pendingVerificationBranchId}
+//             onChange={(e) => {
+//               setPendingVerificationBranchId(e.target.value);
+//               setPendingVerificationExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleClosePendingVerificationModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handlePendingVerificationExport}
+//             disabled={!pendingVerificationStartDate || !pendingVerificationEndDate || !pendingVerificationBranchId || !canCreateReceipts || pendingVerificationExportLoading}
+//           >
+//             {pendingVerificationExportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+//     </div>
+//   );
+// }
+
+// export default Receipt;
+
+
+
+
+
+
+
+
+
+
+
+
+// import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// import { 
+//   CBadge, 
+//   CNav, 
+//   CNavItem, 
+//   CNavLink, 
+//   CTabContent, 
+//   CTabPane,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CCard,
+//   CCardBody,
+//   CButton,
+//   CFormInput,
+//   CSpinner,
+//   CFormLabel,
+//   CAlert,
+//   CDropdown,
+//   CDropdownToggle,
+//   CDropdownMenu,
+//   CDropdownItem,
+//   CModal,
+//   CModalHeader,
+//   CModalTitle,
+//   CModalBody,
+//   CModalFooter,
+//   CPagination,
+//   CPaginationItem,
+//   CFormSelect
+// } from '@coreui/react';
+// import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../utils/tableImports';
+// import '../../css/invoice.css';
+// import '../../css/table.css';
+// import ReceiptModal from './ReceiptModal';
+// import { confirmVerify } from '../../utils/sweetAlerts';
+// import CIcon from '@coreui/icons-react';
+// import { cilCheckCircle, cilPrint, cilSettings, cilPlus, cilChevronLeft, cilChevronRight, cilCloudDownload, cilXCircle } from '@coreui/icons';
+// import { numberToWords } from '../../utils/numberToWords';
+// import { Menu, MenuItem } from '@mui/material';
+// import { useAuth } from '../../context/AuthContext';
+// import QRCode from 'qrcode';
+// import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import Swal from 'sweetalert2';
+// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// import TextField from '@mui/material/TextField';
+// import { enIN } from 'date-fns/locale';
+// import tvsLogo from '../../assets/images/logo.png';
+// import config from '../../config';
+
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS
+// } from '../../utils/modulePermissions';
+
+// function Receipt() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [showModal, setShowModal] = useState(false);
+//   const [selectedBooking, setSelectedBooking] = useState(null);
+//   const [bookingsData, setBookingsData] = useState([]);
+//   const [pendingPaymentsData, setPendingPaymentsData] = useState([]);
+//   const [verifiedPaymentsData, setVerifiedPaymentsData] = useState([]);
+//   const [rejectedPaymentsData, setRejectedPaymentsData] = useState([]);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [anchorEl, setAnchorEl] = useState(null);
+//   const [menuBookingId, setMenuBookingId] = useState(null);
+//   const [successMessage, setSuccessMessage] = useState('');
+  
+//   // ============ REJECT MODAL STATES ============
+//   const [showRejectModal, setShowRejectModal] = useState(false);
+//   const [selectedRejectEntry, setSelectedRejectEntry] = useState(null);
+//   const [rejectionReason, setRejectionReason] = useState('');
+//   const [rejectLoading, setRejectLoading] = useState(false);
+  
+//   // ============ ON-DEMAND RECEIPTS FETCHING ============
+//   const [bookingReceipts, setBookingReceipts] = useState({});
+//   const [loadingReceipts, setLoadingReceipts] = useState({});
+//   const [receiptsFetched, setReceiptsFetched] = useState({});
+  
+//   const [cashLocations, setCashLocations] = useState([]);
+  
+//   // ============ CLIENT-SIDE PAGINATION STATES ============
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const [recordsPerPage, setRecordsPerPage] = useState(100);
+//   const [totalPages, setTotalPages] = useState(1);
+//   const [displayedPages, setDisplayedPages] = useState([]);
+  
+//   // ============ EXPORT MODAL STATES ============
+//   const [openExportModal, setOpenExportModal] = useState(false);
+//   const [startDate, setStartDate] = useState(null);
+//   const [endDate, setEndDate] = useState(null);
+//   const [selectedBranchId, setSelectedBranchId] = useState('');
+//   const [exportLoading, setExportLoading] = useState(false);
+//   const [exportError, setExportError] = useState('');
+  
+//   // ============ VERIFIED OUTSTANDING EXPORT STATES ============
+//   const [openVerifiedOutstandingModal, setOpenVerifiedOutstandingModal] = useState(false);
+//   const [verifiedOutstandingStartDate, setVerifiedOutstandingStartDate] = useState(null);
+//   const [verifiedOutstandingEndDate, setVerifiedOutstandingEndDate] = useState(null);
+//   const [verifiedOutstandingBranchId, setVerifiedOutstandingBranchId] = useState('');
+//   const [verifiedOutstandingExportLoading, setVerifiedOutstandingExportLoading] = useState(false);
+//   const [verifiedOutstandingExportError, setVerifiedOutstandingExportError] = useState('');
+  
+//   // ============ PENDING VERIFICATION EXPORT STATES ============
+//   const [openPendingVerificationModal, setOpenPendingVerificationModal] = useState(false);
+//   const [pendingVerificationStartDate, setPendingVerificationStartDate] = useState(null);
+//   const [pendingVerificationEndDate, setPendingVerificationEndDate] = useState(null);
+//   const [pendingVerificationBranchId, setPendingVerificationBranchId] = useState('');
+//   const [pendingVerificationExportLoading, setPendingVerificationExportLoading] = useState(false);
+//   const [pendingVerificationExportError, setPendingVerificationExportError] = useState('');
+  
+//   const [branches, setBranches] = useState([]);
+
+//   const { permissions = [], user } = useAuth();
+//   const hasAllBranchAccess = user?.branchAccess === "ALL";
+//   const canViewReceipts = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW
+//   );
+
+//   const canCreateReceipts = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE
+//   );
+
+//   const canViewCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canViewPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canViewCompletePaymentTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.COMPLETE_PAYMENT
+//   );
+  
+//   const canViewPendingListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.PENDING_LIST
+//   );
+  
+//   const canViewVerifiedListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.VERIFIED_LIST
+//   );
+  
+//   // Using verified list tab permission for rejected list tab since it's not created yet
+//   const canViewRejectedListTab = canViewVerifiedListTab;
+  
+//   const canCreateInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canCreateInPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canCreateInCompletePaymentTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.COMPLETE_PAYMENT
+//   );
+  
+//   const canCreateInPendingListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.PENDING_LIST
+//   );
+  
+//   const canCreateInVerifiedListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.VERIFIED_LIST
+//   );
+  
+//   const canUpdateInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.UPDATE,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canUpdateInPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.UPDATE,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canPrintInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.CUSTOMER
+//   ) || canViewCustomerTab; 
+  
+//   const canRejectPayments = canUpdateInPaymentVerificationTab;
+  
+//   const canViewAnyTab = canViewCustomerTab || canViewPaymentVerificationTab || 
+//                        canViewCompletePaymentTab || canViewPendingListTab || 
+//                        canViewVerifiedListTab || canViewRejectedListTab;
+
+//   // ============ LEDGER VIEW FUNCTION ============
+//   const openLedgerInNewTab = async (bookingId, bookingNumber) => {
+//     try {
+//       const res = await axiosInstance.get(`/ledger/report/${bookingId}`);
+//       const ledgerData = res.data.data;
+//       const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${bookingId}`;
+
+//       // First filter approved entries
+//       let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
+
+//       // Filter entries based on chassis allocation status
+//       let filteredEntries = approvedEntries;
+//       if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
+//         // Show all entries where debit field exists (debit entries)
+//         filteredEntries = approvedEntries.filter((entry) => 
+//           entry.debit !== undefined && entry.debit !== null
+//         );
+//       }
+
+//       // Recalculate totals based on filtered entries
+//       const totals = {
+//         totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
+//         totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
+//         finalBalance: filteredEntries.reduce((sum, entry) => {
+//           const credit = entry.credit || 0;
+//           const debit = entry.debit || 0;
+//           return sum + (debit - credit);
+//         }, 0)
+//       };
+
+//       const win = window.open('', '_blank');
+//       win.document.write(`
+//         <!DOCTYPE html>
+//         <html>
+//           <head>
+//             <title>Customer Ledger - ${bookingNumber}</title>
+//             <style>
+//               @page {
+//                 size: A4;
+//                 margin: 15mm 10mm;
+//               }
+//               body {
+//                 font-family: Arial;
+//                 width: 100%;
+//                 margin: 0;
+//                 padding: 0;
+//                 font-size: 14px;
+//                 line-height: 1.3;
+//                 font-family: Courier New;
+//               }
+//               .container {
+//                 width: 190mm;
+//                 margin: 0 auto;
+//                 padding: 5mm;
+//               }
+//               .header-container {
+//                 display: flex;
+//                 justify-content:space-between;
+//                 margin-bottom: 3mm;
+//               }
+//               .header-text{
+//                 font-size:20px;
+//                 font-weight:bold;
+//               }
+//               .logo {
+//                 width: 30mm;
+//                 height: auto;
+//                 margin-right: 5mm;
+//               } 
+//               .header {
+//                 text-align: left;
+//               }
+//               .divider {
+//                 border-top: 2px solid #AAAAAA;
+//                 margin: 3mm 0;
+//               }
+//               .header h2 {
+//                 margin: 2mm 0;
+//                 font-size: 12pt;
+//                 font-weight: bold;
+//               }
+//               .header div {
+//                 font-size: 14px;
+//               }
+//               .customer-info {
+//                 display: grid;
+//                 grid-template-columns: repeat(2, 1fr);
+//                 gap: 2mm;
+//                 margin-bottom: 5mm;
+//                 font-size: 14px;
+//               }
+//               .customer-info div {
+//                 display: flex;
+//               }
+//               .customer-info strong {
+//                 min-width: 30mm;
+//                 display: inline-block;
+//               }
+//               table {
+//                 width: 100%;
+//                 border-collapse: collapse;
+//                 margin-bottom: 5mm;
+//                 font-size: 14px;
+//                 page-break-inside: avoid;
+//               }
+//               th, td {
+//                 border: 1px solid #000;
+//                 padding: 2mm;
+//                 text-align: left;
+//               }
+//               th {
+//                 background-color: #f0f0f0;
+//                 font-weight: bold;
+//               }
+//               .footer {
+//                 margin-top: 10mm;
+//                 display: flex;
+//                 justify-content: space-between;
+//                 align-items: flex-end;
+//                 font-size: 14px;
+//               }
+//               .footer-left {
+//                 text-align: left;
+//               }
+//               .footer-right {
+//                 text-align: right;
+//               }
+//               .qr-code {
+//                 width: 35mm;
+//                 height: 35mm;
+//               }
+//               .text-right {
+//                 text-align: right;
+//               }
+//               .text-left {
+//                 text-align: left;
+//               }
+//               .text-center {
+//                 text-align: center;
+//               }
+//               .note {
+//                 font-style: italic;
+//                 color: #666;
+//                 margin-bottom: 5mm;
+//                 text-align: center;
+//               }
+//               @media print {
+//                 body {
+//                   width: 190mm;
+//                   height: 277mm;
+//                 }
+//                 .no-print {
+//                   display: none;
+//                 }
+//               }
+//             </style>
+//           </head>
+//           <body>
+//             <div class="container">
+//               <div class="header-container">
+//                 <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+//                 <div class="header-text"> GANDHI TVS</div>
+//               </div>
+//               <div class="header">
+//                 <div>
+//                   Authorised Main Dealer: TVS Motor Company Ltd.<br>
+//                   Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//                   Upnagar, Nashik Road, Nashik - 422101<br>
+//                   Phone: 7498903672
+//                 </div>
+//               </div>
+//               <div class="divider"></div>
+//               <div class="customer-info">
+//                 <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
+//                 <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+//                 <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
+//                 <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
+//                 <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? (ledgerData.vehicleDetails?.chassisNo || 'N/A') : '-'}</div>
+//                 <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || 'N/A'}</div>
+//                 <div><strong>Chassis Allocated:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? 'Yes' : 'No'}</div>
+//                 <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || 'N/A'}</div>
+//                 <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || 'N/A'}</div>
+//               </div>
+              
+//               <table>
+//                 <thead>
+//                   <tr>
+//                     <th width="15%">Date</th>
+//                     <th width="35%">Description</th>
+//                     <th width="15%">Receipt/VC No</th>
+//                     <th width="10%" class="text-right">Credit (₹)</th>
+//                     <th width="10%" class="text-right">Debit (₹)</th>
+//                     <th width="15%" class="text-right">Balance (₹)</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   ${
+//                     filteredEntries.length > 0
+//                       ? filteredEntries
+//                           .map(
+//                             (entry) => `
+//                               <tr>
+//                                 <td>${entry.date || 'N/A'}</td>
+//                                 <td>${entry.description || 'N/A'}</td>
+//                                 <td>${entry.receiptNo || 'N/A'}</td>
+//                                 <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN') : '-'}</td>
+//                                 <td class="text-right">${entry.debit !== undefined ? entry.debit.toLocaleString('en-IN') : '-'}</td>
+//                                 <td class="text-right">${entry.balance ? entry.balance.toLocaleString('en-IN') : '-'}</td>
+//                               </tr>
+//                             `
+//                           )
+//                           .join('')
+//                       : `<tr><td colspan="6" class="text-center">No approved entries found</td></tr>`
+//                   }
+//                   ${
+//                     filteredEntries.length > 0
+//                       ? `<tr>
+//                           <td colspan="3" class="text-left"><strong>Total</strong></td>
+//                           <td class="text-right"><strong>${totals.totalCredit.toLocaleString('en-IN')}</strong></td>
+//                           <td class="text-right"><strong>${totals.totalDebit.toLocaleString('en-IN')}</strong></td>
+//                           <td class="text-right"><strong>${totals.finalBalance.toLocaleString('en-IN')}</strong></td>
+//                         </tr>`
+//                       : ''
+//                   }
+//                 </tbody>
+//               </table>
+              
+//               <div class="footer">
+//                 <div class="footer-left">
+//                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" 
+//                        class="qr-code" 
+//                        alt="QR Code" />
+//                 </div>
+//                 <div class="footer-right">
+//                   <p>For, Gandhi TVS</p>
+//                   <p>Authorised Signatory</p>
+//                 </div>
+//               </div>
+//             </div>
+            
+//             <script>
+//               window.onload = function() {
+//                 setTimeout(() => {
+//                   window.print();
+//                 }, 300);
+//               };
+//             </script>
+//           </body>
+//         </html>
+//       `);
+      
+//       win.document.close();
+      
+//     } catch (err) {
+//       console.error('Error fetching ledger:', err);
+//       const message = showError(err);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   // ============ FILTER FUNCTIONS - DEFINED BEFORE useEffect ============
+//   const filterData = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+
+//     const searchFields = getDefaultSearchFields('receipts');
+//     const term = searchTerm.toLowerCase();
+
+//     return data.filter((row) =>
+//       searchFields.some((field) => {
+//         const value = field.split('.').reduce((obj, key) => {
+//           if (!obj) return '';
+//           if (key.match(/^\d+$/)) return obj[parseInt(key)];
+//           return obj[key];
+//         }, row);
+
+//         if (value === undefined || value === null) return false;
+
+//         if (typeof value === 'boolean') {
+//           return (value ? 'yes' : 'no').includes(term);
+//         }
+//         if (field === 'createdAt' && value instanceof Date) {
+//           return value.toLocaleDateString('en-GB').includes(term);
+//         }
+//         if (typeof value === 'number') {
+//           return String(value).includes(term);
+//         }
+//         return String(value).toLowerCase().includes(term);
+//       })
+//     );
+//   };
+
+//   const filterPendingPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.bookingDetails?.bookingNumber || '').toLowerCase().includes(term) ||
+//         (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   const filterVerifiedPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.booking || '').toLowerCase().includes(term) ||
+//         (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term) ||
+//         (entry.receivedByDetails?.name || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   const filterRejectedPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.booking?.bookingNumber || '').toLowerCase().includes(term) ||
+//         (entry.booking?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term) ||
+//         (entry.receivedBy?.name || '').toLowerCase().includes(term) ||
+//         (entry.rejectionReason || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   // ============ DERIVED DATA - USE useMemo FOR PERFORMANCE ============
+//   const filteredBookings = useMemo(() => 
+//     filterData(bookingsData, searchTerm), 
+//     [bookingsData, searchTerm]
+//   );
+  
+//   const completePayments = useMemo(() => 
+//     filterData(
+//       bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) === 0),
+//       searchTerm
+//     ),
+//     [bookingsData, searchTerm]
+//   );
+  
+//   const pendingPayments = useMemo(() => 
+//     filterData(
+//       bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) !== 0),
+//       searchTerm
+//     ),
+//     [bookingsData, searchTerm]
+//   );
+
+//   const filteredPendingLedgerEntries = useMemo(() => 
+//     filterPendingPayments(pendingPaymentsData, searchTerm),
+//     [pendingPaymentsData, searchTerm]
+//   );
+  
+//   const filteredVerifiedLedgerEntries = useMemo(() => 
+//     filterVerifiedPayments(verifiedPaymentsData, searchTerm),
+//     [verifiedPaymentsData, searchTerm]
+//   );
+
+//   const filteredRejectedLedgerEntries = useMemo(() => 
+//     filterRejectedPayments(rejectedPaymentsData, searchTerm),
+//     [rejectedPaymentsData, searchTerm]
+//   );
+
+//   // ============ EFFECTS - NOW SAFE TO USE filteredBookings ============
+//   useEffect(() => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     const visibleTabs = [];
+//     if (canViewCustomerTab) visibleTabs.push(0);
+//     if (canViewPaymentVerificationTab) visibleTabs.push(1);
+//     if (canViewCompletePaymentTab) visibleTabs.push(2);
+//     if (canViewPendingListTab) visibleTabs.push(3);
+//     if (canViewVerifiedListTab) visibleTabs.push(4);
+//     if (canViewRejectedListTab) visibleTabs.push(5);
+    
+//     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+//       setActiveTab(visibleTabs[0]);
+//     }
+//   }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab, 
+//       canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab, 
+//       canViewRejectedListTab, activeTab]);
+
+//   useEffect(() => {
+//     if (!canViewReceipts) {
+//       showError('You do not have permission to view Receipts');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     if (!canViewAnyTab) {
+//       showError('You do not have permission to view any Receipt tabs');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     fetchAllData();
+//     fetchCashLocations();
+//     fetchBranches();
+//   }, [canViewReceipts, canViewAnyTab]);
+
+//   useEffect(() => {
+//     window.printReceiptCallback = printReceiptInvoice;
+    
+//     return () => {
+//       delete window.printReceiptCallback;
+//     };
+//   }, []);
+
+//   // ============ PAGINATION CALCULATION ============
+//   const calculatePagination = useCallback((filteredDataLength) => {
+//     const total = filteredDataLength;
+//     const totalPagesCount = Math.ceil(total / recordsPerPage);
+//     setTotalPages(totalPagesCount);
+    
+//     const pages = [];
+//     let startPage = Math.max(1, currentPage - 2);
+//     let endPage = Math.min(totalPagesCount, currentPage + 2);
+    
+//     if (currentPage <= 3) {
+//       endPage = Math.min(5, totalPagesCount);
+//     }
+    
+//     if (currentPage >= totalPagesCount - 2) {
+//       startPage = Math.max(1, totalPagesCount - 4);
+//     }
+    
+//     for (let i = startPage; i <= endPage; i++) {
+//       pages.push(i);
+//     }
+    
+//     setDisplayedPages(pages);
+//   }, [currentPage, recordsPerPage]);
+
+//   useEffect(() => {
+//     const getFilteredDataLength = () => {
+//       switch(activeTab) {
+//         case 0: return filteredBookings.length;
+//         case 1: return filteredPendingLedgerEntries.length;
+//         case 2: return completePayments.length;
+//         case 3: return pendingPayments.length;
+//         case 4: return filteredVerifiedLedgerEntries.length;
+//         case 5: return filteredRejectedLedgerEntries.length;
+//         default: return 0;
+//       }
+//     };
+    
+//     calculatePagination(getFilteredDataLength());
+//   }, [filteredBookings, filteredPendingLedgerEntries, completePayments, 
+//       pendingPayments, filteredVerifiedLedgerEntries, filteredRejectedLedgerEntries, 
+//       activeTab, calculatePagination]);
+
+//   // ============ GET CURRENT RECORDS FOR PAGE ============
+//   const getCurrentRecords = useCallback((filteredDataArray) => {
+//     const indexOfLastRecord = currentPage * recordsPerPage;
+//     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+//     return filteredDataArray.slice(indexOfFirstRecord, indexOfLastRecord);
+//   }, [currentPage, recordsPerPage]);
+
+//   // ============ HANDLE PAGE CHANGE ============
+//   const handlePageChange = (pageNumber) => {
+//     if (pageNumber < 1 || pageNumber > totalPages) return;
+//     setCurrentPage(pageNumber);
+//     window.scrollTo({ top: 0, behavior: 'smooth' });
+//   };
+
+//   // ============ HANDLE RECORDS PER PAGE CHANGE ============
+//   const handleRecordsPerPageChange = (e) => {
+//     setRecordsPerPage(parseInt(e.target.value, 10));
+//     setCurrentPage(1);
+//   };
+
+//   // ============ FETCH FUNCTIONS ============
+//   const fetchAllData = async () => {
+//     try {
+//       setLoading(true);
+//       await Promise.all([
+//         fetchData(),
+//         fetchPendingPayments(),
+//         fetchVerifiedPayments(),
+//         fetchRejectedPayments()
+//       ]);
+//       setLoading(false);
+//     } catch (error) {
+//       console.log('Error fetching data', error);
+//       setError(error.message);
+//       setLoading(false);
+//     }
+//   };
+
+//   // ============ ON-DEMAND RECEIPTS FETCHING ============
+//   const fetchReceiptsForBooking = useCallback(async (bookingId) => {
+//     if (receiptsFetched[bookingId] || loadingReceipts[bookingId]) {
+//       return;
+//     }
+
+//     try {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: true }));
+      
+//       const receiptsResponse = await axiosInstance.get(`/ledger/booking/${bookingId}`);
+//       const receipts = receiptsResponse.data.data.allReceipts || [];
+      
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [bookingId]: receipts
+//       }));
+      
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [bookingId]: true
+//       }));
+//     } catch (error) {
+//       console.error(`Error fetching receipts for booking ${bookingId}:`, error);
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [bookingId]: []
+//       }));
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [bookingId]: true
+//       }));
+//     } finally {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: false }));
+//     }
+//   }, [loadingReceipts, receiptsFetched]);
+
+//   // Pre-fetch receipts for visible bookings only
+//   useEffect(() => {
+//     if (activeTab === 0 && filteredBookings.length > 0) {
+//       const currentRecords = getCurrentRecords(filteredBookings);
+//       currentRecords.forEach(booking => {
+//         if (!receiptsFetched[booking._id] && !loadingReceipts[booking._id]) {
+//           fetchReceiptsForBooking(booking._id);
+//         }
+//       });
+//     }
+//   }, [activeTab, currentPage, filteredBookings, getCurrentRecords, 
+//       receiptsFetched, loadingReceipts, fetchReceiptsForBooking]);
+
+//   const fetchCashLocations = async () => {
+//     try {
+//       const endpoints = [
+//         '/settings/cash-locations',
+//         '/master/cash-locations'
+//       ];
+      
+//       for (const endpoint of endpoints) {
+//         try {
+//           const response = await axiosInstance.get(endpoint);
+//           if (response.data.success && response.data.data) {
+//             setCashLocations(response.data.data);
+//             return;
+//           }
+//         } catch (err) {
+//           console.log(`Endpoint ${endpoint} not available`);
+//         }
+//       }
+//       console.warn('Could not fetch cash locations from any endpoint');
+//       setCashLocations([]);
+//     } catch (error) {
+//       console.error('Error fetching cash locations:', error);
+//       setCashLocations([]);
+//     }
+//   };
+
+//   const fetchBranches = async () => {
+//     try {
+//       const response = await axiosInstance.get('/branches');
+//       setBranches(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchData = async () => {
+//     try {
+//       const params = {
+//         bookingType: 'BRANCH'
+//       };
+      
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const branchBookings = response.data.data.bookings;
+//       setBookingsData(branchBookings);
+      
+//       const initialReceiptsMap = {};
+//       branchBookings.forEach(booking => {
+//         initialReceiptsMap[booking._id] = [];
+//       });
+//       setBookingReceipts(initialReceiptsMap);
+      
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchPendingPayments = async () => {
+//     if (!canViewReceipts || !canViewPaymentVerificationTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/ledger/pending`, { params });
+//       setPendingPaymentsData(response.data.data.ledgerEntries || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchVerifiedPayments = async () => {
+//     if (!canViewReceipts || !canViewVerifiedListTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/payment/verified/bank/ledger`, { params });
+//       setVerifiedPaymentsData(response.data.data.ledgerEntries || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchRejectedPayments = async () => {
+//     if (!canViewReceipts || !canViewRejectedListTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/ledger/rejected`, { params });
+//       setRejectedPaymentsData(response.data.data.docs || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   // Format date functions
+//   const formatDateDDMMYYYY = (date) => {
+//     if (!date) return '';
+//     const day = String(date.getDate()).padStart(2, '0');
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const year = date.getFullYear();
+//     return `${day}-${month}-${year}`;
+//   };
+
+//   const formatDateForAPI = (date) => {
+//     if (!date) return '';
+//     const year = date.getFullYear();
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const day = String(date.getDate()).padStart(2, '0');
+//     return `${year}-${month}-${day}`;
+//   };
+
+//   // ============ EVENT HANDLERS ============
+//   const handleMenuClick = (event, bookingId) => {
+//     setAnchorEl(event.currentTarget);
+//     setMenuBookingId(bookingId);
+//   };
+
+//   const handleMenuClose = () => {
+//     setAnchorEl(null);
+//     setMenuBookingId(null);
+//   };
+
+//   const handleAddClick = (booking) => {
+//     if (!canCreateInCustomerTab) {
+//       showError('You do not have permission to add payments');
+//       return;
+//     }
+    
+//     setSelectedBooking(booking);
+//     setShowModal(true);
+//     handleMenuClose();
+//   };
+
+//   const handleVerifyPayment = async (entry) => {
+//     if (!canCreateInPaymentVerificationTab) {
+//       showError('You do not have permission to verify payments');
+//       return;
+//     }
+    
+//     try {
+//       const result = await confirmVerify({
+//         title: 'Confirm Payment Verification',
+//         text: `Are you sure you want to verify the payment of ₹${entry.amount} for booking ${entry.bookingDetails?.bookingNumber || entry.booking}?`,
+//         confirmButtonText: 'Yes, verify it!'
+//       });
+
+//       if (result.isConfirmed) {
+//         await axiosInstance.patch(`/ledger/approve/${entry._id}`, {
+//           remark: ''
+//         });
+        
+//         setSuccessMessage('Payment verified successfully!');
+        
+//         // Get the booking ID and number
+//         const bookingId = entry.bookingDetails?._id || entry.booking;
+//         const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+        
+//         // Refresh data
+//         await fetchAllData();
+        
+//         // Open ledger in new tab
+//         await openLedgerInNewTab(bookingId, bookingNumber);
+        
+//         setTimeout(() => setSuccessMessage(''), 3000);
+//       }
+//     } catch (error) {
+//       console.error('Error verifying payment:', error);
+//       showError(error, 'Failed to verify payment');
+//     }
+//   };
+
+//   const handleRejectPayment = (entry) => {
+//     if (!canRejectPayments) {
+//       showError('You do not have permission to reject payments');
+//       return;
+//     }
+    
+//     setSelectedRejectEntry(entry);
+//     setRejectionReason('');
+//     setShowRejectModal(true);
+//   };
+
+//   const confirmRejectPayment = async () => {
+//     if (!rejectionReason.trim()) {
+//       showError('Please provide a rejection reason');
+//       return;
+//     }
+
+//     try {
+//       setRejectLoading(true);
+      
+//       await axiosInstance.patch(`/ledger/${selectedRejectEntry._id}/reject`, {
+//         rejectionReason: rejectionReason.trim()
+//       });
+      
+//       setSuccessMessage('Payment rejected successfully!');
+//       setTimeout(() => setSuccessMessage(''), 3000);
+      
+//       // Close modal and reset
+//       setShowRejectModal(false);
+//       setSelectedRejectEntry(null);
+//       setRejectionReason('');
+      
+//       // Refresh data
+//       fetchAllData();
+      
+//     } catch (error) {
+//       console.error('Error rejecting payment:', error);
+//       showError(error, 'Failed to reject payment');
+//     } finally {
+//       setRejectLoading(false);
+//     }
+//   };
+
+//   const handleTabChange = (tab) => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     setActiveTab(tab);
+//     setSearchTerm('');
+//     setCurrentPage(1);
+//   };
+  
+//   const handleSearch = (value) => {
+//     setSearchTerm(value);
+//     setCurrentPage(1);
+//   };
+  
+//   // ============ EXPORT HANDLERS ============
+//   const handleOpenExportModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setOpenExportModal(true);
+//     setExportError('');
+//   };
+
+//   const handleCloseExportModal = () => {
+//     setOpenExportModal(false);
+//     setStartDate(null);
+//     setEndDate(null);
+//     setSelectedBranchId('');
+//     setExportError('');
+//   };
+
+//   const handleOpenVerifiedOutstandingModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+//     setOpenVerifiedOutstandingModal(true);
+//     setVerifiedOutstandingExportError('');
+//   };
+
+//   const handleCloseVerifiedOutstandingModal = () => {
+//     setOpenVerifiedOutstandingModal(false);
+//     setVerifiedOutstandingStartDate(null);
+//     setVerifiedOutstandingEndDate(null);
+//     setVerifiedOutstandingBranchId('');
+//     setVerifiedOutstandingExportError('');
+//   };
+
+//   const handleOpenPendingVerificationModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+//     setOpenPendingVerificationModal(true);
+//     setPendingVerificationExportError('');
+//   };
+
+//   const handleClosePendingVerificationModal = () => {
+//     setOpenPendingVerificationModal(false);
+//     setPendingVerificationStartDate(null);
+//     setPendingVerificationEndDate(null);
+//     setPendingVerificationBranchId('');
+//     setPendingVerificationExportError('');
+//   };
+
+//   const handleExcelExport = async () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setExportError('');
+    
+//     if (!selectedBranchId) {
+//       setExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!startDate || !endDate) {
+//       setExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (startDate > endDate) {
+//       setExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setExportLoading(true);
+      
+//       const formattedStartDate = formatDateForAPI(startDate);
+//       const formattedEndDate = formatDateForAPI(endDate);
+
+//       const params = new URLSearchParams({
+//         branchId: selectedBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate,
+//         format: 'excel'
+//       });
+
+//       const response = await axiosInstance.get(
+//         `/reports/receipts?${params.toString()}`,
+//         { responseType: 'blob' }
+//       );
+
+//       const contentType = response.headers['content-type'];
+      
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (!errorData.success && errorData.message) {
+//           setExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { 
+//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//       });
+      
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+      
+//       const branchName = branches.find(b => b._id === selectedBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(startDate);
+//       const endDateStr = formatDateDDMMYYYY(endDate);
+//       const fileName = `Receipts_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+      
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+      
+//       window.URL.revokeObjectURL(url);
+      
+//       Swal.fire({
+//         toast: true,
+//         position: 'top-end',
+//         icon: 'success',
+//         title: 'Excel exported successfully!',
+//         showConfirmButton: false,
+//         timer: 3000,
+//         timerProgressBar: true
+//       });
+
+//       handleCloseExportModal();
+      
+//     } catch (error) {
+//       console.error('Error exporting report:', error);
+      
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+          
+//           const errorData = JSON.parse(text);
+          
+//           if (errorData.message) {
+//             setExportError(errorData.message);
+//             Swal.fire({
+//               icon: 'error',
+//               title: 'Export Failed',
+//               text: errorData.message,
+//             });
+//           }
+//         } catch (parseError) {
+//           console.error('Error parsing error response:', parseError);
+//           setExportError('Failed to export report');
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: 'Failed to export report',
+//           });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setExportError(error.response.data.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.response.data.message,
+//         });
+//       } else if (error.message) {
+//         setExportError(error.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.message,
+//         });
+//       } else {
+//         setExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+      
+//     } finally {
+//       setExportLoading(false);
+//     }
+//   };
+
+//   const handleVerifiedOutstandingExport = async () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setVerifiedOutstandingExportError('');
+    
+//     if (!verifiedOutstandingBranchId) {
+//       setVerifiedOutstandingExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!verifiedOutstandingStartDate || !verifiedOutstandingEndDate) {
+//       setVerifiedOutstandingExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (verifiedOutstandingStartDate > verifiedOutstandingEndDate) {
+//       setVerifiedOutstandingExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setVerifiedOutstandingExportLoading(true);
+      
+//       const formattedStartDate = formatDateForAPI(verifiedOutstandingStartDate);
+//       const formattedEndDate = formatDateForAPI(verifiedOutstandingEndDate);
+
+//       const params = new URLSearchParams({
+//         branchId: verifiedOutstandingBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate,
+//         format: 'excel'
+//       });
+
+//       const response = await axiosInstance.get(
+//         `/reports/outstanding/verified?${params.toString()}`,
+//         { responseType: 'blob' }
+//       );
+
+//       const contentType = response.headers['content-type'];
+      
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (!errorData.success && errorData.message) {
+//           setVerifiedOutstandingExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { 
+//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//       });
+      
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+      
+//       const branchName = branches.find(b => b._id === verifiedOutstandingBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(verifiedOutstandingStartDate);
+//       const endDateStr = formatDateDDMMYYYY(verifiedOutstandingEndDate);
+//       const fileName = `Verified_Outstanding_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+      
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+      
+//       window.URL.revokeObjectURL(url);
+      
+//       Swal.fire({
+//         toast: true,
+//         position: 'top-end',
+//         icon: 'success',
+//         title: 'Verified Outstanding Report exported successfully!',
+//         showConfirmButton: false,
+//         timer: 3000,
+//         timerProgressBar: true
+//       });
+
+//       handleCloseVerifiedOutstandingModal();
+      
+//     } catch (error) {
+//       console.error('Error exporting verified outstanding report:', error);
+      
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+          
+//           const errorData = JSON.parse(text);
+          
+//           if (errorData.message) {
+//             setVerifiedOutstandingExportError(errorData.message);
+//             Swal.fire({
+//               icon: 'error',
+//               title: 'Export Failed',
+//               text: errorData.message,
+//             });
+//           }
+//         } catch (parseError) {
+//           console.error('Error parsing error response:', parseError);
+//           setVerifiedOutstandingExportError('Failed to export report');
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: 'Failed to export report',
+//           });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setVerifiedOutstandingExportError(error.response.data.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.response.data.message,
+//         });
+//       } else if (error.message) {
+//         setVerifiedOutstandingExportError(error.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.message,
+//         });
+//       } else {
+//         setVerifiedOutstandingExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+      
+//     } finally {
+//       setVerifiedOutstandingExportLoading(false);
+//     }
+//   };
+
+//   const handlePendingVerificationExport = async () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setPendingVerificationExportError('');
+    
+//     if (!pendingVerificationBranchId) {
+//       setPendingVerificationExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!pendingVerificationStartDate || !pendingVerificationEndDate) {
+//       setPendingVerificationExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (pendingVerificationStartDate > pendingVerificationEndDate) {
+//       setPendingVerificationExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setPendingVerificationExportLoading(true);
+      
+//       const formattedStartDate = formatDateForAPI(pendingVerificationStartDate);
+//       const formattedEndDate = formatDateForAPI(pendingVerificationEndDate);
+
+//       const params = new URLSearchParams({
+//         branchId: pendingVerificationBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate,
+//         format: 'excel'
+//       });
+
+//       const response = await axiosInstance.get(
+//         `/reports/outstanding/pending-verification?${params.toString()}`,
+//         { responseType: 'blob' }
+//       );
+
+//       const contentType = response.headers['content-type'];
+      
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (!errorData.success && errorData.message) {
+//           setPendingVerificationExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { 
+//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//       });
+      
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+      
+//       const branchName = branches.find(b => b._id === pendingVerificationBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(pendingVerificationStartDate);
+//       const endDateStr = formatDateDDMMYYYY(pendingVerificationEndDate);
+//       const fileName = `Pending_Verification_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+      
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+      
+//       window.URL.revokeObjectURL(url);
+      
+//       Swal.fire({
+//         toast: true,
+//         position: 'top-end',
+//         icon: 'success',
+//         title: 'Pending Verification Report exported successfully!',
+//         showConfirmButton: false,
+//         timer: 3000,
+//         timerProgressBar: true
+//       });
+
+//       handleClosePendingVerificationModal();
+      
+//     } catch (error) {
+//       console.error('Error exporting pending verification report:', error);
+      
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+          
+//           const errorData = JSON.parse(text);
+          
+//           if (errorData.message) {
+//             setPendingVerificationExportError(errorData.message);
+//             Swal.fire({
+//               icon: 'error',
+//               title: 'Export Failed',
+//               text: errorData.message,
+//             });
+//           }
+//         } catch (parseError) {
+//           console.error('Error parsing error response:', parseError);
+//           setPendingVerificationExportError('Failed to export report');
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: 'Failed to export report',
+//           });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setPendingVerificationExportError(error.response.data.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.response.data.message,
+//         });
+//       } else if (error.message) {
+//         setPendingVerificationExportError(error.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.message,
+//         });
+//       } else {
+//         setPendingVerificationExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+      
+//     } finally {
+//       setPendingVerificationExportLoading(false);
+//     }
+//   };
+
+//   const handlePaymentSuccess = () => {
+//     fetchAllData();
+//     if (selectedBooking) {
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [selectedBooking._id]: false
+//       }));
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [selectedBooking._id]: []
+//       }));
+//     }
+//   };
+
+//   const handleLoadReceipts = (bookingId) => {
+//     fetchReceiptsForBooking(bookingId);
+//   };
+
+//   // ============ PRINT FUNCTIONS ============
+//   const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
+//     if (!canPrintInCustomerTab) {
+//       showError('You do not have permission to print invoices');
+//       return;
+//     }
+    
+//     try {
+//       const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
+//       const receiptData = receiptResponse.data.data.receipt;
+      
+//       const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
+//       const bookingData = bookingResponse.data.data.bookingDetails;
+//       const finalStatus = bookingResponse.data.data.finalStatus || '';
+//       const qrCodeData = receiptData.qrCodeData || {};
+      
+//       const subsidyAmount = bookingData.subsidyAmount || 0;
+//       const isEV = bookingData.model?.type === 'EV';
+      
+//       const priceComponents = bookingData.priceComponents || [];
+//       const filteredPriceComponents = priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+//         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+//         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+//         return !(isInsurance || isRTO || isHypothecation);
+//       });
+
+//       const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+      
+//       const findComponentByKeywords = (keywords) => {
+//         return priceComponents.find((comp) => {
+//           const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//           return keywords.some((keyword) => headerKey.includes(keyword));
+//         });
+//       };
+
+//       const insuranceComponent = findComponentByKeywords([
+//         'INSURANCE', 'INSURCANCE', 'INSURANCE CHARGES', 'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+//       ]);
+//       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+//       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+//       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+//       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+//       const hpCharges = hpComponent ? hpComponent.originalValue : bookingData.hypothecationCharges || 0;
+
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+      
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       const qrText = `GANDHI MOTORS PVT LTD
+// Booking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}
+// Customer: ${qrCodeData.customerName || bookingData.customerDetails?.name}
+// Mobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}
+// Model: ${qrCodeData.modelName || bookingData.model?.model_name}
+// Type: ${bookingData.model?.type || 'N/A'}
+// Chassis: ${qrCodeData.chassisNo || bookingData.chassisNumber || 'Not allocated'}
+// Payment Type: ${qrCodeData.paymentType || bookingData.payment?.type}
+// Total Amount: ₹${grandTotal.toFixed(2)}
+// ${isEV && subsidyAmount > 0 ? `Subsidy: -₹${subsidyAmount.toFixed(2)}` : ''}
+// Receipt: ${receiptData.receiptNumber || 'N/A'}
+// Amount: ${receiptData.display?.amount || `₹${receiptData.amount?.toFixed(2) || '0'}`}
+// Payment Mode: ${receiptData.paymentMode || 'Cash'}
+// Reference: ${receiptData.transactionReference || 'N/A'}
+// Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
+
+//       let qrCodeImage = '';
+//       try {
+//         qrCodeImage = await QRCode.toDataURL(qrText, {
+//           width: 250,
+//           margin: 3,
+//           color: {
+//             dark: '#000000',
+//             light: '#FFFFFF'
+//           },
+//           errorCorrectionLevel: 'H'
+//         });
+//       } catch (error) {
+//         console.error('Error generating QR code:', error);
+//         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
+//           <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250">
+//             <rect width="250" height="250" fill="white"/>
+//             <rect x="20" y="20" width="210" height="210" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+//             <text x="125" y="115" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">QR CODE</text>
+//             <text x="125" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">Receipt: ${receiptData.receiptNumber}</text>
+//             <text x="125" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Scan for details</text>
+//           </svg>
+//         `);
+//       }
+
+//       const transformedData = {
+//         bookingNumber: bookingData.bookingNumber,
+//         bookingType: bookingData.bookingType,
+//         rto: bookingData.rto,
+//         hpa: bookingData.hpa,
+//         hypothecationCharges: bookingData.hypothecationCharges || 0,
+//         gstin: bookingData.gstin || '',
+//         model: {
+//           model_name: bookingData.model?.model_name || 'N/A',
+//           type: bookingData.model?.type || 'N/A'
+//         },
+//         chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
+//         engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
+//         batteryNumber: bookingData.vehicle?.batteryNumber || '',
+//         keyNumber: bookingData.vehicle?.keyNumber || '',
+//         color: {
+//           name: bookingData.color?.name || ''
+//         },
+//         customerDetails: {
+//           name: bookingData.customerDetails?.name || 'N/A',
+//           address: bookingData.customerDetails?.address || '',
+//           taluka: bookingData.customerDetails?.taluka || '',
+//           district: bookingData.customerDetails?.district || '',
+//           pincode: bookingData.customerDetails?.pincode || '',
+//           mobile1: bookingData.customerDetails?.mobile1 || '',
+//           dob: bookingData.customerDetails?.dob || '',
+//           aadharNumber: bookingData.customerDetails?.aadharNumber || ''
+//         },
+//         exchange: bookingData.exchange,
+//         exchangeDetails: bookingData.exchangeDetails,
+//         payment: {
+//           type: bookingData.payment?.type || 'CASH',
+//           financer: bookingData.payment?.financer
+//         },
+//         salesExecutive: bookingData.salesExecutive,
+//         branch: {
+//           gst_number: bookingData.branch?.gst_number || ''
+//         },
+//         accessories: bookingData.accessories || [],
+//         priceComponents: bookingData.priceComponents || [],
+//         subdealer: bookingData.subdealer || '',
+//         receivedAmount: bookingData.receivedAmount || 0,
+//         finalStatus: finalStatus || '',
+//         recentPayment: receiptData,
+//         qrCodeData: qrCodeData,
+//         qrCodeImage: qrCodeImage,
+//         qrCodeText: qrText,
+//         recentPaymentAmount: receiptData.amount || 0,
+//         bookingDetails: bookingData,
+//         subsidyAmount: subsidyAmount,
+//         calculatedTotals: {
+//           totalA,
+//           totalB,
+//           grandTotal,
+//           insuranceCharges,
+//           rtoCharges,
+//           hpCharges,
+//           subsidyDisplay
+//         }
+//       };
+
+//       const isFirstReceipt = receiptIndex === 0;
+      
+//       const invoiceHTML = generateReceiptInvoiceHTML(transformedData, isFirstReceipt);
+
+//       const printWindow = window.open('', '_blank');
+//       printWindow.document.write(invoiceHTML);
+//       printWindow.document.close();
+      
+//       printWindow.onload = function() {
+//         printWindow.focus();
+//         printWindow.print();
+//       };
+      
+//     } catch (error) {
+//       console.error('Error generating receipt invoice:', error);
+//       showError(error, 'Failed to generate receipt invoice');
+//     }
+//   };
+  
+//   const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+//     const exchangeBrokerName = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+//     const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
+
+//     const currentDate = new Date().toLocaleDateString('en-GB');
+//     const receiptDate = data.recentPayment?.receiptDate 
+//       ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB')
+//       : currentDate;
+    
+//     const recentPaymentAmount = data.recentPaymentAmount || 0;
+//     const recentPaymentAmountRef = data.recentPayment?.transactionReference || "-";
+//     const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+//     const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+//     const receiptNumber = data.recentPayment?.receiptNumber || "-";
+
+//     const qrCodeImage = data.qrCodeImage || '';
+    
+//     const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+//     const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
+
+//     if (isFirstReceipt) {
+//       const filteredPriceComponents = data.priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         const isInsurance = /INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+//         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+//         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+//         return !(isInsurance || isRTO || isHypothecation);
+//       });
+
+//       const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+//         const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+//         const unitCost = component.originalValue;
+//         const discount = 0;
+//         const lineTotal = component.originalValue;
+//         const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+//         const totalGST = lineTotal - taxableValue;
+//         const cgstAmount = totalGST / 2;
+//         const sgstAmount = totalGST / 2;
+        
+//         return {
+//           ...component,
+//           unitCost,
+//           taxableValue,
+//           cgstAmount,
+//           sgstAmount,
+//           gstAmount: cgstAmount + sgstAmount,
+//           gstRatePercentage,
+//           discount,
+//           lineTotal
+//         };
+//       });
+      
+//       const findComponentByKeywords = (keywords) => {
+//         return data.priceComponents.find((comp) => {
+//           const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//           return keywords.some((keyword) => headerKey.includes(keyword));
+//         });
+//       };
+
+//       const insuranceComponent = findComponentByKeywords([
+//         'INSURANCE',
+//         'INSURCANCE',
+//         'INSURANCE CHARGES',
+//         'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+//       ]);
+//       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+//       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+//       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+//       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+//       const hpCharges = hpComponent ? hpComponent.originalValue : data.hypothecationCharges || 0;
+
+//       const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       return `<!DOCTYPE html>
+// <html>
+// <head>
+//   <title>Payment Receipt - ${receiptNumber}</title>
+//   <style>
+//     body {
+//       font-family: "Courier New", Courier, monospace;
+//       margin: 0;
+//       padding: 10mm;
+//       font-size: 14px;
+//       color: #555555;
+//     }
+//     .page {
+//       width: 210mm;
+//       height: 297mm;
+//       margin: 0 auto;
+//     }
+//     .header-container {
+//       display: flex;
+//       justify-content: space-between;
+//       margin-bottom: 2mm;
+//       align-items: flex-start;
+//     }
+//     .header-left {
+//       width: 60%;
+//     }
+//     .header-right {
+//       width: 40%;
+//       text-align: right;
+//       display: flex;
+//       flex-direction: column;
+//       align-items: flex-end;
+//     }
+//     .logo-qr-container {
+//       display: flex;
+//       align-items: center;
+//       gap: 20px;
+//       justify-content: flex-end;
+//       margin-bottom: 10px;
+//       width: 100%;
+//     }
+//     .logo {
+//       height: 80px;
+//     }
+//     .qr-code-extra-big {
+//       width: 150px;
+//       height: 150px;
+//       border: 1px solid #ccc;
+//     }
+//     .dealer-info {
+//       text-align: left;
+//       font-size: 14px;
+//       line-height: 1.2;
+//     }
+//     .customer-info-container {
+//       display: flex;
+//       font-size:14px;
+//     }
+//     .customer-info-left {
+//       width: 50%;
+//     }
+//     .customer-info-right {
+//       width: 50%;
+//     }
+//     .customer-info-row {
+//       margin: 1mm 0;
+//       line-height: 1.2;
+//     }
+//     table {
+//       width: 100%;
+//       border-collapse: collapse;
+//       font-size: 9pt;
+//       margin: 2mm 0;
+//     }
+//     th, td {
+//       padding: 1mm;
+//       border: 1px solid #000;
+//       vertical-align: top;
+//     }
+//     .no-border { 
+//       border: none !important; 
+//       font-size:14px;
+//     }
+//     .text-right { text-align: right; }
+//     .text-center { text-align: center; }
+//     .bold { 
+//       font-weight: bold; 
+//     }
+//     .section-title {
+//       font-weight: bold;
+//       margin: 1mm 0;
+//     }
+//     .signature-box {
+//       margin-top: 5mm;
+//       font-size: 9pt;
+//     }
+//     .signature-line {
+//       border-top: 1px dashed #000;
+//       width: 40mm;
+//       display: inline-block;
+//       margin: 0 5mm;
+//     }
+//     .footer {
+//       font-size: 8pt;
+//       text-align: justify;
+//       line-height: 1.2;
+//       margin-top: 3mm;
+//     }
+//     .divider {
+//       border-top: 2px solid #AAAAAA;
+//     }
+//     .totals-table {
+//       width: 100%;
+//       border-collapse: collapse;
+//       margin: 2mm 0;
+//     }
+//     .totals-table td {
+//       border: none;
+//       padding: 1mm;
+//     }
+//     .total-divider {
+//       border-top: 2px solid #AAAAAA;
+//       height: 1px;
+//       margin: 2px 0;
+//     }
+//     .broker-info{
+//       display:flex;
+//       justify-content:space-between;
+//       padding:1px;
+//     }
+//     .status-box {
+//       background-color: #e8f5e8;
+//       border: 2px solid #c3e6c3;
+//       border-radius: 4px;
+//       padding: 15px;
+//       margin: 10px 0;
+//       text-align: center;
+//       font-weight: bold;
+//       font-size: 20px;
+//       color: #495057;
+//     }
+//     .payment-info-title {
+//       font-weight: bold;
+//       margin-bottom: 5px;
+//       color: #155724;
+//       font-size: 16px;
+//     }
+//     .amount-in-words {
+//       font-style: italic;
+//       margin-top: 5px;
+//       color: #333;
+//       padding: 5px;
+//     }
+//     .note{
+//       padding:1px;
+//       margin:2px;
+//     }
+//     .qr-bottom-section {
+//       margin-top: 10mm;
+//       text-align: center;
+//       page-break-inside: avoid;
+//     }
+//     .qr-bottom-big {
+//       width: 180px;
+//       height: 180px;
+//       border: 1px solid #ccc;
+//       margin: 0 auto;
+//       display: block;
+//     }
+//     .qr-scan-text {
+//       font-size: 10pt;
+//       color: #777;
+//       margin-top: 3mm;
+//     }
+//     .receipt-info {
+//       background-color: #f8f9fa;
+//       border: 1px solid #dee2e6;
+//       border-radius: 4px;
+//       padding: 10px;
+//       margin: 10px 0;
+//     }
+//     @page {
+//       size: A4;
+//       margin: 0;
+//     }
+//     @media print {
+//       body {
+//         padding: 5mm;
+//       }
+//       .qr-bottom-section {
+//         page-break-inside: avoid;
+//       }
+//     }
+//   </style>
+// </head>
+// <body>
+//   <div class="page">
+//     <div class="header-container">
+//       <div class="header-left">
+//         <h2 style="margin:3;font-size:15pt;">GANDHI MOTORS PVT LTD</h2>
+//         <div class="dealer-info">
+//           Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//           Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//           Upnagar, Nashik Road, Nashik, 7498993672<br>
+//           GSTIN: ${data.branch?.gst_number || ''}<br>
+//           GANDHI TVS PIMPALGAON
+//         </div>
+//       </div>
+//       <div class="header-right">
+//         <div class="logo-qr-container">
+//           <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//           ${
+//             qrCodeImage 
+//               ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />`
+//               : ''
+//           }
+//         </div>
+        
+//         <div style="margin-top: 5px; font-size: 13px;">Date: ${receiptDate}</div>
+//         <div style="margin-top: 5px; font-size: 13px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//         ${
+//           data.bookingType === 'SUBDEALER'
+//             ? `<div style="font-size: 12px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//         <div style="font-size: 11px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>
+//         `
+//             : ''
+//         }
+//       </div>
+//     </div>
+//     <div class="divider"></div>
+
+//     <div class="receipt-info">
+//       <div><strong>Payment Receipt</strong></div>
+//       <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//       <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//     </div>
+
+//     <div class="customer-info-container">
+//       <div class="customer-info-left">
+//         <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//         <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</div>
+//         <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//         <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//       </div>
+//       <div class="customer-info-right">
+//         <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//         <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//         <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//         <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//         <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//       </div>
+//     </div>
+
+//     <div class="payment-info-box">
+//       <div class="receipt-info">
+//         <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//         <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//         <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//         <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+//       <div class="amount-in-words">
+//         <strong>(In Words):</strong> ${recentPaymentAmountInWords} Only
+//       </div>
+//     </div>
+//     <table>
+//       <tr>
+//         <th style="width:25%">Particulars</th>
+//         <th style="width:8%">HSN CODE</th>
+//         <th style="width:8%">Unit Cost</th>
+//         <th style="width:8%">Taxable</th>
+//         <th style="width:5%">CGST</th>
+//         <th style="width:8%">CGST AMOUNT</th>
+//         <th style="width:5%">SGST</th>
+//         <th style="width:8%">SGST AMOUNT</th>
+//         <th style="width:7%">DISCOUNT</th>
+//         <th style="width:10%">LINE TOTAL</th>
+//       </tr>
+
+//       ${priceComponentsWithGST
+//         .map(
+//           (component) => `
+//         <tr>
+//           <td>${component.header?.header_key || ''}</td>
+//           <td>${component.header?.metadata?.hsn_code || ''}</td>
+//           <td >${component.unitCost.toFixed(2)}</td>
+//           <td >${component.taxableValue.toFixed(2)}</td>
+//           <td >${(component.gstRatePercentage / 2).toFixed(2)}%</td>
+//           <td >${component.cgstAmount.toFixed(2)}</td>
+//           <td >${(component.gstRatePercentage / 2).toFixed(2)}%</td>
+//           <td >${component.sgstAmount.toFixed(2)}</td>
+//           <td >${component.discount.toFixed(2)}</td>
+//           <td >${component.lineTotal.toFixed(2)}</td>
+//         </tr>
+//       `
+//         )
+//         .join('')}
+//     </table>
+
+//     <table class="totals-table">
+//       <tr>
+//         <td class="no-border" style="width:80%"><strong>Total(A)</strong></td>
+//         <td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td colspan="2" class="no-border"><div class="total-divider"></div></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>INSURANCE CHARGES</strong></td>
+//         <td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td>
+//         <td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>HP CHARGES</strong></td>
+//         <td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td>
+//       </tr>
+//         ${isEV && subsidyAmount > 0 ? `
+//       <tr>
+//         <td class="no-border"><strong>SUBSIDY AMOUNT</strong></td>
+//         <td class="no-border text-right" style="color: green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td>
+//       </tr>
+//       ` : ''}
+//       <tr>
+//         <td colspan="2" class="no-border"><div class="total-divider"></div></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>TOTAL(B)</strong></td>
+//         <td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td>
+//         <td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td>
+//       </tr>
+//     </table>
+//     <div class="broker-info">
+//       <div><strong>Ex. Broker/ Sub Dealer:</strong>${exchangeBrokerName}</div>
+//       <div><strong>Ex. Veh No:</strong>${exchangeVehicleNumber}</div>
+//     </div>
+//     <div class="note"><strong>Notes:Booking Awaiting approval as discount exceed</strong></div>
+//     <div class="divider"></div>
+//     <div style="margin-top:2mm;">
+//       <div><strong>Booking Status: </strong>
+//       </div>
+//       <div class="status-box">
+//         ${data.finalStatus || 'Status: Not Available'}
+//       </div>
+//     </div>
+//     <div class="divider"></div>
+
+//     <div class="divider" style="margin-top: 5mm;"></div>
+
+//     <div class="signature-box">
+//       <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Customer's Signature</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Sales Executive</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Manager</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Accountant</div>
+//         </div>
+//       </div>
+//     </div>
+//   </div>
+// </body>
+// </html>`;
+//     } else {
+//       return `<!DOCTYPE html>
+// <html>
+// <head>
+//   <title>Payment Receipt - ${receiptNumber}</title>
+//   <style>
+//     body {
+//       font-family: "Courier New", Courier, monospace;
+//       margin: 0;
+//       padding: 10mm;
+//       font-size: 14px;
+//       color: #555555;
+//     }
+//     .page {
+//       width: 210mm;
+//       height: 297mm;
+//       margin: 0 auto;
+//     }
+//     .receipt-copy {
+//       height: 138mm;
+//       page-break-inside: avoid;
+//     }
+//     .header-container {
+//       display: flex;
+//       justify-content: space-between;
+//       margin-bottom: 2mm;
+//       align-items: flex-start;
+//     }
+//     .header-left {
+//       width: 60%;
+//     }
+//     .header-right {
+//       width: 40%;
+//       text-align: right;
+//       display: flex;
+//       flex-direction: column;
+//       align-items: flex-end;
+//     }
+//     .logo-qr-container {
+//       display: flex;
+//       align-items: center;
+//       gap: 10px;
+//       justify-content: flex-end;
+//       margin-bottom: 5px;
+//       width: 100%;
+//     }
+//     .logo {
+//       height: 60px;
+//     }
+//     .qr-code-small {
+//       width: 100px;
+//       height: 100px;
+//       border: 1px solid #ccc;
+//     }
+//     .dealer-info {
+//       text-align: left;
+//       font-size: 12px;
+//       line-height: 1.1;
+//     }
+//     .customer-info-container {
+//       display: flex;
+//       font-size:12px;
+//     }
+//     .customer-info-left {
+//       width: 50%;
+//     }
+//     .customer-info-right {
+//       width: 50%;
+//     }
+//     .customer-info-row {
+//       margin: 0.5mm 0;
+//       line-height: 1.1;
+//     }
+//     .divider {
+//       border-top: 1px solid #AAAAAA;
+//       margin: 2mm 0;
+//     }
+//     .receipt-info {
+//       background-color: #f8f9fa;
+//       border: 1px solid #dee2e6;
+//       border-radius: 4px;
+//       padding: 8px;
+//       margin: 8px 0;
+//       font-size: 12px;
+//     }
+//     .payment-info-box {
+//       margin: 5px 0;
+//     }
+//     .signature-box {
+//       margin-top: 3mm;
+//       font-size: 8pt;
+//     }
+//     .signature-line {
+//       border-top: 1px dashed #000;
+//       width: 35mm;
+//       display: inline-block;
+//       margin: 0 3mm;
+//     }
+//     .cutting-line {
+//       border-top: 2px dashed #333;
+//       margin: 10mm 0;
+//       text-align: center;
+//       position: relative;
+//     }
+//     .cutting-line::before {
+//       content: "✂ Cut Here ✂";
+//       position: absolute;
+//       top: -10px;
+//       left: 50%;
+//       transform: translateX(-50%);
+//       background: white;
+//       padding: 0 10px;
+//       font-size: 10px;
+//       color: #666;
+//     }
+//     .note{
+//       padding:1px;
+//       margin:2px;
+//       font-size: 11px;
+//     }
+//     @page {
+//       size: A4;
+//       margin: 0;
+//     }
+//     @media print {
+//       body {
+//         padding: 5mm;
+//       }
+//       .receipt-copy {
+//         page-break-inside: avoid;
+//       }
+//     }
+//   </style>
+// </head>
+// <body>
+//   <div class="page">
+//     <div class="receipt-copy">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
+//           <div class="dealer-info">
+//             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//             Upnagar, Nashik Road, Nashik, 7498993672<br>
+//             GSTIN: ${data.branch?.gst_number || ''}<br>
+//             GANDHI TVS PIMPALGAON
+//           </div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//             ${
+//               qrCodeImage 
+//                 ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />`
+//                 : ''
+//             }
+//           </div>
+          
+//           <div style="margin-top: 3px; font-size: 11px;">Date: ${receiptDate}</div>
+//           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//           ${
+//             data.bookingType === 'SUBDEALER'
+//               ? `<div style="font-size: 10px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//           <div style="font-size: 9px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
+//               : ''
+//           }
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+
+//       <div class="receipt-info">
+//         <div><strong>Payment Receipt</strong></div>
+//         <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+
+//       <div class="customer-info-container">
+//         <div class="customer-info-left">
+//           <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//           <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//           <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka}</div>
+//           <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//           <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//         </div>
+//         <div class="customer-info-right">
+//           <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//           <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//           <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//           <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//           <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//         </div>
+//       </div>
+
+//       <div class="payment-info-box">
+//         <div class="receipt-info">
+//           <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//           <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//           <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//           <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//           <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//         </div>
+//       </div>
+
+//       <div class="note"><strong>Notes:</strong></div>
+//       <div class="divider"></div>
+
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Customer's Signature</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Sales Executive</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Manager</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Accountant</div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+
+//     <div class="cutting-line"></div>
+
+//     <div class="receipt-copy">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
+//           <div class="dealer-info">
+//             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//             Upnagar, Nashik Road, Nashik, 7498993672<br>
+//             GSTIN: ${data.branch?.gst_number || ''}<br>
+//             GANDHI TVS PIMPALGAON
+//           </div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//             ${
+//               qrCodeImage 
+//                 ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />`
+//                 : ''
+//             }
+//           </div>
+          
+//           <div style="margin-top: 3px; font-size: 11px;">Date: ${receiptDate}</div>
+//           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//           ${
+//             data.bookingType === 'SUBDEALER'
+//               ? `<div style="font-size: 10px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//           <div style="font-size: 9px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
+//               : ''
+//           }
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+
+//       <div class="receipt-info">
+//         <div><strong>Payment Receipt (DUPLICATE)</strong></div>
+//         <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+
+//       <div class="customer-info-container">
+//         <div class="customer-info-left">
+//           <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//           <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//           <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka}</div>
+//           <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//           <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//         </div>
+//         <div class="customer-info-right">
+//           <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//           <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//           <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//           <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//           <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//         </div>
+//       </div>
+
+//       <div class="payment-info-box">
+//         <div class="receipt-info">
+//           <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//           <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//           <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//           <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//           <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//         </div>
+//       </div>
+
+//       <div class="note"><strong>Notes:</strong></div>
+//       <div class="divider"></div>
+
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Customer's Signature</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Sales Executive</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Manager</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Accountant</div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   </div>
+// </body>
+// </html>`;
+//     }
+//   };
+
+//   // ============ PAGINATION RENDER FUNCTION ============
+//   const renderPagination = (filteredDataArray) => {
+//     if (filteredDataArray.length <= recordsPerPage) {
+//       return null;
+//     }
+    
+//     return (
+//       <div className="mt-4">
+//         <div className="d-flex justify-content-between align-items-center mb-2">
+//           <div className="d-flex align-items-center">
+//             <CFormLabel className="me-2 mb-0">Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={recordsPerPage}
+//               onChange={handleRecordsPerPageChange}
+//               style={{ width: '80px' }}
+//               size="sm"
+//             >
+//               <option value={50}>50</option>
+//               <option value={100}>100</option>
+//               <option value={200}>200</option>
+//               <option value={500}>500</option>
+//             </CFormSelect>
+//           </div>
+//           <div className="text-muted">
+//             Showing {(currentPage - 1) * recordsPerPage + 1} to {Math.min(currentPage * recordsPerPage, filteredDataArray.length)} of {filteredDataArray.length} entries
+//           </div>
+//         </div>
+        
+//         <CPagination align="center" aria-label="Page navigation example">
+//           <CPaginationItem 
+//             aria-label="Previous" 
+//             onClick={() => handlePageChange(currentPage - 1)}
+//             disabled={currentPage === 1}
+//           >
+//             <CIcon icon={cilChevronLeft} />
+//           </CPaginationItem>
+          
+//           {currentPage > 3 && totalPages > 5 && (
+//             <>
+//               <CPaginationItem onClick={() => handlePageChange(1)}>
+//                 1
+//               </CPaginationItem>
+//               {currentPage > 4 && <CPaginationItem disabled>...</CPaginationItem>}
+//             </>
+//           )}
+          
+//           {displayedPages.map(page => (
+//             <CPaginationItem 
+//               key={page}
+//               onClick={() => handlePageChange(page)}
+//               active={currentPage === page}
+//             >
+//               {page}
+//             </CPaginationItem>
+//           ))}
+          
+//           {currentPage < totalPages - 2 && totalPages > 5 && (
+//             <>
+//               {currentPage < totalPages - 3 && <CPaginationItem disabled>...</CPaginationItem>}
+//               <CPaginationItem onClick={() => handlePageChange(totalPages)}>
+//                 {totalPages}
+//               </CPaginationItem>
+//             </>
+//           )}
+          
+//           <CPaginationItem 
+//             aria-label="Next" 
+//             onClick={() => handlePageChange(currentPage + 1)}
+//             disabled={currentPage === totalPages}
+//           >
+//             <CIcon icon={cilChevronRight} />
+//           </CPaginationItem>
+//         </CPagination>
+//       </div>
+//     );
+//   };
+
+//   // ============ RENDER TABLE FUNCTIONS ============
+//   const renderCustomerTable = () => {
+//     if (!canViewCustomerTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Customer tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+
+//     const canShowActionColumn = canCreateInCustomerTab || canPrintInCustomerTab;
+//     const canShowAddPayment = canCreateInCustomerTab;
+//     const canShowPrint = canPrintInCustomerTab;
+    
+//     const currentRecords = getCurrentRecords(filteredBookings);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Receipts</CTableHeaderCell>
+//                 {canShowActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan={canShowActionColumn ? "12" : "11"} style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching bookings found' : 'No booking available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   const hasReceipts = receiptsFetched[booking._id] && bookingReceipts[booking._id]?.length > 0;
+//                   const isLoading = loadingReceipts[booking._id];
+//                   const receipts = bookingReceipts[booking._id] || [];
+                  
+//                   const sortedReceipts = [...receipts].sort((a, b) => {
+//                     const dateA = new Date(a.receiptDate || a.createdAt || 0);
+//                     const dateB = new Date(b.receiptDate || b.createdAt || 0);
+//                     return dateA - dateB;
+//                   });
+                  
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : hasReceipts ? (
+//                           <CDropdown>
+//                             <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canShowPrint}>
+//                               {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
+//                             </CDropdownToggle>
+//                             <CDropdownMenu>
+//                               {sortedReceipts.map((receipt, receiptIndex) => (
+//                                 <CDropdownItem 
+//                                   key={receipt.id} 
+//                                   onClick={() => printReceiptInvoice(receipt.id, booking._id, receiptIndex)}
+//                                 >
+//                                   <div className="d-flex align-items-center">
+//                                     <CIcon icon={cilPrint} className="me-2" />
+//                                     <div>
+//                                       <div><strong>Receipt #{receiptIndex + 1}</strong></div>
+//                                       <small>
+//                                         {receipt.display?.amount || `₹${receipt.amount}`} - 
+//                                         {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}
+//                                       </small>
+//                                     </div>
+//                                   </div>
+//                                 </CDropdownItem>
+//                               ))}
+//                             </CDropdownMenu>
+//                           </CDropdown>
+//                         ) : receiptsFetched[booking._id] ? (
+//                           <span className="text-muted">No receipts</span>
+//                         ) : (
+//                           <CButton
+//                             size="sm"
+//                             color="light"
+//                             onClick={() => handleLoadReceipts(booking._id)}
+//                             disabled={isLoading}
+//                           >
+//                             <CIcon icon={cilCloudDownload} className="me-1" />
+//                             Load Receipts
+//                           </CButton>
+//                         )}
+//                       </CTableDataCell>
+
+//                       {canShowActionColumn && (
+//                         <CTableDataCell>
+//                           <CButton
+//                             size="sm"
+//                             className='option-button btn-sm'
+//                             onClick={(event) => handleMenuClick(event, booking._id)}
+//                             disabled={!canShowAddPayment}
+//                           >
+//                             <CIcon icon={cilSettings} />
+//                             Options
+//                           </CButton>
+
+//                           <Menu
+//                             id={`action-menu-${booking._id}`}
+//                             anchorEl={anchorEl}
+//                             open={menuBookingId === booking._id}
+//                             onClose={handleMenuClose}
+//                             anchorOrigin={{
+//                               vertical: 'bottom',
+//                               horizontal: 'right',
+//                             }}
+//                             transformOrigin={{
+//                               vertical: 'top',
+//                               horizontal: 'right',
+//                             }}
+//                           >
+//                             {canShowAddPayment && (
+//                               <MenuItem onClick={() => {
+//                                 handleAddClick(booking);
+//                                 handleMenuClose();
+//                               }}>
+//                                 <CIcon icon={cilPlus} className="me-2" />
+//                                 Add Payment
+//                               </MenuItem>
+//                             )}
+//                           </Menu>
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredBookings)}
+//       </>
+//     );
+//   };
+  
+//   const renderPaymentVerificationTable = () => {
+//     if (!canViewPaymentVerificationTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Payment Verification tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredPendingLedgerEntries);
+//     const canShowActions = canCreateInPaymentVerificationTab || canRejectPayments;
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Bank Receipts</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+//                 {canShowActions && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan={canShowActions ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   const bookingId = entry.bookingDetails?._id || entry.booking;
+//                   const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+//                   const isLoading = loadingReceipts[bookingId];
+//                   const hasReceipts = receiptsFetched[bookingId] && bookingReceipts[bookingId]?.length > 0;
+//                   const receipts = bookingReceipts[bookingId] || [];
+                  
+//                   const bankReceipts = receipts.filter(receipt => 
+//                     receipt.paymentMode && 
+//                     receipt.paymentMode.toUpperCase() === 'BANK'
+//                   );
+                  
+//                   const sortedBankReceipts = [...bankReceipts].sort((a, b) => {
+//                     const dateA = new Date(a.receiptDate || a.createdAt || 0);
+//                     const dateB = new Date(b.receiptDate || b.createdAt || 0);
+//                     return dateA - dateB;
+//                   });
+                  
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : hasReceipts ? (
+//                           sortedBankReceipts.length > 0 ? (
+//                             <CDropdown>
+//                               <CDropdownToggle size="sm" color="info" variant="outline">
+//                                 {sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}
+//                               </CDropdownToggle>
+//                               <CDropdownMenu>
+//                                 {sortedBankReceipts.map((receipt, receiptIndex) => (
+//                                   <CDropdownItem 
+//                                     key={receipt.id} 
+//                                     onClick={() => printReceiptInvoice(receipt.id, bookingId, receiptIndex)}
+//                                     disabled={!canPrintInCustomerTab}
+//                                   >
+//                                     <div className="d-flex align-items-center">
+//                                       <CIcon icon={cilPrint} className="me-2" />
+//                                       <div>
+//                                         <div><strong>Bank Receipt #{receiptIndex + 1}</strong></div>
+//                                         <small>
+//                                           {receipt.display?.amount || `₹${receipt.amount}`} - 
+//                                           {receipt.display?.date || (receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('en-GB') : 'N/A')}
+//                                         </small>
+//                                       </div>
+//                                     </div>
+//                                   </CDropdownItem>
+//                                 ))}
+//                               </CDropdownMenu>
+//                             </CDropdown>
+//                           ) : (
+//                             <span className="text-muted">No bank receipts</span>
+//                           )
+//                         ) : receiptsFetched[bookingId] ? (
+//                           <span className="text-muted">No bank receipts</span>
+//                         ) : (
+//                           <CButton
+//                             size="sm"
+//                             color="light"
+//                             onClick={() => handleLoadReceipts(bookingId)}
+//                             disabled={isLoading}
+//                           >
+//                             <CIcon icon={cilCloudDownload} className="me-1" />
+//                             Load Receipts
+//                           </CButton>
+//                         )}
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
+//                           {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       {canShowActions && (
+//                         <CTableDataCell>
+//                           <div className="d-flex gap-2">
+//                             {entry.approvalStatus === 'Pending' && canCreateInPaymentVerificationTab && (
+//                               <CButton
+//                                 size="sm"
+//                                 className="action-btn"
+//                                 onClick={() => handleVerifyPayment(entry)}
+//                               >
+//                                 <CIcon icon={cilCheckCircle} className="me-1" />
+//                                 Verify
+//                               </CButton>
+//                             )}
+//                             {entry.approvalStatus === 'Pending' && canRejectPayments && (
+//                               <CButton
+//                                 size="sm"
+//                                 color="danger"
+//                                 variant="outline"
+//                                 onClick={() => handleRejectPayment(entry)}
+//                               >
+//                                 <CIcon icon={cilXCircle} className="me-1" />
+//                                 Reject
+//                               </CButton>
+//                             )}
+//                             {entry.approvalStatus !== 'Pending' && (
+//                               <span className="text-muted">Verified</span>
+//                             )}
+//                           </div>
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredPendingLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   const renderCompletePaymentTable = () => {
+//     if (!canViewCompletePaymentTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Complete Payment tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(completePayments);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching complete payments found' : 'No complete payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(completePayments)}
+//       </>
+//     );
+//   };
+
+//   const renderPendingListTable = () => {
+//     if (!canViewPendingListTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Pending List tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(pendingPayments);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(pendingPayments)}
+//       </>
+//     );
+//   };
+
+//   const renderVerifiedListTable = () => {
+//     if (!canViewVerifiedListTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Verified List tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredVerifiedLedgerEntries);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Verified By</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching verified payments found' : 'No verified payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedByDetails?.name || ''}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredVerifiedLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   const renderRejectedListTable = () => {
+//     if (!canViewRejectedListTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Rejected List tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredRejectedLedgerEntries);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received By</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Rejection Reason</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Rejected At</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching rejected payments found' : 'No rejected payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.booking?.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.booking?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
+//                       <CTableDataCell>{entry.receiptDate ? new Date(entry.receiptDate).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedBy?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color="danger" shape="rounded-pill">
+//                           {entry.rejectionReason || 'No reason provided'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       <CTableDataCell>{entry.approvedAt ? new Date(entry.approvedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredRejectedLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   // ============ EARLY RETURNS FOR PERMISSIONS ============
+//   if (!canViewReceipts) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view Receipts.
+//       </div>
+//     );
+//   }
+
+//   if (!canViewAnyTab) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view any tabs in Receipts.
+//       </div>
+//     );
+//   }
+
+//   if (loading) {
+//     return (
+//       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+//         <CSpinner color="primary" />
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="alert alert-danger" role="alert">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   // ============ MAIN RENDER ============
+//   return (
+//     <div>
+//       <div className='title'>Receipt Management</div>
+      
+//       {successMessage && (
+//         <CAlert color="success" className="mb-3">
+//           {successMessage}
+//         </CAlert>
+//       )}
+      
+//       <CCard className='table-container mt-4'>
+//         <CCardBody>
+//           {canViewAnyTab ? (
+//             <>
+//               {canCreateReceipts && (
+//                 <div className="d-flex mb-3 gap-2">
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenExportModal}
+//                     title="Export Receipts Excel"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Export Receipts
+//                   </CButton>
+                  
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenVerifiedOutstandingModal}
+//                     title="Export Verified Outstanding Report"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Verified Receipts
+//                   </CButton>
+                  
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenPendingVerificationModal}
+//                     title="Export Pending Verification Report"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Pending Verification
+//                   </CButton>
+//                 </div>
+//               )}
+
+//               <CNav variant="tabs" className="mb-3 border-bottom">
+//                 {canViewCustomerTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 0}
+//                       onClick={() => handleTabChange(0)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+//                         color: 'black',
+//                         borderBottom: 'none'
+//                       }}
+//                     >
+//                       Customer
+//                       {!canCreateInCustomerTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewPaymentVerificationTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 1}
+//                       onClick={() => handleTabChange(1)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Payment Verification
+//                       {!canCreateInPaymentVerificationTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewCompletePaymentTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 2}
+//                       onClick={() => handleTabChange(2)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 2 ? '4px solid #2759a2' : '3px solid transparent',
+//                           borderBottom: 'none',
+//                           color: 'black'
+//                       }}
+//                     >
+//                       Complete Payment
+//                       {!canCreateInCompletePaymentTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewPendingListTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 3}
+//                       onClick={() => handleTabChange(3)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 3 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Pending List
+//                       {!canCreateInPendingListTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewVerifiedListTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 4}
+//                       onClick={() => handleTabChange(4)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 4 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Verified List
+//                       {!canCreateInVerifiedListTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewRejectedListTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 5}
+//                       onClick={() => handleTabChange(5)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 5 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Rejected List
+//                       <span className="ms-1 text-muted small">(View Only)</span>
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//               </CNav>
+
+//               <div className="d-flex justify-content-between mb-3">
+//                 <div></div>
+//                 <div className='d-flex'>
+//                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//                   <CFormInput
+//                     type="text"
+//                     style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+//                     className="d-inline-block square-search"
+//                     value={searchTerm}
+//                     onChange={(e) => handleSearch(e.target.value)}
+//                     disabled={!canViewAnyTab}
+//                   />
+//                 </div>
+//               </div>
+
+//               <CTabContent>
+//                 {canViewCustomerTab && (
+//                   <CTabPane visible={activeTab === 0}>
+//                     {renderCustomerTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewPaymentVerificationTab && (
+//                   <CTabPane visible={activeTab === 1}>
+//                     {renderPaymentVerificationTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewCompletePaymentTab && (
+//                   <CTabPane visible={activeTab === 2}>
+//                     {renderCompletePaymentTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewPendingListTab && (
+//                   <CTabPane visible={activeTab === 3}>
+//                     {renderPendingListTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewVerifiedListTab && (
+//                   <CTabPane visible={activeTab === 4}>
+//                     {renderVerifiedListTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewRejectedListTab && (
+//                   <CTabPane visible={activeTab === 5}>
+//                     {renderRejectedListTable()}
+//                   </CTabPane>
+//                 )}
+//               </CTabContent>
+//             </>
+//           ) : (
+//             <CAlert color="warning" className="text-center">
+//               You don't have permission to view any tabs in Receipts.
+//             </CAlert>
+//           )}
+//         </CCardBody>
+//       </CCard>
+
+//       <ReceiptModal 
+//         show={showModal} 
+//         onClose={() => setShowModal(false)} 
+//         bookingData={selectedBooking} 
+//         canCreateReceipts={canCreateInCustomerTab}
+//         cashLocations={cashLocations}
+//         onPaymentSuccess={handlePaymentSuccess} 
+//       />
+
+//       {/* Reject Payment Modal */}
+//       <CModal alignment="center" visible={showRejectModal} onClose={() => setShowRejectModal(false)}>
+//         <CModalHeader>
+//           <CModalTitle>Reject Payment</CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {selectedRejectEntry && (
+//             <>
+//               <div className="mb-3">
+//                 <p><strong>Booking:</strong> {selectedRejectEntry.bookingDetails?.bookingNumber || selectedRejectEntry.booking}</p>
+//                 <p><strong>Amount:</strong> ₹{selectedRejectEntry.amount}</p>
+//                 <p><strong>Payment Mode:</strong> {selectedRejectEntry.paymentMode}</p>
+//               </div>
+//               <div className="mb-3">
+//                 <CFormLabel htmlFor="rejectionReason">Rejection Reason <span className="text-danger">*</span></CFormLabel>
+//                 <CFormInput
+//                   type="text"
+//                   id="rejectionReason"
+//                   value={rejectionReason}
+//                   onChange={(e) => setRejectionReason(e.target.value)}
+//                   placeholder="Enter reason for rejection"
+//                   disabled={rejectLoading}
+//                 />
+//               </div>
+//             </>
+//           )}
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton 
+//             color="secondary" 
+//             onClick={() => setShowRejectModal(false)}
+//             disabled={rejectLoading}
+//           >
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             color="danger"
+//             onClick={confirmRejectPayment}
+//             disabled={!rejectionReason.trim() || rejectLoading}
+//           >
+//             {rejectLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Rejecting...
+//               </>
+//             ) : 'Reject Payment'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Export Receipts Modal */}
+//       <CModal alignment="center" visible={openExportModal} onClose={handleCloseExportModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Receipts - Select Date Range
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {exportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {exportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={startDate}
+//                 onChange={(newValue) => {
+//                   setStartDate(newValue);
+//                   setExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={endDate}
+//                 onChange={(newValue) => {
+//                   setEndDate(newValue);
+//                   setExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={startDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={selectedBranchId}
+//             onChange={(e) => {
+//               setSelectedBranchId(e.target.value);
+//               setExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseExportModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handleExcelExport}
+//             disabled={!startDate || !endDate || !selectedBranchId || !canCreateReceipts || exportLoading}
+//           >
+//             {exportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Verified Outstanding Export Modal */}
+//       <CModal alignment="center" visible={openVerifiedOutstandingModal} onClose={handleCloseVerifiedOutstandingModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Verified Outstanding Report
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {verifiedOutstandingExportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {verifiedOutstandingExportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={verifiedOutstandingStartDate}
+//                 onChange={(newValue) => {
+//                   setVerifiedOutstandingStartDate(newValue);
+//                   setVerifiedOutstandingExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={verifiedOutstandingEndDate}
+//                 onChange={(newValue) => {
+//                   setVerifiedOutstandingEndDate(newValue);
+//                   setVerifiedOutstandingExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={verifiedOutstandingStartDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={verifiedOutstandingBranchId}
+//             onChange={(e) => {
+//               setVerifiedOutstandingBranchId(e.target.value);
+//               setVerifiedOutstandingExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseVerifiedOutstandingModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handleVerifiedOutstandingExport}
+//             disabled={!verifiedOutstandingStartDate || !verifiedOutstandingEndDate || !verifiedOutstandingBranchId || !canCreateReceipts || verifiedOutstandingExportLoading}
+//           >
+//             {verifiedOutstandingExportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Pending Verification Export Modal */}
+//       <CModal alignment="center" visible={openPendingVerificationModal} onClose={handleClosePendingVerificationModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Pending Verification Report
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {pendingVerificationExportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {pendingVerificationExportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={pendingVerificationStartDate}
+//                 onChange={(newValue) => {
+//                   setPendingVerificationStartDate(newValue);
+//                   setPendingVerificationExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={pendingVerificationEndDate}
+//                 onChange={(newValue) => {
+//                   setPendingVerificationEndDate(newValue);
+//                   setPendingVerificationExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={pendingVerificationStartDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={pendingVerificationBranchId}
+//             onChange={(e) => {
+//               setPendingVerificationBranchId(e.target.value);
+//               setPendingVerificationExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleClosePendingVerificationModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handlePendingVerificationExport}
+//             disabled={!pendingVerificationStartDate || !pendingVerificationEndDate || !pendingVerificationBranchId || !canCreateReceipts || pendingVerificationExportLoading}
+//           >
+//             {pendingVerificationExportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+//     </div>
+//   );
+// }
+
+// export default Receipt;
+
+
+
+
+
+
+
+
+// import React, { useState, useEffect, useCallback, useMemo } from 'react';
+// import { 
+//   CBadge, 
+//   CNav, 
+//   CNavItem, 
+//   CNavLink, 
+//   CTabContent, 
+//   CTabPane,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CCard,
+//   CCardBody,
+//   CButton,
+//   CFormInput,
+//   CSpinner,
+//   CFormLabel,
+//   CAlert,
+//   CDropdown,
+//   CDropdownToggle,
+//   CDropdownMenu,
+//   CDropdownItem,
+//   CModal,
+//   CModalHeader,
+//   CModalTitle,
+//   CModalBody,
+//   CModalFooter,
+//   CPagination,
+//   CPaginationItem,
+//   CFormSelect
+// } from '@coreui/react';
+// import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../utils/tableImports';
+// import '../../css/invoice.css';
+// import '../../css/table.css';
+// import ReceiptModal from './ReceiptModal';
+// import { confirmVerify } from '../../utils/sweetAlerts';
+// import CIcon from '@coreui/icons-react';
+// import { cilCheckCircle, cilPrint, cilSettings, cilPlus, cilChevronLeft, cilChevronRight, cilCloudDownload, cilXCircle } from '@coreui/icons';
+// import { numberToWords } from '../../utils/numberToWords';
+// import { Menu, MenuItem } from '@mui/material';
+// import { useAuth } from '../../context/AuthContext';
+// import QRCode from 'qrcode';
+// import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import Swal from 'sweetalert2';
+// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// import TextField from '@mui/material/TextField';
+// import { enIN } from 'date-fns/locale';
+// import tvsLogo from '../../assets/images/logo.png';
+// import config from '../../config';
+
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS
+// } from '../../utils/modulePermissions';
+
+// function Receipt() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [showModal, setShowModal] = useState(false);
+//   const [selectedBooking, setSelectedBooking] = useState(null);
+//   const [bookingsData, setBookingsData] = useState([]);
+//   const [pendingPaymentsData, setPendingPaymentsData] = useState([]);
+//   const [verifiedPaymentsData, setVerifiedPaymentsData] = useState([]);
+//   const [rejectedPaymentsData, setRejectedPaymentsData] = useState([]);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [anchorEl, setAnchorEl] = useState(null);
+//   const [menuBookingId, setMenuBookingId] = useState(null);
+//   const [successMessage, setSuccessMessage] = useState('');
+  
+//   // ============ REJECT MODAL STATES ============
+//   const [showRejectModal, setShowRejectModal] = useState(false);
+//   const [selectedRejectEntry, setSelectedRejectEntry] = useState(null);
+//   const [rejectionReason, setRejectionReason] = useState('');
+//   const [rejectLoading, setRejectLoading] = useState(false);
+  
+//   // ============ ON-DEMAND RECEIPTS FETCHING ============
+//   const [bookingReceipts, setBookingReceipts] = useState({});
+//   const [loadingReceipts, setLoadingReceipts] = useState({});
+//   const [receiptsFetched, setReceiptsFetched] = useState({});
+  
+//   const [cashLocations, setCashLocations] = useState([]);
+  
+//   // ============ CLIENT-SIDE PAGINATION STATES ============
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const [recordsPerPage, setRecordsPerPage] = useState(100);
+//   const [totalPages, setTotalPages] = useState(1);
+//   const [displayedPages, setDisplayedPages] = useState([]);
+  
+//   // ============ EXPORT MODAL STATES ============
+//   const [openExportModal, setOpenExportModal] = useState(false);
+//   const [startDate, setStartDate] = useState(null);
+//   const [endDate, setEndDate] = useState(null);
+//   const [selectedBranchId, setSelectedBranchId] = useState('');
+//   const [exportLoading, setExportLoading] = useState(false);
+//   const [exportError, setExportError] = useState('');
+  
+//   // ============ VERIFIED OUTSTANDING EXPORT STATES ============
+//   const [openVerifiedOutstandingModal, setOpenVerifiedOutstandingModal] = useState(false);
+//   const [verifiedOutstandingStartDate, setVerifiedOutstandingStartDate] = useState(null);
+//   const [verifiedOutstandingEndDate, setVerifiedOutstandingEndDate] = useState(null);
+//   const [verifiedOutstandingBranchId, setVerifiedOutstandingBranchId] = useState('');
+//   const [verifiedOutstandingExportLoading, setVerifiedOutstandingExportLoading] = useState(false);
+//   const [verifiedOutstandingExportError, setVerifiedOutstandingExportError] = useState('');
+  
+//   // ============ PENDING VERIFICATION EXPORT STATES ============
+//   const [openPendingVerificationModal, setOpenPendingVerificationModal] = useState(false);
+//   const [pendingVerificationStartDate, setPendingVerificationStartDate] = useState(null);
+//   const [pendingVerificationEndDate, setPendingVerificationEndDate] = useState(null);
+//   const [pendingVerificationBranchId, setPendingVerificationBranchId] = useState('');
+//   const [pendingVerificationExportLoading, setPendingVerificationExportLoading] = useState(false);
+//   const [pendingVerificationExportError, setPendingVerificationExportError] = useState('');
+  
+//   const [branches, setBranches] = useState([]);
+
+//   const { permissions = [], user } = useAuth();
+//   const hasAllBranchAccess = user?.branchAccess === "ALL";
+//   const canViewReceipts = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW
+//   );
+
+//   const canCreateReceipts = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE
+//   );
+
+//   const canViewCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canViewPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canViewCompletePaymentTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.COMPLETE_PAYMENT
+//   );
+  
+//   const canViewPendingListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.PENDING_LIST
+//   );
+  
+//   const canViewVerifiedListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.VERIFIED_LIST
+//   );
+  
+//   // ============ REJECTED LIST TAB PERMISSIONS ============
+//   const canViewRejectedListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.REJECTED_LIST
+//   );
+  
+//   const canCreateInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canCreateInPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canCreateInCompletePaymentTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.COMPLETE_PAYMENT
+//   );
+  
+//   const canCreateInPendingListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.PENDING_LIST
+//   );
+  
+//   const canCreateInVerifiedListTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.CREATE,
+//     TABS.RECEIPTS.VERIFIED_LIST
+//   );
+  
+//   const canUpdateInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.UPDATE,
+//     TABS.RECEIPTS.CUSTOMER
+//   );
+  
+//   const canUpdateInPaymentVerificationTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.UPDATE,
+//     TABS.RECEIPTS.PAYMENT_VERIFICATION
+//   );
+  
+//   const canPrintInCustomerTab = hasSafePagePermission(
+//     permissions, 
+//     MODULES.ACCOUNT, 
+//     PAGES.ACCOUNT.RECEIPTS, 
+//     ACTIONS.VIEW,
+//     TABS.RECEIPTS.CUSTOMER
+//   ) || canViewCustomerTab; 
+  
+//   const canRejectPayments = canUpdateInPaymentVerificationTab;
+  
+//   const canViewAnyTab = canViewCustomerTab || canViewPaymentVerificationTab || 
+//                        canViewCompletePaymentTab || canViewPendingListTab || 
+//                        canViewVerifiedListTab || canViewRejectedListTab;
+
+//   // ============ LEDGER VIEW FUNCTION ============
+//   const openLedgerInNewTab = async (bookingId, bookingNumber) => {
+//     try {
+//       const res = await axiosInstance.get(`/ledger/report/${bookingId}`);
+//       const ledgerData = res.data.data;
+//       const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${bookingId}`;
+
+//       // First filter approved entries
+//       let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
+
+//       // Filter entries based on chassis allocation status
+//       let filteredEntries = approvedEntries;
+//       if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
+//         // Show all entries where debit field exists (debit entries)
+//         filteredEntries = approvedEntries.filter((entry) => 
+//           entry.debit !== undefined && entry.debit !== null
+//         );
+//       }
+
+//       // Recalculate totals based on filtered entries
+//       const totals = {
+//         totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
+//         totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
+//         finalBalance: filteredEntries.reduce((sum, entry) => {
+//           const credit = entry.credit || 0;
+//           const debit = entry.debit || 0;
+//           return sum + (debit - credit);
+//         }, 0)
+//       };
+
+//       const win = window.open('', '_blank');
+//       win.document.write(`
+//         <!DOCTYPE html>
+//         <html>
+//           <head>
+//             <title>Customer Ledger - ${bookingNumber}</title>
+//             <style>
+//               @page {
+//                 size: A4;
+//                 margin: 15mm 10mm;
+//               }
+//               body {
+//                 font-family: Arial;
+//                 width: 100%;
+//                 margin: 0;
+//                 padding: 0;
+//                 font-size: 14px;
+//                 line-height: 1.3;
+//                 font-family: Courier New;
+//               }
+//               .container {
+//                 width: 190mm;
+//                 margin: 0 auto;
+//                 padding: 5mm;
+//               }
+//               .header-container {
+//                 display: flex;
+//                 justify-content:space-between;
+//                 margin-bottom: 3mm;
+//               }
+//               .header-text{
+//                 font-size:20px;
+//                 font-weight:bold;
+//               }
+//               .logo {
+//                 width: 30mm;
+//                 height: auto;
+//                 margin-right: 5mm;
+//               } 
+//               .header {
+//                 text-align: left;
+//               }
+//               .divider {
+//                 border-top: 2px solid #AAAAAA;
+//                 margin: 3mm 0;
+//               }
+//               .header h2 {
+//                 margin: 2mm 0;
+//                 font-size: 12pt;
+//                 font-weight: bold;
+//               }
+//               .header div {
+//                 font-size: 14px;
+//               }
+//               .customer-info {
+//                 display: grid;
+//                 grid-template-columns: repeat(2, 1fr);
+//                 gap: 2mm;
+//                 margin-bottom: 5mm;
+//                 font-size: 14px;
+//               }
+//               .customer-info div {
+//                 display: flex;
+//               }
+//               .customer-info strong {
+//                 min-width: 30mm;
+//                 display: inline-block;
+//               }
+//               table {
+//                 width: 100%;
+//                 border-collapse: collapse;
+//                 margin-bottom: 5mm;
+//                 font-size: 14px;
+//                 page-break-inside: avoid;
+//               }
+//               th, td {
+//                 border: 1px solid #000;
+//                 padding: 2mm;
+//                 text-align: left;
+//               }
+//               th {
+//                 background-color: #f0f0f0;
+//                 font-weight: bold;
+//               }
+//               .footer {
+//                 margin-top: 10mm;
+//                 display: flex;
+//                 justify-content: space-between;
+//                 align-items: flex-end;
+//                 font-size: 14px;
+//               }
+//               .footer-left {
+//                 text-align: left;
+//               }
+//               .footer-right {
+//                 text-align: right;
+//               }
+//               .qr-code {
+//                 width: 35mm;
+//                 height: 35mm;
+//               }
+//               .text-right {
+//                 text-align: right;
+//               }
+//               .text-left {
+//                 text-align: left;
+//               }
+//               .text-center {
+//                 text-align: center;
+//               }
+//               .note {
+//                 font-style: italic;
+//                 color: #666;
+//                 margin-bottom: 5mm;
+//                 text-align: center;
+//               }
+//               @media print {
+//                 body {
+//                   width: 190mm;
+//                   height: 277mm;
+//                 }
+//                 .no-print {
+//                   display: none;
+//                 }
+//               }
+//             </style>
+//           </head>
+//           <body>
+//             <div class="container">
+//               <div class="header-container">
+//                 <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+//                 <div class="header-text"> GANDHI TVS</div>
+//               </div>
+//               <div class="header">
+//                 <div>
+//                   Authorised Main Dealer: TVS Motor Company Ltd.<br>
+//                   Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//                   Upnagar, Nashik Road, Nashik - 422101<br>
+//                   Phone: 7498903672
+//                 </div>
+//               </div>
+//               <div class="divider"></div>
+//               <div class="customer-info">
+//                 <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
+//                 <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+//                 <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
+//                 <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
+//                 <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? (ledgerData.vehicleDetails?.chassisNo || 'N/A') : '-'}</div>
+//                 <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || 'N/A'}</div>
+//                 <div><strong>Chassis Allocated:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? 'Yes' : 'No'}</div>
+//                 <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || 'N/A'}</div>
+//                 <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || 'N/A'}</div>
+//               </div>
+              
+//               <table>
+//                 <thead>
+//                   <tr>
+//                     <th width="15%">Date</th>
+//                     <th width="35%">Description</th>
+//                     <th width="15%">Receipt/VC No</th>
+//                     <th width="10%" class="text-right">Credit (₹)</th>
+//                     <th width="10%" class="text-right">Debit (₹)</th>
+//                     <th width="15%" class="text-right">Balance (₹)</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   ${
+//                     filteredEntries.length > 0
+//                       ? filteredEntries
+//                           .map(
+//                             (entry) => `
+//                               <tr>
+//                                 <td>${entry.date || 'N/A'}</td>
+//                                 <td>${entry.description || 'N/A'}</td>
+//                                 <td>${entry.receiptNo || 'N/A'}</td>
+//                                 <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN') : '-'}</td>
+//                                 <td class="text-right">${entry.debit !== undefined ? entry.debit.toLocaleString('en-IN') : '-'}</td>
+//                                 <td class="text-right">${entry.balance ? entry.balance.toLocaleString('en-IN') : '-'}</td>
+//                               </tr>
+//                             `
+//                           )
+//                           .join('')
+//                       : `<tr><td colspan="6" class="text-center">No approved entries found</td></tr>`
+//                   }
+//                   ${
+//                     filteredEntries.length > 0
+//                       ? `<tr>
+//                           <td colspan="3" class="text-left"><strong>Total</strong></td>
+//                           <td class="text-right"><strong>${totals.totalCredit.toLocaleString('en-IN')}</strong></td>
+//                           <td class="text-right"><strong>${totals.totalDebit.toLocaleString('en-IN')}</strong></td>
+//                           <td class="text-right"><strong>${totals.finalBalance.toLocaleString('en-IN')}</strong></td>
+//                         </tr>`
+//                       : ''
+//                   }
+//                 </tbody>
+//               </table>
+              
+//               <div class="footer">
+//                 <div class="footer-left">
+//                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" 
+//                        class="qr-code" 
+//                        alt="QR Code" />
+//                 </div>
+//                 <div class="footer-right">
+//                   <p>For, Gandhi TVS</p>
+//                   <p>Authorised Signatory</p>
+//                 </div>
+//               </div>
+//             </div>
+            
+//             <script>
+//               window.onload = function() {
+//                 setTimeout(() => {
+//                   window.print();
+//                 }, 300);
+//               };
+//             </script>
+//           </body>
+//         </html>
+//       `);
+      
+//       win.document.close();
+      
+//     } catch (err) {
+//       console.error('Error fetching ledger:', err);
+//       const message = showError(err);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   // ============ FILTER FUNCTIONS - DEFINED BEFORE useEffect ============
+//   const filterData = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+
+//     const searchFields = getDefaultSearchFields('receipts');
+//     const term = searchTerm.toLowerCase();
+
+//     return data.filter((row) =>
+//       searchFields.some((field) => {
+//         const value = field.split('.').reduce((obj, key) => {
+//           if (!obj) return '';
+//           if (key.match(/^\d+$/)) return obj[parseInt(key)];
+//           return obj[key];
+//         }, row);
+
+//         if (value === undefined || value === null) return false;
+
+//         if (typeof value === 'boolean') {
+//           return (value ? 'yes' : 'no').includes(term);
+//         }
+//         if (field === 'createdAt' && value instanceof Date) {
+//           return value.toLocaleDateString('en-GB').includes(term);
+//         }
+//         if (typeof value === 'number') {
+//           return String(value).includes(term);
+//         }
+//         return String(value).toLowerCase().includes(term);
+//       })
+//     );
+//   };
+
+//   const filterPendingPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.bookingDetails?.bookingNumber || '').toLowerCase().includes(term) ||
+//         (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   const filterVerifiedPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.booking || '').toLowerCase().includes(term) ||
+//         (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term) ||
+//         (entry.receivedByDetails?.name || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   const filterRejectedPayments = (data, searchTerm) => {
+//     if (!searchTerm) return data;
+    
+//     const term = searchTerm.toLowerCase();
+    
+//     return data.filter((entry) => {
+//       return (
+//         (entry.booking?.bookingNumber || '').toLowerCase().includes(term) ||
+//         (entry.booking?.customerDetails?.name || '').toLowerCase().includes(term) ||
+//         (entry.paymentMode || '').toLowerCase().includes(term) ||
+//         String(entry.amount || '').includes(term) ||
+//         (entry.transactionReference || '').toLowerCase().includes(term) ||
+//         (entry.receivedBy?.name || '').toLowerCase().includes(term) ||
+//         (entry.rejectionReason || '').toLowerCase().includes(term)
+//       );
+//     });
+//   };
+
+//   // ============ DERIVED DATA - USE useMemo FOR PERFORMANCE ============
+//   const filteredBookings = useMemo(() => 
+//     filterData(bookingsData, searchTerm), 
+//     [bookingsData, searchTerm]
+//   );
+  
+//   const completePayments = useMemo(() => 
+//     filterData(
+//       bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) === 0),
+//       searchTerm
+//     ),
+//     [bookingsData, searchTerm]
+//   );
+  
+//   const pendingPayments = useMemo(() => 
+//     filterData(
+//       bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) !== 0),
+//       searchTerm
+//     ),
+//     [bookingsData, searchTerm]
+//   );
+
+//   const filteredPendingLedgerEntries = useMemo(() => 
+//     filterPendingPayments(pendingPaymentsData, searchTerm),
+//     [pendingPaymentsData, searchTerm]
+//   );
+  
+//   const filteredVerifiedLedgerEntries = useMemo(() => 
+//     filterVerifiedPayments(verifiedPaymentsData, searchTerm),
+//     [verifiedPaymentsData, searchTerm]
+//   );
+
+//   const filteredRejectedLedgerEntries = useMemo(() => 
+//     filterRejectedPayments(rejectedPaymentsData, searchTerm),
+//     [rejectedPaymentsData, searchTerm]
+//   );
+
+//   // ============ EFFECTS - NOW SAFE TO USE filteredBookings ============
+//   useEffect(() => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     const visibleTabs = [];
+//     if (canViewCustomerTab) visibleTabs.push(0);
+//     if (canViewPaymentVerificationTab) visibleTabs.push(1);
+//     if (canViewCompletePaymentTab) visibleTabs.push(2);
+//     if (canViewPendingListTab) visibleTabs.push(3);
+//     if (canViewVerifiedListTab) visibleTabs.push(4);
+//     if (canViewRejectedListTab) visibleTabs.push(5);
+    
+//     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+//       setActiveTab(visibleTabs[0]);
+//     }
+//   }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab, 
+//       canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab, 
+//       canViewRejectedListTab, activeTab]);
+
+//   useEffect(() => {
+//     if (!canViewReceipts) {
+//       showError('You do not have permission to view Receipts');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     if (!canViewAnyTab) {
+//       showError('You do not have permission to view any Receipt tabs');
+//       setLoading(false);
+//       return;
+//     }
+    
+//     fetchAllData();
+//     fetchCashLocations();
+//     fetchBranches();
+//   }, [canViewReceipts, canViewAnyTab]);
+
+//   useEffect(() => {
+//     window.printReceiptCallback = printReceiptInvoice;
+    
+//     return () => {
+//       delete window.printReceiptCallback;
+//     };
+//   }, []);
+
+//   // ============ PAGINATION CALCULATION ============
+//   const calculatePagination = useCallback((filteredDataLength) => {
+//     const total = filteredDataLength;
+//     const totalPagesCount = Math.ceil(total / recordsPerPage);
+//     setTotalPages(totalPagesCount);
+    
+//     const pages = [];
+//     let startPage = Math.max(1, currentPage - 2);
+//     let endPage = Math.min(totalPagesCount, currentPage + 2);
+    
+//     if (currentPage <= 3) {
+//       endPage = Math.min(5, totalPagesCount);
+//     }
+    
+//     if (currentPage >= totalPagesCount - 2) {
+//       startPage = Math.max(1, totalPagesCount - 4);
+//     }
+    
+//     for (let i = startPage; i <= endPage; i++) {
+//       pages.push(i);
+//     }
+    
+//     setDisplayedPages(pages);
+//   }, [currentPage, recordsPerPage]);
+
+//   useEffect(() => {
+//     const getFilteredDataLength = () => {
+//       switch(activeTab) {
+//         case 0: return filteredBookings.length;
+//         case 1: return filteredPendingLedgerEntries.length;
+//         case 2: return completePayments.length;
+//         case 3: return pendingPayments.length;
+//         case 4: return filteredVerifiedLedgerEntries.length;
+//         case 5: return filteredRejectedLedgerEntries.length;
+//         default: return 0;
+//       }
+//     };
+    
+//     calculatePagination(getFilteredDataLength());
+//   }, [filteredBookings, filteredPendingLedgerEntries, completePayments, 
+//       pendingPayments, filteredVerifiedLedgerEntries, filteredRejectedLedgerEntries, 
+//       activeTab, calculatePagination]);
+
+//   // ============ GET CURRENT RECORDS FOR PAGE ============
+//   const getCurrentRecords = useCallback((filteredDataArray) => {
+//     const indexOfLastRecord = currentPage * recordsPerPage;
+//     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+//     return filteredDataArray.slice(indexOfFirstRecord, indexOfLastRecord);
+//   }, [currentPage, recordsPerPage]);
+
+//   // ============ HANDLE PAGE CHANGE ============
+//   const handlePageChange = (pageNumber) => {
+//     if (pageNumber < 1 || pageNumber > totalPages) return;
+//     setCurrentPage(pageNumber);
+//     window.scrollTo({ top: 0, behavior: 'smooth' });
+//   };
+
+//   // ============ HANDLE RECORDS PER PAGE CHANGE ============
+//   const handleRecordsPerPageChange = (e) => {
+//     setRecordsPerPage(parseInt(e.target.value, 10));
+//     setCurrentPage(1);
+//   };
+
+//   // ============ FETCH FUNCTIONS ============
+//   const fetchAllData = async () => {
+//     try {
+//       setLoading(true);
+//       await Promise.all([
+//         fetchData(),
+//         fetchPendingPayments(),
+//         fetchVerifiedPayments(),
+//         fetchRejectedPayments()
+//       ]);
+//       setLoading(false);
+//     } catch (error) {
+//       console.log('Error fetching data', error);
+//       setError(error.message);
+//       setLoading(false);
+//     }
+//   };
+
+//   // ============ ON-DEMAND RECEIPTS FETCHING ============
+//  const fetchReceiptsForBooking = useCallback(async (bookingId) => {
+//   if (receiptsFetched[bookingId] || loadingReceipts[bookingId]) {
+//     return;
+//   }
+
+//   try {
+//     setLoadingReceipts(prev => ({ ...prev, [bookingId]: true }));
+    
+//     const receiptsResponse = await axiosInstance.get(`/ledger/booking/${bookingId}`);
+//     const receipts = receiptsResponse.data.data.allReceipts || [];
+    
+//     // Store all receipts (both payment and refund)
+//     setBookingReceipts(prev => ({
+//       ...prev,
+//       [bookingId]: receipts
+//     }));
+    
+//     setReceiptsFetched(prev => ({
+//       ...prev,
+//       [bookingId]: true
+//     }));
+//   } catch (error) {
+//     console.error(`Error fetching receipts for booking ${bookingId}:`, error);
+//     setBookingReceipts(prev => ({
+//       ...prev,
+//       [bookingId]: []
+//     }));
+//     setReceiptsFetched(prev => ({
+//       ...prev,
+//       [bookingId]: true
+//     }));
+//   } finally {
+//     setLoadingReceipts(prev => ({ ...prev, [bookingId]: false }));
+//   }
+// }, []);
+
+//   // Pre-fetch receipts for visible bookings only
+//   useEffect(() => {
+//     if (activeTab === 0 && filteredBookings.length > 0) {
+//       const currentRecords = getCurrentRecords(filteredBookings);
+//       currentRecords.forEach(booking => {
+//         if (!receiptsFetched[booking._id] && !loadingReceipts[booking._id]) {
+//           fetchReceiptsForBooking(booking._id);
+//         }
+//       });
+//     }
+//   }, [activeTab, currentPage, filteredBookings, getCurrentRecords, 
+//       receiptsFetched, loadingReceipts, fetchReceiptsForBooking]);
+
+//   const fetchCashLocations = async () => {
+//     try {
+//       const endpoints = [
+//         '/settings/cash-locations',
+//         '/master/cash-locations'
+//       ];
+      
+//       for (const endpoint of endpoints) {
+//         try {
+//           const response = await axiosInstance.get(endpoint);
+//           if (response.data.success && response.data.data) {
+//             setCashLocations(response.data.data);
+//             return;
+//           }
+//         } catch (err) {
+//           console.log(`Endpoint ${endpoint} not available`);
+//         }
+//       }
+//       console.warn('Could not fetch cash locations from any endpoint');
+//       setCashLocations([]);
+//     } catch (error) {
+//       console.error('Error fetching cash locations:', error);
+//       setCashLocations([]);
+//     }
+//   };
+
+//   const fetchBranches = async () => {
+//     try {
+//       const response = await axiosInstance.get('/branches');
+//       setBranches(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchData = async () => {
+//     try {
+//       const params = {
+//         bookingType: 'BRANCH'
+//       };
+      
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const branchBookings = response.data.data.bookings;
+//       setBookingsData(branchBookings);
+      
+//       const initialReceiptsMap = {};
+//       branchBookings.forEach(booking => {
+//         initialReceiptsMap[booking._id] = [];
+//       });
+//       setBookingReceipts(initialReceiptsMap);
+      
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchPendingPayments = async () => {
+//     if (!canViewReceipts || !canViewPaymentVerificationTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/ledger/pending`, { params });
+//       setPendingPaymentsData(response.data.data.ledgerEntries || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchVerifiedPayments = async () => {
+//     if (!canViewReceipts || !canViewVerifiedListTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/payment/verified/bank/ledger`, { params });
+//       setVerifiedPaymentsData(response.data.data.ledgerEntries || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchRejectedPayments = async () => {
+//     if (!canViewReceipts || !canViewRejectedListTab) {
+//       return;
+//     }
+    
+//     try {
+//       const params = {};
+//       const response = await axiosInstance.get(`/ledger/rejected`, { params });
+//       setRejectedPaymentsData(response.data.data.docs || []);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   // Format date functions
+//   const formatDateDDMMYYYY = (date) => {
+//     if (!date) return '';
+//     const day = String(date.getDate()).padStart(2, '0');
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const year = date.getFullYear();
+//     return `${day}-${month}-${year}`;
+//   };
+
+//   const formatDateForAPI = (date) => {
+//     if (!date) return '';
+//     const year = date.getFullYear();
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const day = String(date.getDate()).padStart(2, '0');
+//     return `${year}-${month}-${day}`;
+//   };
+
+//   // ============ EVENT HANDLERS ============
+//   const handleMenuClick = (event, bookingId) => {
+//     setAnchorEl(event.currentTarget);
+//     setMenuBookingId(bookingId);
+//   };
+
+//   const handleMenuClose = () => {
+//     setAnchorEl(null);
+//     setMenuBookingId(null);
+//   };
+
+//   const handleAddClick = (booking) => {
+//     if (!canCreateInCustomerTab) {
+//       showError('You do not have permission to add payments');
+//       return;
+//     }
+    
+//     setSelectedBooking(booking);
+//     setShowModal(true);
+//     handleMenuClose();
+//   };
+
+//   const handleVerifyPayment = async (entry) => {
+//     if (!canCreateInPaymentVerificationTab) {
+//       showError('You do not have permission to verify payments');
+//       return;
+//     }
+    
+//     try {
+//       const result = await confirmVerify({
+//         title: 'Confirm Payment Verification',
+//         text: `Are you sure you want to verify the payment of ₹${entry.amount} for booking ${entry.bookingDetails?.bookingNumber || entry.booking}?`,
+//         confirmButtonText: 'Yes, verify it!'
+//       });
+
+//       if (result.isConfirmed) {
+//         await axiosInstance.patch(`/ledger/approve/${entry._id}`, {
+//           remark: ''
+//         });
+        
+//         setSuccessMessage('Payment verified successfully!');
+        
+//         // Get the booking ID and number
+//         const bookingId = entry.bookingDetails?._id || entry.booking;
+//         const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+        
+//         // Refresh data
+//         await fetchAllData();
+        
+//         // Open ledger in new tab
+//         await openLedgerInNewTab(bookingId, bookingNumber);
+        
+//         setTimeout(() => setSuccessMessage(''), 3000);
+//       }
+//     } catch (error) {
+//       console.error('Error verifying payment:', error);
+//       showError(error, 'Failed to verify payment');
+//     }
+//   };
+
+//   const handleRejectPayment = (entry) => {
+//     if (!canRejectPayments) {
+//       showError('You do not have permission to reject payments');
+//       return;
+//     }
+    
+//     setSelectedRejectEntry(entry);
+//     setRejectionReason('');
+//     setShowRejectModal(true);
+//   };
+
+//   const confirmRejectPayment = async () => {
+//     if (!rejectionReason.trim()) {
+//       showError('Please provide a rejection reason');
+//       return;
+//     }
+
+//     try {
+//       setRejectLoading(true);
+      
+//       await axiosInstance.patch(`/ledger/${selectedRejectEntry._id}/reject`, {
+//         rejectionReason: rejectionReason.trim()
+//       });
+      
+//       setSuccessMessage('Payment rejected successfully!');
+//       setTimeout(() => setSuccessMessage(''), 3000);
+      
+//       // Close modal and reset
+//       setShowRejectModal(false);
+//       setSelectedRejectEntry(null);
+//       setRejectionReason('');
+      
+//       // Refresh data
+//       fetchAllData();
+      
+//     } catch (error) {
+//       console.error('Error rejecting payment:', error);
+//       showError(error, 'Failed to reject payment');
+//     } finally {
+//       setRejectLoading(false);
+//     }
+//   };
+
+//   const handleTabChange = (tab) => {
+//     if (!canViewAnyTab) {
+//       return;
+//     }
+    
+//     setActiveTab(tab);
+//     setSearchTerm('');
+//     setCurrentPage(1);
+//   };
+  
+//   const handleSearch = (value) => {
+//     setSearchTerm(value);
+//     setCurrentPage(1);
+//   };
+  
+//   // ============ EXPORT HANDLERS ============
+//   const handleOpenExportModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setOpenExportModal(true);
+//     setExportError('');
+//   };
+
+//   const handleCloseExportModal = () => {
+//     setOpenExportModal(false);
+//     setStartDate(null);
+//     setEndDate(null);
+//     setSelectedBranchId('');
+//     setExportError('');
+//   };
+
+//   const handleOpenVerifiedOutstandingModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+//     setOpenVerifiedOutstandingModal(true);
+//     setVerifiedOutstandingExportError('');
+//   };
+
+//   const handleCloseVerifiedOutstandingModal = () => {
+//     setOpenVerifiedOutstandingModal(false);
+//     setVerifiedOutstandingStartDate(null);
+//     setVerifiedOutstandingEndDate(null);
+//     setVerifiedOutstandingBranchId('');
+//     setVerifiedOutstandingExportError('');
+//   };
+
+//   const handleOpenPendingVerificationModal = () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+//     setOpenPendingVerificationModal(true);
+//     setPendingVerificationExportError('');
+//   };
+
+//   const handleClosePendingVerificationModal = () => {
+//     setOpenPendingVerificationModal(false);
+//     setPendingVerificationStartDate(null);
+//     setPendingVerificationEndDate(null);
+//     setPendingVerificationBranchId('');
+//     setPendingVerificationExportError('');
+//   };
+
+//   const handleExcelExport = async () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setExportError('');
+    
+//     if (!selectedBranchId) {
+//       setExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!startDate || !endDate) {
+//       setExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (startDate > endDate) {
+//       setExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setExportLoading(true);
+      
+//       const formattedStartDate = formatDateForAPI(startDate);
+//       const formattedEndDate = formatDateForAPI(endDate);
+
+//       const params = new URLSearchParams({
+//         branchId: selectedBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate,
+//         format: 'excel'
+//       });
+
+//       const response = await axiosInstance.get(
+//         `/reports/receipts?${params.toString()}`,
+//         { responseType: 'blob' }
+//       );
+
+//       const contentType = response.headers['content-type'];
+      
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (!errorData.success && errorData.message) {
+//           setExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { 
+//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//       });
+      
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+      
+//       const branchName = branches.find(b => b._id === selectedBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(startDate);
+//       const endDateStr = formatDateDDMMYYYY(endDate);
+//       const fileName = `Receipts_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+      
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+      
+//       window.URL.revokeObjectURL(url);
+      
+//       Swal.fire({
+//         toast: true,
+//         position: 'top-end',
+//         icon: 'success',
+//         title: 'Excel exported successfully!',
+//         showConfirmButton: false,
+//         timer: 3000,
+//         timerProgressBar: true
+//       });
+
+//       handleCloseExportModal();
+      
+//     } catch (error) {
+//       console.error('Error exporting report:', error);
+      
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+          
+//           const errorData = JSON.parse(text);
+          
+//           if (errorData.message) {
+//             setExportError(errorData.message);
+//             Swal.fire({
+//               icon: 'error',
+//               title: 'Export Failed',
+//               text: errorData.message,
+//             });
+//           }
+//         } catch (parseError) {
+//           console.error('Error parsing error response:', parseError);
+//           setExportError('Failed to export report');
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: 'Failed to export report',
+//           });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setExportError(error.response.data.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.response.data.message,
+//         });
+//       } else if (error.message) {
+//         setExportError(error.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.message,
+//         });
+//       } else {
+//         setExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+      
+//     } finally {
+//       setExportLoading(false);
+//     }
+//   };
+
+//  const handleVerifiedOutstandingExport = async () => {
+//   if (!canCreateReceipts) {
+//     showError('You do not have permission to export data');
+//     return;
+//   }
+  
+//   setVerifiedOutstandingExportError('');
+  
+//   if (!verifiedOutstandingBranchId) {
+//     setVerifiedOutstandingExportError('Please select a branch');
+//     return;
+//   }
+
+//   if (!verifiedOutstandingStartDate || !verifiedOutstandingEndDate) {
+//     setVerifiedOutstandingExportError('Please select both start and end dates');
+//     return;
+//   }
+
+//   if (verifiedOutstandingStartDate > verifiedOutstandingEndDate) {
+//     setVerifiedOutstandingExportError('Start date cannot be after end date');
+//     return;
+//   }
+
+//   try {
+//     setVerifiedOutstandingExportLoading(true);
+    
+//     const formattedStartDate = formatDateForAPI(verifiedOutstandingStartDate);
+//     const formattedEndDate = formatDateForAPI(verifiedOutstandingEndDate);
+
+//     const params = new URLSearchParams({
+//       branchId: verifiedOutstandingBranchId,
+//       startDate: formattedStartDate,
+//       endDate: formattedEndDate,
+//       format: 'excel'
+//     });
+
+//     // CHANGED: Updated from /reports/outstanding/verified to /reports/pending/recipt
+//     const response = await axiosInstance.get(
+//       `/reports/pending/recipt?${params.toString()}`,
+//       { responseType: 'blob' }
+//     );
+
+//     const contentType = response.headers['content-type'];
+    
+//     if (contentType && contentType.includes('application/json')) {
+//       const text = await new Promise((resolve, reject) => {
+//         const reader = new FileReader();
+//         reader.onload = () => resolve(reader.result);
+//         reader.onerror = reject;
+//         reader.readAsText(response.data);
+//       });
+      
+//       const errorData = JSON.parse(text);
+      
+//       if (!errorData.success && errorData.message) {
+//         setVerifiedOutstandingExportError(errorData.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: errorData.message,
+//         });
+//         return;
+//       }
+//     }
+
+//     const blob = new Blob([response.data], { 
+//       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//     });
+    
+//     const url = window.URL.createObjectURL(blob);
+//     const link = document.createElement('a');
+//     link.href = url;
+    
+//     const branchName = branches.find(b => b._id === verifiedOutstandingBranchId)?.name || 'Branch';
+//     const startDateStr = formatDateDDMMYYYY(verifiedOutstandingStartDate);
+//     const endDateStr = formatDateDDMMYYYY(verifiedOutstandingEndDate);
+    
+//     // You might want to update the filename to reflect the new API
+//     const fileName = `Pending_Receipts_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//     link.setAttribute('download', fileName);
+    
+//     document.body.appendChild(link);
+//     link.click();
+//     link.remove();
+    
+//     window.URL.revokeObjectURL(url);
+    
+//     Swal.fire({
+//       toast: true,
+//       position: 'top-end',
+//       icon: 'success',
+//       title: 'Pending Receipts Report exported successfully!',
+//       showConfirmButton: false,
+//       timer: 3000,
+//       timerProgressBar: true
+//     });
+
+//     handleCloseVerifiedOutstandingModal();
+    
+//   } catch (error) {
+//     console.error('Error exporting pending receipts report:', error);
+    
+//     if (error.response && error.response.data instanceof Blob) {
+//       try {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(error.response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (errorData.message) {
+//           setVerifiedOutstandingExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//         }
+//       } catch (parseError) {
+//         console.error('Error parsing error response:', parseError);
+//         setVerifiedOutstandingExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+//     } else if (error.response?.data?.message) {
+//       setVerifiedOutstandingExportError(error.response.data.message);
+//       Swal.fire({
+//         icon: 'error',
+//         title: 'Export Failed',
+//         text: error.response.data.message,
+//       });
+//     } else if (error.message) {
+//       setVerifiedOutstandingExportError(error.message);
+//       Swal.fire({
+//         icon: 'error',
+//         title: 'Export Failed',
+//         text: error.message,
+//       });
+//     } else {
+//       setVerifiedOutstandingExportError('Failed to export report');
+//       Swal.fire({
+//         icon: 'error',
+//         title: 'Export Failed',
+//         text: 'Failed to export report',
+//       });
+//     }
+    
+//   } finally {
+//     setVerifiedOutstandingExportLoading(false);
+//   }
+// };
+
+//   const handlePendingVerificationExport = async () => {
+//     if (!canCreateReceipts) {
+//       showError('You do not have permission to export data');
+//       return;
+//     }
+    
+//     setPendingVerificationExportError('');
+    
+//     if (!pendingVerificationBranchId) {
+//       setPendingVerificationExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!pendingVerificationStartDate || !pendingVerificationEndDate) {
+//       setPendingVerificationExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (pendingVerificationStartDate > pendingVerificationEndDate) {
+//       setPendingVerificationExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setPendingVerificationExportLoading(true);
+      
+//       const formattedStartDate = formatDateForAPI(pendingVerificationStartDate);
+//       const formattedEndDate = formatDateForAPI(pendingVerificationEndDate);
+
+//       const params = new URLSearchParams({
+//         branchId: pendingVerificationBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate,
+//         format: 'excel'
+//       });
+
+//       const response = await axiosInstance.get(
+//         `/reports/outstanding/pending-verification?${params.toString()}`,
+//         { responseType: 'blob' }
+//       );
+
+//       const contentType = response.headers['content-type'];
+      
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+        
+//         const errorData = JSON.parse(text);
+        
+//         if (!errorData.success && errorData.message) {
+//           setPendingVerificationExportError(errorData.message);
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: errorData.message,
+//           });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { 
+//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+//       });
+      
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+      
+//       const branchName = branches.find(b => b._id === pendingVerificationBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(pendingVerificationStartDate);
+//       const endDateStr = formatDateDDMMYYYY(pendingVerificationEndDate);
+//       const fileName = `Pending_Verification_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+      
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+      
+//       window.URL.revokeObjectURL(url);
+      
+//       Swal.fire({
+//         toast: true,
+//         position: 'top-end',
+//         icon: 'success',
+//         title: 'Pending Verification Report exported successfully!',
+//         showConfirmButton: false,
+//         timer: 3000,
+//         timerProgressBar: true
+//       });
+
+//       handleClosePendingVerificationModal();
+      
+//     } catch (error) {
+//       console.error('Error exporting pending verification report:', error);
+      
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+          
+//           const errorData = JSON.parse(text);
+          
+//           if (errorData.message) {
+//             setPendingVerificationExportError(errorData.message);
+//             Swal.fire({
+//               icon: 'error',
+//               title: 'Export Failed',
+//               text: errorData.message,
+//             });
+//           }
+//         } catch (parseError) {
+//           console.error('Error parsing error response:', parseError);
+//           setPendingVerificationExportError('Failed to export report');
+//           Swal.fire({
+//             icon: 'error',
+//             title: 'Export Failed',
+//             text: 'Failed to export report',
+//           });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setPendingVerificationExportError(error.response.data.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.response.data.message,
+//         });
+//       } else if (error.message) {
+//         setPendingVerificationExportError(error.message);
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: error.message,
+//         });
+//       } else {
+//         setPendingVerificationExportError('Failed to export report');
+//         Swal.fire({
+//           icon: 'error',
+//           title: 'Export Failed',
+//           text: 'Failed to export report',
+//         });
+//       }
+      
+//     } finally {
+//       setPendingVerificationExportLoading(false);
+//     }
+//   };
+
+//   const handlePaymentSuccess = () => {
+//     fetchAllData();
+//     if (selectedBooking) {
+//       setReceiptsFetched(prev => ({
+//         ...prev,
+//         [selectedBooking._id]: false
+//       }));
+//       setBookingReceipts(prev => ({
+//         ...prev,
+//         [selectedBooking._id]: []
+//       }));
+//     }
+//   };
+
+//   const handleLoadReceipts = (bookingId) => {
+//     fetchReceiptsForBooking(bookingId);
+//   };
+
+//   // ============ PRINT FUNCTIONS ============
+//   const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
+//     if (!canPrintInCustomerTab) {
+//       showError('You do not have permission to print invoices');
+//       return;
+//     }
+    
+//     try {
+//       const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
+//       const receiptData = receiptResponse.data.data.receipt;
+      
+//       const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
+//       const bookingData = bookingResponse.data.data.bookingDetails;
+//       const finalStatus = bookingResponse.data.data.finalStatus || '';
+//       const qrCodeData = receiptData.qrCodeData || {};
+      
+//       const subsidyAmount = bookingData.subsidyAmount || 0;
+//       const isEV = bookingData.model?.type === 'EV';
+      
+//       const priceComponents = bookingData.priceComponents || [];
+//       const filteredPriceComponents = priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+//         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+//         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+//         return !(isInsurance || isRTO || isHypothecation);
+//       });
+
+//       const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+      
+//       const findComponentByKeywords = (keywords) => {
+//         return priceComponents.find((comp) => {
+//           const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//           return keywords.some((keyword) => headerKey.includes(keyword));
+//         });
+//       };
+
+//       const insuranceComponent = findComponentByKeywords([
+//         'INSURANCE', 'INSURCANCE', 'INSURANCE CHARGES', 'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+//       ]);
+//       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+//       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+//       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+//       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+//       const hpCharges = hpComponent ? hpComponent.originalValue : bookingData.hypothecationCharges || 0;
+
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+      
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       const qrText = `GANDHI MOTORS PVT LTD
+// Booking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}
+// Customer: ${qrCodeData.customerName || bookingData.customerDetails?.name}
+// Mobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}
+// Model: ${qrCodeData.modelName || bookingData.model?.model_name}
+// Type: ${bookingData.model?.type || 'N/A'}
+// Chassis: ${qrCodeData.chassisNo || bookingData.chassisNumber || 'Not allocated'}
+// Payment Type: ${qrCodeData.paymentType || bookingData.payment?.type}
+// Total Amount: ₹${grandTotal.toFixed(2)}
+// ${isEV && subsidyAmount > 0 ? `Subsidy: -₹${subsidyAmount.toFixed(2)}` : ''}
+// Receipt: ${receiptData.receiptNumber || 'N/A'}
+// Amount: ${receiptData.display?.amount || `₹${receiptData.amount?.toFixed(2) || '0'}`}
+// Payment Mode: ${receiptData.paymentMode || 'Cash'}
+// Reference: ${receiptData.transactionReference || 'N/A'}
+// Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
+
+//       let qrCodeImage = '';
+//       try {
+//         qrCodeImage = await QRCode.toDataURL(qrText, {
+//           width: 250,
+//           margin: 3,
+//           color: {
+//             dark: '#000000',
+//             light: '#FFFFFF'
+//           },
+//           errorCorrectionLevel: 'H'
+//         });
+//       } catch (error) {
+//         console.error('Error generating QR code:', error);
+//         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
+//           <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250">
+//             <rect width="250" height="250" fill="white"/>
+//             <rect x="20" y="20" width="210" height="210" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+//             <text x="125" y="115" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">QR CODE</text>
+//             <text x="125" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">Receipt: ${receiptData.receiptNumber}</text>
+//             <text x="125" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Scan for details</text>
+//           </svg>
+//         `);
+//       }
+
+//       const transformedData = {
+//         bookingNumber: bookingData.bookingNumber,
+//         bookingType: bookingData.bookingType,
+//         rto: bookingData.rto,
+//         hpa: bookingData.hpa,
+//         hypothecationCharges: bookingData.hypothecationCharges || 0,
+//         gstin: bookingData.gstin || '',
+//         model: {
+//           model_name: bookingData.model?.model_name || 'N/A',
+//           type: bookingData.model?.type || 'N/A'
+//         },
+//         chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
+//         engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
+//         batteryNumber: bookingData.vehicle?.batteryNumber || '',
+//         keyNumber: bookingData.vehicle?.keyNumber || '',
+//         color: {
+//           name: bookingData.color?.name || ''
+//         },
+//         customerDetails: {
+//           name: bookingData.customerDetails?.name || 'N/A',
+//           address: bookingData.customerDetails?.address || '',
+//           taluka: bookingData.customerDetails?.taluka || '',
+//           district: bookingData.customerDetails?.district || '',
+//           pincode: bookingData.customerDetails?.pincode || '',
+//           mobile1: bookingData.customerDetails?.mobile1 || '',
+//           dob: bookingData.customerDetails?.dob || '',
+//           aadharNumber: bookingData.customerDetails?.aadharNumber || ''
+//         },
+//         exchange: bookingData.exchange,
+//         exchangeDetails: bookingData.exchangeDetails,
+//         payment: {
+//           type: bookingData.payment?.type || 'CASH',
+//           financer: bookingData.payment?.financer
+//         },
+//         salesExecutive: bookingData.salesExecutive,
+//         branch: {
+//           gst_number: bookingData.branch?.gst_number || ''
+//         },
+//         accessories: bookingData.accessories || [],
+//         priceComponents: bookingData.priceComponents || [],
+//         subdealer: bookingData.subdealer || '',
+//         receivedAmount: bookingData.receivedAmount || 0,
+//         finalStatus: finalStatus || '',
+//         recentPayment: receiptData,
+//         qrCodeData: qrCodeData,
+//         qrCodeImage: qrCodeImage,
+//         qrCodeText: qrText,
+//         recentPaymentAmount: receiptData.amount || 0,
+//         bookingDetails: bookingData,
+//         subsidyAmount: subsidyAmount,
+//         calculatedTotals: {
+//           totalA,
+//           totalB,
+//           grandTotal,
+//           insuranceCharges,
+//           rtoCharges,
+//           hpCharges,
+//           subsidyDisplay
+//         }
+//       };
+
+//       const isFirstReceipt = receiptIndex === 0;
+      
+//       const invoiceHTML = generateReceiptInvoiceHTML(transformedData, isFirstReceipt);
+
+//       const printWindow = window.open('', '_blank');
+//       printWindow.document.write(invoiceHTML);
+//       printWindow.document.close();
+      
+//       printWindow.onload = function() {
+//         printWindow.focus();
+//         printWindow.print();
+//       };
+      
+//     } catch (error) {
+//       console.error('Error generating receipt invoice:', error);
+//       showError(error, 'Failed to generate receipt invoice');
+//     }
+//   };
+  
+//  const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+//     const exchangeBrokerName = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+//     const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
+
+//     const currentDate = new Date().toLocaleDateString('en-GB');
+//     const receiptDate = data.recentPayment?.receiptDate 
+//       ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB')
+//       : currentDate;
+    
+//     const recentPaymentAmount = data.recentPaymentAmount || 0;
+//     const recentPaymentAmountRef = data.recentPayment?.transactionReference || "-";
+//     const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+//     const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+//     const receiptNumber = data.recentPayment?.receiptNumber || "-";
+
+//     const qrCodeImage = data.qrCodeImage || '';
+    
+//     const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+//     const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
+    
+//     // Get branch name dynamically from the data
+//     const branchName = data.branch?.name || data.bookingDetails?.branch?.name || 'GANDHI TVS';
+
+//     if (isFirstReceipt) {
+//       const filteredPriceComponents = data.priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         const isInsurance = /INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+//         const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+//         const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+//         return !(isInsurance || isRTO || isHypothecation);
+//       });
+
+//       const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+//         const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+//         const unitCost = component.originalValue;
+//         const discount = 0;
+//         const lineTotal = component.originalValue;
+//         const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+//         const totalGST = lineTotal - taxableValue;
+//         const cgstAmount = totalGST / 2;
+//         const sgstAmount = totalGST / 2;
+        
+//         return {
+//           ...component,
+//           unitCost,
+//           taxableValue,
+//           cgstAmount,
+//           sgstAmount,
+//           gstAmount: cgstAmount + sgstAmount,
+//           gstRatePercentage,
+//           discount,
+//           lineTotal
+//         };
+//       });
+      
+//       const findComponentByKeywords = (keywords) => {
+//         return data.priceComponents.find((comp) => {
+//           const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//           return keywords.some((keyword) => headerKey.includes(keyword));
+//         });
+//       };
+
+//       const insuranceComponent = findComponentByKeywords([
+//         'INSURANCE',
+//         'INSURCANCE',
+//         'INSURANCE CHARGES',
+//         'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+//       ]);
+//       const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+//       const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+//       const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+//       const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+//       const hpCharges = hpComponent ? hpComponent.originalValue : data.hypothecationCharges || 0;
+
+//       const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       return `<!DOCTYPE html>
+// <html>
+// <head>
+//   <title>Payment Receipt - ${receiptNumber}</title>
+//   <style>
+//     body {
+//       font-family: "Courier New", Courier, monospace;
+//       margin: 0;
+//       padding: 10mm;
+//       font-size: 14px;
+//       color: #555555;
+//     }
+//     .page {
+//       width: 210mm;
+//       height: 297mm;
+//       margin: 0 auto;
+//     }
+//     .header-container {
+//       display: flex;
+//       justify-content: space-between;
+//       margin-bottom: 2mm;
+//       align-items: flex-start;
+//     }
+//     .header-left {
+//       width: 60%;
+//     }
+//     .header-right {
+//       width: 40%;
+//       text-align: right;
+//       display: flex;
+//       flex-direction: column;
+//       align-items: flex-end;
+//     }
+//     .logo-qr-container {
+//       display: flex;
+//       align-items: center;
+//       gap: 20px;
+//       justify-content: flex-end;
+//       margin-bottom: 10px;
+//       width: 100%;
+//     }
+//     .logo {
+//       height: 80px;
+//     }
+//     .qr-code-extra-big {
+//       width: 150px;
+//       height: 150px;
+//       border: 1px solid #ccc;
+//     }
+//     .dealer-info {
+//       text-align: left;
+//       font-size: 14px;
+//       line-height: 1.2;
+//     }
+//     .customer-info-container {
+//       display: flex;
+//       font-size:14px;
+//     }
+//     .customer-info-left {
+//       width: 50%;
+//     }
+//     .customer-info-right {
+//       width: 50%;
+//     }
+//     .customer-info-row {
+//       margin: 1mm 0;
+//       line-height: 1.2;
+//     }
+//     table {
+//       width: 100%;
+//       border-collapse: collapse;
+//       font-size: 9pt;
+//       margin: 2mm 0;
+//     }
+//     th, td {
+//       padding: 1mm;
+//       border: 1px solid #000;
+//       vertical-align: top;
+//     }
+//     .no-border { 
+//       border: none !important; 
+//       font-size:14px;
+//     }
+//     .text-right { text-align: right; }
+//     .text-center { text-align: center; }
+//     .bold { 
+//       font-weight: bold; 
+//     }
+//     .section-title {
+//       font-weight: bold;
+//       margin: 1mm 0;
+//     }
+//     .signature-box {
+//       margin-top: 5mm;
+//       font-size: 9pt;
+//     }
+//     .signature-line {
+//       border-top: 1px dashed #000;
+//       width: 40mm;
+//       display: inline-block;
+//       margin: 0 5mm;
+//     }
+//     .footer {
+//       font-size: 8pt;
+//       text-align: justify;
+//       line-height: 1.2;
+//       margin-top: 3mm;
+//     }
+//     .divider {
+//       border-top: 2px solid #AAAAAA;
+//     }
+//     .totals-table {
+//       width: 100%;
+//       border-collapse: collapse;
+//       margin: 2mm 0;
+//     }
+//     .totals-table td {
+//       border: none;
+//       padding: 1mm;
+//     }
+//     .total-divider {
+//       border-top: 2px solid #AAAAAA;
+//       height: 1px;
+//       margin: 2px 0;
+//     }
+//     .broker-info{
+//       display:flex;
+//       justify-content:space-between;
+//       padding:1px;
+//     }
+//     .status-box {
+//       background-color: #e8f5e8;
+//       border: 2px solid #c3e6c3;
+//       border-radius: 4px;
+//       padding: 15px;
+//       margin: 10px 0;
+//       text-align: center;
+//       font-weight: bold;
+//       font-size: 20px;
+//       color: #495057;
+//     }
+//     .payment-info-title {
+//       font-weight: bold;
+//       margin-bottom: 5px;
+//       color: #155724;
+//       font-size: 16px;
+//     }
+//     .amount-in-words {
+//       font-style: italic;
+//       margin-top: 5px;
+//       color: #333;
+//       padding: 5px;
+//     }
+//     .note{
+//       padding:1px;
+//       margin:2px;
+//     }
+//     .qr-bottom-section {
+//       margin-top: 10mm;
+//       text-align: center;
+//       page-break-inside: avoid;
+//     }
+//     .qr-bottom-big {
+//       width: 180px;
+//       height: 180px;
+//       border: 1px solid #ccc;
+//       margin: 0 auto;
+//       display: block;
+//     }
+//     .qr-scan-text {
+//       font-size: 10pt;
+//       color: #777;
+//       margin-top: 3mm;
+//     }
+//     .receipt-info {
+//       background-color: #f8f9fa;
+//       border: 1px solid #dee2e6;
+//       border-radius: 4px;
+//       padding: 10px;
+//       margin: 10px 0;
+//     }
+//     @page {
+//       size: A4;
+//       margin: 0;
+//     }
+//     @media print {
+//       body {
+//         padding: 5mm;
+//       }
+//       .qr-bottom-section {
+//         page-break-inside: avoid;
+//       }
+//     }
+//   </style>
+// </head>
+// <body>
+//   <div class="page">
+//     <div class="header-container">
+//       <div class="header-left">
+//         <h2 style="margin:3;font-size:15pt;">GANDHI MOTORS PVT LTD</h2>
+//         <div class="dealer-info">
+//           Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//           Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//           Upnagar, Nashik Road, Nashik, 7498993672<br>
+//           GSTIN: ${data.branch?.gst_number || ''}<br>
+//           ${branchName}
+//         </div>
+//       </div>
+//       <div class="header-right">
+//         <div class="logo-qr-container">
+//           <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//           ${
+//             qrCodeImage 
+//               ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />`
+//               : ''
+//           }
+//         </div>
+        
+//         <div style="margin-top: 5px; font-size: 13px;">Date: ${receiptDate}</div>
+//         <div style="margin-top: 5px; font-size: 13px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//         ${
+//           data.bookingType === 'SUBDEALER'
+//             ? `<div style="font-size: 12px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//         <div style="font-size: 11px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>
+//         `
+//             : ''
+//         }
+//       </div>
+//     </div>
+//     <div class="divider"></div>
+
+//     <div class="receipt-info">
+//       <div><strong>Payment Receipt</strong></div>
+//       <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//       <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//     </div>
+
+//     <div class="customer-info-container">
+//       <div class="customer-info-left">
+//         <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//         <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</div>
+//         <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//         <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//       </div>
+//       <div class="customer-info-right">
+//         <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//         <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//         <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//         <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//         <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//       </div>
+//     </div>
+
+//     <div class="payment-info-box">
+//       <div class="receipt-info">
+//         <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//         <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//         <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//         <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+//       <div class="amount-in-words">
+//         <strong>(In Words):</strong> ${recentPaymentAmountInWords} Only
+//       </div>
+//     </div>
+//     <table>
+//       <tr>
+//         <th style="width:25%">Particulars</th>
+//         <th style="width:8%">HSN CODE</th>
+//         <th style="width:8%">Unit Cost</th>
+//         <th style="width:8%">Taxable</th>
+//         <th style="width:5%">CGST</th>
+//         <th style="width:8%">CGST AMOUNT</th>
+//         <th style="width:5%">SGST</th>
+//         <th style="width:8%">SGST AMOUNT</th>
+//         <th style="width:7%">DISCOUNT</th>
+//         <th style="width:10%">LINE TOTAL</th>
+//       </tr>
+
+//       ${priceComponentsWithGST
+//         .map(
+//           (component) => `
+//         <tr>
+//           <td>${component.header?.header_key || ''}</td>
+//           <td>${component.header?.metadata?.hsn_code || ''}</td>
+//           <td >${component.unitCost.toFixed(2)}</td>
+//           <td >${component.taxableValue.toFixed(2)}</td>
+//           <td >${(component.gstRatePercentage / 2).toFixed(2)}%</td>
+//           <td >${component.cgstAmount.toFixed(2)}</td>
+//           <td >${(component.gstRatePercentage / 2).toFixed(2)}%</td>
+//           <td >${component.sgstAmount.toFixed(2)}</td>
+//           <td >${component.discount.toFixed(2)}</td>
+//           <td >${component.lineTotal.toFixed(2)}</td>
+//         </tr>
+//       `
+//         )
+//         .join('')}
+//     </table>
+
+//     <table class="totals-table">
+//       <tr>
+//         <td class="no-border" style="width:80%"><strong>Total(A)</strong></td>
+//         <td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td colspan="2" class="no-border"><div class="total-divider"></div></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>INSURANCE CHARGES</strong></td>
+//         <td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td>
+//         <td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>HP CHARGES</strong></td>
+//         <td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td>
+//       </tr>
+//         ${isEV && subsidyAmount > 0 ? `
+//       <tr>
+//         <td class="no-border"><strong>SUBSIDY AMOUNT</strong></td>
+//         <td class="no-border text-right" style="color: green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td>
+//       </tr>
+//       ` : ''}
+//       <tr>
+//         <td colspan="2" class="no-border"><div class="total-divider"></div></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>TOTAL(B)</strong></td>
+//         <td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td>
+//       </tr>
+//       <tr>
+//         <td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td>
+//         <td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td>
+//       </tr>
+//     </table>
+//     <div class="broker-info">
+//       <div><strong>Ex. Broker/ Sub Dealer:</strong>${exchangeBrokerName}</div>
+//       <div><strong>Ex. Veh No:</strong>${exchangeVehicleNumber}</div>
+//     </div>
+//     <div class="note"><strong>Notes:Booking Awaiting approval as discount exceed</strong></div>
+//     <div class="divider"></div>
+//     <div style="margin-top:2mm;">
+//       <div><strong>Booking Status: </strong>
+//       </div>
+//       <div class="status-box">
+//         ${data.finalStatus || 'Status: Not Available'}
+//       </div>
+//     </div>
+//     <div class="divider"></div>
+
+//     <div class="divider" style="margin-top: 5mm;"></div>
+
+//     <div class="signature-box">
+//       <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Customer's Signature</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Sales Executive</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Manager</div>
+//         </div>
+//         <div style="text-align:center; width: 22%;">
+//           <div class="signature-line"></div>
+//           <div>Accountant</div>
+//         </div>
+//       </div>
+//     </div>
+//   </div>
+// </body>
+// </html>`;
+//     } else {
+//       // Similar changes for the else part (second receipt copy)
+//       return `<!DOCTYPE html>
+// <html>
+// <head>
+//   <title>Payment Receipt - ${receiptNumber}</title>
+//   <style>
+//     body {
+//       font-family: "Courier New", Courier, monospace;
+//       margin: 0;
+//       padding: 10mm;
+//       font-size: 14px;
+//       color: #555555;
+//     }
+//     .page {
+//       width: 210mm;
+//       height: 297mm;
+//       margin: 0 auto;
+//     }
+//     .receipt-copy {
+//       height: 138mm;
+//       page-break-inside: avoid;
+//     }
+//     .header-container {
+//       display: flex;
+//       justify-content: space-between;
+//       margin-bottom: 2mm;
+//       align-items: flex-start;
+//     }
+//     .header-left {
+//       width: 60%;
+//     }
+//     .header-right {
+//       width: 40%;
+//       text-align: right;
+//       display: flex;
+//       flex-direction: column;
+//       align-items: flex-end;
+//     }
+//     .logo-qr-container {
+//       display: flex;
+//       align-items: center;
+//       gap: 10px;
+//       justify-content: flex-end;
+//       margin-bottom: 5px;
+//       width: 100%;
+//     }
+//     .logo {
+//       height: 60px;
+//     }
+//     .qr-code-small {
+//       width: 100px;
+//       height: 100px;
+//       border: 1px solid #ccc;
+//     }
+//     .dealer-info {
+//       text-align: left;
+//       font-size: 12px;
+//       line-height: 1.1;
+//     }
+//     .customer-info-container {
+//       display: flex;
+//       font-size:12px;
+//     }
+//     .customer-info-left {
+//       width: 50%;
+//     }
+//     .customer-info-right {
+//       width: 50%;
+//     }
+//     .customer-info-row {
+//       margin: 0.5mm 0;
+//       line-height: 1.1;
+//     }
+//     .divider {
+//       border-top: 1px solid #AAAAAA;
+//       margin: 2mm 0;
+//     }
+//     .receipt-info {
+//       background-color: #f8f9fa;
+//       border: 1px solid #dee2e6;
+//       border-radius: 4px;
+//       padding: 8px;
+//       margin: 8px 0;
+//       font-size: 12px;
+//     }
+//     .payment-info-box {
+//       margin: 5px 0;
+//     }
+//     .signature-box {
+//       margin-top: 3mm;
+//       font-size: 8pt;
+//     }
+//     .signature-line {
+//       border-top: 1px dashed #000;
+//       width: 35mm;
+//       display: inline-block;
+//       margin: 0 3mm;
+//     }
+//     .cutting-line {
+//       border-top: 2px dashed #333;
+//       margin: 10mm 0;
+//       text-align: center;
+//       position: relative;
+//     }
+//     .cutting-line::before {
+//       content: "✂ Cut Here ✂";
+//       position: absolute;
+//       top: -10px;
+//       left: 50%;
+//       transform: translateX(-50%);
+//       background: white;
+//       padding: 0 10px;
+//       font-size: 10px;
+//       color: #666;
+//     }
+//     .note{
+//       padding:1px;
+//       margin:2px;
+//       font-size: 11px;
+//     }
+//     @page {
+//       size: A4;
+//       margin: 0;
+//     }
+//     @media print {
+//       body {
+//         padding: 5mm;
+//       }
+//       .receipt-copy {
+//         page-break-inside: avoid;
+//       }
+//     }
+//   </style>
+// </head>
+// <body>
+//   <div class="page">
+//     <div class="receipt-copy">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
+//           <div class="dealer-info">
+//             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//             Upnagar, Nashik Road, Nashik, 7498993672<br>
+//             GSTIN: ${data.branch?.gst_number || ''}<br>
+//             ${branchName}
+//           </div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//             ${
+//               qrCodeImage 
+//                 ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />`
+//                 : ''
+//             }
+//           </div>
+          
+//           <div style="margin-top: 3px; font-size: 11px;">Date: ${receiptDate}</div>
+//           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//           ${
+//             data.bookingType === 'SUBDEALER'
+//               ? `<div style="font-size: 10px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//           <div style="font-size: 9px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
+//               : ''
+//           }
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+
+//       <div class="receipt-info">
+//         <div><strong>Payment Receipt</strong></div>
+//         <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+
+//       <div class="customer-info-container">
+//         <div class="customer-info-left">
+//           <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//           <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//           <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka}</div>
+//           <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//           <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//         </div>
+//         <div class="customer-info-right">
+//           <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//           <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//           <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//           <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//           <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//         </div>
+//       </div>
+
+//       <div class="payment-info-box">
+//         <div class="receipt-info">
+//           <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//           <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//           <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//           <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//           <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//         </div>
+//       </div>
+
+//       <div class="note"><strong>Notes:</strong></div>
+//       <div class="divider"></div>
+
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Customer's Signature</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Sales Executive</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Manager</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Accountant</div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+
+//     <div class="cutting-line"></div>
+
+//     <div class="receipt-copy">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
+//           <div class="dealer-info">
+//             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//             Upnagar, Nashik Road, Nashik, 7498993672<br>
+//             GSTIN: ${data.branch?.gst_number || ''}<br>
+//             ${branchName}
+//           </div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//             ${
+//               qrCodeImage 
+//                 ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />`
+//                 : ''
+//             }
+//           </div>
+          
+//           <div style="margin-top: 3px; font-size: 11px;">Date: ${receiptDate}</div>
+//           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+
+//           ${
+//             data.bookingType === 'SUBDEALER'
+//               ? `<div style="font-size: 10px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+//           <div style="font-size: 9px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
+//               : ''
+//           }
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+
+//       <div class="receipt-info">
+//         <div><strong>Payment Receipt (DUPLICATE)</strong></div>
+//         <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//         <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//       </div>
+
+//       <div class="customer-info-container">
+//         <div class="customer-info-left">
+//           <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
+//           <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
+//           <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka}</div>
+//           <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
+//           <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+//         </div>
+//         <div class="customer-info-right">
+//           <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
+//           <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
+//           <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
+//           <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
+//           <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+//         </div>
+//       </div>
+
+//       <div class="payment-info-box">
+//         <div class="receipt-info">
+//           <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
+//           <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
+//           <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
+//           <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
+//           <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+//         </div>
+//       </div>
+
+//       <div class="note"><strong>Notes:</strong></div>
+//       <div class="divider"></div>
+
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Customer's Signature</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Sales Executive</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Manager</div>
+//           </div>
+//           <div style="text-align:center; width: 22%;">
+//             <div class="signature-line"></div>
+//             <div>Accountant</div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   </div>
+// </body>
+// </html>`;
+//     }
+//   };
+
+//   // ============ PAGINATION RENDER FUNCTION ============
+//   const renderPagination = (filteredDataArray) => {
+//     if (filteredDataArray.length <= recordsPerPage) {
+//       return null;
+//     }
+    
+//     return (
+//       <div className="mt-4">
+//         <div className="d-flex justify-content-between align-items-center mb-2">
+//           <div className="d-flex align-items-center">
+//             <CFormLabel className="me-2 mb-0">Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={recordsPerPage}
+//               onChange={handleRecordsPerPageChange}
+//               style={{ width: '80px' }}
+//               size="sm"
+//             >
+//               <option value={50}>50</option>
+//               <option value={100}>100</option>
+//               <option value={200}>200</option>
+//               <option value={500}>500</option>
+//             </CFormSelect>
+//           </div>
+//           <div className="text-muted">
+//             Showing {(currentPage - 1) * recordsPerPage + 1} to {Math.min(currentPage * recordsPerPage, filteredDataArray.length)} of {filteredDataArray.length} entries
+//           </div>
+//         </div>
+        
+//         <CPagination align="center" aria-label="Page navigation example">
+//           <CPaginationItem 
+//             aria-label="Previous" 
+//             onClick={() => handlePageChange(currentPage - 1)}
+//             disabled={currentPage === 1}
+//           >
+//             <CIcon icon={cilChevronLeft} />
+//           </CPaginationItem>
+          
+//           {currentPage > 3 && totalPages > 5 && (
+//             <>
+//               <CPaginationItem onClick={() => handlePageChange(1)}>
+//                 1
+//               </CPaginationItem>
+//               {currentPage > 4 && <CPaginationItem disabled>...</CPaginationItem>}
+//             </>
+//           )}
+          
+//           {displayedPages.map(page => (
+//             <CPaginationItem 
+//               key={page}
+//               onClick={() => handlePageChange(page)}
+//               active={currentPage === page}
+//             >
+//               {page}
+//             </CPaginationItem>
+//           ))}
+          
+//           {currentPage < totalPages - 2 && totalPages > 5 && (
+//             <>
+//               {currentPage < totalPages - 3 && <CPaginationItem disabled>...</CPaginationItem>}
+//               <CPaginationItem onClick={() => handlePageChange(totalPages)}>
+//                 {totalPages}
+//               </CPaginationItem>
+//             </>
+//           )}
+          
+//           <CPaginationItem 
+//             aria-label="Next" 
+//             onClick={() => handlePageChange(currentPage + 1)}
+//             disabled={currentPage === totalPages}
+//           >
+//             <CIcon icon={cilChevronRight} />
+//           </CPaginationItem>
+//         </CPagination>
+//       </div>
+//     );
+//   };
+
+//   // ============ RENDER TABLE FUNCTIONS ============
+// // In renderCustomerTable function, update the receipt handling section:
+
+// const renderCustomerTable = () => {
+//   if (!canViewCustomerTab) {
+//     return (
+//       <div className="text-center py-4">
+//         <CAlert color="warning">
+//           You do not have permission to view the Customer tab.
+//         </CAlert>
+//       </div>
+//     );
+//   }
+
+//   const canShowActionColumn = canCreateInCustomerTab || canPrintInCustomerTab;
+//   const canShowAddPayment = canCreateInCustomerTab;
+//   const canShowPrint = canPrintInCustomerTab;
+  
+//   const currentRecords = getCurrentRecords(filteredBookings);
+
+//   return (
+//     <>
+//       <div className="responsive-table-wrapper">
+//         <CTable striped bordered hover className='responsive-table'>
+//           <CTableHead>
+//             <CTableRow>
+//               <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//               <CTableHeaderCell scope="col">Receipts</CTableHeaderCell>
+//               {canShowActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//             </CTableRow>
+//           </CTableHead>
+//           <CTableBody>
+//             {currentRecords.length === 0 ? (
+//               <CTableRow>
+//                 <CTableDataCell colSpan={canShowActionColumn ? "12" : "11"} style={{ color: 'red', textAlign: 'center' }}>
+//                   {searchTerm ? 'No matching bookings found' : 'No booking available'}
+//                 </CTableDataCell>
+//               </CTableRow>
+//             ) : (
+//               currentRecords.map((booking, index) => {
+//                 const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                 const hasReceipts = receiptsFetched[booking._id] && bookingReceipts[booking._id]?.length > 0;
+//                 const isLoading = loadingReceipts[booking._id];
+//                 const receipts = bookingReceipts[booking._id] || [];
+                
+//                 // Filter receipts to show ONLY those with isRefund: false
+//                 const paymentReceipts = receipts.filter(receipt => receipt.isRefund === false);
+                
+//                 const sortedReceipts = [...paymentReceipts].sort((a, b) => {
+//                   const dateA = new Date(a.receiptDate || a.createdAt || 0);
+//                   const dateB = new Date(b.receiptDate || b.createdAt || 0);
+//                   return dateA - dateB;
+//                 });
+                
+//                 return (
+//                   <CTableRow key={booking._id || index}>
+//                     <CTableDataCell>{globalIndex}</CTableDataCell>
+//                     <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+//                     <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                     <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                     <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                     <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                     <CTableDataCell>
+//                       {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                         ? (booking.chassisNumber || '')
+//                         : ''
+//                       }
+//                     </CTableDataCell>
+//                     <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                     <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                     <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     <CTableDataCell>
+//                       {isLoading ? (
+//                         <CSpinner size="sm" color="info" />
+//                       ) : sortedReceipts.length > 0 ? (
+//                         <CDropdown>
+//                           <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canShowPrint}>
+//                             {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
+//                           </CDropdownToggle>
+//                           <CDropdownMenu>
+//                             {sortedReceipts.map((receipt, receiptIndex) => (
+//                               <CDropdownItem 
+//                                 key={receipt.id} 
+//                                 onClick={() => printReceiptInvoice(receipt.id, booking._id, receiptIndex)}
+//                               >
+//                                 <div className="d-flex align-items-center">
+//                                   <CIcon icon={cilPrint} className="me-2" />
+//                                   <div>
+//                                     <div><strong>Receipt #{receiptIndex + 1}</strong></div>
+//                                     <small>
+//                                       {receipt.display?.amount || `₹${receipt.amount}`} - 
+//                                       {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}
+//                                     </small>
+//                                   </div>
+//                                 </div>
+//                               </CDropdownItem>
+//                             ))}
+//                           </CDropdownMenu>
+//                         </CDropdown>
+//                       ) : receiptsFetched[booking._id] ? (
+//                         <span className="text-muted">No receipts</span>
+//                       ) : (
+//                         <CButton
+//                           size="sm"
+//                           color="light"
+//                           onClick={() => handleLoadReceipts(booking._id)}
+//                           disabled={isLoading}
+//                         >
+//                           <CIcon icon={cilCloudDownload} className="me-1" />
+//                           Load Receipts
+//                         </CButton>
+//                       )}
+//                     </CTableDataCell>
+
+//                     {canShowActionColumn && (
+//                       <CTableDataCell>
+//                         <CButton
+//                           size="sm"
+//                           className='option-button btn-sm'
+//                           onClick={(event) => handleMenuClick(event, booking._id)}
+//                           disabled={!canShowAddPayment}
+//                         >
+//                           <CIcon icon={cilSettings} />
+//                           Options
+//                         </CButton>
+
+//                         <Menu
+//                           id={`action-menu-${booking._id}`}
+//                           anchorEl={anchorEl}
+//                           open={menuBookingId === booking._id}
+//                           onClose={handleMenuClose}
+//                           anchorOrigin={{
+//                             vertical: 'bottom',
+//                             horizontal: 'right',
+//                           }}
+//                           transformOrigin={{
+//                             vertical: 'top',
+//                             horizontal: 'right',
+//                           }}
+//                         >
+//                           {canShowAddPayment && (
+//                             <MenuItem onClick={() => {
+//                               handleAddClick(booking);
+//                               handleMenuClose();
+//                             }}>
+//                               <CIcon icon={cilPlus} className="me-2" />
+//                               Add Payment
+//                             </MenuItem>
+//                           )}
+//                         </Menu>
+//                       </CTableDataCell>
+//                     )}
+//                   </CTableRow>
+//                 );
+//               })
+//             )}
+//           </CTableBody>
+//         </CTable>
+//       </div>
+//       {renderPagination(filteredBookings)}
+//     </>
+//   );
+// };
+  
+//   const renderPaymentVerificationTable = () => {
+//     if (!canViewPaymentVerificationTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Payment Verification tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredPendingLedgerEntries);
+//     const canShowActions = canCreateInPaymentVerificationTab || canRejectPayments;
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Bank Receipts</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+//                 {canShowActions && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan={canShowActions ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   const bookingId = entry.bookingDetails?._id || entry.booking;
+//                   const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+//                   const isLoading = loadingReceipts[bookingId];
+//                   const hasReceipts = receiptsFetched[bookingId] && bookingReceipts[bookingId]?.length > 0;
+//                   const receipts = bookingReceipts[bookingId] || [];
+                  
+//                   const bankReceipts = receipts.filter(receipt => 
+//                     receipt.paymentMode && 
+//                     receipt.paymentMode.toUpperCase() === 'BANK'
+//                   );
+                  
+//                   const sortedBankReceipts = [...bankReceipts].sort((a, b) => {
+//                     const dateA = new Date(a.receiptDate || a.createdAt || 0);
+//                     const dateB = new Date(b.receiptDate || b.createdAt || 0);
+//                     return dateA - dateB;
+//                   });
+                  
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : hasReceipts ? (
+//                           sortedBankReceipts.length > 0 ? (
+//                             <CDropdown>
+//                               <CDropdownToggle size="sm" color="info" variant="outline">
+//                                 {sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}
+//                               </CDropdownToggle>
+//                               <CDropdownMenu>
+//                                 {sortedBankReceipts.map((receipt, receiptIndex) => (
+//                                   <CDropdownItem 
+//                                     key={receipt.id} 
+//                                     onClick={() => printReceiptInvoice(receipt.id, bookingId, receiptIndex)}
+//                                     disabled={!canPrintInCustomerTab}
+//                                   >
+//                                     <div className="d-flex align-items-center">
+//                                       <CIcon icon={cilPrint} className="me-2" />
+//                                       <div>
+//                                         <div><strong>Bank Receipt #{receiptIndex + 1}</strong></div>
+//                                         <small>
+//                                           {receipt.display?.amount || `₹${receipt.amount}`} - 
+//                                           {receipt.display?.date || (receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('en-GB') : 'N/A')}
+//                                         </small>
+//                                       </div>
+//                                     </div>
+//                                   </CDropdownItem>
+//                                 ))}
+//                               </CDropdownMenu>
+//                             </CDropdown>
+//                           ) : (
+//                             <span className="text-muted">No bank receipts</span>
+//                           )
+//                         ) : receiptsFetched[bookingId] ? (
+//                           <span className="text-muted">No bank receipts</span>
+//                         ) : (
+//                           <CButton
+//                             size="sm"
+//                             color="light"
+//                             onClick={() => handleLoadReceipts(bookingId)}
+//                             disabled={isLoading}
+//                           >
+//                             <CIcon icon={cilCloudDownload} className="me-1" />
+//                             Load Receipts
+//                           </CButton>
+//                         )}
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
+//                           {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       {canShowActions && (
+//                         <CTableDataCell>
+//                           <div className="d-flex gap-2">
+//                             {entry.approvalStatus === 'Pending' && canCreateInPaymentVerificationTab && (
+//                               <CButton
+//                                 size="sm"
+//                                 className="action-btn"
+//                                 onClick={() => handleVerifyPayment(entry)}
+//                               >
+//                                 <CIcon icon={cilCheckCircle} className="me-1" />
+//                                 Verify
+//                               </CButton>
+//                             )}
+//                             {entry.approvalStatus === 'Pending' && canRejectPayments && (
+//                               <CButton
+//                                 size="sm"
+//                                 color="danger"
+//                                 variant="outline"
+//                                 onClick={() => handleRejectPayment(entry)}
+//                               >
+//                                 <CIcon icon={cilXCircle} className="me-1" />
+//                                 Reject
+//                               </CButton>
+//                             )}
+//                             {entry.approvalStatus !== 'Pending' && (
+//                               <span className="text-muted">Verified</span>
+//                             )}
+//                           </div>
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredPendingLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   const renderCompletePaymentTable = () => {
+//     if (!canViewCompletePaymentTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Complete Payment tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(completePayments);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching complete payments found' : 'No complete payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(completePayments)}
+//       </>
+//     );
+//   };
+
+//   const renderPendingListTable = () => {
+//     if (!canViewPendingListTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Pending List tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(pendingPayments);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+//                           ? (booking.chassisNumber || '')
+//                           : ''
+//                         }
+//                       </CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(pendingPayments)}
+//       </>
+//     );
+//   };
+
+//   const renderVerifiedListTable = () => {
+//     if (!canViewVerifiedListTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Verified List tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredVerifiedLedgerEntries);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Verified By</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching verified payments found' : 'No verified payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedByDetails?.name || ''}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredVerifiedLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   const renderRejectedListTable = () => {
+//     if (!canViewRejectedListTab) {
+//       return (
+//         <div className="text-center py-4">
+//           <CAlert color="warning">
+//             You do not have permission to view the Rejected List tab.
+//           </CAlert>
+//         </div>
+//       );
+//     }
+    
+//     const currentRecords = getCurrentRecords(filteredRejectedLedgerEntries);
+
+//     return (
+//       <>
+//         <div className="responsive-table-wrapper">
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Received By</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Rejection Reason</CTableHeaderCell>
+//                 <CTableHeaderCell scope="col">Rejected At</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+//                     {searchTerm ? 'No matching rejected payments found' : 'No rejected payments available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.booking?.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.booking?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>{entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
+//                       <CTableDataCell>{entry.receiptDate ? new Date(entry.receiptDate).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedBy?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color="danger" shape="rounded-pill">
+//                           {entry.rejectionReason || 'No reason provided'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       <CTableDataCell>{entry.approvedAt ? new Date(entry.approvedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(filteredRejectedLedgerEntries)}
+//       </>
+//     );
+//   };
+
+//   // ============ EARLY RETURNS FOR PERMISSIONS ============
+//   if (!canViewReceipts) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view Receipts.
+//       </div>
+//     );
+//   }
+
+//   if (!canViewAnyTab) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view any tabs in Receipts.
+//       </div>
+//     );
+//   }
+
+//   if (loading) {
+//     return (
+//       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+//         <CSpinner color="primary" />
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="alert alert-danger" role="alert">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   // ============ MAIN RENDER ============
+//   return (
+//     <div>
+//       <div className='title'>Receipt Management</div>
+      
+//       {successMessage && (
+//         <CAlert color="success" className="mb-3">
+//           {successMessage}
+//         </CAlert>
+//       )}
+      
+//       <CCard className='table-container mt-4'>
+//         <CCardBody>
+//           {canViewAnyTab ? (
+//             <>
+//               {canCreateReceipts && (
+//                 <div className="d-flex mb-3 gap-2">
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenExportModal}
+//                     title="Export Receipts Excel"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Export Receipts
+//                   </CButton>
+                  
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenVerifiedOutstandingModal}
+//                     title="Export Verified Outstanding Report"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Verified Receipts
+//                   </CButton>
+                  
+//                   <CButton 
+//                     size="sm" 
+//                     className="action-btn"
+//                     onClick={handleOpenPendingVerificationModal}
+//                     title="Export Pending Verification Report"
+//                   >
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+//                     Pending Verification
+//                   </CButton>
+//                 </div>
+//               )}
+
+//               <CNav variant="tabs" className="mb-3 border-bottom">
+//                 {canViewCustomerTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 0}
+//                       onClick={() => handleTabChange(0)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+//                         color: 'black',
+//                         borderBottom: 'none'
+//                       }}
+//                     >
+//                       Customer
+//                       {!canCreateInCustomerTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewPaymentVerificationTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 1}
+//                       onClick={() => handleTabChange(1)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Payment Verification
+//                       {!canCreateInPaymentVerificationTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewCompletePaymentTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 2}
+//                       onClick={() => handleTabChange(2)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 2 ? '4px solid #2759a2' : '3px solid transparent',
+//                           borderBottom: 'none',
+//                           color: 'black'
+//                       }}
+//                     >
+//                       Complete Payment
+//                       {!canCreateInCompletePaymentTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewPendingListTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 3}
+//                       onClick={() => handleTabChange(3)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 3 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Pending List
+//                       {!canCreateInPendingListTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewVerifiedListTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 4}
+//                       onClick={() => handleTabChange(4)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 4 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Verified List
+//                       {!canCreateInVerifiedListTab && (
+//                         <span className="ms-1 text-muted small">(View Only)</span>
+//                       )}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//                 {canViewRejectedListTab && (
+//                   <CNavItem>
+//                     <CNavLink
+//                       active={activeTab === 5}
+//                       onClick={() => handleTabChange(5)}
+//                       style={{ 
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === 5 ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       Rejected List
+//                       {/* <span className="ms-1 text-muted small">(View Only)</span> */}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 )}
+//               </CNav>
+
+//               <div className="d-flex justify-content-between mb-3">
+//                 <div></div>
+//                 <div className='d-flex'>
+//                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//                   <CFormInput
+//                     type="text"
+//                     style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+//                     className="d-inline-block square-search"
+//                     value={searchTerm}
+//                     onChange={(e) => handleSearch(e.target.value)}
+//                     disabled={!canViewAnyTab}
+//                   />
+//                 </div>
+//               </div>
+
+//               <CTabContent>
+//                 {canViewCustomerTab && (
+//                   <CTabPane visible={activeTab === 0}>
+//                     {renderCustomerTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewPaymentVerificationTab && (
+//                   <CTabPane visible={activeTab === 1}>
+//                     {renderPaymentVerificationTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewCompletePaymentTab && (
+//                   <CTabPane visible={activeTab === 2}>
+//                     {renderCompletePaymentTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewPendingListTab && (
+//                   <CTabPane visible={activeTab === 3}>
+//                     {renderPendingListTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewVerifiedListTab && (
+//                   <CTabPane visible={activeTab === 4}>
+//                     {renderVerifiedListTable()}
+//                   </CTabPane>
+//                 )}
+//                 {canViewRejectedListTab && (
+//                   <CTabPane visible={activeTab === 5}>
+//                     {renderRejectedListTable()}
+//                   </CTabPane>
+//                 )}
+//               </CTabContent>
+//             </>
+//           ) : (
+//             <CAlert color="warning" className="text-center">
+//               You don't have permission to view any tabs in Receipts.
+//             </CAlert>
+//           )}
+//         </CCardBody>
+//       </CCard>
+
+//       <ReceiptModal 
+//         show={showModal} 
+//         onClose={() => setShowModal(false)} 
+//         bookingData={selectedBooking} 
+//         canCreateReceipts={canCreateInCustomerTab}
+//         cashLocations={cashLocations}
+//         onPaymentSuccess={handlePaymentSuccess} 
+//       />
+
+//       {/* Reject Payment Modal */}
+//       <CModal alignment="center" visible={showRejectModal} onClose={() => setShowRejectModal(false)}>
+//         <CModalHeader>
+//           <CModalTitle>Reject Payment</CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {selectedRejectEntry && (
+//             <>
+//               <div className="mb-3">
+//                 <p><strong>Booking:</strong> {selectedRejectEntry.bookingDetails?.bookingNumber || selectedRejectEntry.booking}</p>
+//                 <p><strong>Amount:</strong> ₹{selectedRejectEntry.amount}</p>
+//                 <p><strong>Payment Mode:</strong> {selectedRejectEntry.paymentMode}</p>
+//               </div>
+//               <div className="mb-3">
+//                 <CFormLabel htmlFor="rejectionReason">Rejection Reason <span className="text-danger">*</span></CFormLabel>
+//                 <CFormInput
+//                   type="text"
+//                   id="rejectionReason"
+//                   value={rejectionReason}
+//                   onChange={(e) => setRejectionReason(e.target.value)}
+//                   placeholder="Enter reason for rejection"
+//                   disabled={rejectLoading}
+//                 />
+//               </div>
+//             </>
+//           )}
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton 
+//             color="secondary" 
+//             onClick={() => setShowRejectModal(false)}
+//             disabled={rejectLoading}
+//           >
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             color="danger"
+//             onClick={confirmRejectPayment}
+//             disabled={!rejectionReason.trim() || rejectLoading}
+//           >
+//             {rejectLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Rejecting...
+//               </>
+//             ) : 'Reject Payment'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Export Receipts Modal */}
+//       <CModal alignment="center" visible={openExportModal} onClose={handleCloseExportModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Receipts - Select Date Range
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {exportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {exportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={startDate}
+//                 onChange={(newValue) => {
+//                   setStartDate(newValue);
+//                   setExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={endDate}
+//                 onChange={(newValue) => {
+//                   setEndDate(newValue);
+//                   setExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={startDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={selectedBranchId}
+//             onChange={(e) => {
+//               setSelectedBranchId(e.target.value);
+//               setExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseExportModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handleExcelExport}
+//             disabled={!startDate || !endDate || !selectedBranchId || !canCreateReceipts || exportLoading}
+//           >
+//             {exportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Verified Outstanding Export Modal */}
+//       <CModal alignment="center" visible={openVerifiedOutstandingModal} onClose={handleCloseVerifiedOutstandingModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Verified Outstanding Report
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {verifiedOutstandingExportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {verifiedOutstandingExportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={verifiedOutstandingStartDate}
+//                 onChange={(newValue) => {
+//                   setVerifiedOutstandingStartDate(newValue);
+//                   setVerifiedOutstandingExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={verifiedOutstandingEndDate}
+//                 onChange={(newValue) => {
+//                   setVerifiedOutstandingEndDate(newValue);
+//                   setVerifiedOutstandingExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={verifiedOutstandingStartDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={verifiedOutstandingBranchId}
+//             onChange={(e) => {
+//               setVerifiedOutstandingBranchId(e.target.value);
+//               setVerifiedOutstandingExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseVerifiedOutstandingModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handleVerifiedOutstandingExport}
+//             disabled={!verifiedOutstandingStartDate || !verifiedOutstandingEndDate || !verifiedOutstandingBranchId || !canCreateReceipts || verifiedOutstandingExportLoading}
+//           >
+//             {verifiedOutstandingExportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Pending Verification Export Modal */}
+//       <CModal alignment="center" visible={openPendingVerificationModal} onClose={handleClosePendingVerificationModal}>
+//         <CModalHeader>
+//           <CModalTitle>
+//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+//             Export Pending Verification Report
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {pendingVerificationExportError && (
+//             <CAlert color="warning" className="mb-3">
+//               {pendingVerificationExportError}
+//             </CAlert>
+//           )}
+          
+//           <LocalizationProvider 
+//             dateAdapter={AdapterDateFns} 
+//             adapterLocale={enIN}
+//           >
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="Start Date"
+//                 value={pendingVerificationStartDate}
+//                 onChange={(newValue) => {
+//                   setPendingVerificationStartDate(newValue);
+//                   setPendingVerificationExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker
+//                 label="End Date"
+//                 value={pendingVerificationEndDate}
+//                 onChange={(newValue) => {
+//                   setPendingVerificationEndDate(newValue);
+//                   setPendingVerificationExportError('');
+//                 }}
+//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+//                 inputFormat="dd/MM/yyyy"
+//                 mask="__/__/____"
+//                 minDate={pendingVerificationStartDate}
+//                 views={['day', 'month', 'year']}
+//                 disabled={!canCreateReceipts}
+//               />
+//             </div>
+//           </LocalizationProvider>
+          
+//           <TextField
+//             select
+//             label="Select Branch"
+//             value={pendingVerificationBranchId}
+//             onChange={(e) => {
+//               setPendingVerificationBranchId(e.target.value);
+//               setPendingVerificationExportError('');
+//             }}
+//             fullWidth
+//             size="small"
+//             SelectProps={{ native: true }}
+//             disabled={!canCreateReceipts}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {hasAllBranchAccess && (
+//               <option value="all">All Branch</option>
+//             )}
+//             {branches.map((branch) => (
+//               <option key={branch._id} value={branch._id}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </TextField>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleClosePendingVerificationModal}>
+//             Cancel
+//           </CButton>
+//           <CButton 
+//             className="submit-button"
+//             onClick={handlePendingVerificationExport}
+//             disabled={!pendingVerificationStartDate || !pendingVerificationEndDate || !pendingVerificationBranchId || !canCreateReceipts || pendingVerificationExportLoading}
+//           >
+//             {pendingVerificationExportLoading ? (
+//               <>
+//                 <CSpinner size="sm" className="me-2" />
+//                 Exporting...
+//               </>
+//             ) : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+//     </div>
+//   );
+// }
+
+// export default Receipt;
+
+
+
+
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   CBadge, 
   CNav, 
@@ -2809,7 +13784,10 @@ import {
   CModalHeader,
   CModalTitle,
   CModalBody,
-  CModalFooter
+  CModalFooter,
+  CPagination,
+  CPaginationItem,
+  CFormSelect
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../utils/tableImports';
 import '../../css/invoice.css';
@@ -2817,7 +13795,7 @@ import '../../css/table.css';
 import ReceiptModal from './ReceiptModal';
 import { confirmVerify } from '../../utils/sweetAlerts';
 import CIcon from '@coreui/icons-react';
-import { cilCheckCircle, cilPrint, cilSettings, cilPlus } from '@coreui/icons';
+import { cilCheckCircle, cilPrint, cilSettings, cilPlus, cilChevronLeft, cilChevronRight, cilCloudDownload, cilXCircle } from '@coreui/icons';
 import { numberToWords } from '../../utils/numberToWords';
 import { Menu, MenuItem } from '@mui/material';
 import { useAuth } from '../../context/AuthContext';
@@ -2830,6 +13808,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import TextField from '@mui/material/TextField';
 import { enIN } from 'date-fns/locale';
+import tvsLogo from '../../assets/images/logo.png';
+import config from '../../config';
 
 import { 
   hasSafePagePermission,
@@ -2846,21 +13826,57 @@ function Receipt() {
   const [bookingsData, setBookingsData] = useState([]);
   const [pendingPaymentsData, setPendingPaymentsData] = useState([]);
   const [verifiedPaymentsData, setVerifiedPaymentsData] = useState([]);
+  const [rejectedPaymentsData, setRejectedPaymentsData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuBookingId, setMenuBookingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
-  const [bookingReceipts, setBookingReceipts] = useState({}); 
+  
+  // ============ REJECT MODAL STATES ============
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedRejectEntry, setSelectedRejectEntry] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectLoading, setRejectLoading] = useState(false);
+  
+  // ============ ON-DEMAND RECEIPTS FETCHING ============
+  const [bookingReceipts, setBookingReceipts] = useState({});
+  const [loadingReceipts, setLoadingReceipts] = useState({});
+  const [receiptsFetched, setReceiptsFetched] = useState({});
+  
   const [cashLocations, setCashLocations] = useState([]);
-   
+  
+  // ============ CLIENT-SIDE PAGINATION STATES ============
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(100);
+  const [totalPages, setTotalPages] = useState(1);
+  const [displayedPages, setDisplayedPages] = useState([]);
+  
+  // ============ EXPORT MODAL STATES ============
   const [openExportModal, setOpenExportModal] = useState(false);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState('');
+  
+  // ============ VERIFIED OUTSTANDING EXPORT STATES ============
+  const [openVerifiedOutstandingModal, setOpenVerifiedOutstandingModal] = useState(false);
+  const [verifiedOutstandingStartDate, setVerifiedOutstandingStartDate] = useState(null);
+  const [verifiedOutstandingEndDate, setVerifiedOutstandingEndDate] = useState(null);
+  const [verifiedOutstandingBranchId, setVerifiedOutstandingBranchId] = useState('');
+  const [verifiedOutstandingExportLoading, setVerifiedOutstandingExportLoading] = useState(false);
+  const [verifiedOutstandingExportError, setVerifiedOutstandingExportError] = useState('');
+  
+  // ============ PENDING VERIFICATION EXPORT STATES ============
+  const [openPendingVerificationModal, setOpenPendingVerificationModal] = useState(false);
+  const [pendingVerificationStartDate, setPendingVerificationStartDate] = useState(null);
+  const [pendingVerificationEndDate, setPendingVerificationEndDate] = useState(null);
+  const [pendingVerificationBranchId, setPendingVerificationBranchId] = useState('');
+  const [pendingVerificationExportLoading, setPendingVerificationExportLoading] = useState(false);
+  const [pendingVerificationExportError, setPendingVerificationExportError] = useState('');
+  
   const [branches, setBranches] = useState([]);
 
   const { permissions = [], user } = useAuth();
@@ -2917,6 +13933,15 @@ function Receipt() {
     PAGES.ACCOUNT.RECEIPTS, 
     ACTIONS.VIEW,
     TABS.RECEIPTS.VERIFIED_LIST
+  );
+  
+  // ============ REJECTED LIST TAB PERMISSIONS ============
+  const canViewRejectedListTab = hasSafePagePermission(
+    permissions, 
+    MODULES.ACCOUNT, 
+    PAGES.ACCOUNT.RECEIPTS, 
+    ACTIONS.VIEW,
+    TABS.RECEIPTS.REJECTED_LIST
   );
   
   const canCreateInCustomerTab = hasSafePagePermission(
@@ -2982,189 +14007,276 @@ function Receipt() {
     ACTIONS.VIEW,
     TABS.RECEIPTS.CUSTOMER
   ) || canViewCustomerTab; 
+  
+  const canRejectPayments = canUpdateInPaymentVerificationTab;
+  
   const canViewAnyTab = canViewCustomerTab || canViewPaymentVerificationTab || 
                        canViewCompletePaymentTab || canViewPendingListTab || 
-                       canViewVerifiedListTab;
+                       canViewVerifiedListTab || canViewRejectedListTab;
 
-  useEffect(() => {
-    if (!canViewAnyTab) {
-      return;
-    }
-    
-   
-    const visibleTabs = [];
-    if (canViewCustomerTab) visibleTabs.push(0);
-    if (canViewPaymentVerificationTab) visibleTabs.push(1);
-    if (canViewCompletePaymentTab) visibleTabs.push(2);
-    if (canViewPendingListTab) visibleTabs.push(3);
-    if (canViewVerifiedListTab) visibleTabs.push(4);
-    
-    if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
-      setActiveTab(visibleTabs[0]);
-    }
-  }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab, 
-      canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab, activeTab]);
-
-  useEffect(() => {
-    if (!canViewReceipts) {
-      showError('You do not have permission to view Receipts');
-      setLoading(false);
-      return;
-    }
-    
-    if (!canViewAnyTab) {
-      showError('You do not have permission to view any Receipt tabs');
-      setLoading(false);
-      return;
-    }
-    
-    fetchData();
-    fetchPendingPayments();
-    fetchVerifiedPayments();
-    fetchCashLocations();
-    fetchBranches();
-  }, [canViewReceipts, canViewAnyTab]);
-
-  useEffect(() => {
-  
-    window.printReceiptCallback = printReceiptInvoice;
-    
-    return () => {
-      delete window.printReceiptCallback;
-    };
-  }, []);
-
-  const fetchCashLocations = async () => {
+  // ============ LEDGER VIEW FUNCTION ============
+  const openLedgerInNewTab = async (bookingId, bookingNumber) => {
     try {
-      const endpoints = [
-        // '/cash-locations',
-        // '/cashlocations',
-        '/settings/cash-locations',
-        '/master/cash-locations'
-      ];
-      
-      for (const endpoint of endpoints) {
-        try {
-          const response = await axiosInstance.get(endpoint);
-          if (response.data.success && response.data.data) {
-            setCashLocations(response.data.data);
-            console.log('Cash locations loaded:', response.data.data);
-            return;
-          }
-        } catch (err) {
-          console.log(`Endpoint ${endpoint} not available`);
-        }
+      const res = await axiosInstance.get(`/ledger/report/${bookingId}`);
+      const ledgerData = res.data.data;
+      const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${bookingId}`;
+
+      // First filter approved entries
+      let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
+
+      // Filter entries based on chassis allocation status
+      let filteredEntries = approvedEntries;
+      if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
+        // Show all entries where debit field exists (debit entries)
+        filteredEntries = approvedEntries.filter((entry) => 
+          entry.debit !== undefined && entry.debit !== null
+        );
       }
-      console.warn('Could not fetch cash locations from any endpoint');
-      setCashLocations([]);
-    } catch (error) {
-      console.error('Error fetching cash locations:', error);
-      setCashLocations([]);
-    }
-  };
 
-  const fetchBranches = async () => {
-    try {
-      const response = await axiosInstance.get('/branches');
-      setBranches(response.data.data);
-    } catch (error) {
-      const message = showError(error);
+      // Recalculate totals based on filtered entries
+      const totals = {
+        totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
+        totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
+        finalBalance: filteredEntries.reduce((sum, entry) => {
+          const credit = entry.credit || 0;
+          const debit = entry.debit || 0;
+          return sum + (debit - credit);
+        }, 0)
+      };
+
+      const win = window.open('', '_blank');
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Customer Ledger - ${bookingNumber}</title>
+            <style>
+              @page {
+                size: A4;
+                margin: 15mm 10mm;
+              }
+              body {
+                font-family: Arial;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                font-size: 14px;
+                line-height: 1.3;
+                font-family: Courier New;
+              }
+              .container {
+                width: 190mm;
+                margin: 0 auto;
+                padding: 5mm;
+              }
+              .header-container {
+                display: flex;
+                justify-content:space-between;
+                margin-bottom: 3mm;
+              }
+              .header-text{
+                font-size:20px;
+                font-weight:bold;
+              }
+              .logo {
+                width: 30mm;
+                height: auto;
+                margin-right: 5mm;
+              } 
+              .header {
+                text-align: left;
+              }
+              .divider {
+                border-top: 2px solid #AAAAAA;
+                margin: 3mm 0;
+              }
+              .header h2 {
+                margin: 2mm 0;
+                font-size: 12pt;
+                font-weight: bold;
+              }
+              .header div {
+                font-size: 14px;
+              }
+              .customer-info {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 2mm;
+                margin-bottom: 5mm;
+                font-size: 14px;
+              }
+              .customer-info div {
+                display: flex;
+              }
+              .customer-info strong {
+                min-width: 30mm;
+                display: inline-block;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 5mm;
+                font-size: 14px;
+                page-break-inside: avoid;
+              }
+              th, td {
+                border: 1px solid #000;
+                padding: 2mm;
+                text-align: left;
+              }
+              th {
+                background-color: #f0f0f0;
+                font-weight: bold;
+              }
+              .footer {
+                margin-top: 10mm;
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-end;
+                font-size: 14px;
+              }
+              .footer-left {
+                text-align: left;
+              }
+              .footer-right {
+                text-align: right;
+              }
+              .qr-code {
+                width: 35mm;
+                height: 35mm;
+              }
+              .text-right {
+                text-align: right;
+              }
+              .text-left {
+                text-align: left;
+              }
+              .text-center {
+                text-align: center;
+              }
+              .note {
+                font-style: italic;
+                color: #666;
+                margin-bottom: 5mm;
+                text-align: center;
+              }
+              @media print {
+                body {
+                  width: 190mm;
+                  height: 277mm;
+                }
+                .no-print {
+                  display: none;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header-container">
+                <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+                <div class="header-text"> GANDHI TVS</div>
+              </div>
+              <div class="header">
+                <div>
+                  Authorised Main Dealer: TVS Motor Company Ltd.<br>
+                  Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+                  Upnagar, Nashik Road, Nashik - 422101<br>
+                  Phone: 7498903672
+                </div>
+              </div>
+              <div class="divider"></div>
+              <div class="customer-info">
+                <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
+                <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+                <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
+                <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
+                <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? (ledgerData.vehicleDetails?.chassisNo || 'N/A') : '-'}</div>
+                <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || 'N/A'}</div>
+                <div><strong>Chassis Allocated:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? 'Yes' : 'No'}</div>
+                <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || 'N/A'}</div>
+                <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || 'N/A'}</div>
+              </div>
+              
+              <table>
+                <thead>
+                  <tr>
+                    <th width="15%">Date</th>
+                    <th width="35%">Description</th>
+                    <th width="15%">Receipt/VC No</th>
+                    <th width="10%" class="text-right">Credit (₹)</th>
+                    <th width="10%" class="text-right">Debit (₹)</th>
+                    <th width="15%" class="text-right">Balance (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${
+                    filteredEntries.length > 0
+                      ? filteredEntries
+                          .map(
+                            (entry) => `
+                              <tr>
+                                <td>${entry.date || 'N/A'}</td>
+                                <td>${entry.description || 'N/A'}</td>
+                                <td>${entry.receiptNo || 'N/A'}</td>
+                                <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN') : '-'}</td>
+                                <td class="text-right">${entry.debit !== undefined ? entry.debit.toLocaleString('en-IN') : '-'}</td>
+                                <td class="text-right">${entry.balance ? entry.balance.toLocaleString('en-IN') : '-'}</td>
+                              </tr>
+                            `
+                          )
+                          .join('')
+                      : `<tr><td colspan="6" class="text-center">No approved entries found</td></tr>`
+                  }
+                  ${
+                    filteredEntries.length > 0
+                      ? `<tr>
+                          <td colspan="3" class="text-left"><strong>Total</strong></td>
+                          <td class="text-right"><strong>${totals.totalCredit.toLocaleString('en-IN')}</strong></td>
+                          <td class="text-right"><strong>${totals.totalDebit.toLocaleString('en-IN')}</strong></td>
+                          <td class="text-right"><strong>${totals.finalBalance.toLocaleString('en-IN')}</strong></td>
+                        </tr>`
+                      : ''
+                  }
+                </tbody>
+              </table>
+              
+              <div class="footer">
+                <div class="footer-left">
+                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" 
+                       class="qr-code" 
+                       alt="QR Code" />
+                </div>
+                <div class="footer-right">
+                  <p>For, Gandhi TVS</p>
+                  <p>Authorised Signatory</p>
+                </div>
+              </div>
+            </div>
+            
+            <script>
+              window.onload = function() {
+                setTimeout(() => {
+                  window.print();
+                }, 300);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      
+      win.document.close();
+      
+    } catch (err) {
+      console.error('Error fetching ledger:', err);
+      const message = showError(err);
       if (message) {
         setError(message);
       }
     }
   };
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const response = await axiosInstance.get(`/bookings`);
-      const branchBookings = response.data.data.bookings.filter((booking) => booking.bookingType === 'BRANCH');
-      setBookingsData(branchBookings);
-      
-      const receiptsPromises = branchBookings.map(async (booking) => {
-        try {
-          const receiptsResponse = await axiosInstance.get(`/ledger/booking/${booking._id}`);
-          return {
-            bookingId: booking._id,
-            receipts: receiptsResponse.data.data.allReceipts || []
-          };
-        } catch (error) {
-          console.error(`Error fetching receipts for booking ${booking._id}:`, error);
-          return {
-            bookingId: booking._id,
-            receipts: []
-          };
-        }
-      });
-      
-      const receiptsResults = await Promise.all(receiptsPromises);
-      const receiptsMap = {};
-      receiptsResults.forEach(result => {
-        receiptsMap[result.bookingId] = result.receipts;
-      });
-      
-      setBookingReceipts(receiptsMap);
-    } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPendingPayments = async () => {
-    if (!canViewReceipts || !canViewPaymentVerificationTab) {
-      return;
-    }
-    
-    try {
-      const response = await axiosInstance.get(`/ledger/pending`);
-      setPendingPaymentsData(response.data.data.ledgerEntries);
-    } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }
-    }
-  };
-
-  const fetchVerifiedPayments = async () => {
-    if (!canViewReceipts || !canViewVerifiedListTab) {
-      return;
-    }
-    
-    try {
-      const response = await axiosInstance.get(`/payment/verified/bank/ledger`);
-      setVerifiedPaymentsData(response.data.data.ledgerEntries);
-    } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }
-    }
-  };
-
-  // Format date to DD-MM-YYYY for display
-  const formatDateDDMMYYYY = (date) => {
-    if (!date) return '';
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
-  };
-
-  const formatDateForAPI = (date) => {
-    if (!date) return '';
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-
+  // ============ FILTER FUNCTIONS - DEFINED BEFORE useEffect ============
   const filterData = (data, searchTerm) => {
     if (!searchTerm) return data;
 
@@ -3195,53 +14307,403 @@ function Receipt() {
     );
   };
 
-
   const filterPendingPayments = (data, searchTerm) => {
-  if (!searchTerm) return data;
-  
-  const term = searchTerm.toLowerCase();
-  
-  return data.filter((entry) => {
-    return (
-      (entry.bookingDetails?.bookingNumber || '').toLowerCase().includes(term) ||
-      (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
-      (entry.paymentMode || '').toLowerCase().includes(term) ||
-      String(entry.amount || '').includes(term) ||
-      (entry.transactionReference || '').toLowerCase().includes(term)
-    );
-  });
-};
+    if (!searchTerm) return data;
+    
+    const term = searchTerm.toLowerCase();
+    
+    return data.filter((entry) => {
+      return (
+        (entry.bookingDetails?.bookingNumber || '').toLowerCase().includes(term) ||
+        (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+        (entry.paymentMode || '').toLowerCase().includes(term) ||
+        String(entry.amount || '').includes(term) ||
+        (entry.transactionReference || '').toLowerCase().includes(term)
+      );
+    });
+  };
 
-const filterVerifiedPayments = (data, searchTerm) => {
-  if (!searchTerm) return data;
-  
-  const term = searchTerm.toLowerCase();
-  
-  return data.filter((entry) => {
-    return (
-      (entry.booking || '').toLowerCase().includes(term) ||
-      (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
-      (entry.paymentMode || '').toLowerCase().includes(term) ||
-      String(entry.amount || '').includes(term) ||
-      (entry.transactionReference || '').toLowerCase().includes(term) ||
-      (entry.receivedByDetails?.name || '').toLowerCase().includes(term)
-    );
-  });
-};
-  const filteredBookings = filterData(bookingsData, searchTerm);
-  const completePayments = filterData(
-    bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) === 0),
-    searchTerm
+  const filterVerifiedPayments = (data, searchTerm) => {
+    if (!searchTerm) return data;
+    
+    const term = searchTerm.toLowerCase();
+    
+    return data.filter((entry) => {
+      return (
+        (entry.booking || '').toLowerCase().includes(term) ||
+        (entry.bookingDetails?.customerDetails?.name || '').toLowerCase().includes(term) ||
+        (entry.paymentMode || '').toLowerCase().includes(term) ||
+        String(entry.amount || '').includes(term) ||
+        (entry.transactionReference || '').toLowerCase().includes(term) ||
+        (entry.receivedByDetails?.name || '').toLowerCase().includes(term)
+      );
+    });
+  };
+
+  const filterRejectedPayments = (data, searchTerm) => {
+    if (!searchTerm) return data;
+    
+    const term = searchTerm.toLowerCase();
+    
+    return data.filter((entry) => {
+      return (
+        (entry.booking?.bookingNumber || '').toLowerCase().includes(term) ||
+        (entry.booking?.customerDetails?.name || '').toLowerCase().includes(term) ||
+        (entry.paymentMode || '').toLowerCase().includes(term) ||
+        String(entry.amount || '').includes(term) ||
+        (entry.transactionReference || '').toLowerCase().includes(term) ||
+        (entry.receivedBy?.name || '').toLowerCase().includes(term) ||
+        (entry.rejectionReason || '').toLowerCase().includes(term)
+      );
+    });
+  };
+
+  // ============ DERIVED DATA - USE useMemo FOR PERFORMANCE ============
+  const filteredBookings = useMemo(() => 
+    filterData(bookingsData, searchTerm), 
+    [bookingsData, searchTerm]
   );
-  const pendingPayments = filterData(
-    bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) !== 0),
-    searchTerm
+  
+  const completePayments = useMemo(() => 
+    filterData(
+      bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) === 0),
+      searchTerm
+    ),
+    [bookingsData, searchTerm]
   );
-  // const filteredPendingLedgerEntries = filterData(pendingPaymentsData, searchTerm);
+  
+  const pendingPayments = useMemo(() => 
+    filterData(
+      bookingsData.filter((booking) => parseFloat(booking.balanceAmount || 0) !== 0),
+      searchTerm
+    ),
+    [bookingsData, searchTerm]
+  );
 
-  const filteredPendingLedgerEntries = filterPendingPayments(pendingPaymentsData, searchTerm);
-  const filteredVerifiedLedgerEntries = filterVerifiedPayments(verifiedPaymentsData, searchTerm);
+  const filteredPendingLedgerEntries = useMemo(() => 
+    filterPendingPayments(pendingPaymentsData, searchTerm),
+    [pendingPaymentsData, searchTerm]
+  );
+  
+  const filteredVerifiedLedgerEntries = useMemo(() => 
+    filterVerifiedPayments(verifiedPaymentsData, searchTerm),
+    [verifiedPaymentsData, searchTerm]
+  );
 
+  const filteredRejectedLedgerEntries = useMemo(() => 
+    filterRejectedPayments(rejectedPaymentsData, searchTerm),
+    [rejectedPaymentsData, searchTerm]
+  );
+
+  // ============ EFFECTS - NOW SAFE TO USE filteredBookings ============
+  useEffect(() => {
+    if (!canViewAnyTab) {
+      return;
+    }
+    
+    const visibleTabs = [];
+    if (canViewCustomerTab) visibleTabs.push(0);
+    if (canViewPaymentVerificationTab) visibleTabs.push(1);
+    if (canViewCompletePaymentTab) visibleTabs.push(2);
+    if (canViewPendingListTab) visibleTabs.push(3);
+    if (canViewVerifiedListTab) visibleTabs.push(4);
+    if (canViewRejectedListTab) visibleTabs.push(5);
+    
+    if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+      setActiveTab(visibleTabs[0]);
+    }
+  }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab, 
+      canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab, 
+      canViewRejectedListTab, activeTab]);
+
+  useEffect(() => {
+    if (!canViewReceipts) {
+      showError('You do not have permission to view Receipts');
+      setLoading(false);
+      return;
+    }
+    
+    if (!canViewAnyTab) {
+      showError('You do not have permission to view any Receipt tabs');
+      setLoading(false);
+      return;
+    }
+    
+    fetchAllData();
+    fetchCashLocations();
+    fetchBranches();
+  }, [canViewReceipts, canViewAnyTab]);
+
+  useEffect(() => {
+    window.printReceiptCallback = printReceiptInvoice;
+    
+    return () => {
+      delete window.printReceiptCallback;
+    };
+  }, []);
+
+  // ============ PAGINATION CALCULATION ============
+  const calculatePagination = useCallback((filteredDataLength) => {
+    const total = filteredDataLength;
+    const totalPagesCount = Math.ceil(total / recordsPerPage);
+    setTotalPages(totalPagesCount);
+    
+    const pages = [];
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPagesCount, currentPage + 2);
+    
+    if (currentPage <= 3) {
+      endPage = Math.min(5, totalPagesCount);
+    }
+    
+    if (currentPage >= totalPagesCount - 2) {
+      startPage = Math.max(1, totalPagesCount - 4);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    setDisplayedPages(pages);
+  }, [currentPage, recordsPerPage]);
+
+  useEffect(() => {
+    const getFilteredDataLength = () => {
+      switch(activeTab) {
+        case 0: return filteredBookings.length;
+        case 1: return filteredPendingLedgerEntries.length;
+        case 2: return completePayments.length;
+        case 3: return pendingPayments.length;
+        case 4: return filteredVerifiedLedgerEntries.length;
+        case 5: return filteredRejectedLedgerEntries.length;
+        default: return 0;
+      }
+    };
+    
+    calculatePagination(getFilteredDataLength());
+  }, [filteredBookings, filteredPendingLedgerEntries, completePayments, 
+      pendingPayments, filteredVerifiedLedgerEntries, filteredRejectedLedgerEntries, 
+      activeTab, calculatePagination]);
+
+  // ============ GET CURRENT RECORDS FOR PAGE ============
+  const getCurrentRecords = useCallback((filteredDataArray) => {
+    const indexOfLastRecord = currentPage * recordsPerPage;
+    const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+    return filteredDataArray.slice(indexOfFirstRecord, indexOfLastRecord);
+  }, [currentPage, recordsPerPage]);
+
+  // ============ HANDLE PAGE CHANGE ============
+  const handlePageChange = (pageNumber) => {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // ============ HANDLE RECORDS PER PAGE CHANGE ============
+  const handleRecordsPerPageChange = (e) => {
+    setRecordsPerPage(parseInt(e.target.value, 10));
+    setCurrentPage(1);
+  };
+
+  // ============ FETCH FUNCTIONS ============
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([
+        fetchData(),
+        fetchPendingPayments(),
+        fetchVerifiedPayments(),
+        fetchRejectedPayments()
+      ]);
+      setLoading(false);
+    } catch (error) {
+      console.log('Error fetching data', error);
+      setError(error.message);
+      setLoading(false);
+    }
+  };
+
+  // ============ ON-DEMAND RECEIPTS FETCHING ============
+ const fetchReceiptsForBooking = useCallback(async (bookingId) => {
+  if (receiptsFetched[bookingId] || loadingReceipts[bookingId]) {
+    return;
+  }
+
+  try {
+    setLoadingReceipts(prev => ({ ...prev, [bookingId]: true }));
+    
+    const receiptsResponse = await axiosInstance.get(`/ledger/booking/${bookingId}`);
+    const receipts = receiptsResponse.data.data.allReceipts || [];
+    
+    // Store all receipts (both payment and refund)
+    setBookingReceipts(prev => ({
+      ...prev,
+      [bookingId]: receipts
+    }));
+    
+    setReceiptsFetched(prev => ({
+      ...prev,
+      [bookingId]: true
+    }));
+  } catch (error) {
+    console.error(`Error fetching receipts for booking ${bookingId}:`, error);
+    setBookingReceipts(prev => ({
+      ...prev,
+      [bookingId]: []
+    }));
+    setReceiptsFetched(prev => ({
+      ...prev,
+      [bookingId]: true
+    }));
+  } finally {
+    setLoadingReceipts(prev => ({ ...prev, [bookingId]: false }));
+  }
+}, []);
+
+  // Pre-fetch receipts for visible bookings only
+  useEffect(() => {
+    if (activeTab === 0 && filteredBookings.length > 0) {
+      const currentRecords = getCurrentRecords(filteredBookings);
+      currentRecords.forEach(booking => {
+        if (!receiptsFetched[booking._id] && !loadingReceipts[booking._id]) {
+          fetchReceiptsForBooking(booking._id);
+        }
+      });
+    }
+  }, [activeTab, currentPage, filteredBookings, getCurrentRecords, 
+      receiptsFetched, loadingReceipts, fetchReceiptsForBooking]);
+
+  const fetchCashLocations = async () => {
+    try {
+      const endpoints = [
+        '/settings/cash-locations',
+        '/master/cash-locations'
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          const response = await axiosInstance.get(endpoint);
+          if (response.data.success && response.data.data) {
+            setCashLocations(response.data.data);
+            return;
+          }
+        } catch (err) {
+          console.log(`Endpoint ${endpoint} not available`);
+        }
+      }
+      console.warn('Could not fetch cash locations from any endpoint');
+      setCashLocations([]);
+    } catch (error) {
+      console.error('Error fetching cash locations:', error);
+      setCashLocations([]);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const response = await axiosInstance.get('/branches');
+      setBranches(response.data.data);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      const params = {
+        bookingType: 'BRANCH'
+      };
+      
+      const response = await axiosInstance.get(`/bookings`, { params });
+      const branchBookings = response.data.data.bookings;
+      setBookingsData(branchBookings);
+      
+      const initialReceiptsMap = {};
+      branchBookings.forEach(booking => {
+        initialReceiptsMap[booking._id] = [];
+      });
+      setBookingReceipts(initialReceiptsMap);
+      
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    }
+  };
+
+  const fetchPendingPayments = async () => {
+    if (!canViewReceipts || !canViewPaymentVerificationTab) {
+      return;
+    }
+    
+    try {
+      const params = {};
+      const response = await axiosInstance.get(`/ledger/pending`, { params });
+      setPendingPaymentsData(response.data.data.ledgerEntries || []);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    }
+  };
+
+  const fetchVerifiedPayments = async () => {
+    if (!canViewReceipts || !canViewVerifiedListTab) {
+      return;
+    }
+    
+    try {
+      const params = {};
+      const response = await axiosInstance.get(`/payment/verified/bank/ledger`, { params });
+      setVerifiedPaymentsData(response.data.data.ledgerEntries || []);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    }
+  };
+
+  const fetchRejectedPayments = async () => {
+    if (!canViewReceipts || !canViewRejectedListTab) {
+      return;
+    }
+    
+    try {
+      const params = {};
+      const response = await axiosInstance.get(`/ledger/rejected`, { params });
+      setRejectedPaymentsData(response.data.data.docs || []);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    }
+  };
+
+  // Format date functions
+  const formatDateDDMMYYYY = (date) => {
+    if (!date) return '';
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
+  const formatDateForAPI = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // ============ EVENT HANDLERS ============
   const handleMenuClick = (event, bookingId) => {
     setAnchorEl(event.currentTarget);
     setMenuBookingId(bookingId);
@@ -3253,7 +14715,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
   };
 
   const handleAddClick = (booking) => {
-    // Check CREATE permission for the CUSTOMER tab
     if (!canCreateInCustomerTab) {
       showError('You do not have permission to add payments');
       return;
@@ -3265,7 +14726,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
   };
 
   const handleVerifyPayment = async (entry) => {
-    // Check CREATE permission for the PAYMENT VERIFICATION tab
     if (!canCreateInPaymentVerificationTab) {
       showError('You do not have permission to verify payments');
       return;
@@ -3282,14 +14742,67 @@ const filterVerifiedPayments = (data, searchTerm) => {
         await axiosInstance.patch(`/ledger/approve/${entry._id}`, {
           remark: ''
         });
+        
         setSuccessMessage('Payment verified successfully!');
+        
+        // Get the booking ID and number
+        const bookingId = entry.bookingDetails?._id || entry.booking;
+        const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+        
+        // Refresh data
+        await fetchAllData();
+        
+        // Open ledger in new tab
+        await openLedgerInNewTab(bookingId, bookingNumber);
+        
         setTimeout(() => setSuccessMessage(''), 3000);
-        fetchPendingPayments();
-        fetchVerifiedPayments();
       }
     } catch (error) {
       console.error('Error verifying payment:', error);
       showError(error, 'Failed to verify payment');
+    }
+  };
+
+  const handleRejectPayment = (entry) => {
+    if (!canRejectPayments) {
+      showError('You do not have permission to reject payments');
+      return;
+    }
+    
+    setSelectedRejectEntry(entry);
+    setRejectionReason('');
+    setShowRejectModal(true);
+  };
+
+  const confirmRejectPayment = async () => {
+    if (!rejectionReason.trim()) {
+      showError('Please provide a rejection reason');
+      return;
+    }
+
+    try {
+      setRejectLoading(true);
+      
+      await axiosInstance.patch(`/ledger/${selectedRejectEntry._id}/reject`, {
+        rejectionReason: rejectionReason.trim()
+      });
+      
+      setSuccessMessage('Payment rejected successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+      
+      // Close modal and reset
+      setShowRejectModal(false);
+      setSelectedRejectEntry(null);
+      setRejectionReason('');
+      
+      // Refresh data
+      fetchAllData();
+      
+    } catch (error) {
+      console.error('Error rejecting payment:', error);
+      showError(error, 'Failed to reject payment');
+    } finally {
+      setRejectLoading(false);
     }
   };
 
@@ -3300,9 +14813,16 @@ const filterVerifiedPayments = (data, searchTerm) => {
     
     setActiveTab(tab);
     setSearchTerm('');
+    setCurrentPage(1);
   };
+  
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+  
+  // ============ EXPORT HANDLERS ============
   const handleOpenExportModal = () => {
-
     if (!canCreateReceipts) {
       showError('You do not have permission to export data');
       return;
@@ -3320,14 +14840,46 @@ const filterVerifiedPayments = (data, searchTerm) => {
     setExportError('');
   };
 
+  const handleOpenVerifiedOutstandingModal = () => {
+    if (!canCreateReceipts) {
+      showError('You do not have permission to export data');
+      return;
+    }
+    setOpenVerifiedOutstandingModal(true);
+    setVerifiedOutstandingExportError('');
+  };
+
+  const handleCloseVerifiedOutstandingModal = () => {
+    setOpenVerifiedOutstandingModal(false);
+    setVerifiedOutstandingStartDate(null);
+    setVerifiedOutstandingEndDate(null);
+    setVerifiedOutstandingBranchId('');
+    setVerifiedOutstandingExportError('');
+  };
+
+  const handleOpenPendingVerificationModal = () => {
+    if (!canCreateReceipts) {
+      showError('You do not have permission to export data');
+      return;
+    }
+    setOpenPendingVerificationModal(true);
+    setPendingVerificationExportError('');
+  };
+
+  const handleClosePendingVerificationModal = () => {
+    setOpenPendingVerificationModal(false);
+    setPendingVerificationStartDate(null);
+    setPendingVerificationEndDate(null);
+    setPendingVerificationBranchId('');
+    setPendingVerificationExportError('');
+  };
+
   const handleExcelExport = async () => {
-    // Check CREATE permission for Excel export
     if (!canCreateReceipts) {
       showError('You do not have permission to export data');
       return;
     }
     
-    // Clear previous errors
     setExportError('');
     
     if (!selectedBranchId) {
@@ -3351,7 +14903,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
       const formattedStartDate = formatDateForAPI(startDate);
       const formattedEndDate = formatDateForAPI(endDate);
 
-      // Build query parameters for the receipts API
       const params = new URLSearchParams({
         branchId: selectedBranchId,
         startDate: formattedStartDate,
@@ -3359,17 +14910,14 @@ const filterVerifiedPayments = (data, searchTerm) => {
         format: 'excel'
       });
 
-      // Use the provided API endpoint for receipts
       const response = await axiosInstance.get(
         `/reports/receipts?${params.toString()}`,
         { responseType: 'blob' }
       );
 
-      // Check content type to see if it's an error
       const contentType = response.headers['content-type'];
       
       if (contentType && contentType.includes('application/json')) {
-        // It's a JSON error response, parse it
         const text = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
@@ -3379,7 +14927,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
         
         const errorData = JSON.parse(text);
         
-        // Show the exact error message from API
         if (!errorData.success && errorData.message) {
           setExportError(errorData.message);
           Swal.fire({
@@ -3391,7 +14938,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
         }
       }
 
-      // Handle Excel file download
       const blob = new Blob([response.data], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
@@ -3400,7 +14946,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
       const link = document.createElement('a');
       link.href = url;
       
-      // Generate filename with DD-MM-YYYY format
       const branchName = branches.find(b => b._id === selectedBranchId)?.name || 'Branch';
       const startDateStr = formatDateDDMMYYYY(startDate);
       const endDateStr = formatDateDDMMYYYY(endDate);
@@ -3413,7 +14958,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
       
       window.URL.revokeObjectURL(url);
       
-      // Show success message
       Swal.fire({
         toast: true,
         position: 'top-end',
@@ -3429,7 +14973,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
     } catch (error) {
       console.error('Error exporting report:', error);
       
-      // For blob errors, we need to read the blob
       if (error.response && error.response.data instanceof Blob) {
         try {
           const text = await new Promise((resolve, reject) => {
@@ -3441,7 +14984,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
           
           const errorData = JSON.parse(text);
           
-          // Show the exact error message from API
           if (errorData.message) {
             setExportError(errorData.message);
             Swal.fire({
@@ -3460,7 +15002,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
           });
         }
       } else if (error.response?.data?.message) {
-        // Regular error with message in response
         setExportError(error.response.data.message);
         Swal.fire({
           icon: 'error',
@@ -3468,7 +15009,6 @@ const filterVerifiedPayments = (data, searchTerm) => {
           text: error.response.data.message,
         });
       } else if (error.message) {
-        // Network or other errors
         setExportError(error.message);
         Swal.fire({
           icon: 'error',
@@ -3488,72 +15028,392 @@ const filterVerifiedPayments = (data, searchTerm) => {
       setExportLoading(false);
     }
   };
- 
 
-  const handlePaymentSuccess = () => {
-  fetchData();
-  fetchPendingPayments();
-  fetchVerifiedPayments();
-};
-
-const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
-  if (!canPrintInCustomerTab) {
-    showError('You do not have permission to print invoices');
+ const handleVerifiedOutstandingExport = async () => {
+  if (!canCreateReceipts) {
+    showError('You do not have permission to export data');
     return;
   }
   
+  setVerifiedOutstandingExportError('');
+  
+  if (!verifiedOutstandingBranchId) {
+    setVerifiedOutstandingExportError('Please select a branch');
+    return;
+  }
+
+  if (!verifiedOutstandingStartDate || !verifiedOutstandingEndDate) {
+    setVerifiedOutstandingExportError('Please select both start and end dates');
+    return;
+  }
+
+  if (verifiedOutstandingStartDate > verifiedOutstandingEndDate) {
+    setVerifiedOutstandingExportError('Start date cannot be after end date');
+    return;
+  }
+
   try {
-    const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
-    const receiptData = receiptResponse.data.data.receipt;
+    setVerifiedOutstandingExportLoading(true);
     
-    const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
-    const bookingData = bookingResponse.data.data.bookingDetails;
-    const finalStatus = bookingResponse.data.data.finalStatus || '';
-    const qrCodeData = receiptData.qrCodeData || {};
-    
-    const subsidyAmount = bookingData.subsidyAmount || 0;
-    const isEV = bookingData.model?.type === 'EV';
-    
-    // Get booking totals
-    const priceComponents = bookingData.priceComponents || [];
-    const filteredPriceComponents = priceComponents.filter((comp) => {
-      const headerKey = comp.header?.header_key?.toUpperCase() || '';
+    const formattedStartDate = formatDateForAPI(verifiedOutstandingStartDate);
+    const formattedEndDate = formatDateForAPI(verifiedOutstandingEndDate);
 
-      const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
-      const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
-      const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
-
-      return !(isInsurance || isRTO || isHypothecation);
+    const params = new URLSearchParams({
+      branchId: verifiedOutstandingBranchId,
+      startDate: formattedStartDate,
+      endDate: formattedEndDate,
+      format: 'excel'
     });
 
-    const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+    // CHANGED: Updated from /reports/outstanding/verified to /reports/pending/recipt
+    const response = await axiosInstance.get(
+      `/reports/pending/recipt?${params.toString()}`,
+      { responseType: 'blob' }
+    );
+
+    const contentType = response.headers['content-type'];
     
-    const findComponentByKeywords = (keywords) => {
-      return priceComponents.find((comp) => {
-        const headerKey = comp.header?.header_key?.toUpperCase() || '';
-        return keywords.some((keyword) => headerKey.includes(keyword));
+    if (contentType && contentType.includes('application/json')) {
+      const text = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(response.data);
       });
-    };
+      
+      const errorData = JSON.parse(text);
+      
+      if (!errorData.success && errorData.message) {
+        setVerifiedOutstandingExportError(errorData.message);
+        Swal.fire({
+          icon: 'error',
+          title: 'Export Failed',
+          text: errorData.message,
+        });
+        return;
+      }
+    }
 
-    const insuranceComponent = findComponentByKeywords([
-      'INSURANCE', 'INSURCANCE', 'INSURANCE CHARGES', 'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
-    ]);
-    const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
-
-    const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
-    const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
-
-    const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
-    const hpCharges = hpComponent ? hpComponent.originalValue : bookingData.hypothecationCharges || 0;
-
-    const totalB = insuranceCharges + rtoCharges + hpCharges;
+    const blob = new Blob([response.data], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    });
     
-    // Apply subsidy only for EV models
-    const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
-    const grandTotal = totalA + totalB - subsidyDisplay;
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const branchName = branches.find(b => b._id === verifiedOutstandingBranchId)?.name || 'Branch';
+    const startDateStr = formatDateDDMMYYYY(verifiedOutstandingStartDate);
+    const endDateStr = formatDateDDMMYYYY(verifiedOutstandingEndDate);
+    
+    // You might want to update the filename to reflect the new API
+    const fileName = `Pending_Receipts_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+    link.setAttribute('download', fileName);
+    
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    
+    window.URL.revokeObjectURL(url);
+    
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: 'Pending Receipts Report exported successfully!',
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    });
 
-    // Create QR code text data
-    const qrText = `GANDHI MOTORS PVT LTD
+    handleCloseVerifiedOutstandingModal();
+    
+  } catch (error) {
+    console.error('Error exporting pending receipts report:', error);
+    
+    if (error.response && error.response.data instanceof Blob) {
+      try {
+        const text = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsText(error.response.data);
+        });
+        
+        const errorData = JSON.parse(text);
+        
+        if (errorData.message) {
+          setVerifiedOutstandingExportError(errorData.message);
+          Swal.fire({
+            icon: 'error',
+            title: 'Export Failed',
+            text: errorData.message,
+          });
+        }
+      } catch (parseError) {
+        console.error('Error parsing error response:', parseError);
+        setVerifiedOutstandingExportError('Failed to export report');
+        Swal.fire({
+          icon: 'error',
+          title: 'Export Failed',
+          text: 'Failed to export report',
+        });
+      }
+    } else if (error.response?.data?.message) {
+      setVerifiedOutstandingExportError(error.response.data.message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Export Failed',
+        text: error.response.data.message,
+      });
+    } else if (error.message) {
+      setVerifiedOutstandingExportError(error.message);
+      Swal.fire({
+        icon: 'error',
+        title: 'Export Failed',
+        text: error.message,
+      });
+    } else {
+      setVerifiedOutstandingExportError('Failed to export report');
+      Swal.fire({
+        icon: 'error',
+        title: 'Export Failed',
+        text: 'Failed to export report',
+      });
+    }
+    
+  } finally {
+    setVerifiedOutstandingExportLoading(false);
+  }
+};
+
+  const handlePendingVerificationExport = async () => {
+    if (!canCreateReceipts) {
+      showError('You do not have permission to export data');
+      return;
+    }
+    
+    setPendingVerificationExportError('');
+    
+    if (!pendingVerificationBranchId) {
+      setPendingVerificationExportError('Please select a branch');
+      return;
+    }
+
+    if (!pendingVerificationStartDate || !pendingVerificationEndDate) {
+      setPendingVerificationExportError('Please select both start and end dates');
+      return;
+    }
+
+    if (pendingVerificationStartDate > pendingVerificationEndDate) {
+      setPendingVerificationExportError('Start date cannot be after end date');
+      return;
+    }
+
+    try {
+      setPendingVerificationExportLoading(true);
+      
+      const formattedStartDate = formatDateForAPI(pendingVerificationStartDate);
+      const formattedEndDate = formatDateForAPI(pendingVerificationEndDate);
+
+      const params = new URLSearchParams({
+        branchId: pendingVerificationBranchId,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        format: 'excel'
+      });
+
+      const response = await axiosInstance.get(
+        `/reports/outstanding/pending-verification?${params.toString()}`,
+        { responseType: 'blob' }
+      );
+
+      const contentType = response.headers['content-type'];
+      
+      if (contentType && contentType.includes('application/json')) {
+        const text = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsText(response.data);
+        });
+        
+        const errorData = JSON.parse(text);
+        
+        if (!errorData.success && errorData.message) {
+          setPendingVerificationExportError(errorData.message);
+          Swal.fire({
+            icon: 'error',
+            title: 'Export Failed',
+            text: errorData.message,
+          });
+          return;
+        }
+      }
+
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const branchName = branches.find(b => b._id === pendingVerificationBranchId)?.name || 'Branch';
+      const startDateStr = formatDateDDMMYYYY(pendingVerificationStartDate);
+      const endDateStr = formatDateDDMMYYYY(pendingVerificationEndDate);
+      const fileName = `Pending_Verification_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+      link.setAttribute('download', fileName);
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      window.URL.revokeObjectURL(url);
+      
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Pending Verification Report exported successfully!',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      });
+
+      handleClosePendingVerificationModal();
+      
+    } catch (error) {
+      console.error('Error exporting pending verification report:', error);
+      
+      if (error.response && error.response.data instanceof Blob) {
+        try {
+          const text = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsText(error.response.data);
+          });
+          
+          const errorData = JSON.parse(text);
+          
+          if (errorData.message) {
+            setPendingVerificationExportError(errorData.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Export Failed',
+              text: errorData.message,
+            });
+          }
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+          setPendingVerificationExportError('Failed to export report');
+          Swal.fire({
+            icon: 'error',
+            title: 'Export Failed',
+            text: 'Failed to export report',
+          });
+        }
+      } else if (error.response?.data?.message) {
+        setPendingVerificationExportError(error.response.data.message);
+        Swal.fire({
+          icon: 'error',
+          title: 'Export Failed',
+          text: error.response.data.message,
+        });
+      } else if (error.message) {
+        setPendingVerificationExportError(error.message);
+        Swal.fire({
+          icon: 'error',
+          title: 'Export Failed',
+          text: error.message,
+        });
+      } else {
+        setPendingVerificationExportError('Failed to export report');
+        Swal.fire({
+          icon: 'error',
+          title: 'Export Failed',
+          text: 'Failed to export report',
+        });
+      }
+      
+    } finally {
+      setPendingVerificationExportLoading(false);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    fetchAllData();
+    if (selectedBooking) {
+      setReceiptsFetched(prev => ({
+        ...prev,
+        [selectedBooking._id]: false
+      }));
+      setBookingReceipts(prev => ({
+        ...prev,
+        [selectedBooking._id]: []
+      }));
+    }
+  };
+
+  const handleLoadReceipts = (bookingId) => {
+    fetchReceiptsForBooking(bookingId);
+  };
+
+  // ============ PRINT FUNCTIONS ============
+  const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
+    if (!canPrintInCustomerTab) {
+      showError('You do not have permission to print invoices');
+      return;
+    }
+    
+    try {
+      const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
+      const receiptData = receiptResponse.data.data.receipt;
+      
+      const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
+      const bookingData = bookingResponse.data.data.bookingDetails;
+      const finalStatus = bookingResponse.data.data.finalStatus || '';
+      const qrCodeData = receiptData.qrCodeData || {};
+      
+      const subsidyAmount = bookingData.subsidyAmount || 0;
+      const isEV = bookingData.model?.type === 'EV';
+      
+      const priceComponents = bookingData.priceComponents || [];
+      const filteredPriceComponents = priceComponents.filter((comp) => {
+        const headerKey = comp.header?.header_key?.toUpperCase() || '';
+        const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+        const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+        const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+        return !(isInsurance || isRTO || isHypothecation);
+      });
+
+      const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+      
+      const findComponentByKeywords = (keywords) => {
+        return priceComponents.find((comp) => {
+          const headerKey = comp.header?.header_key?.toUpperCase() || '';
+          return keywords.some((keyword) => headerKey.includes(keyword));
+        });
+      };
+
+      const insuranceComponent = findComponentByKeywords([
+        'INSURANCE', 'INSURCANCE', 'INSURANCE CHARGES', 'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+      ]);
+      const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+      const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+      const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+      const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+      const hpCharges = hpComponent ? hpComponent.originalValue : bookingData.hypothecationCharges || 0;
+
+      const totalB = insuranceCharges + rtoCharges + hpCharges;
+      
+      const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+      const grandTotal = totalA + totalB - subsidyDisplay;
+
+      const qrText = `GANDHI MOTORS PVT LTD
 Booking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}
 Customer: ${qrCodeData.customerName || bookingData.customerDetails?.name}
 Mobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}
@@ -3569,204 +15429,192 @@ Payment Mode: ${receiptData.paymentMode || 'Cash'}
 Reference: ${receiptData.transactionReference || 'N/A'}
 Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
 
-    // Generate QR code as data URL
-    let qrCodeImage = '';
-    try {
-      qrCodeImage = await QRCode.toDataURL(qrText, {
-        width: 250,
-        margin: 3,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        },
-        errorCorrectionLevel: 'H'
-      });
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-      qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
-        <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250">
-          <rect width="250" height="250" fill="white"/>
-          <rect x="20" y="20" width="210" height="210" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
-          <text x="125" y="115" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">QR CODE</text>
-          <text x="125" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">Receipt: ${receiptData.receiptNumber}</text>
-          <text x="125" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Scan for details</text>
-        </svg>
-      `);
-    }
-
-    const transformedData = {
-      bookingNumber: bookingData.bookingNumber,
-      bookingType: bookingData.bookingType,
-      rto: bookingData.rto,
-      hpa: bookingData.hpa,
-      hypothecationCharges: bookingData.hypothecationCharges || 0,
-      gstin: bookingData.gstin || '',
-      model: {
-        model_name: bookingData.model?.model_name || 'N/A',
-        type: bookingData.model?.type || 'N/A' // Add type to model
-      },
-      chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
-      engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
-      batteryNumber: bookingData.vehicle?.batteryNumber || '',
-      keyNumber: bookingData.vehicle?.keyNumber || '',
-      color: {
-        name: bookingData.color?.name || ''
-      },
-      customerDetails: {
-        name: bookingData.customerDetails?.name || 'N/A',
-        address: bookingData.customerDetails?.address || '',
-        taluka: bookingData.customerDetails?.taluka || '',
-        district: bookingData.customerDetails?.district || '',
-        pincode: bookingData.customerDetails?.pincode || '',
-        mobile1: bookingData.customerDetails?.mobile1 || '',
-        dob: bookingData.customerDetails?.dob || '',
-        aadharNumber: bookingData.customerDetails?.aadharNumber || ''
-      },
-      exchange: bookingData.exchange,
-      exchangeDetails: bookingData.exchangeDetails,
-      payment: {
-        type: bookingData.payment?.type || 'CASH',
-        financer: bookingData.payment?.financer
-      },
-      salesExecutive: bookingData.salesExecutive,
-      branch: {
-        gst_number: bookingData.branch?.gst_number || ''
-      },
-      accessories: bookingData.accessories || [],
-      priceComponents: bookingData.priceComponents || [],
-      subdealer: bookingData.subdealer || '',
-      receivedAmount: bookingData.receivedAmount || 0,
-      finalStatus: finalStatus || '',
-      recentPayment: receiptData,
-      qrCodeData: qrCodeData,
-      qrCodeImage: qrCodeImage,
-      qrCodeText: qrText,
-      recentPaymentAmount: receiptData.amount || 0,
-      bookingDetails: bookingData, // Pass entire booking details
-      subsidyAmount: subsidyAmount, // Add subsidy amount
-      calculatedTotals: {
-        totalA,
-        totalB,
-        grandTotal,
-        insuranceCharges,
-        rtoCharges,
-        hpCharges,
-        subsidyDisplay
-      }
-    };
-
-    // Check if this is the first receipt or subsequent receipts
-    const isFirstReceipt = receiptIndex === 0;
-    
-    const invoiceHTML = generateReceiptInvoiceHTML(transformedData, isFirstReceipt);
-
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(invoiceHTML);
-    printWindow.document.close();
-    
-    printWindow.onload = function() {
-      printWindow.focus();
-      printWindow.print();
-    };
-    
-  } catch (error) {
-    console.error('Error generating receipt invoice:', error);
-    showError(error, 'Failed to generate receipt invoice');
-  }
-};
-  const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
-
-
-    const exchangeBrokerName = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
-    const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
-
-    const currentDate = new Date().toLocaleDateString('en-GB');
-    const receiptDate = data.recentPayment?.receiptDate 
-      ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB')
-      : currentDate;
-    
-    const recentPaymentAmount = data.recentPaymentAmount || 0;
-    const recentPaymentAmountRef = data.recentPayment?.transactionReference || "-";
-    const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
-    const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
-    const receiptNumber = data.recentPayment?.receiptNumber || "-";
-
-    // Get QR code data
-    const qrCodeData = data.qrCodeData || {};
-    const qrCodeImage = data.qrCodeImage || '';
-    
-     const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
-     const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
-  
-    if (isFirstReceipt) {
-      const filteredPriceComponents = data.priceComponents.filter((comp) => {
-        const headerKey = comp.header?.header_key?.toUpperCase() || '';
-
-        const isInsurance = /INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
-        const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
-        const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
-
-        return !(isInsurance || isRTO || isHypothecation);
-      });
-
-      const priceComponentsWithGST = filteredPriceComponents.map((component) => {
-        const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
-
-        const unitCost = component.originalValue;
-        // const discount = component.discountedValue < component.originalValue ? component.originalValue - component.discountedValue : 0;
-        const discount = 0;
-        // const lineTotal = component.discountedValue;
-         const lineTotal = component.originalValue;
-        const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
-
-        const totalGST = lineTotal - taxableValue;
-        const cgstAmount = totalGST / 2;
-        const sgstAmount = totalGST / 2;
-        const gstAmount = cgstAmount + sgstAmount;
-
-        return {
-          ...component,
-          unitCost,
-          taxableValue,
-          cgstAmount,
-          sgstAmount,
-          gstAmount,
-          gstRatePercentage: gstRatePercentage,
-          discount,
-          lineTotal
-        };
-      });
-      
- 
-
-      const findComponentByKeywords = (keywords) => {
-        return data.priceComponents.find((comp) => {
-          const headerKey = comp.header?.header_key?.toUpperCase() || '';
-          return keywords.some((keyword) => headerKey.includes(keyword));
+      let qrCodeImage = '';
+      try {
+        qrCodeImage = await QRCode.toDataURL(qrText, {
+          width: 250,
+          margin: 3,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          },
+          errorCorrectionLevel: 'H'
         });
+      } catch (error) {
+        console.error('Error generating QR code:', error);
+        qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250">
+            <rect width="250" height="250" fill="white"/>
+            <rect x="20" y="20" width="210" height="210" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+            <text x="125" y="115" text-anchor="middle" font-family="Arial" font-size="16" fill="#333">QR CODE</text>
+            <text x="125" y="140" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">Receipt: ${receiptData.receiptNumber}</text>
+            <text x="125" y="160" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">Scan for details</text>
+          </svg>
+        `);
+      }
+
+      const transformedData = {
+        bookingNumber: bookingData.bookingNumber,
+        bookingType: bookingData.bookingType,
+        rto: bookingData.rto,
+        hpa: bookingData.hpa,
+        hypothecationCharges: bookingData.hypothecationCharges || 0,
+        gstin: bookingData.gstin || '',
+        model: {
+          model_name: bookingData.model?.model_name || 'N/A',
+          type: bookingData.model?.type || 'N/A'
+        },
+        chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
+        engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
+        batteryNumber: bookingData.vehicle?.batteryNumber || '',
+        keyNumber: bookingData.vehicle?.keyNumber || '',
+        color: {
+          name: bookingData.color?.name || ''
+        },
+        customerDetails: {
+          name: bookingData.customerDetails?.name || 'N/A',
+          address: bookingData.customerDetails?.address || '',
+          taluka: bookingData.customerDetails?.taluka || '',
+          district: bookingData.customerDetails?.district || '',
+          pincode: bookingData.customerDetails?.pincode || '',
+          mobile1: bookingData.customerDetails?.mobile1 || '',
+          dob: bookingData.customerDetails?.dob || '',
+          aadharNumber: bookingData.customerDetails?.aadharNumber || ''
+        },
+        exchange: bookingData.exchange,
+        exchangeDetails: bookingData.exchangeDetails,
+        payment: {
+          type: bookingData.payment?.type || 'CASH',
+          financer: bookingData.payment?.financer
+        },
+        salesExecutive: bookingData.salesExecutive,
+        branch: {
+          gst_number: bookingData.branch?.gst_number || ''
+        },
+        accessories: bookingData.accessories || [],
+        priceComponents: bookingData.priceComponents || [],
+        subdealer: bookingData.subdealer || '',
+        receivedAmount: bookingData.receivedAmount || 0,
+        finalStatus: finalStatus || '',
+        recentPayment: receiptData,
+        qrCodeData: qrCodeData,
+        qrCodeImage: qrCodeImage,
+        qrCodeText: qrText,
+        recentPaymentAmount: receiptData.amount || 0,
+        bookingDetails: bookingData,
+        subsidyAmount: subsidyAmount,
+        calculatedTotals: {
+          totalA,
+          totalB,
+          grandTotal,
+          insuranceCharges,
+          rtoCharges,
+          hpCharges,
+          subsidyDisplay
+        }
       };
 
-      const insuranceComponent = findComponentByKeywords([
-        'INSURANCE',
-        'INSURCANCE',
-        'INSURANCE CHARGES',
-        'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
-      ]);
-      const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+      const isFirstReceipt = receiptIndex === 0;
+      
+      const invoiceHTML = generateReceiptInvoiceHTML(transformedData, isFirstReceipt);
 
-      const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
-      const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(invoiceHTML);
+      printWindow.document.close();
+      
+      printWindow.onload = function() {
+        printWindow.focus();
+        printWindow.print();
+      };
+      
+    } catch (error) {
+      console.error('Error generating receipt invoice:', error);
+      showError(error, 'Failed to generate receipt invoice');
+    }
+  };
+  
+const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+  const exchangeBrokerName = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+  const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
 
-      const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
-      const hpCharges = hpComponent ? hpComponent.originalValue : data.hypothecationCharges || 0;
+  const currentDate = new Date().toLocaleDateString('en-GB');
+  const receiptDate = data.recentPayment?.receiptDate 
+    ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB')
+    : currentDate;
+  
+  const recentPaymentAmount = data.recentPaymentAmount || 0;
+  const recentPaymentAmountRef = data.recentPayment?.transactionReference || "-";
+  const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+  const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+  const receiptNumber = data.recentPayment?.receiptNumber || "-";
 
-      const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
-      const totalB = insuranceCharges + rtoCharges + hpCharges;
-      const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
-      const grandTotal = totalA + totalB;
+  const qrCodeImage = data.qrCodeImage || '';
+  
+  const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+  const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
+  
+  // Get branch name dynamically from the data
+  const branchName = data.branch?.name || data.bookingDetails?.branch?.name || 'GANDHI TVS';
 
-      return `
-<!DOCTYPE html>
+  if (isFirstReceipt) {
+    const filteredPriceComponents = data.priceComponents.filter((comp) => {
+      const headerKey = comp.header?.header_key?.toUpperCase() || '';
+      const isInsurance = /INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey);
+      const isRTO = /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey);
+      const isHypothecation = /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey);
+      return !(isInsurance || isRTO || isHypothecation);
+    });
+
+    const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+      const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+      const unitCost = component.originalValue;
+      const discount = 0;
+      const lineTotal = component.originalValue;
+      const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+      const totalGST = lineTotal - taxableValue;
+      const cgstAmount = totalGST / 2;
+      const sgstAmount = totalGST / 2;
+      
+      return {
+        ...component,
+        unitCost,
+        taxableValue,
+        cgstAmount,
+        sgstAmount,
+        gstAmount: cgstAmount + sgstAmount,
+        gstRatePercentage,
+        discount,
+        lineTotal
+      };
+    });
+    
+    const findComponentByKeywords = (keywords) => {
+      return data.priceComponents.find((comp) => {
+        const headerKey = comp.header?.header_key?.toUpperCase() || '';
+        return keywords.some((keyword) => headerKey.includes(keyword));
+      });
+    };
+
+    const insuranceComponent = findComponentByKeywords([
+      'INSURANCE',
+      'INSURCANCE',
+      'INSURANCE CHARGES',
+      'INSURANCE 4+1 INCLUSIVE OF ADDITIONAL COVERS'
+    ]);
+    const insuranceCharges = insuranceComponent ? insuranceComponent.originalValue : 0;
+
+    const rtoComponent = findComponentByKeywords(['RTO', 'RTO TAX & REGISTRATION CHARGES']);
+    const rtoCharges = rtoComponent ? rtoComponent.originalValue : 0;
+
+    const hpComponent = findComponentByKeywords(['HYPOTHECATION', 'HPA', 'HPA (if applicable)']);
+    const hpCharges = hpComponent ? hpComponent.originalValue : data.hypothecationCharges || 0;
+
+    const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+    const totalB = insuranceCharges + rtoCharges + hpCharges;
+    const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+    const grandTotal = totalA + totalB - subsidyDisplay;
+
+    return `<!DOCTYPE html>
 <html>
 <head>
   <title>Payment Receipt - ${receiptNumber}</title>
@@ -3775,7 +15623,7 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
       font-family: "Courier New", Courier, monospace;
       margin: 0;
       padding: 10mm;
-      font-size: 14px;
+      font-size: 15px;
       color: #555555;
     }
     .page {
@@ -3788,6 +15636,7 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
       justify-content: space-between;
       margin-bottom: 2mm;
       align-items: flex-start;
+      font-size: 14px;
     }
     .header-left {
       width: 60%;
@@ -3808,23 +15657,22 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
       width: 100%;
     }
     .logo {
-      height: 80px;
+      height: 81px;
     }
     .qr-code-extra-big {
-      width: 150px;
-      height: 150px;
+      width: 151px;
+      height: 151px;
       border: 1px solid #ccc;
     }
     .dealer-info {
       text-align: left;
-      font-size: 14px;
+      font-size: 15px;
       line-height: 1.2;
     }
     .customer-info-container {
       display: flex;
-      font-size:14px;
+      font-size: 15px;
     }
-
     .customer-info-left {
       width: 50%;
     }
@@ -3835,10 +15683,14 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
       margin: 1mm 0;
       line-height: 1.2;
     }
+    /* Style for values in customer info */
+    .customer-info-row .value {
+      font-weight: 700;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 9pt;
+      font-size: 10pt;
       margin: 2mm 0;
     }
     th, td {
@@ -3848,7 +15700,7 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
     }
     .no-border { 
       border: none !important; 
-      font-size:14px;
+      font-size: 15px;
     }
     .text-right { text-align: right; }
     .text-center { text-align: center; }
@@ -3860,17 +15712,17 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
       margin: 1mm 0;
     }
     .signature-box {
-      margin-top: 5mm;
-      font-size: 9pt;
+      margin-top: 6mm;
+      font-size: 10pt;
     }
     .signature-line {
       border-top: 1px dashed #000;
-      width: 40mm;
+      width: 41mm;
       display: inline-block;
       margin: 0 5mm;
     }
     .footer {
-      font-size: 8pt;
+      font-size: 9pt;
       text-align: justify;
       line-height: 1.2;
       margin-top: 3mm;
@@ -3895,64 +15747,96 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
     .broker-info{
       display:flex;
       justify-content:space-between;
-      padding:1px;
+      padding:2px;
     }
     .status-box {
       background-color: #e8f5e8;
       border: 2px solid #c3e6c3;
       border-radius: 4px;
-      padding: 15px;
-      margin: 10px 0;
+      padding: 16px;
+      margin: 11px 0;
       text-align: center;
       font-weight: bold;
-      font-size: 20px;
+      font-size: 21px;
       color: #495057;
     }
     .payment-info-title {
       font-weight: bold;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
       color: #155724;
-      font-size: 16px;
+      font-size: 17px;
     }
     .amount-in-words {
       font-style: italic;
-      margin-top: 5px;
+      margin-top: 6px;
       color: #333;
-      padding: 5px;
+      padding: 6px;
     }
-
+    .amount-in-words .value {
+      font-weight: 700;
+      font-style: normal;
+    }
     .note{
-      padding:1px;
-      margin:2px;
+      padding:2px;
+      margin:3px;
     }
-    
-    /* QR Code at bottom - even bigger */
+    .note .value {
+      font-weight: 700;
+    }
     .qr-bottom-section {
-      margin-top: 10mm;
+      margin-top: 11mm;
       text-align: center;
       page-break-inside: avoid;
     }
     .qr-bottom-big {
-      width: 180px;
-      height: 180px;
+      width: 181px;
+      height: 181px;
       border: 1px solid #ccc;
       margin: 0 auto;
       display: block;
     }
     .qr-scan-text {
-      font-size: 10pt;
+      font-size: 11pt;
       color: #777;
       margin-top: 3mm;
     }
-    
     .receipt-info {
       background-color: #f8f9fa;
       border: 1px solid #dee2e6;
       border-radius: 4px;
-      padding: 10px;
-      margin: 10px 0;
+      padding: 11px;
+      margin: 11px 0;
     }
-    
+    .receipt-info-row {
+      margin: 2px 0;
+    }
+    .receipt-info-row .value {
+      font-weight: 700;
+    }
+    /* 2-column grid for payment info - TIGHT SPACING */
+    .payment-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 15px;
+      padding: 3px;
+      font-size: 14px;
+    }
+    .payment-grid-item {
+      padding: 2px 0;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .payment-grid-item strong {
+      font-weight: 600;
+      margin-right: 5px;
+      min-width: 105px;
+      display: inline-block;
+    }
+    .payment-grid-item .value {
+      font-weight: 700;
+    }
     @page {
       size: A4;
       margin: 0;
@@ -3969,20 +15853,18 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
 </head>
 <body>
   <div class="page">
-    <!-- Header Section with QR Code -->
     <div class="header-container">
       <div class="header-left">
-        <h2 style="margin:3;font-size:15pt;">GANDHI MOTORS PVT LTD</h2>
+        <h2 style="margin:3;font-size:16pt;">GANDHI MOTORS PVT LTD</h2>
         <div class="dealer-info">
           Authorized Main Dealer: TVS Motor Company Ltd.<br>
           Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
           Upnagar, Nashik Road, Nashik, 7498993672<br>
           GSTIN: ${data.branch?.gst_number || ''}<br>
-          GANDHI TVS PIMPALGAON
+          ${branchName}
         </div>
       </div>
       <div class="header-right">
-        <!-- Logo and QR code side by side -->
         <div class="logo-qr-container">
           <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
           ${
@@ -3992,61 +15874,62 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
           }
         </div>
         
-        <div style="margin-top: 5px; font-size: 13px;">Date: ${receiptDate}</div>
-        <div style="margin-top: 5px; font-size: 13px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+        <div style="margin-top: 6px; font-size: 14px;">Date: ${receiptDate}</div>
+        <div style="margin-top: 6px; font-size: 14px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
 
         ${
           data.bookingType === 'SUBDEALER'
-            ? `<div style="font-size: 12px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
-        <div style="font-size: 11px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>
-          
-          `
+            ? `<div style="font-size: 13px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+        <div style="font-size: 12px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>
+        `
             : ''
         }
-        
       </div>
     </div>
     <div class="divider"></div>
 
-    <!-- Receipt Information -->
-    <div class="receipt-info">
-      <div><strong>Payment Receipt</strong></div>
-      <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
-      <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+    <div class="receipt-info" style="padding: 8px;">
+      <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
+      <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+      <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
     </div>
 
-    <!-- Customer Information -->
     <div class="customer-info-container">
       <div class="customer-info-left">
-        <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
-        <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
-        <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</div>
-        <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
-          <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+        <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+        <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+        <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</span></div>
+        <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+        <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
       </div>
       <div class="customer-info-right">
-        <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
-       <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
-        <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
-         <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
-        <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+        <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+        <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+        <div class="customer-info-row"><strong>Payment Type:</strong> <span class="value">${data.payment?.type || 'CASH'}</span></div>
+        <div class="customer-info-row"><strong>Financer:</strong> <span class="value">${data.payment?.financer?.name || ''}</span></div>
+        <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
       </div>
     </div>
 
-    <!-- Received Amount Section -->
     <div class="payment-info-box">
-      <div class="receipt-info">
-        <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
-        <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
-        <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
-        <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
-        <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+      <div class="receipt-info" style="padding: 4px;">
+        <!-- Payment Information Grid - 2 columns (3 rows) with TIGHT spacing and bold values -->
+        <div class="payment-grid-2col">
+          <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${data.recentPaymentAmount.toFixed(2)}</span></div>
+          <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+          
+          <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+          <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+          
+          <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+         
+        </div>
       </div>
       <div class="amount-in-words">
-        <strong>(In Words):</strong> ${recentPaymentAmountInWords} Only
+        <strong>(In Words):</strong> <span class="value">${recentPaymentAmountInWords} Only</span>
       </div>
     </div>
-    <!-- Price Breakdown Table -->
+
     <table>
       <tr>
         <th style="width:25%">Particulars</th>
@@ -4081,8 +15964,7 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
         .join('')}
     </table>
 
-    <!-- Totals Section - No Borders -->
-     <table class="totals-table">
+    <table class="totals-table">
       <tr>
         <td class="no-border" style="width:80%"><strong>Total(A)</strong></td>
         <td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td>
@@ -4121,25 +16003,21 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
       </tr>
     </table>
     <div class="broker-info">
-      <div><strong>Ex. Broker/ Sub Dealer:</strong>${exchangeBrokerName}</div>
-      <div><strong>Ex. Veh No:</strong>${exchangeVehicleNumber}</div>
+      <div><strong>Ex. Broker/ Sub Dealer:</strong> <span class="value">${exchangeBrokerName}</span></div>
+      <div><strong>Ex. Veh No:</strong> <span class="value">${exchangeVehicleNumber}</span></div>
     </div>
-    <div class="note"><strong>Notes:Booking Awaiting approval as discount exceed</strong></div>
+    <div class="note"><strong>Notes:</strong> <span class="value">Booking Awaiting approval as discount exceed</span></div>
     <div class="divider"></div>
     <div style="margin-top:2mm;">
-      <div><strong>Booking Status: </strong>
-      </div>
+      <div><strong>Booking Status: </strong></div>
       <div class="status-box">
-        ${data.finalStatus || 'Status: Not Available'}
+        <span class="value">${data.finalStatus || 'Status: Not Available'}</span>
       </div>
     </div>
     <div class="divider"></div>
 
-    <!-- BIG QR Code at Bottom -->
-    
     <div class="divider" style="margin-top: 5mm;"></div>
 
-    <!-- Signature Section - Adjusted to fit properly -->
     <div class="signature-box">
       <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
         <div style="text-align:center; width: 22%;">
@@ -4162,13 +16040,10 @@ Date: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
     </div>
   </div>
 </body>
-</html>
-  `;
-    } else {
-     // For subsequent receipts (2nd onwards) - Simplified version without price breakdown
-// Show the same receipt twice with cutting line in between
-return `
-<!DOCTYPE html>
+</html>`;
+  } else {
+    // SECOND RECEIPT TYPE - with 2-column grid for payment info and bold values
+    return `<!DOCTYPE html>
 <html>
 <head>
   <title>Payment Receipt - ${receiptNumber}</title>
@@ -4177,7 +16052,7 @@ return `
       font-family: "Courier New", Courier, monospace;
       margin: 0;
       padding: 10mm;
-      font-size: 14px;
+      font-size: 15px;
       color: #555555;
     }
     .page {
@@ -4186,7 +16061,7 @@ return `
       margin: 0 auto;
     }
     .receipt-copy {
-      height: 138mm; /* Half of A4 page */
+      height: 138mm;
       page-break-inside: avoid;
     }
     .header-container {
@@ -4194,6 +16069,7 @@ return `
       justify-content: space-between;
       margin-bottom: 2mm;
       align-items: flex-start;
+      font-size: 14px;
     }
     .header-left {
       width: 60%;
@@ -4214,21 +16090,21 @@ return `
       width: 100%;
     }
     .logo {
-      height: 60px;
+      height: 61px;
     }
     .qr-code-small {
-      width: 100px;
-      height: 100px;
+      width: 101px;
+      height: 101px;
       border: 1px solid #ccc;
     }
     .dealer-info {
       text-align: left;
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.1;
     }
     .customer-info-container {
       display: flex;
-      font-size:12px;
+      font-size: 13px;
     }
     .customer-info-left {
       width: 50%;
@@ -4240,6 +16116,10 @@ return `
       margin: 0.5mm 0;
       line-height: 1.1;
     }
+    /* Style for values in customer info */
+    .customer-info-row .value {
+      font-weight: 700;
+    }
     .divider {
       border-top: 1px solid #AAAAAA;
       margin: 2mm 0;
@@ -4248,46 +16128,78 @@ return `
       background-color: #f8f9fa;
       border: 1px solid #dee2e6;
       border-radius: 4px;
-      padding: 8px;
-      margin: 8px 0;
-      font-size: 12px;
+      padding: 9px;
+      margin: 9px 0;
+      font-size: 13px;
+    }
+    .receipt-info-row {
+      margin: 2px 0;
+    }
+    .receipt-info-row .value {
+      font-weight: 700;
     }
     .payment-info-box {
-      margin: 5px 0;
+      margin: 6px 0;
     }
     .signature-box {
-      margin-top: 3mm;
-      font-size: 8pt;
+      margin-top: 4mm;
+      font-size: 9pt;
     }
     .signature-line {
       border-top: 1px dashed #000;
-      width: 35mm;
+      width: 36mm;
       display: inline-block;
       margin: 0 3mm;
     }
     .cutting-line {
       border-top: 2px dashed #333;
-      margin: 10mm 0;
+      margin: 11mm 0;
       text-align: center;
       position: relative;
     }
     .cutting-line::before {
       content: "✂ Cut Here ✂";
       position: absolute;
-      top: -10px;
+      top: -11px;
       left: 50%;
       transform: translateX(-50%);
       background: white;
-      padding: 0 10px;
-      font-size: 10px;
+      padding: 0 11px;
+      font-size: 11px;
       color: #666;
     }
     .note{
-      padding:1px;
-      margin:2px;
-      font-size: 11px;
+      padding:2px;
+      margin:3px;
+      font-size: 12px;
     }
-    
+    .note .value {
+      font-weight: 700;
+    }
+    /* 2-column grid for payment info - TIGHT SPACING */
+    .payment-grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 15px;
+      padding: 3px;
+      font-size: 13px;
+    }
+    .payment-grid-item {
+      padding: 2px 0;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .payment-grid-item strong {
+      font-weight: 600;
+      margin-right: 5px;
+      min-width: 100px;
+      display: inline-block;
+    }
+    .payment-grid-item .value {
+      font-weight: 700;
+    }
     @page {
       size: A4;
       margin: 0;
@@ -4304,22 +16216,20 @@ return `
 </head>
 <body>
   <div class="page">
-    <!-- First Copy -->
+    <!-- FIRST COPY (TOP) -->
     <div class="receipt-copy">
-      <!-- Header Section with QR Code -->
       <div class="header-container">
         <div class="header-left">
-          <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
+          <h2 style="margin:2;font-size:13pt;">GANDHI MOTORS PVT LTD</h2>
           <div class="dealer-info">
             Authorized Main Dealer: TVS Motor Company Ltd.<br>
             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
             Upnagar, Nashik Road, Nashik, 7498993672<br>
             GSTIN: ${data.branch?.gst_number || ''}<br>
-            GANDHI TVS PIMPALGAON
+            ${branchName}
           </div>
         </div>
         <div class="header-right">
-          <!-- Logo and QR code side by side -->
           <div class="logo-qr-container">
             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
             ${
@@ -4329,59 +16239,61 @@ return `
             }
           </div>
           
-          <div style="margin-top: 3px; font-size: 11px;">Date: ${receiptDate}</div>
-          <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+          <div style="margin-top: 4px; font-size: 12px;">Date: ${receiptDate}</div>
+          <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
 
           ${
             data.bookingType === 'SUBDEALER'
-              ? `<div style="font-size: 10px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
-          <div style="font-size: 9px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
+              ? `<div style="font-size: 11px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+          <div style="font-size: 10px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
               : ''
           }
         </div>
       </div>
       <div class="divider"></div>
 
-      <!-- Receipt Information -->
-      <div class="receipt-info">
-        <div><strong>Payment Receipt</strong></div>
-        <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
-        <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+      <div class="receipt-info" style="padding: 6px;">
+        <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
+        <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+        <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
       </div>
 
-      <!-- Customer Information -->
       <div class="customer-info-container">
         <div class="customer-info-left">
-          <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
-          <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
-          <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka}</div>
-          <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
-          <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+          <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+          <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+          <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
+          <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+          <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
         </div>
         <div class="customer-info-right">
-          <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
-          <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
-          <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
-          <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
-          <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+          <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+          <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+          <div class="customer-info-row"><strong>Payment Type:</strong> <span class="value">${data.payment?.type || 'CASH'}</span></div>
+          <div class="customer-info-row"><strong>Financer:</strong> <span class="value">${data.payment?.financer?.name || ''}</span></div>
+          <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
         </div>
       </div>
 
-      <!-- Received Amount Section -->
       <div class="payment-info-box">
-        <div class="receipt-info">
-          <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
-          <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
-          <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
-          <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
-          <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+        <div class="receipt-info" style="padding: 4px;">
+          <!-- Payment Information Grid - 2 columns (3 rows) with TIGHT spacing and bold values -->
+          <div class="payment-grid-2col">
+            <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${data.recentPaymentAmount.toFixed(2)}</span></div>
+            <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+            
+            <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+            <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+            
+            <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+           
+          </div>
         </div>
       </div>
 
-      <div class="note"><strong>Notes:</strong></div>
+      <div class="note"><strong>Notes:</strong> <span class="value"></span></div>
       <div class="divider"></div>
 
-      <!-- Signature Section -->
       <div class="signature-box">
         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
           <div style="text-align:center; width: 22%;">
@@ -4404,25 +16316,22 @@ return `
       </div>
     </div>
 
-    <!-- Cutting Line -->
     <div class="cutting-line"></div>
 
-    <!-- Second Copy (Duplicate) -->
+    <!-- DUPLICATE COPY (BOTTOM) -->
     <div class="receipt-copy">
-      <!-- Header Section with QR Code -->
       <div class="header-container">
         <div class="header-left">
-          <h2 style="margin:2;font-size:12pt;">GANDHI MOTORS PVT LTD</h2>
+          <h2 style="margin:2;font-size:13pt;">GANDHI MOTORS PVT LTD</h2>
           <div class="dealer-info">
             Authorized Main Dealer: TVS Motor Company Ltd.<br>
             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
             Upnagar, Nashik Road, Nashik, 7498993672<br>
             GSTIN: ${data.branch?.gst_number || ''}<br>
-            GANDHI TVS PIMPALGAON
+            ${branchName}
           </div>
         </div>
         <div class="header-right">
-          <!-- Logo and QR code side by side -->
           <div class="logo-qr-container">
             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
             ${
@@ -4432,59 +16341,61 @@ return `
             }
           </div>
           
-          <div style="margin-top: 3px; font-size: 11px;">Date: ${receiptDate}</div>
-          <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+          <div style="margin-top: 4px; font-size: 12px;">Date: ${receiptDate}</div>
+          <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
 
           ${
             data.bookingType === 'SUBDEALER'
-              ? `<div style="font-size: 10px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
-          <div style="font-size: 9px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
+              ? `<div style="font-size: 11px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div>
+          <div style="font-size: 10px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>`
               : ''
           }
         </div>
       </div>
       <div class="divider"></div>
 
-      <!-- Receipt Information -->
-      <div class="receipt-info">
-        <div><strong>Payment Receipt (DUPLICATE)</strong></div>
-        <div><strong>Booking Number:</strong> ${data.bookingNumber}</div>
-        <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+      <div class="receipt-info" style="padding: 6px;">
+        <div class="receipt-info-row"><strong>Payment Receipt (DUPLICATE)</strong></div>
+        <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+        <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
       </div>
 
-      <!-- Customer Information -->
       <div class="customer-info-container">
         <div class="customer-info-left">
-          <div class="customer-info-row"><strong>Booking Number:</strong> ${data.bookingNumber}</div>
-          <div class="customer-info-row"><strong>Customer Name:</strong> ${data.customerDetails.name}</div>
-          <div class="customer-info-row"><strong>Address:</strong> ${data.customerDetails.address}, ${data.customerDetails.taluka}</div>
-          <div class="customer-info-row"><strong>Mobile No.:</strong> ${data.customerDetails.mobile1}</div>
-          <div class="customer-info-row"><strong>HPA:</strong> ${data.hpa ? 'YES' : 'NO'}</div>
+          <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+          <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+          <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
+          <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+          <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
         </div>
         <div class="customer-info-right">
-          <div class="customer-info-row"><strong>Model Name:</strong> ${data.model.model_name}</div>
-          <div class="customer-info-row"><strong>Chassis No:</strong> ${data.chassisNumber}</div>
-          <div class="customer-info-row"><strong>Payment Type:</strong> ${data.payment?.type || 'CASH'}</div>
-          <div class="customer-info-row"><strong>Financer:</strong> ${data.payment?.financer?.name || ''}</div>
-          <div class="customer-info-row"><strong>Sales Executive:</strong> ${data.salesExecutive?.name || 'N/A'}</div>
+          <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+          <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+          <div class="customer-info-row"><strong>Payment Type:</strong> <span class="value">${data.payment?.type || 'CASH'}</span></div>
+          <div class="customer-info-row"><strong>Financer:</strong> <span class="value">${data.payment?.financer?.name || ''}</span></div>
+          <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
         </div>
       </div>
 
-      <!-- Received Amount Section -->
       <div class="payment-info-box">
-        <div class="receipt-info">
-          <div><strong>Receipt Amount (Rs):</strong> ₹${data.recentPaymentAmount.toFixed(2)}</div>
-          <div><strong>Receipt Number:</strong> ${receiptNumber}</div>
-          <div><strong>Reference No:</strong> ${recentPaymentAmountRef}</div>
-          <div><strong>Payment Mode:</strong> ${recentPaymentAmountType}</div>
-          <div><strong>Receipt Date:</strong> ${receiptDate}</div>
+        <div class="receipt-info" style="padding: 4px;">
+          <!-- Payment Information Grid - 2 columns (3 rows) with TIGHT spacing and bold values -->
+          <div class="payment-grid-2col">
+            <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${data.recentPaymentAmount.toFixed(2)}</span></div>
+            <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+            
+            <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+            <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+            
+            <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+            
+          </div>
         </div>
       </div>
 
-      <div class="note"><strong>Notes:</strong></div>
+      <div class="note"><strong>Notes:</strong> <span class="value"></span></div>
       <div class="divider"></div>
 
-      <!-- Signature Section -->
       <div class="signature-box">
         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
           <div style="text-align:center; width: 22%;">
@@ -4508,14 +16419,91 @@ return `
     </div>
   </div>
 </body>
-</html>
-  `;
-}
+</html>`;
+  }
+};
+
+  // ============ PAGINATION RENDER FUNCTION ============
+  const renderPagination = (filteredDataArray) => {
+    if (filteredDataArray.length <= recordsPerPage) {
+      return null;
+    }
+    
+    return (
+      <div className="mt-4">
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <div className="d-flex align-items-center">
+            <CFormLabel className="me-2 mb-0">Records per page:</CFormLabel>
+            <CFormSelect
+              value={recordsPerPage}
+              onChange={handleRecordsPerPageChange}
+              style={{ width: '80px' }}
+              size="sm"
+            >
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+              <option value={200}>200</option>
+              <option value={500}>500</option>
+            </CFormSelect>
+          </div>
+          <div className="text-muted">
+            Showing {(currentPage - 1) * recordsPerPage + 1} to {Math.min(currentPage * recordsPerPage, filteredDataArray.length)} of {filteredDataArray.length} entries
+          </div>
+        </div>
+        
+        <CPagination align="center" aria-label="Page navigation example">
+          <CPaginationItem 
+            aria-label="Previous" 
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <CIcon icon={cilChevronLeft} />
+          </CPaginationItem>
+          
+          {currentPage > 3 && totalPages > 5 && (
+            <>
+              <CPaginationItem onClick={() => handlePageChange(1)}>
+                1
+              </CPaginationItem>
+              {currentPage > 4 && <CPaginationItem disabled>...</CPaginationItem>}
+            </>
+          )}
+          
+          {displayedPages.map(page => (
+            <CPaginationItem 
+              key={page}
+              onClick={() => handlePageChange(page)}
+              active={currentPage === page}
+            >
+              {page}
+            </CPaginationItem>
+          ))}
+          
+          {currentPage < totalPages - 2 && totalPages > 5 && (
+            <>
+              {currentPage < totalPages - 3 && <CPaginationItem disabled>...</CPaginationItem>}
+              <CPaginationItem onClick={() => handlePageChange(totalPages)}>
+                {totalPages}
+              </CPaginationItem>
+            </>
+          )}
+          
+          <CPaginationItem 
+            aria-label="Next" 
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <CIcon icon={cilChevronRight} />
+          </CPaginationItem>
+        </CPagination>
+      </div>
+    );
   };
 
+  // ============ RENDER TABLE FUNCTIONS ============
+// In renderCustomerTable function, update the receipt handling section:
 
- const renderCustomerTable = () => {
-  // Check if user has permission to view this tab
+const renderCustomerTable = () => {
   if (!canViewCustomerTab) {
     return (
       <div className="text-center py-4">
@@ -4526,270 +16514,328 @@ return `
     );
   }
 
-  // Check if user has permission to add payments (CREATE permission) or view receipts (VIEW permission)
   const canShowActionColumn = canCreateInCustomerTab || canPrintInCustomerTab;
   const canShowAddPayment = canCreateInCustomerTab;
   const canShowPrint = canPrintInCustomerTab;
+  
+  const currentRecords = getCurrentRecords(filteredBookings);
 
   return (
-    <div className="responsive-table-wrapper">
-      <CTable striped bordered hover className='responsive-table'>
-        <CTableHead>
-          <CTableRow>
-            <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Total</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Received</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Receipts</CTableHeaderCell>
-            {canShowActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
-          </CTableRow>
-        </CTableHead>
-        <CTableBody>
-          {filteredBookings.length === 0 ? (
+    <>
+      <div className="responsive-table-wrapper">
+        <CTable striped bordered hover className='responsive-table'>
+          <CTableHead>
             <CTableRow>
-              <CTableDataCell colSpan={canShowActionColumn ? "12" : "11"} style={{ color: 'red', textAlign: 'center' }}>
-                {searchTerm ? 'No matching bookings found' : 'No booking available'}
-              </CTableDataCell>
+              <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
+              <CTableHeaderCell scope="col">Receipts</CTableHeaderCell>
+              {canShowActionColumn && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
             </CTableRow>
-          ) : (
-            filteredBookings.map((booking, index) => {
-              const receipts = bookingReceipts[booking._id] || [];
-              
-              // Sort receipts by date in ascending order (oldest first)
-              const sortedReceipts = [...receipts].sort((a, b) => {
-                const dateA = new Date(a.receiptDate || a.createdAt || 0);
-                const dateB = new Date(b.receiptDate || b.createdAt || 0);
-                return dateA - dateB; // Ascending order
-              });
-              
-              return (
-                <CTableRow key={index}>
-                  <CTableDataCell>{index + 1}</CTableDataCell>
-                  <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
-                  <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                  <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>
-                    {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-                      ? (booking.chassisNumber || '')
-                      : ''
-                    }
-                  </CTableDataCell>
-                  <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
-                  <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
-                  <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
-                  <CTableDataCell>
-                    {sortedReceipts.length > 0 ? (
-                      <CDropdown>
-                        <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canShowPrint}>
-                          {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
-                        </CDropdownToggle>
-                        <CDropdownMenu>
-                          {sortedReceipts.map((receipt, receiptIndex) => (
-                            <CDropdownItem 
-                              key={receipt.id} 
-                              onClick={() => printReceiptInvoice(receipt.id, booking._id, receiptIndex)}
-                            >
-                              <div className="d-flex align-items-center">
-                                <CIcon icon={cilPrint} className="me-2" />
-                                <div>
-                                  <div><strong>Receipt #{receiptIndex + 1}</strong></div>
-                                  <small>
-                                    {receipt.display?.amount || `₹${receipt.amount}`} - 
-                                    {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}
-                                  </small>
-                                </div>
-                              </div>
-                            </CDropdownItem>
-                          ))}
-                        </CDropdownMenu>
-                      </CDropdown>
-                    ) : (
-                      <span className="text-muted">No receipts</span>
-                    )}
-                  </CTableDataCell>
-
-                  {canShowActionColumn && (
+          </CTableHead>
+          <CTableBody>
+            {currentRecords.length === 0 ? (
+              <CTableRow>
+                <CTableDataCell colSpan={canShowActionColumn ? "12" : "11"} style={{ color: 'red', textAlign: 'center' }}>
+                  {searchTerm ? 'No matching bookings found' : 'No booking available'}
+                </CTableDataCell>
+              </CTableRow>
+            ) : (
+              currentRecords.map((booking, index) => {
+                const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+                const hasReceipts = receiptsFetched[booking._id] && bookingReceipts[booking._id]?.length > 0;
+                const isLoading = loadingReceipts[booking._id];
+                const receipts = bookingReceipts[booking._id] || [];
+                
+                // Filter receipts to show ONLY those with isRefund: false
+                const paymentReceipts = receipts.filter(receipt => receipt.isRefund === false);
+                
+                const sortedReceipts = [...paymentReceipts].sort((a, b) => {
+                  const dateA = new Date(a.receiptDate || a.createdAt || 0);
+                  const dateB = new Date(b.receiptDate || b.createdAt || 0);
+                  return dateA - dateB;
+                });
+                
+                return (
+                  <CTableRow key={booking._id || index}>
+                    <CTableDataCell>{globalIndex}</CTableDataCell>
+                    <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+                    <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+                    <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+                    <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+                    <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
                     <CTableDataCell>
-                      <CButton
-                        size="sm"
-                        className='option-button btn-sm'
-                        onClick={(event) => handleMenuClick(event, booking._id)}
-                        disabled={!canShowAddPayment}
-                      >
-                        <CIcon icon={cilSettings} />
-                        Options
-                      </CButton>
-
-                      <Menu
-                        id={`action-menu-${booking._id}`}
-                        anchorEl={anchorEl}
-                        open={menuBookingId === booking._id}
-                        onClose={handleMenuClose}
-                        anchorOrigin={{
-                          vertical: 'bottom',
-                          horizontal: 'right',
-                        }}
-                        transformOrigin={{
-                          vertical: 'top',
-                          horizontal: 'right',
-                        }}
-                      >
-                        {canShowAddPayment && (
-                          <MenuItem onClick={() => {
-                            handleAddClick(booking);
-                            handleMenuClose();
-                          }}>
-                            <CIcon icon={cilPlus} className="me-2" />
-                            Add Payment
-                          </MenuItem>
-                        )}
-                      </Menu>
+                      {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+                        ? (booking.chassisNumber || '')
+                        : ''
+                      }
                     </CTableDataCell>
-                  )}
-                </CTableRow>
-              );
-            })
-          )}
-        </CTableBody>
-      </CTable>
-    </div>
-  );
-};
-const renderPaymentVerificationTable = () => {
- 
-  if (!canViewPaymentVerificationTab) {
-    return (
-      <div className="text-center py-4">
-        <CAlert color="warning">
-          You do not have permission to view the Payment Verification tab.
-        </CAlert>
-      </div>
-    );
-  }
-
-  return (
-    <div className="responsive-table-wrapper">
-      <CTable striped bordered hover className='responsive-table'>
-        <CTableHead>
-          <CTableRow>
-            <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Date</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Bank Receipts</CTableHeaderCell>
-            <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-            {canCreateInPaymentVerificationTab && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
-          </CTableRow>
-        </CTableHead>
-        <CTableBody>
-          {filteredPendingLedgerEntries.length === 0 ? (
-            <CTableRow>
-              <CTableDataCell colSpan={canCreateInPaymentVerificationTab ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
-                {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
-              </CTableDataCell>
-            </CTableRow>
-          ) : (
-            filteredPendingLedgerEntries.map((entry, index) => {
-              // Fetch receipts for the booking associated with this ledger entry
-              const bookingId = entry.bookingDetails?._id || entry.booking;
-              const receipts = bookingReceipts[bookingId] || [];
-              
-              // Filter only BANK payment mode receipts
-              const bankReceipts = receipts.filter(receipt => 
-                receipt.paymentMode && 
-                receipt.paymentMode.toUpperCase() === 'BANK'
-              );
-              
-              // Sort bank receipts by date in ascending order (oldest first)
-              const sortedBankReceipts = [...bankReceipts].sort((a, b) => {
-                const dateA = new Date(a.receiptDate || a.createdAt || 0);
-                const dateB = new Date(b.receiptDate || b.createdAt || 0);
-                return dateA - dateB; // Ascending order
-              });
-              
-              return (
-                <CTableRow key={index}>
-                  <CTableDataCell>{index + 1}</CTableDataCell>
-                  <CTableDataCell>{entry.bookingDetails?.bookingNumber || entry.booking || ''}</CTableDataCell>
-                  <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
-                  <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
-                  <CTableDataCell>{entry.amount || ''}</CTableDataCell>
-                  <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
-                  <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                  <CTableDataCell>
-                    {sortedBankReceipts.length > 0 ? (
-                      <CDropdown>
-                        <CDropdownToggle size="sm" color="info" variant="outline">
-                          {sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}
-                        </CDropdownToggle>
-                        <CDropdownMenu>
-                          {sortedBankReceipts.map((receipt, receiptIndex) => (
-                            <CDropdownItem 
-                              key={receipt.id} 
-                              onClick={() => printReceiptInvoice(receipt.id, bookingId, receiptIndex)}
-                              disabled={!canPrintInCustomerTab} // Use same print permission
-                            >
-                              <div className="d-flex align-items-center">
-                                <CIcon icon={cilPrint} className="me-2" />
-                                <div>
-                                  <div><strong>Bank Receipt #{receiptIndex + 1}</strong></div>
-                                  <small>
-                                    {receipt.display?.amount || `₹${receipt.amount}`} - 
-                                    {receipt.display?.date || (receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('en-GB') : 'N/A')}
-                                  </small>
-                                </div>
-                              </div>
-                            </CDropdownItem>
-                          ))}
-                        </CDropdownMenu>
-                      </CDropdown>
-                    ) : (
-                      <span className="text-muted">No bank receipts</span>
-                    )}
-                  </CTableDataCell>
-                  <CTableDataCell>
-                    <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
-                      {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
-                    </CBadge>
-                  </CTableDataCell>
-                  {canCreateInPaymentVerificationTab && (
+                    <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+                    <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+                    <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
                     <CTableDataCell>
-                      {entry.approvalStatus === 'Pending' ? (
+                      {isLoading ? (
+                        <CSpinner size="sm" color="info" />
+                      ) : sortedReceipts.length > 0 ? (
+                        <CDropdown>
+                          <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canShowPrint}>
+                            {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
+                          </CDropdownToggle>
+                          <CDropdownMenu>
+                            {sortedReceipts.map((receipt, receiptIndex) => (
+                              <CDropdownItem 
+                                key={receipt.id} 
+                                onClick={() => printReceiptInvoice(receipt.id, booking._id, receiptIndex)}
+                              >
+                                <div className="d-flex align-items-center">
+                                  <CIcon icon={cilPrint} className="me-2" />
+                                  <div>
+                                    <div><strong>Receipt #{receiptIndex + 1}</strong></div>
+                                    <small>
+                                      {receipt.display?.amount || `₹${receipt.amount}`} - 
+                                      {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}
+                                    </small>
+                                  </div>
+                                </div>
+                              </CDropdownItem>
+                            ))}
+                          </CDropdownMenu>
+                        </CDropdown>
+                      ) : receiptsFetched[booking._id] ? (
+                        <span className="text-muted">No receipts</span>
+                      ) : (
                         <CButton
                           size="sm"
-                          className="action-btn"
-                          onClick={() => handleVerifyPayment(entry)}
+                          color="light"
+                          onClick={() => handleLoadReceipts(booking._id)}
+                          disabled={isLoading}
                         >
-                          <CIcon icon={cilCheckCircle} className="me-1" />
-                          Verify
+                          <CIcon icon={cilCloudDownload} className="me-1" />
+                          Load Receipts
                         </CButton>
-                      ) : (
-                        <span className="text-muted">Verified</span>
                       )}
                     </CTableDataCell>
-                  )}
-                </CTableRow>
-              );
-            })
-          )}
-        </CTableBody>
-      </CTable>
-    </div>
+
+                    {canShowActionColumn && (
+                      <CTableDataCell>
+                        <CButton
+                          size="sm"
+                          className='option-button btn-sm'
+                          onClick={(event) => handleMenuClick(event, booking._id)}
+                          disabled={!canShowAddPayment}
+                        >
+                          <CIcon icon={cilSettings} />
+                          Options
+                        </CButton>
+
+                        <Menu
+                          id={`action-menu-${booking._id}`}
+                          anchorEl={anchorEl}
+                          open={menuBookingId === booking._id}
+                          onClose={handleMenuClose}
+                          anchorOrigin={{
+                            vertical: 'bottom',
+                            horizontal: 'right',
+                          }}
+                          transformOrigin={{
+                            vertical: 'top',
+                            horizontal: 'right',
+                          }}
+                        >
+                          {canShowAddPayment && (
+                            <MenuItem onClick={() => {
+                              handleAddClick(booking);
+                              handleMenuClose();
+                            }}>
+                              <CIcon icon={cilPlus} className="me-2" />
+                              Add Payment
+                            </MenuItem>
+                          )}
+                        </Menu>
+                      </CTableDataCell>
+                    )}
+                  </CTableRow>
+                );
+              })
+            )}
+          </CTableBody>
+        </CTable>
+      </div>
+      {renderPagination(filteredBookings)}
+    </>
   );
 };
+  
+  const renderPaymentVerificationTable = () => {
+    if (!canViewPaymentVerificationTab) {
+      return (
+        <div className="text-center py-4">
+          <CAlert color="warning">
+            You do not have permission to view the Payment Verification tab.
+          </CAlert>
+        </div>
+      );
+    }
+    
+    const currentRecords = getCurrentRecords(filteredPendingLedgerEntries);
+    const canShowActions = canCreateInPaymentVerificationTab || canRejectPayments;
 
- const renderCompletePaymentTable = () => {
+    return (
+      <>
+        <div className="responsive-table-wrapper">
+          <CTable striped bordered hover className='responsive-table'>
+            <CTableHead>
+              <CTableRow>
+                <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Bank Receipts</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Status</CTableHeaderCell>
+                {canShowActions && <CTableHeaderCell scope="col">Action</CTableHeaderCell>}
+              </CTableRow>
+            </CTableHead>
+            <CTableBody>
+              {currentRecords.length === 0 ? (
+                <CTableRow>
+                  <CTableDataCell colSpan={canShowActions ? "11" : "10"} style={{ color: 'red', textAlign: 'center' }}>
+                    {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
+                  </CTableDataCell>
+                </CTableRow>
+              ) : (
+                currentRecords.map((entry, index) => {
+                  const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+                  const bookingId = entry.bookingDetails?._id || entry.booking;
+                  const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+                  const isLoading = loadingReceipts[bookingId];
+                  const hasReceipts = receiptsFetched[bookingId] && bookingReceipts[bookingId]?.length > 0;
+                  const receipts = bookingReceipts[bookingId] || [];
+                  
+                  const bankReceipts = receipts.filter(receipt => 
+                    receipt.paymentMode && 
+                    receipt.paymentMode.toUpperCase() === 'BANK'
+                  );
+                  
+                  const sortedBankReceipts = [...bankReceipts].sort((a, b) => {
+                    const dateA = new Date(a.receiptDate || a.createdAt || 0);
+                    const dateB = new Date(b.receiptDate || b.createdAt || 0);
+                    return dateA - dateB;
+                  });
+                  
+                  return (
+                    <CTableRow key={entry._id || index}>
+                      <CTableDataCell>{globalIndex}</CTableDataCell>
+                      <CTableDataCell>{bookingNumber}</CTableDataCell>
+                      <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+                      <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
+                      <CTableDataCell>{entry.amount || ''}</CTableDataCell>
+                      <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
+                      <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+                      <CTableDataCell>
+                        {isLoading ? (
+                          <CSpinner size="sm" color="info" />
+                        ) : hasReceipts ? (
+                          sortedBankReceipts.length > 0 ? (
+                            <CDropdown>
+                              <CDropdownToggle size="sm" color="info" variant="outline">
+                                {sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}
+                              </CDropdownToggle>
+                              <CDropdownMenu>
+                                {sortedBankReceipts.map((receipt, receiptIndex) => (
+                                  <CDropdownItem 
+                                    key={receipt.id} 
+                                    onClick={() => printReceiptInvoice(receipt.id, bookingId, receiptIndex)}
+                                    disabled={!canPrintInCustomerTab}
+                                  >
+                                    <div className="d-flex align-items-center">
+                                      <CIcon icon={cilPrint} className="me-2" />
+                                      <div>
+                                        <div><strong>Bank Receipt #{receiptIndex + 1}</strong></div>
+                                        <small>
+                                          {receipt.display?.amount || `₹${receipt.amount}`} - 
+                                          {receipt.display?.date || (receipt.receiptDate ? new Date(receipt.receiptDate).toLocaleDateString('en-GB') : 'N/A')}
+                                        </small>
+                                      </div>
+                                    </div>
+                                  </CDropdownItem>
+                                ))}
+                              </CDropdownMenu>
+                            </CDropdown>
+                          ) : (
+                            <span className="text-muted">No bank receipts</span>
+                          )
+                        ) : receiptsFetched[bookingId] ? (
+                          <span className="text-muted">No bank receipts</span>
+                        ) : (
+                          <CButton
+                            size="sm"
+                            color="light"
+                            onClick={() => handleLoadReceipts(bookingId)}
+                            disabled={isLoading}
+                          >
+                            <CIcon icon={cilCloudDownload} className="me-1" />
+                            Load Receipts
+                          </CButton>
+                        )}
+                      </CTableDataCell>
+                      <CTableDataCell>
+                        <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
+                          {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
+                        </CBadge>
+                      </CTableDataCell>
+                      {canShowActions && (
+                        <CTableDataCell>
+                          <div className="d-flex gap-2">
+                            {entry.approvalStatus === 'Pending' && canCreateInPaymentVerificationTab && (
+                              <CButton
+                                size="sm"
+                                className="action-btn"
+                                onClick={() => handleVerifyPayment(entry)}
+                              >
+                                <CIcon icon={cilCheckCircle} className="me-1" />
+                                Verify
+                              </CButton>
+                            )}
+                            {entry.approvalStatus === 'Pending' && canRejectPayments && (
+                              <CButton
+                                size="sm"
+                                color="danger"
+                                variant="outline"
+                                onClick={() => handleRejectPayment(entry)}
+                              >
+                                <CIcon icon={cilXCircle} className="me-1" />
+                                Reject
+                              </CButton>
+                            )}
+                            {entry.approvalStatus !== 'Pending' && (
+                              <span className="text-muted">Verified</span>
+                            )}
+                          </div>
+                        </CTableDataCell>
+                      )}
+                    </CTableRow>
+                  );
+                })
+              )}
+            </CTableBody>
+          </CTable>
+        </div>
+        {renderPagination(filteredPendingLedgerEntries)}
+      </>
+    );
+  };
+
+  const renderCompletePaymentTable = () => {
     if (!canViewCompletePaymentTab) {
       return (
         <div className="text-center py-4">
@@ -4799,60 +16845,67 @@ const renderPaymentVerificationTable = () => {
         </div>
       );
     }
+    
+    const currentRecords = getCurrentRecords(completePayments);
 
     return (
-      <div className="responsive-table-wrapper">
-        <CTable striped bordered hover className='responsive-table'>
-          <CTableHead>
-            <CTableRow>
-              <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Total</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Received</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-            </CTableRow>
-          </CTableHead>
-          <CTableBody>
-            {completePayments.length === 0 ? (
+      <>
+        <div className="responsive-table-wrapper">
+          <CTable striped bordered hover className='responsive-table'>
+            <CTableHead>
               <CTableRow>
-                <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
-                  {searchTerm ? 'No matching complete payments found' : 'No complete payments available'}
-                </CTableDataCell>
+                <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
               </CTableRow>
-            ) : (
-              completePayments.map((booking, index) => (
-                <CTableRow key={index}>
-                  <CTableDataCell>{index + 1}</CTableDataCell>
-                  <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
-                  <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                  <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>
-                    {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-                      ? (booking.chassisNumber || '')
-                      : ''
-                    }
+            </CTableHead>
+            <CTableBody>
+              {currentRecords.length === 0 ? (
+                <CTableRow>
+                  <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+                    {searchTerm ? 'No matching complete payments found' : 'No complete payments available'}
                   </CTableDataCell>
-                  <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
-                  <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
-                  <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
                 </CTableRow>
-              ))
-            )}
-          </CTableBody>
-        </CTable>
-      </div>
+              ) : (
+                currentRecords.map((booking, index) => {
+                  const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+                  return (
+                    <CTableRow key={booking._id || index}>
+                      <CTableDataCell>{globalIndex}</CTableDataCell>
+                      <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+                      <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+                      <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>
+                        {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+                          ? (booking.chassisNumber || '')
+                          : ''
+                        }
+                      </CTableDataCell>
+                      <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+                      <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+                      <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+                    </CTableRow>
+                  );
+                })
+              )}
+            </CTableBody>
+          </CTable>
+        </div>
+        {renderPagination(completePayments)}
+      </>
     );
   };
 
-const renderPendingListTable = () => {
-    // Check if user has permission to view this tab
+  const renderPendingListTable = () => {
     if (!canViewPendingListTab) {
       return (
         <div className="text-center py-4">
@@ -4862,60 +16915,67 @@ const renderPendingListTable = () => {
         </div>
       );
     }
+    
+    const currentRecords = getCurrentRecords(pendingPayments);
 
     return (
-      <div className="responsive-table-wrapper">
-        <CTable striped bordered hover className='responsive-table'>
-          <CTableHead>
-            <CTableRow>
-              <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Total</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Received</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
-            </CTableRow>
-          </CTableHead>
-          <CTableBody>
-            {pendingPayments.length === 0 ? (
+      <>
+        <div className="responsive-table-wrapper">
+          <CTable striped bordered hover className='responsive-table'>
+            <CTableHead>
               <CTableRow>
-                <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
-                  {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
-                </CTableDataCell>
+                <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Model Name</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Booking Date</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Mobile Number</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Chassis Number</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Total</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Received</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Balance</CTableHeaderCell>
               </CTableRow>
-            ) : (
-              pendingPayments.map((booking, index) => (
-                <CTableRow key={index}>
-                  <CTableDataCell>{index + 1}</CTableDataCell>
-                  <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
-                  <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                  <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
-                  <CTableDataCell>
-                    {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
-                      ? (booking.chassisNumber || '')
-                      : ''
-                    }
+            </CTableHead>
+            <CTableBody>
+              {currentRecords.length === 0 ? (
+                <CTableRow>
+                  <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+                    {searchTerm ? 'No matching pending payments found' : 'No pending payments available'}
                   </CTableDataCell>
-                  <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
-                  <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
-                  <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
                 </CTableRow>
-              ))
-            )}
-          </CTableBody>
-        </CTable>
-      </div>
+              ) : (
+                currentRecords.map((booking, index) => {
+                  const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+                  return (
+                    <CTableRow key={booking._id || index}>
+                      <CTableDataCell>{globalIndex}</CTableDataCell>
+                      <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+                      <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+                      <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>
+                        {booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' 
+                          ? (booking.chassisNumber || '')
+                          : ''
+                        }
+                      </CTableDataCell>
+                      <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+                      <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+                      <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+                    </CTableRow>
+                  );
+                })
+              )}
+            </CTableBody>
+          </CTable>
+        </div>
+        {renderPagination(pendingPayments)}
+      </>
     );
   };
 
   const renderVerifiedListTable = () => {
-    // Check if user has permission to view this tab
     if (!canViewVerifiedListTab) {
       return (
         <div className="text-center py-4">
@@ -4925,49 +16985,127 @@ const renderPendingListTable = () => {
         </div>
       );
     }
+    
+    const currentRecords = getCurrentRecords(filteredVerifiedLedgerEntries);
 
     return (
-      <div className="responsive-table-wrapper">
-        <CTable striped bordered hover className='responsive-table'>
-          <CTableHead>
-            <CTableRow>
-              <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Date</CTableHeaderCell>
-              <CTableHeaderCell scope="col">Verified By</CTableHeaderCell>
-            </CTableRow>
-          </CTableHead>
-          <CTableBody>
-            {filteredVerifiedLedgerEntries.length === 0 ? (
+      <>
+        <div className="responsive-table-wrapper">
+          <CTable striped bordered hover className='responsive-table'>
+            <CTableHead>
               <CTableRow>
-                <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
-                  {searchTerm ? 'No matching verified payments found' : 'No verified payments available'}
-                </CTableDataCell>
+                <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Verified By</CTableHeaderCell>
               </CTableRow>
-            ) : (
-              filteredVerifiedLedgerEntries.map((entry, index) => (
-                <CTableRow key={index}>
-                  <CTableDataCell>{index + 1}</CTableDataCell>
-                  <CTableDataCell>{entry.bookingDetails?.bookingNumber || ''}</CTableDataCell>
-                  <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
-                  <CTableDataCell>{entry.paymentMode}</CTableDataCell>
-                  <CTableDataCell>{entry.amount}</CTableDataCell>
-                  <CTableDataCell>{entry.transactionReference}</CTableDataCell>
-                  <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                  <CTableDataCell>{entry.receivedByDetails?.name || ''}</CTableDataCell>
+            </CTableHead>
+            <CTableBody>
+              {currentRecords.length === 0 ? (
+                <CTableRow>
+                  <CTableDataCell colSpan="8" style={{ color: 'red', textAlign: 'center' }}>
+                    {searchTerm ? 'No matching verified payments found' : 'No verified payments available'}
+                  </CTableDataCell>
                 </CTableRow>
-              ))
-            )}
-          </CTableBody>
-        </CTable>
-      </div>
+              ) : (
+                currentRecords.map((entry, index) => {
+                  const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+                  return (
+                    <CTableRow key={entry._id || index}>
+                      <CTableDataCell>{globalIndex}</CTableDataCell>
+                      <CTableDataCell>{entry.bookingDetails?.bookingNumber || ''}</CTableDataCell>
+                      <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+                      <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+                      <CTableDataCell>{entry.amount}</CTableDataCell>
+                      <CTableDataCell>{entry.transactionReference}</CTableDataCell>
+                      <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+                      <CTableDataCell>{entry.receivedByDetails?.name || ''}</CTableDataCell>
+                    </CTableRow>
+                  );
+                })
+              )}
+            </CTableBody>
+          </CTable>
+        </div>
+        {renderPagination(filteredVerifiedLedgerEntries)}
+      </>
     );
   };
 
+  const renderRejectedListTable = () => {
+    if (!canViewRejectedListTab) {
+      return (
+        <div className="text-center py-4">
+          <CAlert color="warning">
+            You do not have permission to view the Rejected List tab.
+          </CAlert>
+        </div>
+      );
+    }
+    
+    const currentRecords = getCurrentRecords(filteredRejectedLedgerEntries);
+
+    return (
+      <>
+        <div className="responsive-table-wrapper">
+          <CTable striped bordered hover className='responsive-table'>
+            <CTableHead>
+              <CTableRow>
+                <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Booking ID</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Amount</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Transaction Reference</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Date</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Received By</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Rejection Reason</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Rejected At</CTableHeaderCell>
+              </CTableRow>
+            </CTableHead>
+            <CTableBody>
+              {currentRecords.length === 0 ? (
+                <CTableRow>
+                  <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
+                    {searchTerm ? 'No matching rejected payments found' : 'No rejected payments available'}
+                  </CTableDataCell>
+                </CTableRow>
+              ) : (
+                currentRecords.map((entry, index) => {
+                  const globalIndex = (currentPage - 1) * recordsPerPage + index + 1;
+                  return (
+                    <CTableRow key={entry._id || index}>
+                      <CTableDataCell>{globalIndex}</CTableDataCell>
+                      <CTableDataCell>{entry.booking?.bookingNumber || ''}</CTableDataCell>
+                      <CTableDataCell>{entry.booking?.customerDetails?.name || ''}</CTableDataCell>
+                      <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+                      <CTableDataCell>{entry.amount}</CTableDataCell>
+                      <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
+                      <CTableDataCell>{entry.receiptDate ? new Date(entry.receiptDate).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+                      <CTableDataCell>{entry.receivedBy?.name || ''}</CTableDataCell>
+                      <CTableDataCell>
+                        <CBadge color="danger" shape="rounded-pill">
+                          {entry.rejectionReason || 'No reason provided'}
+                        </CBadge>
+                      </CTableDataCell>
+                      <CTableDataCell>{entry.approvedAt ? new Date(entry.approvedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+                    </CTableRow>
+                  );
+                })
+              )}
+            </CTableBody>
+          </CTable>
+        </div>
+        {renderPagination(filteredRejectedLedgerEntries)}
+      </>
+    );
+  };
+
+  // ============ EARLY RETURNS FOR PERMISSIONS ============
   if (!canViewReceipts) {
     return (
       <div className="alert alert-danger m-3" role="alert">
@@ -5000,6 +17138,7 @@ const renderPendingListTable = () => {
     );
   }
 
+  // ============ MAIN RENDER ============
   return (
     <div>
       <div className='title'>Receipt Management</div>
@@ -5012,20 +17151,38 @@ const renderPendingListTable = () => {
       
       <CCard className='table-container mt-4'>
         <CCardBody>
-          {/* Show tabs only if user has permission to view at least one */}
           {canViewAnyTab ? (
             <>
-              {/* Excel Export Button - MOVED TO LEFT SIDE */}
               {canCreateReceipts && (
-                <div className="d-flex mb-3">
+                <div className="d-flex mb-3 gap-2">
                   <CButton 
                     size="sm" 
                     className="action-btn"
                     onClick={handleOpenExportModal}
-                    title="Export Excel"
+                    title="Export Receipts Excel"
                   >
                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />
-                    Export Excel
+                    Export Receipts
+                  </CButton>
+                  
+                  <CButton 
+                    size="sm" 
+                    className="action-btn"
+                    onClick={handleOpenVerifiedOutstandingModal}
+                    title="Export Verified Outstanding Report"
+                  >
+                    <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+                    Verified Receipts
+                  </CButton>
+                  
+                  <CButton 
+                    size="sm" 
+                    className="action-btn"
+                    onClick={handleOpenPendingVerificationModal}
+                    title="Export Pending Verification Report"
+                  >
+                    <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+                    Pending Verification
                   </CButton>
                 </div>
               )}
@@ -5050,7 +17207,6 @@ const renderPendingListTable = () => {
                     </CNavLink>
                   </CNavItem>
                 )}
-                {/* Payment Verification tab - Only show if user has VIEW permission */}
                 {canViewPaymentVerificationTab && (
                   <CNavItem>
                     <CNavLink
@@ -5127,12 +17283,27 @@ const renderPendingListTable = () => {
                     </CNavLink>
                   </CNavItem>
                 )}
+                {canViewRejectedListTab && (
+                  <CNavItem>
+                    <CNavLink
+                      active={activeTab === 5}
+                      onClick={() => handleTabChange(5)}
+                      style={{ 
+                        cursor: 'pointer',
+                        borderTop: activeTab === 5 ? '4px solid #2759a2' : '3px solid transparent',
+                        borderBottom: 'none',
+                        color: 'black'
+                      }}
+                    >
+                      Rejected List
+                      {/* <span className="ms-1 text-muted small">(View Only)</span> */}
+                    </CNavLink>
+                  </CNavItem>
+                )}
               </CNav>
 
               <div className="d-flex justify-content-between mb-3">
-                <div>
-                  {/* This div is now empty since Excel button moved above */}
-                </div>
+                <div></div>
                 <div className='d-flex'>
                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
                   <CFormInput
@@ -5140,7 +17311,7 @@ const renderPendingListTable = () => {
                     style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
                     className="d-inline-block square-search"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearch(e.target.value)}
                     disabled={!canViewAnyTab}
                   />
                 </div>
@@ -5172,6 +17343,11 @@ const renderPendingListTable = () => {
                     {renderVerifiedListTable()}
                   </CTabPane>
                 )}
+                {canViewRejectedListTab && (
+                  <CTabPane visible={activeTab === 5}>
+                    {renderRejectedListTable()}
+                  </CTabPane>
+                )}
               </CTabContent>
             </>
           ) : (
@@ -5186,21 +17362,70 @@ const renderPendingListTable = () => {
         show={showModal} 
         onClose={() => setShowModal(false)} 
         bookingData={selectedBooking} 
-        canCreateReceipts={canCreateInCustomerTab} // Pass tab-specific CREATE permission
-        cashLocations={cashLocations} // Pass cash locations to modal
+        canCreateReceipts={canCreateInCustomerTab}
+        cashLocations={cashLocations}
         onPaymentSuccess={handlePaymentSuccess} 
       />
 
-      {/* Date Range Modal for Excel Export */}
+      {/* Reject Payment Modal */}
+      <CModal alignment="center" visible={showRejectModal} onClose={() => setShowRejectModal(false)}>
+        <CModalHeader>
+          <CModalTitle>Reject Payment</CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {selectedRejectEntry && (
+            <>
+              <div className="mb-3">
+                <p><strong>Booking:</strong> {selectedRejectEntry.bookingDetails?.bookingNumber || selectedRejectEntry.booking}</p>
+                <p><strong>Amount:</strong> ₹{selectedRejectEntry.amount}</p>
+                <p><strong>Payment Mode:</strong> {selectedRejectEntry.paymentMode}</p>
+              </div>
+              <div className="mb-3">
+                <CFormLabel htmlFor="rejectionReason">Rejection Reason <span className="text-danger">*</span></CFormLabel>
+                <CFormInput
+                  type="text"
+                  id="rejectionReason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Enter reason for rejection"
+                  disabled={rejectLoading}
+                />
+              </div>
+            </>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton 
+            color="secondary" 
+            onClick={() => setShowRejectModal(false)}
+            disabled={rejectLoading}
+          >
+            Cancel
+          </CButton>
+          <CButton 
+            color="danger"
+            onClick={confirmRejectPayment}
+            disabled={!rejectionReason.trim() || rejectLoading}
+          >
+            {rejectLoading ? (
+              <>
+                <CSpinner size="sm" className="me-2" />
+                Rejecting...
+              </>
+            ) : 'Reject Payment'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* Export Receipts Modal */}
       <CModal alignment="center" visible={openExportModal} onClose={handleCloseExportModal}>
         <CModalHeader>
           <CModalTitle>
             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
-            Select Date Range for Receipts Export
+            Export Receipts - Select Date Range
           </CModalTitle>
         </CModalHeader>
         <CModalBody>
-          {/* Display export error */}
           {exportError && (
             <CAlert color="warning" className="mb-3">
               {exportError}
@@ -5209,7 +17434,7 @@ const renderPendingListTable = () => {
           
           <LocalizationProvider 
             dateAdapter={AdapterDateFns} 
-            adapterLocale={enIN} // Add Indian locale
+            adapterLocale={enIN}
           >
             <div className="mb-3">
               <DatePicker
@@ -5217,12 +17442,12 @@ const renderPendingListTable = () => {
                 value={startDate}
                 onChange={(newValue) => {
                   setStartDate(newValue);
-                  setExportError(''); // Clear error when user changes date
+                  setExportError('');
                 }}
                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-                inputFormat="dd/MM/yyyy" // Use slash format for display
-                mask="__/__/____" // Add mask for better UX
-                views={['day', 'month', 'year']} // Show day-month-year in that order
+                inputFormat="dd/MM/yyyy"
+                mask="__/__/____"
+                views={['day', 'month', 'year']}
                 disabled={!canCreateReceipts}
               />
             </div>
@@ -5232,13 +17457,13 @@ const renderPendingListTable = () => {
                 value={endDate}
                 onChange={(newValue) => {
                   setEndDate(newValue);
-                  setExportError(''); // Clear error when user changes date
+                  setExportError('');
                 }}
                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-                inputFormat="dd/MM/yyyy" // Use slash format for display
-                mask="__/__/____" // Add mask for better UX
+                inputFormat="dd/MM/yyyy"
+                mask="__/__/____"
                 minDate={startDate}
-                views={['day', 'month', 'year']} // Show day-month-year in that order
+                views={['day', 'month', 'year']}
                 disabled={!canCreateReceipts}
               />
             </div>
@@ -5246,10 +17471,11 @@ const renderPendingListTable = () => {
           
           <TextField
             select
+            label="Select Branch"
             value={selectedBranchId}
             onChange={(e) => {
               setSelectedBranchId(e.target.value);
-              setExportError(''); // Clear error when user changes branch
+              setExportError('');
             }}
             fullWidth
             size="small"
@@ -5257,9 +17483,9 @@ const renderPendingListTable = () => {
             disabled={!canCreateReceipts}
           >
             <option value="">-- Select Branch --</option>
-             {hasAllBranchAccess && (
-                  <option value="all">All Branch</option>
-                )}
+            {hasAllBranchAccess && (
+              <option value="all">All Branch</option>
+            )}
             {branches.map((branch) => (
               <option key={branch._id} value={branch._id}>
                 {branch.name}
@@ -5277,6 +17503,196 @@ const renderPendingListTable = () => {
             disabled={!startDate || !endDate || !selectedBranchId || !canCreateReceipts || exportLoading}
           >
             {exportLoading ? (
+              <>
+                <CSpinner size="sm" className="me-2" />
+                Exporting...
+              </>
+            ) : 'Export'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* Verified Outstanding Export Modal */}
+      <CModal alignment="center" visible={openVerifiedOutstandingModal} onClose={handleCloseVerifiedOutstandingModal}>
+        <CModalHeader>
+          <CModalTitle>
+            <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+            Export Verified Outstanding Report
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {verifiedOutstandingExportError && (
+            <CAlert color="warning" className="mb-3">
+              {verifiedOutstandingExportError}
+            </CAlert>
+          )}
+          
+          <LocalizationProvider 
+            dateAdapter={AdapterDateFns} 
+            adapterLocale={enIN}
+          >
+            <div className="mb-3">
+              <DatePicker
+                label="Start Date"
+                value={verifiedOutstandingStartDate}
+                onChange={(newValue) => {
+                  setVerifiedOutstandingStartDate(newValue);
+                  setVerifiedOutstandingExportError('');
+                }}
+                renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                inputFormat="dd/MM/yyyy"
+                mask="__/__/____"
+                views={['day', 'month', 'year']}
+                disabled={!canCreateReceipts}
+              />
+            </div>
+            <div className="mb-3">
+              <DatePicker
+                label="End Date"
+                value={verifiedOutstandingEndDate}
+                onChange={(newValue) => {
+                  setVerifiedOutstandingEndDate(newValue);
+                  setVerifiedOutstandingExportError('');
+                }}
+                renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                inputFormat="dd/MM/yyyy"
+                mask="__/__/____"
+                minDate={verifiedOutstandingStartDate}
+                views={['day', 'month', 'year']}
+                disabled={!canCreateReceipts}
+              />
+            </div>
+          </LocalizationProvider>
+          
+          <TextField
+            select
+            label="Select Branch"
+            value={verifiedOutstandingBranchId}
+            onChange={(e) => {
+              setVerifiedOutstandingBranchId(e.target.value);
+              setVerifiedOutstandingExportError('');
+            }}
+            fullWidth
+            size="small"
+            SelectProps={{ native: true }}
+            disabled={!canCreateReceipts}
+          >
+            <option value="">-- Select Branch --</option>
+            {hasAllBranchAccess && (
+              <option value="all">All Branch</option>
+            )}
+            {branches.map((branch) => (
+              <option key={branch._id} value={branch._id}>
+                {branch.name}
+              </option>
+            ))}
+          </TextField>
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={handleCloseVerifiedOutstandingModal}>
+            Cancel
+          </CButton>
+          <CButton 
+            className="submit-button"
+            onClick={handleVerifiedOutstandingExport}
+            disabled={!verifiedOutstandingStartDate || !verifiedOutstandingEndDate || !verifiedOutstandingBranchId || !canCreateReceipts || verifiedOutstandingExportLoading}
+          >
+            {verifiedOutstandingExportLoading ? (
+              <>
+                <CSpinner size="sm" className="me-2" />
+                Exporting...
+              </>
+            ) : 'Export'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* Pending Verification Export Modal */}
+      <CModal alignment="center" visible={openPendingVerificationModal} onClose={handleClosePendingVerificationModal}>
+        <CModalHeader>
+          <CModalTitle>
+            <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+            Export Pending Verification Report
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {pendingVerificationExportError && (
+            <CAlert color="warning" className="mb-3">
+              {pendingVerificationExportError}
+            </CAlert>
+          )}
+          
+          <LocalizationProvider 
+            dateAdapter={AdapterDateFns} 
+            adapterLocale={enIN}
+          >
+            <div className="mb-3">
+              <DatePicker
+                label="Start Date"
+                value={pendingVerificationStartDate}
+                onChange={(newValue) => {
+                  setPendingVerificationStartDate(newValue);
+                  setPendingVerificationExportError('');
+                }}
+                renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                inputFormat="dd/MM/yyyy"
+                mask="__/__/____"
+                views={['day', 'month', 'year']}
+                disabled={!canCreateReceipts}
+              />
+            </div>
+            <div className="mb-3">
+              <DatePicker
+                label="End Date"
+                value={pendingVerificationEndDate}
+                onChange={(newValue) => {
+                  setPendingVerificationEndDate(newValue);
+                  setPendingVerificationExportError('');
+                }}
+                renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+                inputFormat="dd/MM/yyyy"
+                mask="__/__/____"
+                minDate={pendingVerificationStartDate}
+                views={['day', 'month', 'year']}
+                disabled={!canCreateReceipts}
+              />
+            </div>
+          </LocalizationProvider>
+          
+          <TextField
+            select
+            label="Select Branch"
+            value={pendingVerificationBranchId}
+            onChange={(e) => {
+              setPendingVerificationBranchId(e.target.value);
+              setPendingVerificationExportError('');
+            }}
+            fullWidth
+            size="small"
+            SelectProps={{ native: true }}
+            disabled={!canCreateReceipts}
+          >
+            <option value="">-- Select Branch --</option>
+            {hasAllBranchAccess && (
+              <option value="all">All Branch</option>
+            )}
+            {branches.map((branch) => (
+              <option key={branch._id} value={branch._id}>
+                {branch.name}
+              </option>
+            ))}
+          </TextField>
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={handleClosePendingVerificationModal}>
+            Cancel
+          </CButton>
+          <CButton 
+            className="submit-button"
+            onClick={handlePendingVerificationExport}
+            disabled={!pendingVerificationStartDate || !pendingVerificationEndDate || !pendingVerificationBranchId || !canCreateReceipts || pendingVerificationExportLoading}
+          >
+            {pendingVerificationExportLoading ? (
               <>
                 <CSpinner size="sm" className="me-2" />
                 Exporting...

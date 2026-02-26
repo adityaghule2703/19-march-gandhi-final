@@ -28,7 +28,6 @@
   margin-top: 20px;
 }
 
-
 @media (max-width: 768px) {
   .challan-display-container {
     padding: 15px;
@@ -44,19 +43,17 @@
   }
 }
 
-
-
 .challan-card {
-    font-family: 'Arial', sans-serif;
-    border: 1px solid #ddd;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    margin: 0 auto;
-  }
-  
-  .challan-body {
-    padding: 20px;
-  }
+  font-family: 'Arial', sans-serif;
+  border: 1px solid #ddd;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  margin: 0 auto;
+}
+
+.challan-body {
+  padding: 20px;
+}
 
 .challan-header {
   margin-bottom: 20px;
@@ -73,166 +70,184 @@
 .header-content h2 {
   flex: 1;
   text-align: center;
-}
-
-.header-logo {
-  height: 25px;
-  margin-left: 20px;
-}
-.challan-header h2 {
   margin: 0;
   font-size: 24px;
   font-weight: bold;
   text-transform: uppercase;
 }
 
+.header-logo {
+  height: 25px;
+  margin-left: 20px;
+}
+
 .header2 {
   display: flex;
   justify-content: space-between;
+  margin-bottom: 15px;
 }
 
-  .header2{
-    display: flex;
-    justify-content: space-between;
-  }
-  .dealer-name {
-    font-size: 16px;
-    font-weight: bold;
-  }
-  
-  .challan-date {
-    font-size: 14px;
-  }
-  .locations-container {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-    padding: 2px 0 0 0;
-    border-top: 3px solid #AAAAAA;
-    border-bottom: 3px solid #AAAAAA;
-  }
-  
-  .location-item {
-    margin-top: 10px;
-    flex: 1;
-    padding: 0 15px;
-  }
-  
-  .location-label {
-    margin-bottom: 5px;
-    font-weight: bold;
-  }
-  
-  .location-value {
-    text-transform: uppercase;
-    font-weight: bold;
-  }
-
-   .vehicle-details-table {
-    width: 100%;
-    margin-bottom: 10px;
-    border-collapse: collapse;
-    border: none !important;
-  }
-  
-  .vehicle-details-table th {
-    background-color: transparent !important;
-    font-weight: bold;
-    text-align: center;
-    padding: 4px;
-    border: none !important;
-    margin-bottom: 5px;
-  }
-  
-  .vehicle-details-table td {
-    padding: 2px;
-    border: none !important;
-    text-align: center;
-    text-transform: uppercase;
-  }
-  
-  .vehicle-details-table th[colspan] {
-    background-color: transparent !important;
-    border: none !important;
-  }
-
-  .accessories-section {
-    margin-bottom: 10px;
-    padding-top: 10px;
-  }
-  
-  .section-title {
-    font-weight: bold;
-    margin-bottom: 10px;
-    font-size: 16px;
-  }
-  
-  .accessories-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 5px;
-  }
-  
-  .accessories-grid p {
-    margin: 0;
-    font-size: 14px;
-  }
-
-  .notes-section {
-    margin-bottom: 20px;
-    padding-top: 15px;
-    border-top: 3px solid #AAAAAA;
-  }
-  
-  .notes-text {
-    font-size: 12px;
-    line-height: 1.4;
-  }
-  .signatures-section {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 30px;
-    padding-top: 20px;
-  }
-  
-  .signature-line {
-    border-top: 1px dashed #000;
-    width: 45%;
-    padding-top: 10px;
-    text-align: center;
-  }
-  
-  .signature-line p {
-    font-weight: bold;
-    margin: 0;
-  }
-  
-  /* Footer note */
-  .footer-note {
-    text-align: center;
-    margin-top: 20px;
-    font-size: 10px;
-  }
-  
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  .challan-card, .challan-card * {
-    visibility: visible;
-  }
-  .challan-card {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-  .challan-actions {
-    display: none;
-  }
+.dealer-name {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0;
 }
+
+.challan-date {
+  font-size: 14px;
+  margin: 0;
+}
+
+.locations-container {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-top: 3px solid #AAAAAA;
+  border-bottom: 3px solid #AAAAAA;
+}
+
+.location-item {
+  flex: 1;
+  padding: 0 15px;
+}
+
+.location-item p {
+  margin: 5px 0;
+}
+
+.location-label {
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.location-value {
+  text-transform: uppercase;
+  font-weight: bold;
+}
+
+.vehicle-section {
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+/* Updated table styles for proper table appearance */
+.vehicle-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  border: 2px solid #333 !important;
+}
+
+.vehicle-details-table th {
+  background-color: #e9ecef !important;
+  font-weight: bold;
+  text-align: center;
+  padding: 12px 8px;
+  border: 2px solid #333 !important;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.vehicle-details-table td {
+  padding: 10px 8px;
+  border: 2px solid #333 !important;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.vehicle-details-table td.bold-text {
+  font-weight: bold;
+  color: #000;
+  font-weight: 700;
+}
+
+/* Add zebra striping for better readability */
+.vehicle-details-table tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+/* Hover effect */
+.vehicle-details-table tbody tr:hover {
+  background-color: #f1f3f5;
+}
+
+/* Style for the first column (Sr. No) */
+.vehicle-details-table td:first-child {
+  font-weight: 500;
+}
+
+.accessories-section {
+  margin-bottom: 10px;
+  padding-top: 10px;
+}
+
+.section-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.accessories-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.accessories-grid p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.notes-section {
+  margin-bottom: 20px;
+  padding-top: 15px;
+  border-top: 3px solid #AAAAAA;
+}
+
+.notes-text {
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 10px 0;
+}
+
+.notes-text p {
+  margin: 5px 0;
+}
+
+.notes-text strong {
+  font-weight: bold;
+}
+
+.signatures-section {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40px;
+  padding-top: 20px;
+}
+
+.signature-line {
+  border-top: 2px dashed #333;
+  width: 45%;
+  padding-top: 10px;
+  text-align: center;
+}
+
+.signature-line p {
+  font-weight: bold;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* Footer note */
+.footer-note {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 10px;
+}
+
+/* Model accessories styles */
 .model-accessories-container {
   margin-top: 15px;
   padding: 15px;
@@ -273,9 +288,8 @@
   text-align: center;
 }
 
-
-
- .modal-content {
+/* Modal styles */
+.modal-content {
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -299,4 +313,162 @@
   .modal-dialog {
     margin: 1rem auto;
   }
-} 
+}
+
+/* Print styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .challan-card, .challan-card * {
+    visibility: visible;
+  }
+  
+  .challan-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20px;
+  }
+  
+  .challan-actions {
+    display: none;
+  }
+  
+  /* Ensure table borders print properly */
+  .vehicle-details-table {
+    border: 2px solid #000 !important;
+  }
+  
+  .vehicle-details-table th,
+  .vehicle-details-table td {
+    border: 2px solid #000 !important;
+  }
+  
+  .vehicle-details-table th {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Responsive styles for smaller screens */
+@media (max-width: 768px) {
+  .challan-body {
+    padding: 10px;
+  }
+  
+  .header-content h2 {
+    font-size: 18px;
+  }
+  
+  .header-logo {
+    height: 20px;
+    margin-left: 10px;
+  }
+  
+  .dealer-name {
+    font-size: 14px;
+  }
+  
+  .challan-date {
+    font-size: 12px;
+  }
+  
+  .locations-container {
+    flex-direction: column;
+    padding: 5px 0;
+  }
+  
+  .location-item {
+    padding: 5px 10px;
+  }
+  
+  .location-item:first-child {
+    border-bottom: 1px dashed #aaa;
+  }
+  
+  .vehicle-details-table th {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+  
+  .vehicle-details-table td {
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+  
+  .signature-line {
+    width: 40%;
+  }
+  
+  .signature-line p {
+    font-size: 12px;
+  }
+  
+  .notes-text {
+    font-size: 11px;
+  }
+}
+
+/* Styles for empty state */
+.vehicle-details-table tbody tr:last-child td {
+  border-bottom: 2px solid #333;
+}
+
+/* Additional styles for better visual hierarchy */
+.section-divider {
+  border-top: 2px solid #666;
+  margin: 20px 0;
+}
+
+/* Styles for the chassis and engine number cells */
+.chassis-engine-bold {
+  font-weight: 700;
+  color: #000;
+}
+
+/* Table header specific styles */
+.vehicle-details-table thead tr:first-child th {
+  border-top: 2px solid #333;
+}
+
+.vehicle-details-table thead tr:last-child th {
+  border-bottom: 2px solid #333;
+}
+
+/* Ensure table has proper borders on all sides */
+.vehicle-details-table {
+  border: 2px solid #333;
+  border-radius: 4px;
+}
+
+/* Style for the actions container */
+.challan-actions {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 30px;
+  padding: 10px;
+  border-top: 1px solid #dee2e6;
+}
+
+.challan-actions .btn {
+  min-width: 120px;
+  padding: 8px 20px;
+  font-weight: 500;
+}
+
+/* Hover effect for buttons */
+.challan-actions .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Focus styles for accessibility */
+.challan-actions .btn:focus {
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}

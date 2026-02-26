@@ -16,7 +16,8 @@ import {
 } from '@coreui/react';
 import axiosInstance from '../../axiosInstance';
 import '../../css/form.css';
-const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData }) => {
+
+const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData, onPaymentSaved, canCreateExchangeLedger, onPaymentSuccess }) => {
   const branchId = brokerData?.branchId;
 
   const [formData, setFormData] = useState({
@@ -86,6 +87,7 @@ const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData }) => {
     setIsLoading(true);
     setError(null);
     setSuccess(null);
+    
     if (!formData.branch) {
       setError('Please select a branch/location');
       setIsLoading(false);
@@ -115,12 +117,33 @@ const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData }) => {
       }
 
       const response = await axiosInstance.post(`/broker-ledger/on-account/${formData.brokerId}/${formData.branch}`, paymentData);
+      
+      console.log('Payment response:', response.data);
+      
+      let transactionId = null;
+      
+      if (response.data.data?.transaction?._id) {
+        transactionId = response.data.data.transaction._id;
+      } else if (response.data.data?._id) {
+        transactionId = response.data.data._id;
+      } else if (response.data._id) {
+        transactionId = response.data._id;
+      }
+      
+      console.log('Extracted transaction ID:', transactionId);
 
       setSuccess('Payment successfully recorded!');
+      
+      if (onPaymentSaved) {
+        onPaymentSaved('Payment successfully recorded!');
+      }
+      
       if (refreshData) {
         refreshData();
       }
+      
       onClose();
+      
       setFormData({
         brokerId: brokerData?.broker?._id || '',
         branch: branchId || '',
@@ -134,6 +157,15 @@ const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData }) => {
         subPaymentMode: ''
       });
       setEditFixedAmount(false);
+      
+      if (onPaymentSuccess && transactionId) {
+        setTimeout(() => {
+          onPaymentSuccess(transactionId);
+        }, 500);
+      } else {
+        console.warn('No transaction ID found in response:', response.data);
+      }
+      
     } catch (err) {
       console.error('Payment error:', err);
       setError(err.response?.data?.message || 'Failed to process payment. Please try again.');
@@ -160,6 +192,7 @@ const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData }) => {
         console.error('Error fetching bank locations:', error);
       }
     };
+    
     const fetchSubmode = async () => {
       try {
         const response = await axiosInstance.get('/banksubpaymentmodes');
@@ -168,6 +201,7 @@ const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData }) => {
         console.error('Error fetching bank submode:', error);
       }
     };
+    
     const fetchBranches = async () => {
       try {
         const response = await axiosInstance.get('/branches');

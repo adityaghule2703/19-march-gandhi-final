@@ -1,0 +1,62 @@
+
+ 
+.react-select-container {
+    flex: 1;
+  }
+  
+  .react-select__control {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border: 1px solid #d8dbe0 !important;
+    min-height: 35px !important;
+  }
+  
+  .react-select__control:hover {
+    border-color: #b1b7c1 !important;
+  }
+  
+  .react-select__control--is-focused {
+    border-color: #2759a2 !important;
+    /* box-shadow: 0 0 0 1px #321fdb !important; */
+  }
+  
+  .react-select__menu {
+    z-index: 1000 !important;
+  }
+  
+  .react-select__option--is-selected {
+    background-color: #321fdb !important;
+  }
+  
+  .react-select__option--is-focused {
+    background-color: #e6e6e6 !important;
+  }
+  
+  .react-select__placeholder {
+    color: #6b6b6b !important;
+  }
+  
+  .input-box {
+    margin-bottom: 20px;
+  }
+  
+  .details-container {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  
+  .details {
+    font-weight: 500;
+    margin-right: 4px;
+  }
+  
+  .required {
+    color: red;
+  }
+  
+  .input-icon {
+    background-color: #f8f9fa;
+    border-right: none;
+  }
+ 

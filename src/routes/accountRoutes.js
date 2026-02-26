@@ -9,7 +9,7 @@ const CustomerLedger = React.lazy(() => import('../views/account/ViewLedger'))
 const ExchangeLedger = React.lazy(() => import('../views/account/ExchangeLedger'))
 const BrokerPayment = React.lazy(() => import('../views/account/broker-payment/PaymentVerification'))
 const VoucherReport = React.lazy(() => import('../views/account/ReceiptReport'))
-
+const DownPaymentReceipt = React.lazy(() => import('../views/account/DownPaymentReceipt'))
 export const accountRoutes = [
     { path:'/account-dashboard', name:'Account Dashboard', element:AccountDashboard},
     { path:'/account/receipt', name:'Account Receipt', element:Receipts},
@@ -21,4 +21,5 @@ export const accountRoutes = [
     { path:'/exchange-ledgers', name:'Exchange Ledger', element:ExchangeLedger},
     { path:'/broker-payment', name:'Broker Payment', element:BrokerPayment},
     { path:'/receipt-report', name:'Receipt Report', element:VoucherReport},
+    { path:'/downpayment-receipt', name:'Downpayment Receipt', element:DownPaymentReceipt}
 ];

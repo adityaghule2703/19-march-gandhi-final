@@ -48,7 +48,7 @@
 //   const [currentAction, setCurrentAction] = useState(null);
 //   const [showChassisModal, setShowChassisModal] = useState(false);
 //   const [chassisLoading, setChassisLoading] = useState(false);
-//   const { permissions } = useAuth(); 
+//   const { permissions } = useAuth();
 //   const userRole = localStorage.getItem('userRole');
 //   const hasActionPermission = hasPermission(permissions, 'BOOKING_BOOKING_ACTIONS');
 
@@ -73,12 +73,12 @@
 //         preConfirm: () => {
 //           const reason = document.getElementById('swal-reason').value.trim();
 //           const charges = document.getElementById('swal-charges').value;
-          
+
 //           if (!reason) {
 //             Swal.showValidationMessage('Please enter a reason for cancellation');
 //             return false;
 //           }
-          
+
 //           return {
 //             reason,
 //             cancellationCharges: charges ? parseInt(charges) : 0
@@ -88,7 +88,7 @@
 
 //       if (formValues) {
 //         setCancelLoading(true);
-        
+
 //         await axiosInstance.post(`/bookings/${booking.id}/cancel`, {
 //           reason: formValues.reason,
 //           cancellationCharges: formValues.cancellationCharges
@@ -147,7 +147,7 @@
 //     try {
 //       setActionLoading(true);
 //       setShowApprovalModal(false);
-  
+
 //       const requestBody = {};
 //       if (approvalNote && approvalNote.trim()) {
 //         if (currentAction === 'reject') {
@@ -156,7 +156,7 @@
 //           requestBody.approvalNote = approvalNote.trim();
 //         }
 //       }
-  
+
 //       let response;
 //       if (currentAction === 'approve') {
 //         response = await axiosInstance.put(`/bookings/${booking.id}/approve`, requestBody);
@@ -165,9 +165,9 @@
 //       } else {
 //         response = await axiosInstance.post(`/bookings/${booking.id}/${currentAction}`, requestBody);
 //       }
-  
+
 //       const successMessage = response?.data?.message || `Booking ${currentAction}d successfully!`;
-      
+
 //       if (currentAction === 'reject') {
 //         Swal.fire({
 //           title: 'Success!',
@@ -179,7 +179,7 @@
 //       } else {
 //         showSuccess(successMessage);
 //       }
-      
+
 //       refreshData();
 //       onClose();
 //     } catch (error) {
@@ -269,14 +269,14 @@
 //   };
 
 //   const shouldShowApproveRejectButtons = () => {
-//     return hasActionPermission && 
+//     return hasActionPermission &&
 //            (booking?.status === 'PENDING_APPROVAL' || booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)');
 //   };
 
 //   const shouldShowCancelButton = () => {
-//     return hasActionPermission && 
-//            booking?.status !== 'CANCELLED' && 
-//            booking?.status !== 'COMPLETED' && 
+//     return hasActionPermission &&
+//            booking?.status !== 'CANCELLED' &&
+//            booking?.status !== 'COMPLETED' &&
 //            booking?.status !== 'REJECTED';
 //   };
 
@@ -294,7 +294,7 @@
 //         </div>
 //       );
 //     }
-    
+
 //     // Fallback to original verticles array if verticlesSummary doesn't exist
 //     if (!booking.verticles || booking.verticles.length === 0) {
 //       return <span className="detail-value">No verticles assigned</span>;
@@ -451,7 +451,7 @@
 //               </CCard>
 
 //               {/* Verticles Section */}
-//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) || 
+//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) ||
 //                 (booking.verticles && booking.verticles.length > 0)) && (
 //                 <CCard className="booking-section mb-3">
 //                   <CCardHeader>
@@ -731,7 +731,7 @@
 //                   </CCard>
 //                 </div>
 //               </div>
-              
+
 //               <CCard className="booking-section">
 //                 <CCardHeader>
 //                   <h5>
@@ -787,9 +787,9 @@
 //               )}
 
 //               {shouldShowCancelButton() && (
-//                 <button 
-//                   className="btn btn-warning me-2" 
-//                   onClick={handleCancelBooking} 
+//                 <button
+//                   className="btn btn-warning me-2"
+//                   onClick={handleCancelBooking}
 //                   disabled={cancelLoading}
 //                 >
 //                   {cancelLoading ? 'Cancelling...' : 'Cancel Booking'}
@@ -938,11 +938,6 @@
 
 // export default ViewBooking;
 
-
-
-
-
-
 // import React, { useState } from 'react';
 // import {
 //   CModal,
@@ -1001,28 +996,28 @@
 //   const [currentAction, setCurrentAction] = useState(null);
 //   const [showChassisModal, setShowChassisModal] = useState(false);
 //   const [chassisLoading, setChassisLoading] = useState(false);
-//   const { permissions } = useAuth(); 
+//   const { permissions } = useAuth();
 //   const userRole = localStorage.getItem('userRole');
-  
+
 //   // Page-level permission checks for Booking View page under Sales module
 //   const hasBookingViewPermission = hasSafePagePermission(
-//     permissions, 
-//     MODULES.SALES, 
-//     PAGES.SALES.ALL_BOOKING, 
+//     permissions,
+//     MODULES.SALES,
+//     PAGES.SALES.ALL_BOOKING,
 //     ACTIONS.VIEW
 //   );
-  
+
 //   const hasBookingUpdatePermission = hasSafePagePermission(
-//     permissions, 
-//     MODULES.SALES, 
-//     PAGES.SALES.ALL_BOOKING, 
+//     permissions,
+//     MODULES.SALES,
+//     PAGES.SALES.ALL_BOOKING,
 //     ACTIONS.UPDATE
 //   );
-  
+
 //   const hasBookingDeletePermission = hasSafePagePermission(
-//     permissions, 
-//     MODULES.SALES, 
-//     PAGES.SALES.ALL_BOOKING, 
+//     permissions,
+//     MODULES.SALES,
+//     PAGES.SALES.ALL_BOOKING,
 //     ACTIONS.DELETE
 //   );
 
@@ -1030,7 +1025,7 @@
 //   const canViewBooking = canViewPage(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING);
 //   const canUpdateBooking = canUpdateInPage(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING);
 //   const canDeleteBooking = canDeleteInPage(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING);
-  
+
 //   // For booking actions (approve/reject) - typically these require UPDATE permission
 //   const canPerformBookingActions = hasBookingUpdatePermission;
 
@@ -1044,7 +1039,7 @@
 //       showError('You do not have permission to perform this action');
 //       return;
 //     }
-    
+
 //     setCurrentAction(action);
 //     setShowApprovalModal(true);
 //   };
@@ -1054,7 +1049,7 @@
 //       showError('You do not have permission to cancel bookings');
 //       return;
 //     }
-    
+
 //     try {
 //       const { value: formValues } = await Swal.fire({
 //         title: 'Cancel Booking',
@@ -1070,12 +1065,12 @@
 //         preConfirm: () => {
 //           const reason = document.getElementById('swal-reason').value.trim();
 //           const charges = document.getElementById('swal-charges').value;
-          
+
 //           if (!reason) {
 //             Swal.showValidationMessage('Please enter a reason for cancellation');
 //             return false;
 //           }
-          
+
 //           return {
 //             reason,
 //             cancellationCharges: charges ? parseInt(charges) : 0
@@ -1085,7 +1080,7 @@
 
 //       if (formValues) {
 //         setCancelLoading(true);
-        
+
 //         await axiosInstance.post(`/bookings/${booking.id}/cancel`, {
 //           reason: formValues.reason,
 //           cancellationCharges: formValues.cancellationCharges
@@ -1109,7 +1104,7 @@
 //       showError('You do not have permission to verify KYC');
 //       return;
 //     }
-    
+
 //     try {
 //       setKycActionLoading(true);
 //       const { value: verificationNote } = await Swal.fire({
@@ -1151,11 +1146,11 @@
 //       showError('You do not have permission to perform this action');
 //       return;
 //     }
-    
+
 //     try {
 //       setActionLoading(true);
 //       setShowApprovalModal(false);
-  
+
 //       const requestBody = {};
 //       if (approvalNote && approvalNote.trim()) {
 //         if (currentAction === 'reject') {
@@ -1164,7 +1159,7 @@
 //           requestBody.approvalNote = approvalNote.trim();
 //         }
 //       }
-  
+
 //       let response;
 //       if (currentAction === 'approve') {
 //         response = await axiosInstance.put(`/bookings/${booking.id}/approve`, requestBody);
@@ -1173,9 +1168,9 @@
 //       } else {
 //         response = await axiosInstance.post(`/bookings/${booking.id}/${currentAction}`, requestBody);
 //       }
-  
+
 //       const successMessage = response?.data?.message || `Booking ${currentAction}d successfully!`;
-      
+
 //       if (currentAction === 'reject') {
 //         Swal.fire({
 //           title: 'Success!',
@@ -1187,7 +1182,7 @@
 //       } else {
 //         showSuccess(successMessage);
 //       }
-      
+
 //       refreshData();
 //       onClose();
 //     } catch (error) {
@@ -1203,7 +1198,7 @@
 //       showError('You do not have permission to allocate chassis numbers');
 //       return;
 //     }
-    
+
 //     try {
 //       setChassisLoading(true);
 //       setShowChassisModal(false);
@@ -1282,14 +1277,14 @@
 //   };
 
 //   const shouldShowApproveRejectButtons = () => {
-//     return canPerformBookingActions && 
+//     return canPerformBookingActions &&
 //            (booking?.status === 'PENDING_APPROVAL' || booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)');
 //   };
 
 //   const shouldShowCancelButton = () => {
-//     return canDeleteBooking && 
-//            booking?.status !== 'CANCELLED' && 
-//            booking?.status !== 'COMPLETED' && 
+//     return canDeleteBooking &&
+//            booking?.status !== 'CANCELLED' &&
+//            booking?.status !== 'COMPLETED' &&
 //            booking?.status !== 'REJECTED';
 //   };
 
@@ -1307,7 +1302,7 @@
 //         </div>
 //       );
 //     }
-    
+
 //     // Fallback to original verticles array if verticlesSummary doesn't exist
 //     if (!booking.verticles || booking.verticles.length === 0) {
 //       return <span className="detail-value">No verticles assigned</span>;
@@ -1464,7 +1459,7 @@
 //               </CCard>
 
 //               {/* Verticles Section */}
-//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) || 
+//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) ||
 //                 (booking.verticles && booking.verticles.length > 0)) && (
 //                 <CCard className="booking-section mb-3">
 //                   <CCardHeader>
@@ -1744,7 +1739,7 @@
 //                   </CCard>
 //                 </div>
 //               </div>
-              
+
 //               <CCard className="booking-section">
 //                 <CCardHeader>
 //                   <h5>
@@ -1780,17 +1775,17 @@
 //               {shouldShowApproveRejectButtons() && (
 //                 <>
 //                   {/* Changed "Approve Discount" to "Approve" */}
-//                   <button 
-//                     className="btn btn-success me-2" 
-//                     onClick={() => handleActionClick('approve')} 
+//                   <button
+//                     className="btn btn-success me-2"
+//                     onClick={() => handleActionClick('approve')}
 //                     disabled={actionLoading}
 //                   >
 //                     {actionLoading ? 'Approving...' : 'Approve'}
 //                   </button>
 //                   {/* Disabled when discount is zero */}
-//                   <button 
-//                     className="btn btn-danger me-2" 
-//                     onClick={() => handleActionClick('reject')} 
+//                   <button
+//                     className="btn btn-danger me-2"
+//                     onClick={() => handleActionClick('reject')}
 //                     disabled={actionLoading || isDiscountZero()}
 //                     title={isDiscountZero() ? "Cannot reject booking with zero discount" : ""}
 //                   >
@@ -1811,9 +1806,9 @@
 //               )}
 
 //               {shouldShowCancelButton() && (
-//                 <button 
-//                   className="btn btn-warning me-2" 
-//                   onClick={handleCancelBooking} 
+//                 <button
+//                   className="btn btn-warning me-2"
+//                   onClick={handleCancelBooking}
 //                   disabled={cancelLoading}
 //                 >
 //                   {cancelLoading ? 'Cancelling...' : 'Cancel Booking'}
@@ -1962,14 +1957,6 @@
 
 // export default ViewBooking;
 
-
-
-
-
-
-
-
-
 // import React, { useState, useEffect } from 'react';
 // import {
 //   CModal,
@@ -2026,17 +2013,17 @@
 //   const [currentAction, setCurrentAction] = useState(null);
 //   const [showChassisModal, setShowChassisModal] = useState(false);
 //   const [chassisLoading, setChassisLoading] = useState(false);
-//   const { permissions } = useAuth(); 
+//   const { permissions } = useAuth();
 //   const userRole = localStorage.getItem('userRole');
-  
+
 //   // Determine which tab this booking belongs to based on status
 //   const getBookingTab = () => {
 //     if (!booking?.status) return null;
-    
+
 //     const status = booking.status;
-    
-//     if (status === 'PENDING_APPROVAL' || 
-//         status === 'PENDING_APPROVAL (Discount_Exceeded)' || 
+
+//     if (status === 'PENDING_APPROVAL' ||
+//         status === 'PENDING_APPROVAL (Discount_Exceeded)' ||
 //         status === 'FREEZZED') {
 //       return TABS.ALL_BOOKING.PENDING_APPROVALS;
 //     } else if (status === 'APPROVED') {
@@ -2049,17 +2036,17 @@
 //       return TABS.ALL_BOOKING.REJECTED_DISCOUNT;
 //     } else if (status === 'CANCELLED') {
 //       // Check if it's a cancellation request
-//       return booking.cancellationRequest?.status === 'PENDING' ? 
+//       return booking.cancellationRequest?.status === 'PENDING' ?
 //         TABS.ALL_BOOKING.CANCELLED_BOOKING : null;
 //     }
 //     return null;
 //   };
 
 //   const bookingTab = getBookingTab();
-  
+
 //   // Tab-specific CREATE permission checks (for approve/allocate actions)
-//   const hasCreatePermission = bookingTab ? 
-//     hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.CREATE, bookingTab) : 
+//   const hasCreatePermission = bookingTab ?
+//     hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.CREATE, bookingTab) :
 //     false;
 
 //   // Tab-specific UPDATE permission checks (for edit/verify KYC actions)
@@ -2075,7 +2062,7 @@
 //   // Specific action permissions based on tab
 //   const canApproveBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     if (bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS) {
 //       // For PENDING_APPROVALS tab, approve booking uses CREATE permission
 //       return hasCreatePermission;
@@ -2085,7 +2072,7 @@
 
 //   const canRejectBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     if (bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS) {
 //       // For PENDING_APPROVALS tab, reject booking uses DELETE permission
 //       return hasDeletePermission;
@@ -2095,45 +2082,45 @@
 
 //   const canCancelBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Cancel booking uses DELETE permission in the current tab
 //     // Except for CANCELLED and COMPLETED statuses
-//     const canCancelStatus = booking?.status !== 'CANCELLED' && 
-//                            booking?.status !== 'COMPLETED' && 
+//     const canCancelStatus = booking?.status !== 'CANCELLED' &&
+//                            booking?.status !== 'COMPLETED' &&
 //                            booking?.status !== 'REJECTED';
-    
+
 //     return canCancelStatus && hasDeletePermission;
 //   };
 
 //   const canVerifyKYC = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // KYC verification uses UPDATE permission in the current tab
 //     return booking?.documentStatus?.kyc?.status === 'PENDING' && hasUpdatePermission;
 //   };
 
 //   const canEditBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Edit uses UPDATE permission in the current tab
 //     // Disable edit for certain statuses
-//     const canEditStatus = booking?.status !== 'FREEZZED' && 
-//                          booking?.status !== 'APPROVED' && 
+//     const canEditStatus = booking?.status !== 'FREEZZED' &&
+//                          booking?.status !== 'APPROVED' &&
 //                          booking?.status !== 'ALLOCATED';
-    
+
 //     return canEditStatus && hasUpdatePermission;
 //   };
 
 //   const canUploadDocuments = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Upload documents uses CREATE permission
 //     return hasCreatePermission;
 //   };
 
 //   const canAllocateChassis = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Allocate chassis uses CREATE permission in APPROVED tab
 //     if (bookingTab === TABS.ALL_BOOKING.APPROVED) {
 //       return hasCreatePermission;
@@ -2143,7 +2130,7 @@
 
 //   const canUpdateChassis = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Update chassis uses CREATE permission in ALLOCATED tab
 //     if (bookingTab === TABS.ALL_BOOKING.ALLOCATED) {
 //       return hasCreatePermission && booking?.chassisNumberChangeAllowed;
@@ -2158,18 +2145,18 @@
 
 //   const handleActionClick = (action) => {
 //     let hasPermission = false;
-    
+
 //     if (action === 'approve') {
 //       hasPermission = canApproveBooking();
 //     } else if (action === 'reject') {
 //       hasPermission = canRejectBooking();
 //     }
-    
+
 //     if (!hasPermission) {
 //       showError('You do not have permission to perform this action');
 //       return;
 //     }
-    
+
 //     setCurrentAction(action);
 //     setShowApprovalModal(true);
 //   };
@@ -2179,7 +2166,7 @@
 //       showError('You do not have permission to cancel bookings in this tab');
 //       return;
 //     }
-    
+
 //     try {
 //       const { value: formValues } = await Swal.fire({
 //         title: 'Cancel Booking',
@@ -2195,12 +2182,12 @@
 //         preConfirm: () => {
 //           const reason = document.getElementById('swal-reason').value.trim();
 //           const charges = document.getElementById('swal-charges').value;
-          
+
 //           if (!reason) {
 //             Swal.showValidationMessage('Please enter a reason for cancellation');
 //             return false;
 //           }
-          
+
 //           return {
 //             reason,
 //             cancellationCharges: charges ? parseInt(charges) : 0
@@ -2210,7 +2197,7 @@
 
 //       if (formValues) {
 //         setCancelLoading(true);
-        
+
 //         await axiosInstance.post(`/bookings/${booking.id}/cancel`, {
 //           reason: formValues.reason,
 //           cancellationCharges: formValues.cancellationCharges
@@ -2233,7 +2220,7 @@
 //       showError('You do not have permission to verify KYC');
 //       return;
 //     }
-    
+
 //     try {
 //       setKycActionLoading(true);
 //       const { value: verificationNote } = await Swal.fire({
@@ -2272,18 +2259,18 @@
 
 //   const handleStatusUpdate = async (approvalNote) => {
 //     let hasPermission = false;
-    
+
 //     if (currentAction === 'approve') {
 //       hasPermission = canApproveBooking();
 //     } else if (currentAction === 'reject') {
 //       hasPermission = canRejectBooking();
 //     }
-    
+
 //     if (!hasPermission) {
 //       showError('You do not have permission to perform this action');
 //       return;
 //     }
-    
+
 //     try {
 //       setActionLoading(true);
 //       setShowApprovalModal(false);
@@ -2307,7 +2294,7 @@
 //       }
 
 //       const successMessage = response?.data?.message || `Booking ${currentAction}d successfully!`;
-      
+
 //       if (currentAction === 'reject') {
 //         Swal.fire({
 //           title: 'Success!',
@@ -2319,7 +2306,7 @@
 //       } else {
 //         showSuccess(successMessage);
 //       }
-      
+
 //       refreshData();
 //       onClose();
 //     } catch (error) {
@@ -2334,19 +2321,19 @@
 //     // Check if this is allocation (from APPROVED tab) or update (from ALLOCATED tab)
 //     const isAllocation = bookingTab === TABS.ALL_BOOKING.APPROVED;
 //     const isUpdate = bookingTab === TABS.ALL_BOOKING.ALLOCATED;
-    
+
 //     let hasPermission = false;
 //     if (isAllocation) {
 //       hasPermission = canAllocateChassis();
 //     } else if (isUpdate) {
 //       hasPermission = canUpdateChassis();
 //     }
-    
+
 //     if (!hasPermission) {
 //       showError('You do not have permission to allocate/update chassis number');
 //       return;
 //     }
-    
+
 //     try {
 //       setChassisLoading(true);
 //       setShowChassisModal(false);
@@ -2428,7 +2415,7 @@
 //   };
 
 //   const shouldShowApproveRejectButtons = () => {
-//     return (booking?.status === 'PENDING_APPROVAL' || 
+//     return (booking?.status === 'PENDING_APPROVAL' ||
 //             booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)') &&
 //            bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS;
 //   };
@@ -2438,14 +2425,14 @@
 //   };
 
 //   const shouldShowChassisAllocationButton = () => {
-//     return canAllocateChassis() && 
+//     return canAllocateChassis() &&
 //            booking?.status === 'APPROVED' &&
 //            (booking?.payment?.type === 'CASH' ||
 //             (booking?.payment?.type === 'FINANCE' && booking?.documentStatus?.financeLetter?.status === 'APPROVED'));
 //   };
 
 //   const shouldShowChassisUpdateButton = () => {
-//     return canUpdateChassis() && 
+//     return canUpdateChassis() &&
 //            booking?.status === 'ALLOCATED' &&
 //            booking?.chassisNumberChangeAllowed;
 //   };
@@ -2464,7 +2451,7 @@
 //         </div>
 //       );
 //     }
-    
+
 //     // Fallback to original verticles array if verticlesSummary doesn't exist
 //     if (!booking.verticles || booking.verticles.length === 0) {
 //       return <span className="detail-value">No verticles assigned</span>;
@@ -2621,7 +2608,7 @@
 //               </CCard>
 
 //               {/* Verticles Section */}
-//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) || 
+//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) ||
 //                 (booking.verticles && booking.verticles.length > 0)) && (
 //                 <CCard className="booking-section mb-3">
 //                   <CCardHeader>
@@ -2901,7 +2888,7 @@
 //                   </CCard>
 //                 </div>
 //               </div>
-              
+
 //               <CCard className="booking-section">
 //                 <CCardHeader>
 //                   <h5>
@@ -2936,17 +2923,17 @@
 //             <div>
 //               {shouldShowApproveRejectButtons() && (
 //                 <>
-//                   <button 
-//                     className="btn btn-success me-2" 
-//                     onClick={() => handleActionClick('approve')} 
+//                   <button
+//                     className="btn btn-success me-2"
+//                     onClick={() => handleActionClick('approve')}
 //                     disabled={actionLoading || !canApproveBooking()}
 //                     title={!canApproveBooking() ? "You don't have permission to approve bookings" : ""}
 //                   >
 //                     {actionLoading ? 'Approving...' : 'Approve'}
 //                   </button>
-//                   <button 
-//                     className="btn btn-danger me-2" 
-//                     onClick={() => handleActionClick('reject')} 
+//                   <button
+//                     className="btn btn-danger me-2"
+//                     onClick={() => handleActionClick('reject')}
 //                     disabled={actionLoading || isDiscountZero() || !canRejectBooking()}
 //                     title={!canRejectBooking() ? "You don't have permission to reject bookings" : isDiscountZero() ? "Cannot reject booking with zero discount" : ""}
 //                   >
@@ -2957,17 +2944,17 @@
 
 //               {booking?.documentStatus?.kyc?.status === 'PENDING' && (
 //                 <>
-//                   <button 
-//                     className="btn btn-success me-2" 
-//                     onClick={() => handleKycStatusUpdate('APPROVED')} 
+//                   <button
+//                     className="btn btn-success me-2"
+//                     onClick={() => handleKycStatusUpdate('APPROVED')}
 //                     disabled={kycActionLoading || !canVerifyKYC()}
 //                     title={!canVerifyKYC() ? "You don't have permission to verify KYC" : ""}
 //                   >
 //                     {kycActionLoading ? 'Verifying KYC...' : 'Verify KYC'}
 //                   </button>
-//                   <button 
-//                     className="btn btn-danger me-2" 
-//                     onClick={() => handleKycStatusUpdate('REJECTED')} 
+//                   <button
+//                     className="btn btn-danger me-2"
+//                     onClick={() => handleKycStatusUpdate('REJECTED')}
 //                     disabled={kycActionLoading || !canVerifyKYC()}
 //                     title={!canVerifyKYC() ? "You don't have permission to reject KYC" : ""}
 //                   >
@@ -2977,9 +2964,9 @@
 //               )}
 
 //               {shouldShowCancelButton() && (
-//                 <button 
-//                   className="btn btn-warning me-2" 
-//                   onClick={handleCancelBooking} 
+//                 <button
+//                   className="btn btn-warning me-2"
+//                   onClick={handleCancelBooking}
 //                   disabled={cancelLoading}
 //                   title={!canCancelBooking() ? "You don't have permission to cancel bookings" : ""}
 //                 >
@@ -2988,8 +2975,8 @@
 //               )}
 
 //               {shouldShowChassisAllocationButton() && (
-//                 <button 
-//                   className="btn btn-info me-2" 
+//                 <button
+//                   className="btn btn-info me-2"
 //                   onClick={() => setShowChassisModal(true)}
 //                   disabled={chassisLoading}
 //                   title={!canAllocateChassis() ? "You don't have permission to allocate chassis" : ""}
@@ -2999,8 +2986,8 @@
 //               )}
 
 //               {shouldShowChassisUpdateButton() && (
-//                 <button 
-//                   className="btn btn-info me-2" 
+//                 <button
+//                   className="btn btn-info me-2"
 //                   onClick={() => setShowChassisModal(true)}
 //                   disabled={chassisLoading}
 //                   title={!canUpdateChassis() ? "You don't have permission to update chassis" : ""}
@@ -3158,10 +3145,6 @@
 
 // export default ViewBooking;
 
-
-
-
-
 // import React, { useState, useEffect } from 'react';
 // import {
 //   CModal,
@@ -3218,17 +3201,17 @@
 //   const [currentAction, setCurrentAction] = useState(null);
 //   const [showChassisModal, setShowChassisModal] = useState(false);
 //   const [chassisLoading, setChassisLoading] = useState(false);
-//   const { permissions } = useAuth(); 
+//   const { permissions } = useAuth();
 //   const userRole = localStorage.getItem('userRole');
-  
+
 //   // Determine which tab this booking belongs to based on status
 //   const getBookingTab = () => {
 //     if (!booking?.status) return null;
-    
+
 //     const status = booking.status;
-    
-//     if (status === 'PENDING_APPROVAL' || 
-//         status === 'PENDING_APPROVAL (Discount_Exceeded)' || 
+
+//     if (status === 'PENDING_APPROVAL' ||
+//         status === 'PENDING_APPROVAL (Discount_Exceeded)' ||
 //         status === 'FREEZZED') {
 //       return TABS.ALL_BOOKING.PENDING_APPROVALS;
 //     } else if (status === 'APPROVED') {
@@ -3241,17 +3224,17 @@
 //       return TABS.ALL_BOOKING.REJECTED_DISCOUNT;
 //     } else if (status === 'CANCELLED') {
 //       // Check if it's a cancellation request
-//       return booking.cancellationRequest?.status === 'PENDING' ? 
+//       return booking.cancellationRequest?.status === 'PENDING' ?
 //         TABS.ALL_BOOKING.CANCELLED_BOOKING : null;
 //     }
 //     return null;
 //   };
 
 //   const bookingTab = getBookingTab();
-  
+
 //   // Tab-specific CREATE permission checks (for approve/allocate actions)
-//   const hasCreatePermission = bookingTab ? 
-//     hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.CREATE, bookingTab) : 
+//   const hasCreatePermission = bookingTab ?
+//     hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.CREATE, bookingTab) :
 //     false;
 
 //   // Tab-specific UPDATE permission checks (for edit/verify KYC actions)
@@ -3267,7 +3250,7 @@
 //   // Specific action permissions based on tab
 //   const canApproveBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     if (bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS) {
 //       // For PENDING_APPROVALS tab, approve booking uses CREATE permission
 //       return hasCreatePermission;
@@ -3277,7 +3260,7 @@
 
 //   const canRejectBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     if (bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS) {
 //       // For PENDING_APPROVALS tab, reject booking uses DELETE permission
 //       return hasDeletePermission;
@@ -3287,45 +3270,45 @@
 
 //   const canCancelBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Cancel booking uses DELETE permission in the current tab
 //     // Except for CANCELLED and COMPLETED statuses
-//     const canCancelStatus = booking?.status !== 'CANCELLED' && 
-//                            booking?.status !== 'COMPLETED' && 
+//     const canCancelStatus = booking?.status !== 'CANCELLED' &&
+//                            booking?.status !== 'COMPLETED' &&
 //                            booking?.status !== 'REJECTED';
-    
+
 //     return canCancelStatus && hasDeletePermission;
 //   };
 
 //   const canVerifyKYC = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // KYC verification uses UPDATE permission in the current tab
 //     return booking?.documentStatus?.kyc?.status === 'PENDING' && hasUpdatePermission;
 //   };
 
 //   const canEditBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Edit uses UPDATE permission in the current tab
 //     // Disable edit for certain statuses
-//     const canEditStatus = booking?.status !== 'FREEZZED' && 
-//                          booking?.status !== 'APPROVED' && 
+//     const canEditStatus = booking?.status !== 'FREEZZED' &&
+//                          booking?.status !== 'APPROVED' &&
 //                          booking?.status !== 'ALLOCATED';
-    
+
 //     return canEditStatus && hasUpdatePermission;
 //   };
 
 //   const canUploadDocuments = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Upload documents uses CREATE permission
 //     return hasCreatePermission;
 //   };
 
 //   const canAllocateChassis = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Allocate chassis uses CREATE permission in APPROVED tab
 //     if (bookingTab === TABS.ALL_BOOKING.APPROVED) {
 //       return hasCreatePermission;
@@ -3335,7 +3318,7 @@
 
 //   const canUpdateChassis = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Update chassis uses CREATE permission in ALLOCATED tab
 //     if (bookingTab === TABS.ALL_BOOKING.ALLOCATED) {
 //       return hasCreatePermission && booking?.chassisNumberChangeAllowed;
@@ -3350,18 +3333,18 @@
 
 //   const handleActionClick = (action) => {
 //     let hasPermission = false;
-    
+
 //     if (action === 'approve') {
 //       hasPermission = canApproveBooking();
 //     } else if (action === 'reject') {
 //       hasPermission = canRejectBooking();
 //     }
-    
+
 //     if (!hasPermission) {
 //       showError('You do not have permission to perform this action');
 //       return;
 //     }
-    
+
 //     setCurrentAction(action);
 //     setShowApprovalModal(true);
 //   };
@@ -3371,7 +3354,7 @@
 //       showError('You do not have permission to cancel bookings in this tab');
 //       return;
 //     }
-    
+
 //     try {
 //       const { value: formValues } = await Swal.fire({
 //         title: 'Cancel Booking',
@@ -3387,12 +3370,12 @@
 //         preConfirm: () => {
 //           const reason = document.getElementById('swal-reason').value.trim();
 //           const charges = document.getElementById('swal-charges').value;
-          
+
 //           if (!reason) {
 //             Swal.showValidationMessage('Please enter a reason for cancellation');
 //             return false;
 //           }
-          
+
 //           return {
 //             reason,
 //             cancellationCharges: charges ? parseInt(charges) : 0
@@ -3402,7 +3385,7 @@
 
 //       if (formValues) {
 //         setCancelLoading(true);
-        
+
 //         await axiosInstance.post(`/bookings/${booking.id}/cancel`, {
 //           reason: formValues.reason,
 //           cancellationCharges: formValues.cancellationCharges
@@ -3425,7 +3408,7 @@
 //       showError('You do not have permission to verify KYC');
 //       return;
 //     }
-    
+
 //     try {
 //       setKycActionLoading(true);
 //       const { value: verificationNote } = await Swal.fire({
@@ -3464,18 +3447,18 @@
 
 //   const handleStatusUpdate = async (approvalNote) => {
 //     let hasPermission = false;
-    
+
 //     if (currentAction === 'approve') {
 //       hasPermission = canApproveBooking();
 //     } else if (currentAction === 'reject') {
 //       hasPermission = canRejectBooking();
 //     }
-    
+
 //     if (!hasPermission) {
 //       showError('You do not have permission to perform this action');
 //       return;
 //     }
-    
+
 //     try {
 //       setActionLoading(true);
 //       setShowApprovalModal(false);
@@ -3499,7 +3482,7 @@
 //       }
 
 //       const successMessage = response?.data?.message || `Booking ${currentAction}d successfully!`;
-      
+
 //       if (currentAction === 'reject') {
 //         Swal.fire({
 //           title: 'Success!',
@@ -3511,7 +3494,7 @@
 //       } else {
 //         showSuccess(successMessage);
 //       }
-      
+
 //       refreshData();
 //       onClose();
 //     } catch (error) {
@@ -3526,19 +3509,19 @@
 //     // Check if this is allocation (from APPROVED tab) or update (from ALLOCATED tab)
 //     const isAllocation = bookingTab === TABS.ALL_BOOKING.APPROVED;
 //     const isUpdate = bookingTab === TABS.ALL_BOOKING.ALLOCATED;
-    
+
 //     let hasPermission = false;
 //     if (isAllocation) {
 //       hasPermission = canAllocateChassis();
 //     } else if (isUpdate) {
 //       hasPermission = canUpdateChassis();
 //     }
-    
+
 //     if (!hasPermission) {
 //       showError('You do not have permission to allocate/update chassis number');
 //       return;
 //     }
-    
+
 //     try {
 //       setChassisLoading(true);
 //       setShowChassisModal(false);
@@ -3620,7 +3603,7 @@
 //   };
 
 //   const shouldShowApproveRejectButtons = () => {
-//     return (booking?.status === 'PENDING_APPROVAL' || 
+//     return (booking?.status === 'PENDING_APPROVAL' ||
 //             booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)') &&
 //            bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS;
 //   };
@@ -3630,14 +3613,14 @@
 //   };
 
 //   const shouldShowChassisAllocationButton = () => {
-//     return canAllocateChassis() && 
+//     return canAllocateChassis() &&
 //            booking?.status === 'APPROVED' &&
 //            (booking?.payment?.type === 'CASH' ||
 //             (booking?.payment?.type === 'FINANCE' && booking?.documentStatus?.financeLetter?.status === 'APPROVED'));
 //   };
 
 //   const shouldShowChassisUpdateButton = () => {
-//     return canUpdateChassis() && 
+//     return canUpdateChassis() &&
 //            booking?.status === 'ALLOCATED' &&
 //            booking?.chassisNumberChangeAllowed;
 //   };
@@ -3656,7 +3639,7 @@
 //         </div>
 //       );
 //     }
-    
+
 //     // Fallback to original verticles array if verticlesSummary doesn't exist
 //     if (!booking.verticles || booking.verticles.length === 0) {
 //       return <span className="detail-value">No verticles assigned</span>;
@@ -3815,7 +3798,7 @@
 //               </CCard>
 
 //               {/* Verticles Section */}
-//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) || 
+//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) ||
 //                 (booking.verticles && booking.verticles.length > 0)) && (
 //                 <CCard className="booking-section mb-3">
 //                   <CCardHeader>
@@ -4102,7 +4085,7 @@
 //                   </CCard>
 //                 </div>
 //               </div>
-              
+
 //               <CCard className="booking-section">
 //                 <CCardHeader>
 //                   <h5>
@@ -4137,17 +4120,17 @@
 //             <div>
 //               {shouldShowApproveRejectButtons() && (
 //                 <>
-//                   <button 
-//                     className="btn btn-success me-2" 
-//                     onClick={() => handleActionClick('approve')} 
+//                   <button
+//                     className="btn btn-success me-2"
+//                     onClick={() => handleActionClick('approve')}
 //                     disabled={actionLoading || !canApproveBooking()}
 //                     title={!canApproveBooking() ? "You don't have permission to approve bookings" : ""}
 //                   >
 //                     {actionLoading ? 'Approving...' : 'Approve'}
 //                   </button>
-//                   <button 
-//                     className="btn btn-danger me-2" 
-//                     onClick={() => handleActionClick('reject')} 
+//                   <button
+//                     className="btn btn-danger me-2"
+//                     onClick={() => handleActionClick('reject')}
 //                     disabled={actionLoading || isDiscountZero() || !canRejectBooking()}
 //                     title={!canRejectBooking() ? "You don't have permission to reject bookings" : isDiscountZero() ? "Cannot reject booking with zero discount" : ""}
 //                   >
@@ -4158,17 +4141,17 @@
 
 //               {booking?.documentStatus?.kyc?.status === 'PENDING' && (
 //                 <>
-//                   <button 
-//                     className="btn btn-success me-2" 
-//                     onClick={() => handleKycStatusUpdate('APPROVED')} 
+//                   <button
+//                     className="btn btn-success me-2"
+//                     onClick={() => handleKycStatusUpdate('APPROVED')}
 //                     disabled={kycActionLoading || !canVerifyKYC()}
 //                     title={!canVerifyKYC() ? "You don't have permission to verify KYC" : ""}
 //                   >
 //                     {kycActionLoading ? 'Verifying KYC...' : 'Verify KYC'}
 //                   </button>
-//                   <button 
-//                     className="btn btn-danger me-2" 
-//                     onClick={() => handleKycStatusUpdate('REJECTED')} 
+//                   <button
+//                     className="btn btn-danger me-2"
+//                     onClick={() => handleKycStatusUpdate('REJECTED')}
 //                     disabled={kycActionLoading || !canVerifyKYC()}
 //                     title={!canVerifyKYC() ? "You don't have permission to reject KYC" : ""}
 //                   >
@@ -4178,9 +4161,9 @@
 //               )}
 
 //               {shouldShowCancelButton() && (
-//                 <button 
-//                   className="btn btn-warning me-2" 
-//                   onClick={handleCancelBooking} 
+//                 <button
+//                   className="btn btn-warning me-2"
+//                   onClick={handleCancelBooking}
 //                   disabled={cancelLoading}
 //                   title={!canCancelBooking() ? "You don't have permission to cancel bookings" : ""}
 //                 >
@@ -4189,8 +4172,8 @@
 //               )}
 
 //               {shouldShowChassisAllocationButton() && (
-//                 <button 
-//                   className="btn btn-info me-2" 
+//                 <button
+//                   className="btn btn-info me-2"
 //                   onClick={() => setShowChassisModal(true)}
 //                   disabled={chassisLoading}
 //                   title={!canAllocateChassis() ? "You don't have permission to allocate chassis" : ""}
@@ -4200,8 +4183,8 @@
 //               )}
 
 //               {shouldShowChassisUpdateButton() && (
-//                 <button 
-//                   className="btn btn-info me-2" 
+//                 <button
+//                   className="btn btn-info me-2"
 //                   onClick={() => setShowChassisModal(true)}
 //                   disabled={chassisLoading}
 //                   title={!canUpdateChassis() ? "You don't have permission to update chassis" : ""}
@@ -4370,11 +4353,6 @@
 
 // export default ViewBooking;
 
-
-
-
-
-
 // import React, { useState, useEffect } from 'react';
 // import {
 //   CModal,
@@ -4431,17 +4409,17 @@
 //   const [currentAction, setCurrentAction] = useState(null);
 //   const [showChassisModal, setShowChassisModal] = useState(false);
 //   const [chassisLoading, setChassisLoading] = useState(false);
-//   const { permissions } = useAuth(); 
+//   const { permissions } = useAuth();
 //   const userRole = localStorage.getItem('userRole');
-  
+
 //   // Determine which tab this booking belongs to based on status
 //   const getBookingTab = () => {
 //     if (!booking?.status) return null;
-    
+
 //     const status = booking.status;
-    
-//     if (status === 'PENDING_APPROVAL' || 
-//         status === 'PENDING_APPROVAL (Discount_Exceeded)' || 
+
+//     if (status === 'PENDING_APPROVAL' ||
+//         status === 'PENDING_APPROVAL (Discount_Exceeded)' ||
 //         status === 'FREEZZED') {
 //       return TABS.ALL_BOOKING.PENDING_APPROVALS;
 //     } else if (status === 'APPROVED') {
@@ -4454,17 +4432,17 @@
 //       return TABS.ALL_BOOKING.REJECTED_DISCOUNT;
 //     } else if (status === 'CANCELLED') {
 //       // Check if it's a cancellation request
-//       return booking.cancellationRequest?.status === 'PENDING' ? 
+//       return booking.cancellationRequest?.status === 'PENDING' ?
 //         TABS.ALL_BOOKING.CANCELLED_BOOKING : null;
 //     }
 //     return null;
 //   };
 
 //   const bookingTab = getBookingTab();
-  
+
 //   // Tab-specific CREATE permission checks (for approve/allocate actions)
-//   const hasCreatePermission = bookingTab ? 
-//     hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.CREATE, bookingTab) : 
+//   const hasCreatePermission = bookingTab ?
+//     hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.CREATE, bookingTab) :
 //     false;
 
 //   // Tab-specific UPDATE permission checks (for edit/verify KYC actions)
@@ -4480,7 +4458,7 @@
 //   // Specific action permissions based on tab
 //   const canApproveBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     if (bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS) {
 //       // For PENDING_APPROVALS tab, approve booking uses CREATE permission
 //       return hasCreatePermission;
@@ -4490,7 +4468,7 @@
 
 //   const canRejectBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     if (bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS) {
 //       // For PENDING_APPROVALS tab, reject booking uses DELETE permission
 //       return hasDeletePermission;
@@ -4500,45 +4478,45 @@
 
 //   const canCancelBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Cancel booking uses DELETE permission in the current tab
 //     // Except for CANCELLED and COMPLETED statuses
-//     const canCancelStatus = booking?.status !== 'CANCELLED' && 
-//                            booking?.status !== 'COMPLETED' && 
+//     const canCancelStatus = booking?.status !== 'CANCELLED' &&
+//                            booking?.status !== 'COMPLETED' &&
 //                            booking?.status !== 'REJECTED';
-    
+
 //     return canCancelStatus && hasDeletePermission;
 //   };
 
 //   const canVerifyKYC = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // KYC verification uses UPDATE permission in the current tab
 //     return booking?.documentStatus?.kyc?.status === 'PENDING' && hasUpdatePermission;
 //   };
 
 //   const canEditBooking = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Edit uses UPDATE permission in the current tab
 //     // Disable edit for certain statuses
-//     const canEditStatus = booking?.status !== 'FREEZZED' && 
-//                          booking?.status !== 'APPROVED' && 
+//     const canEditStatus = booking?.status !== 'FREEZZED' &&
+//                          booking?.status !== 'APPROVED' &&
 //                          booking?.status !== 'ALLOCATED';
-    
+
 //     return canEditStatus && hasUpdatePermission;
 //   };
 
 //   const canUploadDocuments = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Upload documents uses CREATE permission
 //     return hasCreatePermission;
 //   };
 
 //   const canAllocateChassis = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Allocate chassis uses CREATE permission in APPROVED tab
 //     if (bookingTab === TABS.ALL_BOOKING.APPROVED) {
 //       return hasCreatePermission;
@@ -4548,7 +4526,7 @@
 
 //   const canUpdateChassis = () => {
 //     if (!bookingTab) return false;
-    
+
 //     // Update chassis uses CREATE permission in ALLOCATED tab
 //     if (bookingTab === TABS.ALL_BOOKING.ALLOCATED) {
 //       return hasCreatePermission && booking?.chassisNumberChangeAllowed;
@@ -4563,18 +4541,18 @@
 
 //   const handleActionClick = (action) => {
 //     let hasPermission = false;
-    
+
 //     if (action === 'approve') {
 //       hasPermission = canApproveBooking();
 //     } else if (action === 'reject') {
 //       hasPermission = canRejectBooking();
 //     }
-    
+
 //     if (!hasPermission) {
 //       showError('You do not have permission to perform this action');
 //       return;
 //     }
-    
+
 //     setCurrentAction(action);
 //     setShowApprovalModal(true);
 //   };
@@ -4584,7 +4562,7 @@
 //       showError('You do not have permission to cancel bookings in this tab');
 //       return;
 //     }
-    
+
 //     try {
 //       const { value: formValues } = await Swal.fire({
 //         title: 'Cancel Booking',
@@ -4600,12 +4578,12 @@
 //         preConfirm: () => {
 //           const reason = document.getElementById('swal-reason').value.trim();
 //           const charges = document.getElementById('swal-charges').value;
-          
+
 //           if (!reason) {
 //             Swal.showValidationMessage('Please enter a reason for cancellation');
 //             return false;
 //           }
-          
+
 //           return {
 //             reason,
 //             cancellationCharges: charges ? parseInt(charges) : 0
@@ -4615,7 +4593,7 @@
 
 //       if (formValues) {
 //         setCancelLoading(true);
-        
+
 //         await axiosInstance.post(`/bookings/${booking.id}/cancel`, {
 //           reason: formValues.reason,
 //           cancellationCharges: formValues.cancellationCharges
@@ -4638,7 +4616,7 @@
 //       showError('You do not have permission to verify KYC');
 //       return;
 //     }
-    
+
 //     try {
 //       setKycActionLoading(true);
 //       const { value: verificationNote } = await Swal.fire({
@@ -4677,18 +4655,18 @@
 
 //   const handleStatusUpdate = async (approvalNote) => {
 //   let hasPermission = false;
-  
+
 //   if (currentAction === 'approve') {
 //     hasPermission = canApproveBooking();
 //   } else if (currentAction === 'reject') {
 //     hasPermission = canRejectBooking();
 //   }
-  
+
 //   if (!hasPermission) {
 //     showError('You do not have permission to perform this action');
 //     return;
 //   }
-  
+
 //   try {
 //     setActionLoading(true);
 //     setShowApprovalModal(false);
@@ -4712,7 +4690,7 @@
 //     }
 
 //     const successMessage = response?.data?.message || `Booking ${currentAction}d successfully!`;
-    
+
 //     if (currentAction === 'reject') {
 //       Swal.fire({
 //         title: 'Success!',
@@ -4724,36 +4702,36 @@
 //     } else {
 //       showSuccess(successMessage);
 //     }
-    
+
 //     refreshData();
 //     onClose();
 //   } catch (error) {
 //     console.log('Error updating status:', error);
-    
+
 //     // Handle specific discount limit error
 //     const errorMessage = error.response?.data?.message;
-    
+
 //     if (currentAction === 'approve' && errorMessage && errorMessage.includes('exceeds your approval limit')) {
 //       // Extract the discount amount and required role from the error response
 //       const discountAmount = error.response?.data?.discountAmount;
 //       const requiredRole = error.response?.data?.requiredRole;
 //       const userDiscountLimit = error.response?.data?.userDiscountLimit;
-      
+
 //       let detailedMessage = errorMessage;
-      
+
 //       // Add more details if available
 //       // if (discountAmount !== undefined) {
 //       //   detailedMessage += `<br/><br/>• Discount Amount: ₹${discountAmount}`;
 //       // }
-      
+
 //       // if (userDiscountLimit !== undefined) {
 //       //   detailedMessage += `<br/>• Your Approval Limit: ₹${userDiscountLimit}`;
 //       // }
-      
+
 //       // if (requiredRole) {
 //       //   detailedMessage += `<br/>• Required Role: ${requiredRole}`;
 //       // }
-      
+
 //       // Show a more detailed error message for discount limit issues
 //       Swal.fire({
 //         title: 'Approval Limit Exceeded!',
@@ -4775,19 +4753,19 @@
 //     // Check if this is allocation (from APPROVED tab) or update (from ALLOCATED tab)
 //     const isAllocation = bookingTab === TABS.ALL_BOOKING.APPROVED;
 //     const isUpdate = bookingTab === TABS.ALL_BOOKING.ALLOCATED;
-    
+
 //     let hasPermission = false;
 //     if (isAllocation) {
 //       hasPermission = canAllocateChassis();
 //     } else if (isUpdate) {
 //       hasPermission = canUpdateChassis();
 //     }
-    
+
 //     if (!hasPermission) {
 //       showError('You do not have permission to allocate/update chassis number');
 //       return;
 //     }
-    
+
 //     try {
 //       setChassisLoading(true);
 //       setShowChassisModal(false);
@@ -4869,7 +4847,7 @@
 //   };
 
 //   const shouldShowApproveRejectButtons = () => {
-//     return (booking?.status === 'PENDING_APPROVAL' || 
+//     return (booking?.status === 'PENDING_APPROVAL' ||
 //             booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)') &&
 //            bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS;
 //   };
@@ -4879,14 +4857,14 @@
 //   };
 
 //   const shouldShowChassisAllocationButton = () => {
-//     return canAllocateChassis() && 
+//     return canAllocateChassis() &&
 //            booking?.status === 'APPROVED' &&
 //            (booking?.payment?.type === 'CASH' ||
 //             (booking?.payment?.type === 'FINANCE' && booking?.documentStatus?.financeLetter?.status === 'APPROVED'));
 //   };
 
 //   const shouldShowChassisUpdateButton = () => {
-//     return canUpdateChassis() && 
+//     return canUpdateChassis() &&
 //            booking?.status === 'ALLOCATED' &&
 //            booking?.chassisNumberChangeAllowed;
 //   };
@@ -4905,7 +4883,7 @@
 //         </div>
 //       );
 //     }
-    
+
 //     // Fallback to original verticles array if verticlesSummary doesn't exist
 //     if (!booking.verticles || booking.verticles.length === 0) {
 //       return <span className="detail-value">No verticles assigned</span>;
@@ -5064,7 +5042,7 @@
 //               </CCard>
 
 //               {/* Verticles Section */}
-//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) || 
+//               {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) ||
 //                 (booking.verticles && booking.verticles.length > 0)) && (
 //                 <CCard className="booking-section mb-3">
 //                   <CCardHeader>
@@ -5354,7 +5332,7 @@
 //                   </CCard>
 //                 </div>
 //               </div>
-              
+
 //               <CCard className="booking-section">
 //                 <CCardHeader>
 //                   <h5>
@@ -5389,17 +5367,17 @@
 //             <div>
 //               {shouldShowApproveRejectButtons() && (
 //                 <>
-//                   <button 
-//                     className="btn btn-success me-2" 
-//                     onClick={() => handleActionClick('approve')} 
+//                   <button
+//                     className="btn btn-success me-2"
+//                     onClick={() => handleActionClick('approve')}
 //                     disabled={actionLoading || !canApproveBooking()}
 //                     title={!canApproveBooking() ? "You don't have permission to approve bookings" : ""}
 //                   >
 //                     {actionLoading ? 'Approving...' : 'Approve'}
 //                   </button>
-//                   <button 
-//                     className="btn btn-danger me-2" 
-//                     onClick={() => handleActionClick('reject')} 
+//                   <button
+//                     className="btn btn-danger me-2"
+//                     onClick={() => handleActionClick('reject')}
 //                     disabled={actionLoading || isDiscountZero() || !canRejectBooking()}
 //                     title={!canRejectBooking() ? "You don't have permission to reject bookings" : isDiscountZero() ? "Cannot reject booking with zero discount" : ""}
 //                   >
@@ -5410,17 +5388,17 @@
 
 //               {booking?.documentStatus?.kyc?.status === 'PENDING' && (
 //                 <>
-//                   <button 
-//                     className="btn btn-success me-2" 
-//                     onClick={() => handleKycStatusUpdate('APPROVED')} 
+//                   <button
+//                     className="btn btn-success me-2"
+//                     onClick={() => handleKycStatusUpdate('APPROVED')}
 //                     disabled={kycActionLoading || !canVerifyKYC()}
 //                     title={!canVerifyKYC() ? "You don't have permission to verify KYC" : ""}
 //                   >
 //                     {kycActionLoading ? 'Verifying KYC...' : 'Verify KYC'}
 //                   </button>
-//                   <button 
-//                     className="btn btn-danger me-2" 
-//                     onClick={() => handleKycStatusUpdate('REJECTED')} 
+//                   <button
+//                     className="btn btn-danger me-2"
+//                     onClick={() => handleKycStatusUpdate('REJECTED')}
 //                     disabled={kycActionLoading || !canVerifyKYC()}
 //                     title={!canVerifyKYC() ? "You don't have permission to reject KYC" : ""}
 //                   >
@@ -5430,9 +5408,9 @@
 //               )}
 
 //               {shouldShowCancelButton() && (
-//                 <button 
-//                   className="btn btn-warning me-2" 
-//                   onClick={handleCancelBooking} 
+//                 <button
+//                   className="btn btn-warning me-2"
+//                   onClick={handleCancelBooking}
 //                   disabled={cancelLoading}
 //                   title={!canCancelBooking() ? "You don't have permission to cancel bookings" : ""}
 //                 >
@@ -5441,8 +5419,8 @@
 //               )}
 
 //               {shouldShowChassisAllocationButton() && (
-//                 <button 
-//                   className="btn btn-info me-2" 
+//                 <button
+//                   className="btn btn-info me-2"
 //                   onClick={() => setShowChassisModal(true)}
 //                   disabled={chassisLoading}
 //                   title={!canAllocateChassis() ? "You don't have permission to allocate chassis" : ""}
@@ -5452,8 +5430,8 @@
 //               )}
 
 //               {shouldShowChassisUpdateButton() && (
-//                 <button 
-//                   className="btn btn-info me-2" 
+//                 <button
+//                   className="btn btn-info me-2"
 //                   onClick={() => setShowChassisModal(true)}
 //                   disabled={chassisLoading}
 //                   title={!canUpdateChassis() ? "You don't have permission to update chassis" : ""}
@@ -5618,12 +5596,7 @@
 
 // export default ViewBooking;
 
-
-
-
-
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
 import {
   CModal,
   CModalHeader,
@@ -5636,8 +5609,8 @@ import {
   CRow,
   CCol,
   CBadge,
-  CButton
-} from '@coreui/react';
+  CButton,
+} from '@coreui/react'
 import {
   FaCar,
   FaUserTie,
@@ -5648,191 +5621,214 @@ import {
   FaFileInvoiceDollar,
   FaBuilding,
   FaStickyNote,
-  FaTag
-} from 'react-icons/fa';
-import '../../../css/bookingView.css';
-import '../../../css/form.css';
-import PropTypes from 'prop-types';
-import { Link } from 'react-router-dom';
-import config from '../../../config';
-import Swal from 'sweetalert2';
-import { showError, showSuccess } from '../../../utils/sweetAlerts';
-import axiosInstance from '../../../axiosInstance';
-import { cilCloudUpload } from '@coreui/icons';
-import CIcon from '@coreui/icons-react';
-import ApprovalFormModal from './ApprovalFormModal';
-import ChassisNumberModal from './ChassisModel';
-import { useAuth } from '../../../context/AuthContext';
+  FaTag,
+} from 'react-icons/fa'
+import '../../../css/bookingView.css'
+import '../../../css/form.css'
+import PropTypes from 'prop-types'
+import { Link } from 'react-router-dom'
+import config from '../../../config'
+import Swal from 'sweetalert2'
+import { showError, showSuccess } from '../../../utils/sweetAlerts'
+import axiosInstance from '../../../axiosInstance'
+import { cilCloudUpload } from '@coreui/icons'
+import CIcon from '@coreui/icons-react'
+import ApprovalFormModal from './ApprovalFormModal'
+import ChassisNumberModal from './ChassisModel'
+import { useAuth } from '../../../context/AuthContext'
 import {
   hasSafePagePermission,
   MODULES,
   PAGES,
   TABS,
-  ACTIONS
-} from '../../../utils/modulePermissions';
+  ACTIONS,
+} from '../../../utils/modulePermissions'
 
 const ViewBooking = ({ open, onClose, booking, refreshData }) => {
-  const [actionLoading, setActionLoading] = useState(false);
-  const [kycActionLoading, setKycActionLoading] = useState(false);
-  const [cancelLoading, setCancelLoading] = useState(false);
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [currentAction, setCurrentAction] = useState(null);
-  const [showChassisModal, setShowChassisModal] = useState(false);
-  const [chassisLoading, setChassisLoading] = useState(false);
-  const { permissions, user} = useAuth(); 
-  const userRole = localStorage.getItem('userRole');
-  
+  const [actionLoading, setActionLoading] = useState(false)
+  const [kycActionLoading, setKycActionLoading] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [showApprovalModal, setShowApprovalModal] = useState(false)
+  const [currentAction, setCurrentAction] = useState(null)
+  const [showChassisModal, setShowChassisModal] = useState(false)
+  const [chassisLoading, setChassisLoading] = useState(false)
+  const { permissions, user } = useAuth()
+  const userRole = localStorage.getItem('userRole')
+
   // Determine which tab this booking belongs to based on status
   const getBookingTab = () => {
-    if (!booking?.status) return null;
-    
-    const status = booking.status;
-    
-    if (status === 'PENDING_APPROVAL' || 
-        status === 'PENDING_APPROVAL (Discount_Exceeded)' || 
-        status === 'FREEZZED') {
-      return TABS.ALL_BOOKING.PENDING_APPROVALS;
+    if (!booking?.status) return null
+
+    const status = booking.status
+
+    if (
+      status === 'PENDING_APPROVAL' ||
+      status === 'PENDING_APPROVAL (Discount_Exceeded)' ||
+      status === 'FREEZZED'
+    ) {
+      return TABS.ALL_BOOKING.PENDING_APPROVALS
     } else if (status === 'APPROVED') {
-      return TABS.ALL_BOOKING.APPROVED;
+      return TABS.ALL_BOOKING.APPROVED
     } else if (status === 'ON_HOLD') {
-      return TABS.ALL_BOOKING.PENDING_ALLOCATED;
+      return TABS.ALL_BOOKING.PENDING_ALLOCATED
     } else if (status === 'ALLOCATED') {
-      return TABS.ALL_BOOKING.ALLOCATED;
+      return TABS.ALL_BOOKING.ALLOCATED
     } else if (status === 'REJECTED') {
-      return TABS.ALL_BOOKING.REJECTED_DISCOUNT;
+      return TABS.ALL_BOOKING.REJECTED_DISCOUNT
     } else if (status === 'CANCELLED') {
       // Check if it's a cancellation request
-      return booking.cancellationRequest?.status === 'PENDING' ? 
-        TABS.ALL_BOOKING.CANCELLED_BOOKING : null;
+      return booking.cancellationRequest?.status === 'PENDING'
+        ? TABS.ALL_BOOKING.CANCELLED_BOOKING
+        : null
     }
-    return null;
-  };
+    return null
+  }
 
-  const bookingTab = getBookingTab();
-  
+  const bookingTab = getBookingTab()
+
   // Tab-specific CREATE permission checks (for approve/allocate actions)
-  const hasCreatePermission = bookingTab ? 
-    hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.CREATE, bookingTab) : 
-    false;
+  const hasCreatePermission = bookingTab
+    ? hasSafePagePermission(
+        permissions,
+        MODULES.SALES,
+        PAGES.SALES.ALL_BOOKING,
+        ACTIONS.CREATE,
+        bookingTab,
+      )
+    : false
 
   // Tab-specific UPDATE permission checks (for edit/verify KYC actions)
-  const hasUpdatePermission = bookingTab ?
-    hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.UPDATE, bookingTab) :
-    false;
+  const hasUpdatePermission = bookingTab
+    ? hasSafePagePermission(
+        permissions,
+        MODULES.SALES,
+        PAGES.SALES.ALL_BOOKING,
+        ACTIONS.UPDATE,
+        bookingTab,
+      )
+    : false
 
   // Tab-specific DELETE permission checks (for reject/cancel actions)
-  const hasDeletePermission = bookingTab ?
-    hasSafePagePermission(permissions, MODULES.SALES, PAGES.SALES.ALL_BOOKING, ACTIONS.DELETE, bookingTab) :
-    false;
+  const hasDeletePermission = bookingTab
+    ? hasSafePagePermission(
+        permissions,
+        MODULES.SALES,
+        PAGES.SALES.ALL_BOOKING,
+        ACTIONS.DELETE,
+        bookingTab,
+      )
+    : false
 
   // Specific action permissions based on tab
   const canApproveBooking = () => {
-    if (!bookingTab) return false;
-    
+    if (!bookingTab) return false
+
     if (bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS) {
       // For PENDING_APPROVALS tab, approve booking uses CREATE permission
-      return hasCreatePermission;
+      return hasCreatePermission
     }
-    return false;
-  };
+    return false
+  }
 
   const canRejectBooking = () => {
-    if (!bookingTab) return false;
-    
+    if (!bookingTab) return false
+
     if (bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS) {
       // For PENDING_APPROVALS tab, reject booking uses DELETE permission
-      return hasDeletePermission;
+      return hasDeletePermission
     }
-    return false;
-  };
+    return false
+  }
 
   const canCancelBooking = () => {
-    if (!bookingTab) return false;
-    
+    if (!bookingTab) return false
+
     // Cancel booking uses DELETE permission in the current tab
     // Except for CANCELLED and COMPLETED statuses
-    const canCancelStatus = booking?.status !== 'CANCELLED' && 
-                           booking?.status !== 'COMPLETED' && 
-                           booking?.status !== 'REJECTED';
-    
-    return canCancelStatus && hasDeletePermission;
-  };
+    const canCancelStatus =
+      booking?.status !== 'CANCELLED' &&
+      booking?.status !== 'COMPLETED' &&
+      booking?.status !== 'REJECTED'
+
+    return canCancelStatus && hasDeletePermission
+  }
 
   const canVerifyKYC = () => {
-    if (!bookingTab) return false;
-    
+    if (!bookingTab) return false
+
     // KYC verification uses UPDATE permission in the current tab
-    return booking?.documentStatus?.kyc?.status === 'PENDING' && hasUpdatePermission;
-  };
+    return booking?.documentStatus?.kyc?.status === 'PENDING' && hasUpdatePermission
+  }
 
   const canEditBooking = () => {
-    if (!bookingTab) return false;
-    
+    if (!bookingTab) return false
+
     // Edit uses UPDATE permission in the current tab
     // Disable edit for certain statuses
-    const canEditStatus = booking?.status !== 'FREEZZED' && 
-                         booking?.status !== 'APPROVED' && 
-                         booking?.status !== 'ALLOCATED';
-    
-    return canEditStatus && hasUpdatePermission;
-  };
+    const canEditStatus =
+      booking?.status !== 'FREEZZED' &&
+      booking?.status !== 'APPROVED' &&
+      booking?.status !== 'ALLOCATED'
+
+    return canEditStatus && hasUpdatePermission
+  }
 
   const canUploadDocuments = () => {
-    if (!bookingTab) return false;
-    
+    if (!bookingTab) return false
+
     // Upload documents uses CREATE permission
-    return hasCreatePermission;
-  };
+    return hasCreatePermission
+  }
 
   const canAllocateChassis = () => {
-    if (!bookingTab) return false;
-    
+    if (!bookingTab) return false
+
     // Allocate chassis uses CREATE permission in APPROVED tab
     if (bookingTab === TABS.ALL_BOOKING.APPROVED) {
-      return hasCreatePermission;
+      return hasCreatePermission
     }
-    return false;
-  };
+    return false
+  }
 
   const canUpdateChassis = () => {
-    if (!bookingTab) return false;
-    
+    if (!bookingTab) return false
+
     // Update chassis uses CREATE permission in ALLOCATED tab
     if (bookingTab === TABS.ALL_BOOKING.ALLOCATED) {
-      return hasCreatePermission && booking?.chassisNumberChangeAllowed;
+      return hasCreatePermission && booking?.chassisNumberChangeAllowed
     }
-    return false;
-  };
+    return false
+  }
 
   // Check if discount is zero
   const isDiscountZero = () => {
-    return booking?.totalAmount === booking?.discountedAmount;
-  };
+    return booking?.totalAmount === booking?.discountedAmount
+  }
 
   const handleActionClick = (action) => {
-    let hasPermission = false;
-    
+    let hasPermission = false
+
     if (action === 'approve') {
-      hasPermission = canApproveBooking();
+      hasPermission = canApproveBooking()
     } else if (action === 'reject') {
-      hasPermission = canRejectBooking();
+      hasPermission = canRejectBooking()
     }
-    
+
     if (!hasPermission) {
-      showError('You do not have permission to perform this action');
-      return;
+      showError('You do not have permission to perform this action')
+      return
     }
-    
-    setCurrentAction(action);
-    setShowApprovalModal(true);
-  };
+
+    setCurrentAction(action)
+    setShowApprovalModal(true)
+  }
 
   const handleCancelBooking = async () => {
     if (!canCancelBooking()) {
-      showError('You do not have permission to cancel bookings in this tab');
-      return;
+      showError('You do not have permission to cancel bookings in this tab')
+      return
     }
-    
+
     try {
       const { value: formValues } = await Swal.fire({
         title: 'Cancel Booking',
@@ -5846,49 +5842,49 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
         cancelButtonText: 'Go Back',
         confirmButtonColor: '#d33',
         preConfirm: () => {
-          const reason = document.getElementById('swal-reason').value.trim();
-          const charges = document.getElementById('swal-charges').value;
-          
+          const reason = document.getElementById('swal-reason').value.trim()
+          const charges = document.getElementById('swal-charges').value
+
           if (!reason) {
-            Swal.showValidationMessage('Please enter a reason for cancellation');
-            return false;
+            Swal.showValidationMessage('Please enter a reason for cancellation')
+            return false
           }
-          
+
           return {
             reason,
-            cancellationCharges: charges ? parseInt(charges) : 0
-          };
-        }
-      });
+            cancellationCharges: charges ? parseInt(charges) : 0,
+          }
+        },
+      })
 
       if (formValues) {
-        setCancelLoading(true);
-        
+        setCancelLoading(true)
+
         await axiosInstance.post(`/bookings/${booking.id}/cancel`, {
           reason: formValues.reason,
-          cancellationCharges: formValues.cancellationCharges
-        });
+          cancellationCharges: formValues.cancellationCharges,
+        })
 
-        showSuccess('Booking cancelled successfully!');
-        refreshData();
-        onClose();
+        showSuccess('Booking cancelled successfully!')
+        refreshData()
+        onClose()
       }
     } catch (error) {
-      console.error('Error cancelling booking:', error);
-      showError(error.response?.data?.message || 'Failed to cancel booking');
+      console.error('Error cancelling booking:', error)
+      showError(error.response?.data?.message || 'Failed to cancel booking')
     } finally {
-      setCancelLoading(false);
+      setCancelLoading(false)
     }
-  };
+  }
 
   const handleKycStatusUpdate = async (status) => {
     if (!canVerifyKYC()) {
-      showError('You do not have permission to verify KYC');
-      return;
+      showError('You do not have permission to verify KYC')
+      return
     }
-    
+
     try {
-      setKycActionLoading(true);
+      setKycActionLoading(true)
       const { value: verificationNote } = await Swal.fire({
         title: `Enter verification note for KYC ${status}`,
         input: 'text',
@@ -5898,161 +5894,136 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
         confirmButtonText: 'Submit',
         cancelButtonText: 'Cancel',
         inputValidator: (value) => {
-          if (!value) return 'Verification note is required!';
-        }
-      });
+          if (!value) return 'Verification note is required!'
+        },
+      })
 
       if (verificationNote) {
-        const kycId = booking.documentStatus?.kyc?.id;
-        if (!kycId) throw new Error('KYC ID not found');
+        const kycId = booking.documentStatus?.kyc?.id
+        if (!kycId) throw new Error('KYC ID not found')
 
         await axiosInstance.post(`/kyc/${kycId}/verify`, {
           status,
-          verificationNote
-        });
+          verificationNote,
+        })
 
-        showSuccess(`KYC ${status.toLowerCase()} successfully!`);
-        refreshData();
-        onClose();
+        showSuccess(`KYC ${status.toLowerCase()} successfully!`)
+        refreshData()
+        onClose()
       }
     } catch (error) {
-      console.log(error);
-      showError(error.response?.data?.message || `Failed to update KYC status`);
+      console.log(error)
+      showError(error.response?.data?.message || `Failed to update KYC status`)
     } finally {
-      setKycActionLoading(false);
+      setKycActionLoading(false)
     }
-  };
+  }
 
   const handleStatusUpdate = async (approvalNote) => {
-  let hasPermission = false;
-  
-  if (currentAction === 'approve') {
-    hasPermission = canApproveBooking();
-  } else if (currentAction === 'reject') {
-    hasPermission = canRejectBooking();
-  }
-  
-  if (!hasPermission) {
-    showError('You do not have permission to perform this action');
-    return;
-  }
-  
-  try {
-    setActionLoading(true);
-    setShowApprovalModal(false);
+    let hasPermission = false
 
-    const requestBody = {};
-    if (approvalNote && approvalNote.trim()) {
-      if (currentAction === 'reject') {
-        requestBody.rejectionNote = approvalNote.trim();
-      } else {
-        requestBody.approvalNote = approvalNote.trim();
-      }
-    }
-
-    let response;
     if (currentAction === 'approve') {
-      response = await axiosInstance.put(`/bookings/${booking.id}/approve`, requestBody);
+      hasPermission = canApproveBooking()
     } else if (currentAction === 'reject') {
-      response = await axiosInstance.post(`/bookings/${booking.id}/reject`, requestBody);
-    } else {
-      response = await axiosInstance.post(`/bookings/${booking.id}/${currentAction}`, requestBody);
+      hasPermission = canRejectBooking()
     }
 
-    const successMessage = response?.data?.message || `Booking ${currentAction}d successfully!`;
-    
-    if (currentAction === 'reject') {
-      Swal.fire({
-        title: 'Success!',
-        text: successMessage,
-        icon: 'success',
-        confirmButtonColor: '#d33',
-        iconColor: '#d33'
-      });
-    } else {
-      showSuccess(successMessage);
+    if (!hasPermission) {
+      showError('You do not have permission to perform this action')
+      return
     }
-    
-    refreshData();
-    onClose();
-  } catch (error) {
-    console.log('Error updating status:', error);
-    
-    // Handle specific discount limit error
-    const errorMessage = error.response?.data?.message;
-    
-    if (currentAction === 'approve' && errorMessage && errorMessage.includes('exceeds your approval limit')) {
-      // Extract the discount amount and required role from the error response
-      const discountAmount = error.response?.data?.discountAmount;
-      const requiredRole = error.response?.data?.requiredRole;
-      const userDiscountLimit = error.response?.data?.userDiscountLimit;
-      
-      let detailedMessage = errorMessage;
-      
-      // Add more details if available
-      // if (discountAmount !== undefined) {
-      //   detailedMessage += `<br/><br/>• Discount Amount: ₹${discountAmount}`;
-      // }
-      
-      // if (userDiscountLimit !== undefined) {
-      //   detailedMessage += `<br/>• Your Approval Limit: ₹${userDiscountLimit}`;
-      // }
-      
-      // if (requiredRole) {
-      //   detailedMessage += `<br/>• Required Role: ${requiredRole}`;
-      // }
-      
-      // Show a more detailed error message for discount limit issues
+
+    try {
+      setActionLoading(true)
+      setShowApprovalModal(false)
+
+      const requestBody = {}
+      if (approvalNote && approvalNote.trim()) {
+        if (currentAction === 'reject') {
+          requestBody.rejectionNote = approvalNote.trim()
+        } else {
+          requestBody.approvalNote = approvalNote.trim()
+        }
+      }
+
+      let response
+      if (currentAction === 'approve') {
+        response = await axiosInstance.put(`/bookings/${booking.id}/approve`, requestBody)
+      } else if (currentAction === 'reject') {
+        response = await axiosInstance.post(`/bookings/${booking.id}/reject`, requestBody)
+      } else {
+        response = await axiosInstance.post(`/bookings/${booking.id}/${currentAction}`, requestBody)
+      }
+
+      const successMessage = response?.data?.message || `Booking ${currentAction}d successfully!`
+
+      if (currentAction === 'reject') {
+        Swal.fire({
+          title: 'Success!',
+          text: successMessage,
+          icon: 'success',
+          confirmButtonColor: '#d33',
+          iconColor: '#d33',
+        })
+      } else {
+        showSuccess(successMessage)
+      }
+
+      refreshData()
+      onClose()
+    } catch (error) {
+      console.log('Error updating status:', error)
+
+      // Just get the error message from the response - no conditions, no hardcoded strings
+      const errorMessage = error.response?.data?.message || `Failed to ${currentAction} booking`
+
+      // Show the error message exactly as received from the backend
       Swal.fire({
-        title: 'Approval Limit Exceeded!',
-        html: detailedMessage,
-        icon: 'warning',
+        title: currentAction === 'approve' ? 'Approval Failed' : 'Action Failed',
+        text: errorMessage,
+        icon: 'error',
         confirmButtonText: 'OK',
-        confirmButtonColor: '#f0ad4e'
-      });
-    } else {
-      // Show generic error for other cases
-      showError(errorMessage || `Failed to ${currentAction} booking`);
+        confirmButtonColor: '#d33',
+      })
+    } finally {
+      setActionLoading(false)
     }
-  } finally {
-    setActionLoading(false);
   }
-};
 
   const handleChassisAllocation = async (chassisNumber) => {
     // Check if this is allocation (from APPROVED tab) or update (from ALLOCATED tab)
-    const isAllocation = bookingTab === TABS.ALL_BOOKING.APPROVED;
-    const isUpdate = bookingTab === TABS.ALL_BOOKING.ALLOCATED;
-    
-    let hasPermission = false;
+    const isAllocation = bookingTab === TABS.ALL_BOOKING.APPROVED
+    const isUpdate = bookingTab === TABS.ALL_BOOKING.ALLOCATED
+
+    let hasPermission = false
     if (isAllocation) {
-      hasPermission = canAllocateChassis();
+      hasPermission = canAllocateChassis()
     } else if (isUpdate) {
-      hasPermission = canUpdateChassis();
+      hasPermission = canUpdateChassis()
     }
-    
+
     if (!hasPermission) {
-      showError('You do not have permission to allocate/update chassis number');
-      return;
+      showError('You do not have permission to allocate/update chassis number')
+      return
     }
-    
+
     try {
-      setChassisLoading(true);
-      setShowChassisModal(false);
+      setChassisLoading(true)
+      setShowChassisModal(false)
 
       await axiosInstance.put(`/bookings/${booking.id}/chassis-number`, {
-        chassisNumber: chassisNumber.trim()
-      });
+        chassisNumber: chassisNumber.trim(),
+      })
 
-      showSuccess('Chassis number allocated successfully!');
-      refreshData();
+      showSuccess('Chassis number allocated successfully!')
+      refreshData()
     } catch (error) {
-      console.error('Error allocating chassis number:', error);
-      showError(error.response?.data?.message || 'Failed to allocate chassis number');
+      console.error('Error allocating chassis number:', error)
+      showError(error.response?.data?.message || 'Failed to allocate chassis number')
     } finally {
-      setChassisLoading(false);
+      setChassisLoading(false)
     }
-  };
+  }
 
   const renderStatusBadge = () => {
     const statusStyles = {
@@ -6066,20 +6037,27 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
       ON_HOLD: { backgroundColor: '#fff7ed', color: '#9a3412' },
       ALLOCATED: { backgroundColor: '#f0f9ff', color: '#0c4a6e' },
       FREEZZED: { backgroundColor: '#ffc107', color: '#000' },
-      default: { backgroundColor: '#e5e7eb', color: '#374151' }
-    };
+      default: { backgroundColor: '#e5e7eb', color: '#374151' },
+    }
 
-    const style = statusStyles[booking?.status] || statusStyles.default;
+    const style = statusStyles[booking?.status] || statusStyles.default
 
     return (
       <CBadge style={style} className="status-badge">
-        {booking?.status === 'FREEZZED' ? 'FROZEN (self insurance)' : booking?.status?.replace(/_/g, ' ')}
+        {booking?.status === 'FREEZZED'
+          ? 'FROZEN (self insurance)'
+          : booking?.status?.replace(/_/g, ' ')}
       </CBadge>
-    );
-  };
+    )
+  }
 
   const renderDocumentStatus = (status, type) => {
-    if (!status || status === 'NOT_UPLOADED' || status === 'REJECTED' || status === 'NOT_SUBMITTED') {
+    if (
+      !status ||
+      status === 'NOT_UPLOADED' ||
+      status === 'REJECTED' ||
+      status === 'NOT_SUBMITTED'
+    ) {
       return (
         <div className="d-flex align-items-center">
           <CBadge color="secondary" className="me-2">
@@ -6091,7 +6069,7 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
               state={{
                 bookingId: booking.id,
                 customerName: booking.customerDetails.name,
-                address: `${booking.customerDetails.address}, ${booking.customerDetails.taluka}, ${booking.customerDetails.district}, ${booking.customerDetails.pincode}`
+                address: `${booking.customerDetails.address}, ${booking.customerDetails.taluka}, ${booking.customerDetails.district}, ${booking.customerDetails.pincode}`,
               }}
             >
               <CButton color="primary" size="sm" className="upload-kyc-btn icon-only">
@@ -6100,51 +6078,56 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
             </Link>
           )}
         </div>
-      );
+      )
     }
     if (status === 'PENDING') {
-      return <CBadge color="warning">PENDING</CBadge>;
+      return <CBadge color="warning">PENDING</CBadge>
     }
 
     if (status === 'APPROVED') {
-      return <CBadge color="success">APPROVED</CBadge>;
+      return <CBadge color="success">APPROVED</CBadge>
     }
-    return <CBadge color="secondary">{status}</CBadge>;
-  };
+    return <CBadge color="secondary">{status}</CBadge>
+  }
 
   // const shouldShowAwaitingApproval = () => {
   //   return userRole === 'SALES_EXECUTIVE' && booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)';
   // };
   const shouldShowAwaitingApproval = () => {
-  const isSalesExecutive = 
-    user?.is_sales_executive || 
-    user?.roles?.some(role => role.name === 'SALES_EXECUTIVE') || 
-    localStorage.getItem('userRole') === 'SALES_EXECUTIVE';
-  
-  return isSalesExecutive && booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)';
-};
+    const isSalesExecutive =
+      user?.is_sales_executive ||
+      user?.roles?.some((role) => role.name === 'SALES_EXECUTIVE') ||
+      localStorage.getItem('userRole') === 'SALES_EXECUTIVE'
+
+    return isSalesExecutive && booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)'
+  }
   const shouldShowApproveRejectButtons = () => {
-    return (booking?.status === 'PENDING_APPROVAL' || 
-            booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)') &&
-           bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS;
-  };
+    return (
+      (booking?.status === 'PENDING_APPROVAL' ||
+        booking?.status === 'PENDING_APPROVAL (Discount_Exceeded)') &&
+      bookingTab === TABS.ALL_BOOKING.PENDING_APPROVALS
+    )
+  }
 
   const shouldShowCancelButton = () => {
-    return canCancelBooking();
-  };
+    return canCancelBooking()
+  }
 
   const shouldShowChassisAllocationButton = () => {
-    return canAllocateChassis() && 
-           booking?.status === 'APPROVED' &&
-           (booking?.payment?.type === 'CASH' ||
-            (booking?.payment?.type === 'FINANCE' && booking?.documentStatus?.financeLetter?.status === 'APPROVED'));
-  };
+    return (
+      canAllocateChassis() &&
+      booking?.status === 'APPROVED' &&
+      (booking?.payment?.type === 'CASH' ||
+        (booking?.payment?.type === 'FINANCE' &&
+          booking?.documentStatus?.financeLetter?.status === 'APPROVED'))
+    )
+  }
 
   const shouldShowChassisUpdateButton = () => {
-    return canUpdateChassis() && 
-           booking?.status === 'ALLOCATED' &&
-           booking?.chassisNumberChangeAllowed;
-  };
+    return (
+      canUpdateChassis() && booking?.status === 'ALLOCATED' && booking?.chassisNumberChangeAllowed
+    )
+  }
 
   // Function to render verticles with names from verticlesSummary.list
   const renderVerticles = () => {
@@ -6158,28 +6141,28 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
             </CBadge>
           ))}
         </div>
-      );
+      )
     }
-    
+
     // Fallback to original verticles array if verticlesSummary doesn't exist
     if (!booking.verticles || booking.verticles.length === 0) {
-      return <span className="detail-value">No verticles assigned</span>;
+      return <span className="detail-value">No verticles assigned</span>
     }
 
     // Handle case where verticles might contain objects or strings
     return (
       <div className="verticles-container">
         {booking.verticles.map((verticle, index) => {
-          const verticleName = verticle.name || verticle;
+          const verticleName = verticle.name || verticle
           return (
             <CBadge key={index} color="info" className="me-2 mb-1">
               {verticleName}
             </CBadge>
-          );
+          )
         })}
       </div>
-    );
-  };
+    )
+  }
 
   if (!booking) {
     return (
@@ -6196,7 +6179,7 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
           </button>
         </CModalFooter>
       </CModal>
-    );
+    )
   }
 
   const renderPriceComponents = () => {
@@ -6206,18 +6189,21 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
         <span className="detail-value">
           ₹{parseFloat(component.discountedValue).toFixed(2)}
           {component.originalValue !== component.discountedValue && (
-            <span className="text-muted" style={{ textDecoration: 'line-through', marginLeft: '8px' }}>
+            <span
+              className="text-muted"
+              style={{ textDecoration: 'line-through', marginLeft: '8px' }}
+            >
               ₹{parseFloat(component.originalValue).toFixed(2)}
             </span>
           )}
         </span>
       </div>
-    ));
-  };
+    ))
+  }
 
   const renderAccessories = () => {
     if (!booking.accessories || booking.accessories.length === 0) {
-      return <span>None</span>;
+      return <span>None</span>
     }
 
     return (
@@ -6230,17 +6216,19 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                 <span className="accessory-price">₹{parseFloat(item.price).toFixed(2)}</span>
               </>
             ) : (
-              <span className="accessory-name">Custom Item: ₹{parseFloat(item.price).toFixed(2)}</span>
+              <span className="accessory-name">
+                Custom Item: ₹{parseFloat(item.price).toFixed(2)}
+              </span>
             )}
           </div>
         ))}
       </div>
-    );
-  };
+    )
+  }
 
   const renderClaimDocuments = () => {
     if (!booking.claimDetails?.hasClaim) {
-      return null;
+      return null
     }
 
     return (
@@ -6251,7 +6239,9 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
         <CCardBody>
           <div className="detail-row">
             <span className="detail-label">Claim Amount:</span>
-            <span className="detail-value">₹{parseFloat(booking.claimDetails.priceClaim).toFixed(2)}</span>
+            <span className="detail-value">
+              ₹{parseFloat(booking.claimDetails.priceClaim).toFixed(2)}
+            </span>
           </div>
           <div className="detail-row">
             <span className="detail-label">Description:</span>
@@ -6262,15 +6252,20 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
             <div className="documents-grid">
               {booking.claimDetails.documents.map((doc, index) => (
                 <div key={index} className="document-item">
-                  <img src={`${config.baseURL}/uploads/${doc.path}`} target="_blank" rel="noopener noreferrer" className="document-link" />
+                  <img
+                    src={`${config.baseURL}/uploads/${doc.path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="document-link"
+                  />
                 </div>
               ))}
             </div>
           </div>
         </CCardBody>
       </CCard>
-    );
-  };
+    )
+  }
 
   return (
     <>
@@ -6306,11 +6301,36 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                     <CCol md={4} className="text-end">
                       <div className="booking-amount">
                         <div className="amount-label">Total Amount</div>
-                        <div className="amount-value">₹{parseFloat(booking.totalAmount).toFixed(2)}</div>
+                        <div className="amount-value">
+                          ₹{parseFloat(booking.totalAmount).toFixed(2)}
+                        </div>
                         {booking.discountedAmount !== booking.totalAmount && (
-                          <div className="discounted-amount">
-                            <b>After Discount: ₹{parseFloat(booking.discountedAmount).toFixed(2)}</b>
-                          </div>
+                          <>
+                            <div className="discounted-amount">
+                              <strong style={{ fontSize: '1.2em' }}>
+                                After Discount: ₹{parseFloat(booking.discountedAmount).toFixed(2)}
+                              </strong>
+                            </div>
+                            <div className="total-discount">
+                              <strong style={{ fontSize: '1.3em', color: '#f79a2a' }}>
+                                Total Discount Given: ₹
+                                {(
+                                  parseFloat(booking.totalAmount) -
+                                  parseFloat(booking.discountedAmount) -
+                                  parseFloat(booking.subsidyAmount)
+                                ).toFixed(2)}
+                              </strong>
+                            </div>
+                            {/* <div className="total-discount">
+                              <strong style={{ fontSize: '1.3em', color: '#161514' }}>
+                                Subsidy Given: ₹
+                                {(
+                                 
+                                  parseFloat(booking.subsidyAmount)
+                                ).toFixed(2)}
+                              </strong>
+                            </div> */}
+                          </>
                         )}
                       </div>
                     </CCol>
@@ -6319,7 +6339,7 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
               </CCard>
 
               {/* Verticles Section */}
-              {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) || 
+              {((booking.verticlesSummary?.list && booking.verticlesSummary.list.length > 0) ||
                 (booking.verticles && booking.verticles.length > 0)) && (
                 <CCard className="booking-section mb-3">
                   <CCardHeader>
@@ -6371,13 +6391,13 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">RTO Amount:</span>
-                        <span className="detail-value">₹{parseFloat(booking.rtoAmount).toFixed(2)}</span>
+                        <span className="detail-value">
+                          ₹{parseFloat(booking.rtoAmount).toFixed(2)}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">HPA:</span>
-                        <span className="detail-value">
-                          {booking.hpa ? 'Yes' : 'No'}
-                        </span>
+                        <span className="detail-value">{booking.hpa ? 'Yes' : 'No'}</span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Subsidy Amount:</span>
@@ -6404,79 +6424,98 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                       <div className="detail-row">
                         <span className="detail-label">Address:</span>
                         <span className="detail-value">
-                          {booking.customerDetails.address}, {booking.customerDetails.taluka}, {booking.customerDetails.district},{' '}
-                          {booking.customerDetails.pincode}
+                          {booking.customerDetails.address}, {booking.customerDetails.taluka},{' '}
+                          {booking.customerDetails.district}, {booking.customerDetails.pincode}
                         </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Contact:</span>
                         <span className="detail-value">
                           {booking.customerDetails.mobile1}
-                          {booking.customerDetails.mobile2 && ` / ${booking.customerDetails.mobile2}`}
+                          {booking.customerDetails.mobile2 &&
+                            ` / ${booking.customerDetails.mobile2}`}
                         </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">PAN:</span>
-                        <span className="detail-value">{booking.customerDetails.panNo || 'N/A'}</span>
+                        <span className="detail-value">
+                          {booking.customerDetails.panNo || 'N/A'}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Aadhar:</span>
-                        <span className="detail-value">{booking.customerDetails.aadharNumber || 'N/A'}</span>
+                        <span className="detail-value">
+                          {booking.customerDetails.aadharNumber || 'N/A'}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">DOB:</span>
                         <span className="detail-value">
-                          {booking.customerDetails.dob ? new Date(booking.customerDetails.dob).toLocaleDateString() : 'N/A'}
+                          {booking.customerDetails.dob
+                            ? new Date(booking.customerDetails.dob).toLocaleDateString()
+                            : 'N/A'}
                         </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Occupation:</span>
-                        <span className="detail-value">{booking.customerDetails.occupation || 'N/A'}</span>
+                        <span className="detail-value">
+                          {booking.customerDetails.occupation || 'N/A'}
+                        </span>
                       </div>
                     </CCardBody>
                   </CCard>
                 </div>
 
                 <div className="details-column">
-                 <CCard className="booking-section">
-  <CCardHeader>
-    <h5>
-      <FaMoneyBillWave /> Financial Details
-    </h5>
-  </CCardHeader>
-  <CCardBody>
-    <div className="detail-row">
-      <span className="detail-label">Payment Type:</span>
-      <span className="detail-value">{booking.payment.type}</span>
-    </div>
+                  <CCard className="booking-section">
+                    <CCardHeader>
+                      <h5>
+                        <FaMoneyBillWave /> Financial Details
+                      </h5>
+                    </CCardHeader>
+                    <CCardBody>
+                      <div className="detail-row">
+                        <span className="detail-label">Payment Type:</span>
+                        <span className="detail-value">{booking.payment.type}</span>
+                      </div>
 
-    {booking.payment.type === 'FINANCE' && (
-      <div className="detail-row">
-        <span className="detail-label">Financer:</span>
-        <span className="detail-value">{booking.payment?.financer?.name || ''}</span>
-      </div>
-    )}
+                      {booking.payment.type === 'FINANCE' && (
+                        <div className="detail-row">
+                          <span className="detail-label">Financer:</span>
+                          <span className="detail-value">
+                            {booking.payment?.financer?.name || ''}
+                          </span>
+                        </div>
+                      )}
 
-    <div className="detail-row">
-      <span className="detail-label">Accessories Total:</span>
-      <span className="detail-value">₹{parseFloat(booking.accessoriesTotal).toFixed(2)}</span>
-    </div>
-    <div className="detail-row">
-      <span className="detail-label">RTO Amount:</span>
-      <span className="detail-value">₹{parseFloat(booking.rtoAmount).toFixed(2)}</span>
-    </div>
-    <div className="detail-row">
-      <span className="detail-label">Total Amount:</span>
-      <span className="detail-value">₹{parseFloat(booking.totalAmount).toFixed(2)}</span>
-    </div>
-    {booking.discountedAmount !== booking.totalAmount && (
-      <div className="detail-row">
-        <span className="detail-label">Discounted Amount:</span>
-        <span className="detail-value">₹{parseFloat(booking.discountedAmount).toFixed(2)}</span>
-      </div>
-    )}
-  </CCardBody>
-</CCard>
+                      <div className="detail-row">
+                        <span className="detail-label">Accessories Total:</span>
+                        <span className="detail-value">
+                          ₹{parseFloat(booking.accessoriesTotal).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">RTO Amount:</span>
+                        <span className="detail-value">
+                          ₹{parseFloat(booking.rtoAmount).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Total Amount:</span>
+                        <span className="detail-value">
+                          ₹{parseFloat(booking.totalAmount).toFixed(2)}
+                        </span>
+                      </div>
+                      {booking.discountedAmount !== booking.totalAmount && (
+                        <div className="detail-row">
+                          <span className="detail-label">Discounted Amount:</span>
+                          <span className="detail-value">
+                            ₹{parseFloat(booking.discountedAmount).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </CCardBody>
+                  </CCard>
 
                   <CCard className="booking-section">
                     <CCardHeader>
@@ -6497,12 +6536,16 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                     <CCardBody>
                       <div className="detail-row">
                         <span className="detail-label">KYC:</span>
-                        <span className="detail-value">{renderDocumentStatus(booking.kycStatus, 'kyc')}</span>
+                        <span className="detail-value">
+                          {renderDocumentStatus(booking.kycStatus, 'kyc')}
+                        </span>
                       </div>
                       {booking.payment.type === 'FINANCE' && (
                         <div className="detail-row">
                           <span className="detail-label">Finance Letter:</span>
-                          <span className="detail-value">{renderDocumentStatus(booking.financeLetterStatus, 'finance')}</span>
+                          <span className="detail-value">
+                            {renderDocumentStatus(booking.financeLetterStatus, 'finance')}
+                          </span>
                         </div>
                       )}
                       {/* <div className="detail-row">
@@ -6530,28 +6573,30 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                       </div> */}
 
                       <div className="detail-row">
-  <span className="detail-label">Booking Form:</span>
-  <span className="detail-value">
-    {booking.formGenerated ? (
-      <>
-        {shouldShowAwaitingApproval() ? (
-          <span className="awaiting-approval-text">Awaiting for Approval</span>
-        ) : (
-          <a
-            href={`${config.baseURL}${booking.formPath}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="form-link"
-          >
-            VIEW
-          </a>
-        )}
-      </>
-    ) : (
-      <span>Not Generated</span>
-    )}
-  </span>
-</div>
+                        <span className="detail-label">Booking Form:</span>
+                        <span className="detail-value">
+                          {booking.formGenerated ? (
+                            <>
+                              {shouldShowAwaitingApproval() ? (
+                                <span className="awaiting-approval-text">
+                                  Awaiting for Approval
+                                </span>
+                              ) : (
+                                <a
+                                  href={`${config.baseURL}${booking.formPath}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="form-link"
+                                >
+                                  VIEW
+                                </a>
+                              )}
+                            </>
+                          ) : (
+                            <span>Not Generated</span>
+                          )}
+                        </span>
+                      </div>
                     </CCardBody>
                   </CCard>
 
@@ -6564,7 +6609,9 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                     <CCardBody>
                       <div className="detail-row">
                         <span className="detail-label">Sales Executive:</span>
-                        <span className="detail-value">{booking.salesExecutive ? booking.salesExecutive.name : 'N/A'}</span>
+                        <span className="detail-value">
+                          {booking.salesExecutive ? booking.salesExecutive.name : 'N/A'}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Created By:</span>
@@ -6572,11 +6619,15 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Created At:</span>
-                        <span className="detail-value">{new Date(booking.createdAt).toLocaleString()}</span>
+                        <span className="detail-value">
+                          {new Date(booking.createdAt).toLocaleString()}
+                        </span>
                       </div>
                       <div className="detail-row">
                         <span className="detail-label">Last Updated:</span>
-                        <span className="detail-value">{new Date(booking.updatedAt).toLocaleString()}</span>
+                        <span className="detail-value">
+                          {new Date(booking.updatedAt).toLocaleString()}
+                        </span>
                       </div>
                     </CCardBody>
                   </CCard>
@@ -6597,20 +6648,28 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                         <>
                           <div className="detail-row">
                             <span className="detail-label">Vehicle Number:</span>
-                            <span className="detail-value">{booking.exchangeDetails.vehicleNumber}</span>
+                            <span className="detail-value">
+                              {booking.exchangeDetails.vehicleNumber}
+                            </span>
                           </div>
                           <div className="detail-row">
                             <span className="detail-label">Chassis Number:</span>
-                            <span className="detail-value">{booking.exchangeDetails.chassisNumber}</span>
+                            <span className="detail-value">
+                              {booking.exchangeDetails.chassisNumber}
+                            </span>
                           </div>
                           <div className="detail-row">
                             <span className="detail-label">Price:</span>
-                            <span className="detail-value">₹{parseFloat(booking.exchangeDetails.price).toFixed(2)}</span>
+                            <span className="detail-value">
+                              ₹{parseFloat(booking.exchangeDetails.price).toFixed(2)}
+                            </span>
                           </div>
                           {booking.exchangeDetails.broker && (
                             <div className="detail-row">
                               <span className="detail-label">Broker:</span>
-                              <span className="detail-value">{booking.exchangeDetails.broker.name}</span>
+                              <span className="detail-value">
+                                {booking.exchangeDetails.broker.name}
+                              </span>
                             </div>
                           )}
                         </>
@@ -6619,7 +6678,7 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
                   </CCard>
                 </div>
               </div>
-              
+
               <CCard className="booking-section">
                 <CCardHeader>
                   <h5>
@@ -6654,19 +6713,27 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
             <div>
               {shouldShowApproveRejectButtons() && (
                 <>
-                  <button 
-                    className="btn btn-success me-2" 
-                    onClick={() => handleActionClick('approve')} 
+                  <button
+                    className="btn btn-success me-2"
+                    onClick={() => handleActionClick('approve')}
                     disabled={actionLoading || !canApproveBooking()}
-                    title={!canApproveBooking() ? "You don't have permission to approve bookings" : ""}
+                    title={
+                      !canApproveBooking() ? "You don't have permission to approve bookings" : ''
+                    }
                   >
                     {actionLoading ? 'Approving...' : 'Approve'}
                   </button>
-                  <button 
-                    className="btn btn-danger me-2" 
-                    onClick={() => handleActionClick('reject')} 
+                  <button
+                    className="btn btn-danger me-2"
+                    onClick={() => handleActionClick('reject')}
                     disabled={actionLoading || isDiscountZero() || !canRejectBooking()}
-                    title={!canRejectBooking() ? "You don't have permission to reject bookings" : isDiscountZero() ? "Cannot reject booking with zero discount" : ""}
+                    title={
+                      !canRejectBooking()
+                        ? "You don't have permission to reject bookings"
+                        : isDiscountZero()
+                          ? 'Cannot reject booking with zero discount'
+                          : ''
+                    }
                   >
                     {actionLoading ? 'Rejecting...' : 'Reject Discount'}
                   </button>
@@ -6675,19 +6742,19 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
 
               {booking?.documentStatus?.kyc?.status === 'PENDING' && (
                 <>
-                  <button 
-                    className="btn btn-success me-2" 
-                    onClick={() => handleKycStatusUpdate('APPROVED')} 
+                  <button
+                    className="btn btn-success me-2"
+                    onClick={() => handleKycStatusUpdate('APPROVED')}
                     disabled={kycActionLoading || !canVerifyKYC()}
-                    title={!canVerifyKYC() ? "You don't have permission to verify KYC" : ""}
+                    title={!canVerifyKYC() ? "You don't have permission to verify KYC" : ''}
                   >
                     {kycActionLoading ? 'Verifying KYC...' : 'Verify KYC'}
                   </button>
-                  <button 
-                    className="btn btn-danger me-2" 
-                    onClick={() => handleKycStatusUpdate('REJECTED')} 
+                  <button
+                    className="btn btn-danger me-2"
+                    onClick={() => handleKycStatusUpdate('REJECTED')}
                     disabled={kycActionLoading || !canVerifyKYC()}
-                    title={!canVerifyKYC() ? "You don't have permission to reject KYC" : ""}
+                    title={!canVerifyKYC() ? "You don't have permission to reject KYC" : ''}
                   >
                     {kycActionLoading ? 'Rejecting KYC...' : 'Reject KYC'}
                   </button>
@@ -6695,33 +6762,35 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
               )}
 
               {shouldShowCancelButton() && (
-                <button 
-                  className="btn btn-warning me-2" 
-                  onClick={handleCancelBooking} 
+                <button
+                  className="btn btn-warning me-2"
+                  onClick={handleCancelBooking}
                   disabled={cancelLoading}
-                  title={!canCancelBooking() ? "You don't have permission to cancel bookings" : ""}
+                  title={!canCancelBooking() ? "You don't have permission to cancel bookings" : ''}
                 >
                   {cancelLoading ? 'Cancelling...' : 'Cancel Booking'}
                 </button>
               )}
 
               {shouldShowChassisAllocationButton() && (
-                <button 
-                  className="btn btn-info me-2" 
+                <button
+                  className="btn btn-info me-2"
                   onClick={() => setShowChassisModal(true)}
                   disabled={chassisLoading}
-                  title={!canAllocateChassis() ? "You don't have permission to allocate chassis" : ""}
+                  title={
+                    !canAllocateChassis() ? "You don't have permission to allocate chassis" : ''
+                  }
                 >
                   {chassisLoading ? 'Allocating...' : 'Allocate Chassis'}
                 </button>
               )}
 
               {shouldShowChassisUpdateButton() && (
-                <button 
-                  className="btn btn-info me-2" 
+                <button
+                  className="btn btn-info me-2"
                   onClick={() => setShowChassisModal(true)}
                   disabled={chassisLoading}
-                  title={!canUpdateChassis() ? "You don't have permission to update chassis" : ""}
+                  title={!canUpdateChassis() ? "You don't have permission to update chassis" : ''}
                 >
                   {chassisLoading ? 'Updating...' : 'Update Chassis'}
                 </button>
@@ -6749,8 +6818,8 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
         isLoading={chassisLoading}
       />
     </>
-  );
-};
+  )
+}
 
 ViewBooking.propTypes = {
   open: PropTypes.bool.isRequired,
@@ -6760,13 +6829,13 @@ ViewBooking.propTypes = {
     bookingNumber: PropTypes.string,
     model: PropTypes.shape({
       model_name: PropTypes.string,
-      type: PropTypes.string
+      type: PropTypes.string,
     }),
     color: PropTypes.shape({
-      name: PropTypes.string
+      name: PropTypes.string,
     }),
     branch: PropTypes.shape({
-      name: PropTypes.string
+      name: PropTypes.string,
     }),
     note: PropTypes.string,
     customerType: PropTypes.string,
@@ -6781,40 +6850,40 @@ ViewBooking.propTypes = {
       chassisNumber: PropTypes.string,
       price: PropTypes.number,
       broker: PropTypes.shape({
-        name: PropTypes.string
-      })
+        name: PropTypes.string,
+      }),
     }),
     payment: PropTypes.shape({
       type: PropTypes.string,
       financer: PropTypes.shape({
-        name: PropTypes.string
+        name: PropTypes.string,
       }),
       scheme: PropTypes.string,
       emiPlan: PropTypes.string,
-      gcAmount: PropTypes.number
+      gcAmount: PropTypes.number,
     }),
     accessories: PropTypes.arrayOf(
       PropTypes.shape({
         accessory: PropTypes.shape({
-          name: PropTypes.string
+          name: PropTypes.string,
         }),
-        price: PropTypes.number
-      })
+        price: PropTypes.number,
+      }),
     ),
     priceComponents: PropTypes.arrayOf(
       PropTypes.shape({
         header: PropTypes.shape({
-          header_key: PropTypes.string
+          header_key: PropTypes.string,
         }),
         originalValue: PropTypes.number,
-        discountedValue: PropTypes.number
-      })
+        discountedValue: PropTypes.number,
+      }),
     ),
     discounts: PropTypes.arrayOf(
       PropTypes.shape({
         amount: PropTypes.number,
-        type: PropTypes.string
-      })
+        type: PropTypes.string,
+      }),
     ),
     accessoriesTotal: PropTypes.number,
     totalAmount: PropTypes.number,
@@ -6823,21 +6892,21 @@ ViewBooking.propTypes = {
     createdAt: PropTypes.string,
     updatedAt: PropTypes.string,
     createdBy: PropTypes.shape({
-      name: PropTypes.string
+      name: PropTypes.string,
     }),
     salesExecutive: PropTypes.shape({
-      name: PropTypes.string
+      name: PropTypes.string,
     }),
     formPath: PropTypes.string,
     formGenerated: PropTypes.bool,
     documentStatus: PropTypes.shape({
       kyc: PropTypes.shape({
         status: PropTypes.string,
-        id: PropTypes.string
+        id: PropTypes.string,
       }),
       financeLetter: PropTypes.shape({
-        status: PropTypes.string
-      })
+        status: PropTypes.string,
+      }),
     }),
     customerDetails: PropTypes.shape({
       salutation: PropTypes.string,
@@ -6851,7 +6920,7 @@ ViewBooking.propTypes = {
       pincode: PropTypes.string,
       mobile1: PropTypes.string,
       mobile2: PropTypes.string,
-      aadharNumber: PropTypes.string
+      aadharNumber: PropTypes.string,
     }),
     verticles: PropTypes.array,
     verticlesSummary: PropTypes.shape({
@@ -6859,13 +6928,13 @@ ViewBooking.propTypes = {
         PropTypes.shape({
           id: PropTypes.string,
           name: PropTypes.string,
-          status: PropTypes.string
-        })
-      )
+          status: PropTypes.string,
+        }),
+      ),
     }),
     chassisNumberChangeAllowed: PropTypes.bool,
     cancellationRequest: PropTypes.shape({
-      status: PropTypes.string
+      status: PropTypes.string,
     }),
     claimDetails: PropTypes.shape({
       hasClaim: PropTypes.bool,
@@ -6873,29 +6942,12 @@ ViewBooking.propTypes = {
       description: PropTypes.string,
       documents: PropTypes.arrayOf(
         PropTypes.shape({
-          path: PropTypes.string
-        })
-      )
-    })
+          path: PropTypes.string,
+        }),
+      ),
+    }),
   }),
-  refreshData: PropTypes.func
-};
+  refreshData: PropTypes.func,
+}
 
-export default ViewBooking;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+export default ViewBooking

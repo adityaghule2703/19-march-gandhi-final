@@ -4,6 +4,7 @@ const SelfInsurance = React.lazy(() => import('../views/sales/booking/SelfInsura
 const BookingList = React.lazy(() => import('../views/sales/booking/BookingList'))
 const DeliveryChallan = React.lazy(() => import('../views/sales/delivery-challan/DeliveryChallan'))
 const Invoice = React.lazy(() => import('../views/sales/Invoice'))
+const DummyInvoice = React.lazy(() => import('../views/sales/DummyInvoice'))
 const HelmetInvoice = React.lazy(() => import('../views/sales/HelmetInvoice'))
 const DealForm = React.lazy(() => import('../views/sales/DealForm'))
 const UploadDealForm = React.lazy(() => import('../views/sales/UploadDealForm'))
@@ -22,6 +23,7 @@ export const salesRoutes = [
   
     { path:'/delivery-challan', name:'Delivery Challan', element:DeliveryChallan},
     { path:'/invoice', name:'GST Invoice', element:Invoice},
+     { path:'/dummy-invoice', name:'Dummy Invoice', element:DummyInvoice},
     { path:'/helmet-invoice', name:'Helmet Invoice', element:HelmetInvoice},
     { path:'/deal-form', name:'Deal Form', element:DealForm},
     { path:'/upload-deal', name:'Upload Deal', element:UploadDealForm},

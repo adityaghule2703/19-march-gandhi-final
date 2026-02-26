@@ -20,6 +20,8 @@ const SubdealerDeliveryChallan = React.lazy(() => import('../views/subdealer/boo
 const AllBooking = React.lazy(() => import('../views/subdealer/booking/AllBooking'))
 const SubdealerManagement = React.lazy(() => import('../views/subdealer/booking/SubdealerManagement'))
 const SubdealerNewBooking = React.lazy(() => import('../views/subdealer/booking/SubdealerNewBooking'))
+// Import the new Chassis Allocation component
+const ChassisAllocation = React.lazy(() => import('../views/subdealer/booking/ChassisAllocation'))
 
 export const subdealerRoutes = [
     { path:'/subdealer-list', name:'Subdealer List', element:SubdealerList},
@@ -30,6 +32,8 @@ export const subdealerRoutes = [
     { path:'/subdealer-booking', name:'Subdealer Booking', element:SubdealerNewBooking},
     { path:'/update-subdealer-booking/:id', name:'Update Subdealer Booking', element:SubdealerNewBooking},
     { path:'/subdealer-all-bookings', name:'Subdealer All Bookings', element:AllBooking},
+    // Add the new chassis allocation route
+    { path:'/subdealer-all-bookings/chassis-allocation/:id', name:'Chassis Allocation', element:ChassisAllocation},
     { path:'/subdealer-management', name:'Subdealer Management', element:SubdealerManagement},
     { path:'/subdealer-account/receipt', name:'Subdealer Receipt', element:SubdealerReceipts},
     { path:'/subdealer-account/add-balance', name:'Add Balance', element:AddBalance},

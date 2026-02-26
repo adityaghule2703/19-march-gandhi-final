@@ -832,12 +832,12 @@ const DeliveryChallan = () => {
   const hasViewPermission = canViewPage(permissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.DELIVERY_CHALLAN);
   
   // Check for print permission
-  const hasPrintPermission = hasSafePagePermission(
-    permissions, 
-    MODULES.SUBDEALER_BOOKING, 
-    PAGES.SUBDEALER_BOOKING.DELIVERY_CHALLAN, 
-    ACTIONS.PRINT
-  );
+ const hasPrintPermission = hasSafePagePermission(
+  permissions, 
+  MODULES.SUBDEALER_BOOKING, 
+  PAGES.SUBDEALER_BOOKING.DELIVERY_CHALLAN, 
+  ACTIONS.CREATE  // Changed from PRINT to CREATE
+);
 
   useEffect(() => {
     if (!hasViewPermission) {

@@ -359,6 +359,7 @@
 
 
 
+
 import '../../../css/table.css';
 import {
   React,
@@ -368,7 +369,6 @@ import {
   MenuItem,
   getDefaultSearchFields,
   useTableFilter,
-  usePagination,
   confirmDelete,
   showError,
   axiosInstance
@@ -416,9 +416,15 @@ const RatesList = () => {
   const [editingRate, setEditingRate] = useState(null);
   const [successMessage, setSuccessMessage] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
+  const [groupedData, setGroupedData] = useState([]);
 
-  const { currentRecords, PaginationOptions } = usePagination(filteredData);
   const { permissions } = useAuth();
+  
+  // Get user data from localStorage
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // Check if user is superadmin
+  const isSuperAdmin = storedUser.roles?.some(role => role.isSuperAdmin === true);
   
   // Page-level permission checks for Finance Rates page under Masters module
   const hasFinanceRatesView = hasSafePagePermission(
@@ -456,8 +462,6 @@ const RatesList = () => {
   const canDeleteFinanceRates = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.FINANCE_RATES);
   
   const showActionColumn = canUpdateFinanceRates || canDeleteFinanceRates;
-  
-  // REMOVED: Branch filtering logic for superadmin check
 
   useEffect(() => {
     if (!canViewFinanceRates) {
@@ -472,12 +476,14 @@ const RatesList = () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(`/financers/rates`);
-      const allRates = response.data.data;
-
-      // REMOVED: Branch filtering logic
-      // Show all rates for all users
-      setData(allRates);
-      setFilteredData(allRates);
+      
+      // Get the grouped data from the API response
+      const groupedRates = response.data.data?.groupedByProvider || [];
+      
+      // NO BRANCH FILTERING - show all data for all users
+      setGroupedData(groupedRates);
+      setData(groupedRates);
+      setFilteredData(groupedRates);
     } catch (error) {
       const message = showError(error);
       if (message) {
@@ -498,20 +504,26 @@ const RatesList = () => {
     setMenuId(null);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (providerId) => {
     if (!canDeleteFinanceRates) {
       showError('You do not have permission to delete finance rates');
       return;
     }
     
-    const result = await confirmDelete();
+    const result = await confirmDelete('Are you sure you want to delete all rates for this financer?');
     if (result.isConfirmed) {
       try {
-        await axiosInstance.delete(`/financers/rates/${id}`);
-        setData(data.filter((financer) => financer.id !== id));
-        fetchData();
-        setSuccessMessage('Finance rate deleted successfully');
-        setTimeout(() => setSuccessMessage(''), 3000);
+        // Find the provider to get all rate IDs
+        const provider = groupedData.find(p => p.providerId === providerId);
+        if (provider) {
+          // Delete each rate individually
+          await Promise.all(provider.branchRates.map(rate => 
+            axiosInstance.delete(`/financers/rates/${rate.rateId}`)
+          ));
+          fetchData();
+          setSuccessMessage('All finance rates deleted successfully');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        }
       } catch (error) {
         console.log(error);
         showError(error);
@@ -521,7 +533,15 @@ const RatesList = () => {
 
   const handleSearch = (value) => {
     setSearchTerm(value);
-    handleFilter(value, getDefaultSearchFields('finance_rates'));
+    // Custom filter for grouped data
+    const filtered = data.filter(provider => 
+      provider.providerName?.toLowerCase().includes(value.toLowerCase()) ||
+      provider.branchRates.some(rate => 
+        rate.branchName?.toLowerCase().includes(value.toLowerCase()) ||
+        rate.gcRate?.toString().includes(value)
+      )
+    );
+    setFilteredData(filtered);
   };
 
   const handleShowAddModal = () => {
@@ -534,13 +554,13 @@ const RatesList = () => {
     setShowModal(true);
   };
 
-  const handleShowEditModal = (rate) => {
+  const handleShowEditModal = (provider) => {
     if (!canUpdateFinanceRates) {
       showError('You do not have permission to edit finance rates');
       return;
     }
     
-    setEditingRate(rate);
+    setEditingRate(provider);
     setShowModal(true);
   };
 
@@ -574,8 +594,8 @@ const RatesList = () => {
 
   if (error) {
     return (
-      <div className="alert alert-danger" role="alert">
-      {error}
+      <div className="alert alert-danger m-3" role="alert">
+        {error}
       </div>
     );
   }
@@ -616,6 +636,7 @@ const RatesList = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Search by financer, branch or rate..."
               />
             </div>
           </div>
@@ -625,68 +646,81 @@ const RatesList = () => {
               <CTableHead>
                 <CTableRow>
                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
-                  <CTableHeaderCell>Location</CTableHeaderCell>
                   <CTableHeaderCell>Financer Name</CTableHeaderCell>
+                  <CTableHeaderCell>Location</CTableHeaderCell>
                   <CTableHeaderCell>GC Rate</CTableHeaderCell>
                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
               </CTableHead>
               <CTableBody>
-                {currentRecords.length === 0 ? (
+                {filteredData.length === 0 ? (
                   <CTableRow>
                     <CTableDataCell colSpan={showActionColumn ? "5" : "4"} className="text-center">
                       <CBadge color="secondary">No finance rates available</CBadge>
                     </CTableDataCell>
                   </CTableRow>
                 ) : (
-                  currentRecords.map((rate, index) => (
-                    <CTableRow key={rate.id || index}>
-                      <CTableDataCell>{index + 1}</CTableDataCell>
-                      <CTableDataCell>
-                       {rate.branchDetails?.name || ''}
-                      </CTableDataCell>
-                      <CTableDataCell>
-                       {rate.financeProviderDetails?.name || ''}
-                      </CTableDataCell>
-                      <CTableDataCell>
-                      {rate.gcRate || ''}
-                      </CTableDataCell>
-                      {showActionColumn && (
+                  filteredData.flatMap((provider, providerIndex) => {
+                    return provider.branchRates.map((rate, rateIndex) => (
+                      <CTableRow key={`${provider.providerId}-${rate.branchId}`}>
+                        {/* Show serial number only for first row of each provider */}
+                        {rateIndex === 0 ? (
+                          <>
+                            <CTableDataCell rowSpan={provider.branchRates.length}>
+                              {providerIndex + 1}
+                            </CTableDataCell>
+                            <CTableDataCell rowSpan={provider.branchRates.length}>
+                              <strong>{provider.providerName}</strong>
+                            </CTableDataCell>
+                          </>
+                        ) : null}
+                        
+                        <CTableDataCell>{rate.branchName || ''}</CTableDataCell>
                         <CTableDataCell>
-                          <CButton
-                            size="sm"
-                            className='option-button btn-sm'
-                            onClick={(event) => handleClick(event, rate.id)}
-                          >
-                            <CIcon icon={cilSettings} />
-                            Options
-                          </CButton>
-                          <Menu 
-                            id={`action-menu-${rate.id}`} 
-                            anchorEl={anchorEl} 
-                            open={menuId === rate.id} 
-                            onClose={handleClose}
-                          >
-                            {canUpdateFinanceRates && (
-                              <MenuItem 
-                                onClick={() => handleShowEditModal(rate)}
-                                style={{ color: 'black' }}
-                              >
-                                <CIcon icon={cilPencil} className="me-2" />
-                                Edit
-                              </MenuItem>
-                            )}
-                            {canDeleteFinanceRates && (
-                              <MenuItem onClick={() => handleDelete(rate.id)}>
-                                <CIcon icon={cilTrash} className="me-2" />
-                                Delete
-                              </MenuItem>
-                            )}
-                          </Menu>
+                          <CBadge color="info">{rate.gcRate || ''}</CBadge>
                         </CTableDataCell>
-                      )}
-                    </CTableRow>
-                  ))
+                        
+                        {/* Show action buttons only for first row of each provider */}
+                        {rateIndex === 0 && showActionColumn && (
+                          <CTableDataCell rowSpan={provider.branchRates.length}>
+                            <CButton
+                              size="sm"
+                              className='option-button btn-sm'
+                              onClick={(event) => handleClick(event, provider.providerId)}
+                            >
+                              <CIcon icon={cilSettings} />
+                              Options
+                            </CButton>
+                            <Menu 
+                              id={`action-menu-${provider.providerId}`} 
+                              anchorEl={anchorEl} 
+                              open={menuId === provider.providerId} 
+                              onClose={handleClose}
+                            >
+                              {canUpdateFinanceRates && (
+                                <MenuItem 
+                                  onClick={() => handleShowEditModal(provider)}
+                                  style={{ color: 'black' }}
+                                >
+                                  <CIcon icon={cilPencil} className="me-2" />
+                                  Edit
+                                </MenuItem>
+                              )}
+                              {canDeleteFinanceRates && (
+                                <MenuItem 
+                                  onClick={() => handleDelete(provider.providerId)}
+                                  style={{ color: 'black' }}
+                                >
+                                  <CIcon icon={cilTrash} className="me-2" />
+                                  Delete
+                                </MenuItem>
+                              )}
+                            </Menu>
+                          </CTableDataCell>
+                        )}
+                      </CTableRow>
+                    ));
+                  })
                 )}
               </CTableBody>
             </CTable>

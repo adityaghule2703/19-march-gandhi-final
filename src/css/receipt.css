@@ -9,3 +9,15 @@
 .font-weight-bold{
     font-weight: bold;
 }
+
+/* Hide spinner arrows for number inputs */
+.no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

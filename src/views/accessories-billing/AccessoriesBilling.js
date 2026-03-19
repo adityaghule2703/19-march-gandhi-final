@@ -32,9 +32,9 @@ function AccessoriesBilling() {
   });
   const [errors, setErrors] = useState({});
   const [accessories, setAccessories] = useState([]);
-  const [customers, setCustomers] = useState([]);
+  const [bookings, setBookings] = useState([]); // Changed from customers to bookings
   const [subdealers, setSubdealers] = useState([]);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState(null); // Changed from selectedCustomer to selectedBooking
   const [branches, setBranches] = useState([]);
   const [selectedSubdealer, setSelectedSubdealer] = useState(null);
   const [banks, setBanks] = useState([]);
@@ -69,7 +69,7 @@ function AccessoriesBilling() {
       setLoading(true);
       try {
         await Promise.all([
-          fetchCustomers(),
+          fetchBookings(), // Changed from fetchCustomers to fetchBookings
           fetchBranches(),
           fetchPaymentSubmodes(),
           fetchCashLocation(),
@@ -85,17 +85,18 @@ function AccessoriesBilling() {
     initializeData();
   }, []);
 
-  const fetchCustomers = async () => {
+  // New function to fetch bookings
+  const fetchBookings = async () => {
     try {
-      const response = await axiosInstance.get('/customers');
-      const customersData = response.data.data?.customers || response.data.customers || [];
-      setCustomers(Array.isArray(customersData) ? customersData : []);
+      const response = await axiosInstance.get('/bookings?bookingType=BRANCH');
+      const bookingsData = response.data.data?.bookings || response.data.bookings || [];
+      setBookings(Array.isArray(bookingsData) ? bookingsData : []);
     } catch (error) {
       const message = showError(error);
       if (message) {
         setError(message);
       }
-      setCustomers([]);
+      setBookings([]);
     }
   };
 
@@ -213,7 +214,7 @@ function AccessoriesBilling() {
           bankLocation: '',
           subPaymentMode: ''
         }));
-        setSelectedCustomer(null);
+        setSelectedBooking(null); // Changed from setSelectedCustomer
       } else if (value === 'CUSTOMER') {
         setFormData(prevData => ({
           ...prevData,
@@ -228,16 +229,21 @@ function AccessoriesBilling() {
         setSelectedSubdealer(null);
       }
     } else if (name === 'booking_id') {
-      const customer = customers.find((c) => c._id === value);
-      if (customer) {
-        setSelectedCustomer(customer);
+      // Find the selected booking
+      const booking = bookings.find((b) => b._id === value);
+      if (booking) {
+        setSelectedBooking(booking);
+        // Extract customer details from the booking
+        const customerDetails = booking.customerDetails || {};
         setFormData(prevData => ({
           ...prevData,
-          customer_id: customer.custId || '',
-          customer_name: customer.name || ''
+          customer_id: customerDetails.custId || '',
+          customer_name: customerDetails.name || '',
+          branch_id: booking.branch?._id || prevData.branch_id, // Set branch from booking if available
+          sales_executive: booking.salesExecutive?._id || prevData.sales_executive // Set sales executive from booking if available
         }));
       } else {
-        setSelectedCustomer(null);
+        setSelectedBooking(null);
         setFormData(prevData => ({
           ...prevData,
           customer_id: '',
@@ -347,12 +353,14 @@ function AccessoriesBilling() {
             <div class="billed-to">
               <h5>Billed To:</h5>
               ${
-                formData.customer_type === 'CUSTOMER' && selectedCustomer
+                formData.customer_type === 'CUSTOMER' && selectedBooking
                   ? `
-                <p>${selectedCustomer.name}</p>
-                <p>Customer ID: ${selectedCustomer.custId}</p>
-                <p>${selectedCustomer.address}</p>
-                <p>${selectedCustomer.mobile1}</p>
+                <p>${selectedBooking.customerDetails?.name || ''}</p>
+                <p>Customer ID: ${selectedBooking.customerDetails?.custId || ''}</p>
+                <p>Booking #: ${selectedBooking.bookingNumber || ''}</p>
+                <p>${selectedBooking.customerDetails?.address || ''}</p>
+                <p>${selectedBooking.customerDetails?.mobile1 || ''}</p>
+                <p>Model: ${selectedBooking.model?.model_name || ''}</p>
               `
                   : formData.customer_type === 'SUBDEALER' && selectedSubdealer
                     ? `
@@ -633,7 +641,7 @@ function AccessoriesBilling() {
         payload = {
           ...payload,
           branch_id: formData.branch_id,
-          booking_id: formData.booking_id,
+          booking_id: formData.booking_id, // This is the booking ID
           customer_id: formData.customer_id,
           customer_name: formData.customer_name,
           sales_executive: formData.sales_executive,
@@ -745,9 +753,12 @@ function AccessoriesBilling() {
                       </CInputGroupText>
                       <CFormSelect name="booking_id" value={formData.booking_id} onChange={handleChange}>
                         <option value="">-Select-</option>
-                        {Array.isArray(customers) && customers.map((customer) => (
-                          <option key={customer._id} value={customer._id}>
-                            {customer.name} (ID: {customer.custId})
+                        {Array.isArray(bookings) && bookings.map((booking) => (
+                          <option key={booking._id} value={booking._id}>
+                            {booking.customerDetails?.name || 'Unknown'} 
+                            {booking.customerDetails?.custId ? ` (ID: ${booking.customerDetails.custId})` : ''} 
+                            - Booking: {booking.bookingNumber || 'N/A'}
+                            {booking.model?.model_name ? ` - ${booking.model.model_name}` : ''}
                           </option>
                         ))}
                       </CFormSelect>

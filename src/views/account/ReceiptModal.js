@@ -895,19 +895,27 @@ const ReceiptModal = ({ show, onClose, bookingData, canCreateReceipts, cashLocat
 
           <CForm onSubmit={handleSubmit}>
             <CRow className="mb-3">
-              <CCol md={6}>
-                <label className="form-label">Amount (₹)</label>
-                <CFormInput
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  step="0.01"
-                  disabled={isLoading}
-                />
-              </CCol>
+             <CCol md={6}>
+  <label className="form-label">Amount (₹)</label>
+  <CFormInput
+    type="number"
+    name="amount"
+    value={formData.amount}
+    onChange={handleChange}
+    required
+    min="0"
+    step="0.01"
+    disabled={isLoading}
+    className="no-spinner"
+    onWheel={(e) => e.target.blur()}  // Prevent mouse wheel
+    onKeyDown={(e) => {
+      // Prevent up/down arrow keys from changing value
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+      }
+    }}
+  />
+</CCol>
               <CCol md={6}>
                 <label className="form-label">Mode of Payment</label>
                 <CFormSelect 

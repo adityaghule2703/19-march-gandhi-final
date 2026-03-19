@@ -158,9 +158,10 @@ const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData, onPayment
       });
       setEditFixedAmount(false);
       
+      // Pass both transactionId, brokerId, and branchId to onPaymentSuccess
       if (onPaymentSuccess && transactionId) {
         setTimeout(() => {
-          onPaymentSuccess(transactionId);
+          onPaymentSuccess(transactionId, formData.brokerId, formData.branch);
         }, 500);
       } else {
         console.warn('No transaction ID found in response:', response.data);
@@ -326,19 +327,27 @@ const ExchangeLedgerModel = ({ show, onClose, brokerData, refreshData, onPayment
             </CRow>
             <CRow className="mb-3">{renderPaymentSpecificFields()}</CRow>
             <CRow className="mb-3">
-              <CCol md={6}>
-                <label className="form-label">Amount (₹)</label>
-                <CFormInput
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  step="0.01"
-                  disabled={isLoading || (commissionInfo?.type === 'FIXED' && !editFixedAmount)}
-                />
-              </CCol>
+            <CCol md={6}>
+  <label className="form-label">Amount (₹)</label>
+  <CFormInput
+    type="number"
+    name="amount"
+    value={formData.amount}
+    onChange={handleChange}
+    required
+    min="0"
+    step="0.01"
+    disabled={isLoading || (commissionInfo?.type === 'FIXED' && !editFixedAmount)}
+    className="no-spinner"  // Add this class
+    onWheel={(e) => e.target.blur()}  // Prevent mouse wheel
+    onKeyDown={(e) => {
+      // Prevent up/down arrow keys from changing value
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+      }
+    }}
+  />
+</CCol>
               <CCol md={6}>
                 <label className="form-label">Reference Number</label>
                 <CFormInput

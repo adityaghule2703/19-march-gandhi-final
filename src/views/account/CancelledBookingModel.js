@@ -340,21 +340,29 @@ const CancelledBookingModel = ({ show, onClose, bookingData, onSuccess }) => {
 
           <CForm onSubmit={handleSubmit}>
             <CRow className="mb-3">
-              <CCol md={6}>
-                <label className="form-label">Amount (₹)</label>
-                <CFormInput
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  max={maxRefund}
-                  step="0.01"
-                  disabled={isLoading}
-                  placeholder="Enter refund amount"
-                />
-              </CCol>
+             <CCol md={6}>
+  <label className="form-label">Amount (₹)</label>
+  <CFormInput
+    type="number"
+    name="amount"
+    value={formData.amount}
+    onChange={handleChange}
+    required
+    min="0"
+    max={maxRefund}
+    step="0.01"
+    disabled={isLoading}
+    placeholder="Enter refund amount"
+    className="no-spinner"  // Add this class
+    onWheel={(e) => e.target.blur()}  // Prevent mouse wheel
+    onKeyDown={(e) => {
+      // Prevent up/down arrow keys from changing value
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+      }
+    }}
+  />
+</CCol>
               <CCol md={6}>
                 <label className="form-label">Mode of Payment</label>
                 <CFormSelect 

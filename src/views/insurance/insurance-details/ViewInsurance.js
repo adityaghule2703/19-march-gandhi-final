@@ -27,6 +27,8 @@ const ViewInsuranceModal = ({ show, onClose, insuranceData: initialData }) => {
   const [docLoading, setDocLoading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [documentUrl, setDocumentUrl] = useState(null);
+  const [documentError, setDocumentError] = useState(false);
 
   useEffect(() => {
     const fetchInsuranceDetails = async () => {
@@ -45,6 +47,15 @@ const ViewInsuranceModal = ({ show, onClose, insuranceData: initialData }) => {
 
     fetchInsuranceDetails();
   }, [show, initialData]);
+
+  // Clean up object URLs when component unmounts or document changes
+  useEffect(() => {
+    return () => {
+      if (documentUrl) {
+        URL.revokeObjectURL(documentUrl);
+      }
+    };
+  }, [documentUrl]);
 
   if (!insuranceData) return null;
 
@@ -75,9 +86,13 @@ const ViewInsuranceModal = ({ show, onClose, insuranceData: initialData }) => {
 
     setGeneratingPDF(true);
     try {
+      const token = localStorage.getItem('access_token'); // or however you store your token
       const response = await axiosInstance.get(`/insurance/${insuranceData.id}/download-pdf`, {
         responseType: 'blob',
-        timeout: 60000
+        timeout: 60000,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -96,16 +111,57 @@ const ViewInsuranceModal = ({ show, onClose, insuranceData: initialData }) => {
     }
   };
 
-  const handleDownloadDocument = (doc) => {
-    window.open(`${config.baseURL}/insurance/${insuranceData.id}/document/${doc.id}`, '_blank');
+  const handleDownloadDocument = async (doc) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await axiosInstance.get(`/insurance/${insuranceData.id}/document/${doc.id}`, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.name);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Error downloading document. Please try again.');
+    }
   };
 
   const handleViewDocument = async (doc) => {
     setSelectedDocument(doc);
     setDocLoading(true);
+    setDocumentError(false);
+    
+    // Clean up previous URL
+    if (documentUrl) {
+      URL.revokeObjectURL(documentUrl);
+      setDocumentUrl(null);
+    }
+    
     try {
+      const token = localStorage.getItem('access_token');
+      const response = await axiosInstance.get(`/insurance/${insuranceData.id}/document/${doc.id}`, {
+        responseType: 'blob',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Create a blob URL for the document
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      setDocumentUrl(url);
     } catch (error) {
       console.error('Error loading document:', error);
+      setDocumentError(true);
     } finally {
       setDocLoading(false);
     }
@@ -305,32 +361,44 @@ const ViewInsuranceModal = ({ show, onClose, insuranceData: initialData }) => {
                                     <CSpinner />
                                     <p>Loading document...</p>
                                   </div>
-                                ) : isImageFile(selectedDocument.name) ? (
-                                  <CImage
-                                    src={`${config.baseURL}${selectedDocument.url}`}
-                                    fluid
-                                    className="mx-auto d-block"
-                                    style={{ maxHeight: '350px' }}
-                                  />
-                                ) : isPdfFile(selectedDocument.name) ? (
-                                  <iframe
-                                    src={`${config.baseURL}${selectedDocument.url}`}
-                                    width="100%"
-                                    height="350"
-                                    frameBorder="0"
-                                    title={selectedDocument.name}
-                                  />
-                                ) : (
-                                  <div className="text-center py-5">
-                                    <p>Preview not available for this file type</p>
+                                ) : documentError ? (
+                                  <div className="text-center py-5 text-danger">
+                                    <p>Error loading document. Please try downloading it instead.</p>
                                     <CButton
                                       color="primary"
-                                      onClick={() => handleDownload(`${config.baseURL}${selectedDocument.url}`, selectedDocument.name)}
+                                      onClick={() => handleDownloadDocument(selectedDocument)}
                                     >
                                       Download File
                                     </CButton>
                                   </div>
-                                )}
+                                ) : documentUrl ? (
+                                  isImageFile(selectedDocument.name) ? (
+                                    <CImage
+                                      src={documentUrl}
+                                      fluid
+                                      className="mx-auto d-block"
+                                      style={{ maxHeight: '350px' }}
+                                    />
+                                  ) : isPdfFile(selectedDocument.name) ? (
+                                    <iframe
+                                      src={documentUrl}
+                                      width="100%"
+                                      height="350"
+                                      frameBorder="0"
+                                      title={selectedDocument.name}
+                                    />
+                                  ) : (
+                                    <div className="text-center py-5">
+                                      <p>Preview not available for this file type</p>
+                                      <CButton
+                                        color="primary"
+                                        onClick={() => handleDownloadDocument(selectedDocument)}
+                                      >
+                                        Download File
+                                      </CButton>
+                                    </div>
+                                  )
+                                ) : null}
                               </div>
                             </div>
                           )}

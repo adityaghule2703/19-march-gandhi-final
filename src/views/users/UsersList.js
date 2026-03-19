@@ -1,3 +1,349 @@
+// // import '../../css/table.css';
+// // import '../../css/form.css';
+// // import React, { useState, useEffect } from 'react';
+// // import {
+// //   CTable,
+// //   CTableHead,
+// //   CTableRow,
+// //   CTableHeaderCell,
+// //   CTableBody,
+// //   CTableDataCell,
+// //   CCard,
+// //   CCardBody,
+// //   CCardHeader,
+// //   CButton,
+// //   CFormInput,
+// //   CSpinner,
+// //   CBadge
+// // } from '@coreui/react';
+// // import CIcon from '@coreui/icons-react';
+// // import { 
+// //   cilPlus, 
+// //   cilSettings, 
+// //   cilPencil, 
+// //   cilTrash
+// // } from '@coreui/icons';
+// // import { Link } from 'react-router-dom';
+// // import { CFormLabel } from '@coreui/react';
+// // import {
+// //   React as ReactHook,
+// //   useState as useStateHook,
+// //   useEffect as useEffectHook,
+// //   Menu,
+// //   MenuItem,
+// //   getDefaultSearchFields,
+// //   confirmDelete,
+// //   showError,
+// //   showSuccess,
+// //   axiosInstance
+// // } from 'src/utils/tableImports.js';
+// // import { useAuth } from '../../context/AuthContext';
+// // import { 
+// //   hasSafePagePermission,
+// //   MODULES, 
+// //   PAGES,
+// //   ACTIONS,
+// //   canViewPage,
+// //   canCreateInPage,
+// //   canUpdateInPage,
+// //   canDeleteInPage
+// // } from 'src/utils/modulePermissions.js';
+
+// // const UsersList = () => {
+// //   const [anchorEl, setAnchorEl] = useState(null);
+// //   const [menuId, setMenuId] = useState(null);
+// //   const [data, setData] = useState([]);
+// //   const [filteredData, setFilteredData] = useState([]);
+// //   const [loading, setLoading] = useState(true);
+// //   const [error, setError] = useState(null);
+// //   const [searchTerm, setSearchTerm] = useState('');
+// //   const { permissions } = useAuth();
+
+// //   // Page-level permission checks for User List page under User Management module
+// //   const hasUserListView = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+// //     PAGES.USER.USER_LIST, 
+// //     ACTIONS.VIEW
+// //   );
+  
+// //   const hasUserListCreate = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+// //     PAGES.USER.USER_LIST, 
+// //     ACTIONS.CREATE
+// //   );
+  
+// //   const hasUserListUpdate = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+// //     PAGES.USER.USER_LIST, 
+// //     ACTIONS.UPDATE
+// //   );
+  
+// //   const hasUserListDelete = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+// //     PAGES.USER.USER_LIST, 
+// //     ACTIONS.DELETE
+// //   );
+
+// //   // Using convenience functions for cleaner code
+// //   const canViewUserList = canViewPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+// //   const canCreateUserList = canCreateInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+// //   const canUpdateUserList = canUpdateInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+// //   const canDeleteUserList = canDeleteInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+
+// //   const showActionColumn = canUpdateUserList || canDeleteUserList;
+
+// //   useEffect(() => {
+// //     if (!canViewUserList) {
+// //       showError('You do not have permission to view Users List');
+// //       return;
+// //     }
+    
+// //     fetchData();
+// //   }, [canViewUserList]);
+
+// //   const fetchData = async () => {
+// //     try {
+// //       setLoading(true);
+// //       const response = await axiosInstance.get(`/users`);
+// //       const users = response.data.data.map((user) => ({
+// //         ...user,
+// //         id: user._id || user.id,
+// //         primaryRole: user.roles?.[0]?.name || 'No Role',
+// //         branchName: user.branchDetails?.name || user.branch || '',
+// //         subdealerName: user.subdealerDetails?.name || user.subdealer || ''
+// //       }));
+// //       setData(users);
+// //       setFilteredData(users);
+// //     } catch (error) {
+// //       const message = showError(error);
+// //       if (message) {
+// //         setError(message);
+// //       }    
+// //     } finally {
+// //       setLoading(false);
+// //     }
+// //   };
+
+// //   const handleSearch = (searchValue) => {
+// //     setSearchTerm(searchValue);
+// //     const searchFields = getDefaultSearchFields('users');
+// //     const filtered = data.filter(item =>
+// //       searchFields.some(field => {
+// //         const fieldValue = item[field]?.toString().toLowerCase() || '';
+// //         return fieldValue.includes(searchValue.toLowerCase());
+// //       })
+// //     );
+// //     setFilteredData(filtered);
+// //   };
+
+// //   const handleClick = (event, id) => {
+// //     setAnchorEl(event.currentTarget);
+// //     setMenuId(id);
+// //   };
+
+// //   const handleClose = () => {
+// //     setAnchorEl(null);
+// //     setMenuId(null);
+// //   };
+
+// //   const handleDelete = async (id) => {
+// //     const result = await confirmDelete();
+// //     if (result.isConfirmed) {
+// //       try {
+// //         await axiosInstance.delete(`/users/${id}`);
+// //         setData(data.filter((user) => user.id !== id));
+// //         setFilteredData(filteredData.filter((user) => user.id !== id));
+// //         showSuccess('User deleted successfully!');
+// //         handleClose();
+// //       } catch (error) {
+// //         console.log(error);
+// //         let message = 'Failed to delete. Please try again.';
+
+// //         if (error.response) {
+// //           const res = error.response.data;
+// //           message = res.message || res.error || message;
+// //         } else if (error.request) {
+// //           message = 'No response from server. Please check your network.';
+// //         } else if (error.message) {
+// //           message = error.message;
+// //         }
+
+// //         showError(message);
+// //       }
+// //     }
+// //   };
+
+// //   const formatDate = (dateString) => {
+// //     if (!dateString) return 'Never logged in';
+// //     const date = new Date(dateString);
+// //     return date.toLocaleString();
+// //   };
+
+// //   const getRoleNames = (roles) => {
+// //     if (!roles || !roles.length) return 'No Role';
+// //     return roles.map((role) => role.name).join(', ');
+// //   };
+
+// //   const getStatusBadge = (status) => {
+// //     if (status === 'active') {
+// //       return <CBadge color="success">Active</CBadge>;
+// //     } else if (status === 'inactive') {
+// //       return <CBadge color="danger">Inactive</CBadge>;
+// //     } else {
+// //       return <CBadge color="secondary">{status}</CBadge>;
+// //     }
+// //   };
+
+// //   if (!canViewUserList) {
+// //     return (
+// //       <div className="alert alert-danger m-3" role="alert">
+// //         You do not have permission to view Users List.
+// //       </div>
+// //     );
+// //   }
+
+// //   if (loading) {
+// //     return (
+// //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+// //         <CSpinner color="primary" />
+// //       </div>
+// //     );
+// //   }
+
+// //   if (error) {
+// //     return (
+// //       <div className="alert alert-danger" role="alert">
+// //         {error}
+// //       </div>
+// //     );
+// //   }
+
+// //   return (
+// //     <div>
+// //       <div className='title'>Users List</div>
+    
+// //       <CCard className='table-container mt-4'>
+// //         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
+// //           <div>
+// //             {canCreateUserList && (
+// //               <Link to='/users/add-user'>
+// //                 <CButton size="sm" className="action-btn me-1">
+// //                   <CIcon icon={cilPlus} className='icon'/> New User
+// //                 </CButton>
+// //               </Link>
+// //             )}
+// //           </div>
+// //         </CCardHeader>
+        
+// //         <CCardBody>
+// //           <div className="d-flex justify-content-between mb-3">
+// //             <div></div>
+// //             <div className='d-flex'>
+// //               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+// //               <CFormInput
+// //                 type="text"
+// //                 className="d-inline-block square-search"
+// //                 value={searchTerm}
+// //                 onChange={(e) => handleSearch(e.target.value)}
+// //                 // placeholder="Search users..."
+// //               />
+// //             </div>
+// //           </div>
+          
+// //           <div className="responsive-table-wrapper">
+// //             <CTable striped bordered hover className='responsive-table'>
+// //               <CTableHead>
+// //                 <CTableRow>
+// //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+// //                   <CTableHeaderCell>Name</CTableHeaderCell>
+// //                   <CTableHeaderCell>Email</CTableHeaderCell>
+// //                   <CTableHeaderCell>Mobile Number</CTableHeaderCell>
+// //                   <CTableHeaderCell>Branch/Subdealer</CTableHeaderCell>
+// //                   <CTableHeaderCell>Role(s)</CTableHeaderCell>
+// //                   <CTableHeaderCell>Discount</CTableHeaderCell>
+// //                   <CTableHeaderCell>Last Login</CTableHeaderCell>
+// //                   <CTableHeaderCell>Status</CTableHeaderCell>
+// //                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
+// //                 </CTableRow>
+// //               </CTableHead>
+// //               <CTableBody>
+// //                 {filteredData.length > 0 ? (
+// //                   filteredData.map((user, index) => (
+// //                     <CTableRow key={user.id}>
+// //                       <CTableDataCell>{index + 1}</CTableDataCell>
+// //                       <CTableDataCell>{user.name}</CTableDataCell>
+// //                       <CTableDataCell>{user.email}</CTableDataCell>
+// //                       <CTableDataCell>{user.mobile}</CTableDataCell>
+// //                       <CTableDataCell>{user.branchName || user.subdealerName}</CTableDataCell>
+// //                       <CTableDataCell>{getRoleNames(user.roles)}</CTableDataCell>
+// //                       <CTableDataCell>{user.discount || '0'}</CTableDataCell>
+// //                       <CTableDataCell>{formatDate(user.lastLogin)}</CTableDataCell>
+// //                       <CTableDataCell>
+// //                         {getStatusBadge(user.status)}
+// //                       </CTableDataCell>
+// //                       {showActionColumn && (
+// //                         <CTableDataCell>
+// //                           <CButton
+// //                             size="sm"
+// //                             className='option-button btn-sm'
+// //                             onClick={(event) => handleClick(event, user.id)}
+// //                           >
+// //                             <CIcon icon={cilSettings} />
+// //                             Options
+// //                           </CButton>
+// //                           <Menu 
+// //                             id={`action-menu-${user.id}`} 
+// //                             anchorEl={anchorEl} 
+// //                             open={menuId === user.id} 
+// //                             onClose={handleClose}
+// //                           >
+// //                             {canUpdateUserList && (
+// //                               <Link className="Link" to={`/users/update-user/${user.id}`}>
+// //                                 <MenuItem style={{ color: 'black' }}>
+// //                                   <CIcon icon={cilPencil} className="me-2" />Edit
+// //                                 </MenuItem>
+// //                               </Link>
+// //                             )}
+// //                             {canDeleteUserList && (
+// //                               <MenuItem onClick={() => handleDelete(user.id)}>
+// //                                 <CIcon icon={cilTrash} className="me-2" />Delete
+// //                               </MenuItem>
+// //                             )}
+// //                           </Menu>
+// //                         </CTableDataCell>
+// //                       )}
+// //                     </CTableRow>
+// //                   ))
+// //                 ) : (
+// //                   <CTableRow>
+// //                     <CTableDataCell colSpan={showActionColumn ? "10" : "9"} className="text-center">
+// //                       {searchTerm ? 'No matching users found' : 'No users available'}
+// //                     </CTableDataCell>
+// //                   </CTableRow>
+// //                 )}
+// //               </CTableBody>
+// //             </CTable>
+// //           </div>
+// //         </CCardBody>
+// //       </CCard>
+// //     </div>
+// //   );
+// // };
+
+// // export default UsersList;
+
+
+
+
+
+
+
+
+
 // import '../../css/table.css';
 // import '../../css/form.css';
 // import React, { useState, useEffect } from 'react';
@@ -96,6 +442,46 @@
 
 //   const showActionColumn = canUpdateUserList || canDeleteUserList;
 
+//   // Format date to DD-MM-YYYY
+//   const formatDate = (dateString) => {
+//     if (!dateString) return 'Never logged in';
+    
+//     try {
+//       const date = new Date(dateString);
+//       if (isNaN(date.getTime())) return 'Never logged in';
+      
+//       const day = String(date.getDate()).padStart(2, '0');
+//       const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+//       const year = date.getFullYear();
+      
+//       return `${day}-${month}-${year}`;
+//     } catch (error) {
+//       console.error('Error formatting date:', error);
+//       return 'Never logged in';
+//     }
+//   };
+
+//   // Format date to DD-MM-YYYY HH:MM (for date-time display if needed)
+//   const formatDateTime = (dateString) => {
+//     if (!dateString) return 'Never logged in';
+    
+//     try {
+//       const date = new Date(dateString);
+//       if (isNaN(date.getTime())) return 'Never logged in';
+      
+//       const day = String(date.getDate()).padStart(2, '0');
+//       const month = String(date.getMonth() + 1).padStart(2, '0');
+//       const year = date.getFullYear();
+//       const hours = String(date.getHours()).padStart(2, '0');
+//       const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+//       return `${day}-${month}-${year} ${hours}:${minutes}`;
+//     } catch (error) {
+//       console.error('Error formatting date:', error);
+//       return 'Never logged in';
+//     }
+//   };
+
 //   useEffect(() => {
 //     if (!canViewUserList) {
 //       showError('You do not have permission to view Users List');
@@ -175,12 +561,6 @@
 //         showError(message);
 //       }
 //     }
-//   };
-
-//   const formatDate = (dateString) => {
-//     if (!dateString) return 'Never logged in';
-//     const date = new Date(dateString);
-//     return date.toLocaleString();
 //   };
 
 //   const getRoleNames = (roles) => {
@@ -340,10 +720,6 @@
 
 
 
-
-
-
-
 import '../../css/table.css';
 import '../../css/form.css';
 import React, { useState, useEffect } from 'react';
@@ -360,14 +736,17 @@ import {
   CButton,
   CFormInput,
   CSpinner,
-  CBadge
+  CBadge,
+  CTooltip
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
   cilPlus, 
   cilSettings, 
   cilPencil, 
-  cilTrash
+  cilTrash,
+  cilBan,
+  cilCheckCircle
 } from '@coreui/icons';
 import { Link } from 'react-router-dom';
 import { CFormLabel } from '@coreui/react';
@@ -401,6 +780,7 @@ const UsersList = () => {
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStatus, setLoadingStatus] = useState({}); // Track loading state for status updates
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const { permissions } = useAuth();
@@ -408,37 +788,37 @@ const UsersList = () => {
   // Page-level permission checks for User List page under User Management module
   const hasUserListView = hasSafePagePermission(
     permissions, 
-    MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+    MODULES.USER_MANAGEMENT,
     PAGES.USER.USER_LIST, 
     ACTIONS.VIEW
   );
   
   const hasUserListCreate = hasSafePagePermission(
     permissions, 
-    MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+    MODULES.USER_MANAGEMENT,
     PAGES.USER.USER_LIST, 
     ACTIONS.CREATE
   );
   
   const hasUserListUpdate = hasSafePagePermission(
     permissions, 
-    MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+    MODULES.USER_MANAGEMENT,
     PAGES.USER.USER_LIST, 
     ACTIONS.UPDATE
   );
   
   const hasUserListDelete = hasSafePagePermission(
     permissions, 
-    MODULES.USER_MANAGEMENT,  // Changed from MODULES.USER to MODULES.USER_MANAGEMENT
+    MODULES.USER_MANAGEMENT,
     PAGES.USER.USER_LIST, 
     ACTIONS.DELETE
   );
 
   // Using convenience functions for cleaner code
-  const canViewUserList = canViewPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
-  const canCreateUserList = canCreateInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
-  const canUpdateUserList = canUpdateInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
-  const canDeleteUserList = canDeleteInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);  // Changed
+  const canViewUserList = canViewPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);
+  const canCreateUserList = canCreateInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);
+  const canUpdateUserList = canUpdateInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);
+  const canDeleteUserList = canDeleteInPage(permissions, MODULES.USER_MANAGEMENT, PAGES.USER.USER_LIST);
 
   const showActionColumn = canUpdateUserList || canDeleteUserList;
 
@@ -451,31 +831,10 @@ const UsersList = () => {
       if (isNaN(date.getTime())) return 'Never logged in';
       
       const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+      const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
       
       return `${day}-${month}-${year}`;
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Never logged in';
-    }
-  };
-
-  // Format date to DD-MM-YYYY HH:MM (for date-time display if needed)
-  const formatDateTime = (dateString) => {
-    if (!dateString) return 'Never logged in';
-    
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Never logged in';
-      
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      
-      return `${day}-${month}-${year} ${hours}:${minutes}`;
     } catch (error) {
       console.error('Error formatting date:', error);
       return 'Never logged in';
@@ -500,7 +859,8 @@ const UsersList = () => {
         id: user._id || user.id,
         primaryRole: user.roles?.[0]?.name || 'No Role',
         branchName: user.branchDetails?.name || user.branch || '',
-        subdealerName: user.subdealerDetails?.name || user.subdealer || ''
+        subdealerName: user.subdealerDetails?.name || user.subdealer || '',
+        status: user.status ? user.status.toLowerCase() : 'inactive' // Normalize status
       }));
       setData(users);
       setFilteredData(users);
@@ -536,6 +896,47 @@ const UsersList = () => {
     setMenuId(null);
   };
 
+  const handleStatusUpdate = async (userId, newStatus) => {
+    // Set loading state for this specific user
+    setLoadingStatus(prev => ({ ...prev, [userId]: true }));
+    
+    try {
+      // Using the provided PUT API endpoint
+      await axiosInstance.put(`/users/${userId}`, { status: newStatus.toUpperCase() });
+      
+      // Update local state
+      setData(prevData => 
+        prevData.map(user => 
+          user.id === userId ? { ...user, status: newStatus.toLowerCase() } : user
+        )
+      );
+      
+      setFilteredData(prevData => 
+        prevData.map(user => 
+          user.id === userId ? { ...user, status: newStatus.toLowerCase() } : user
+        )
+      );
+      
+      showSuccess(`User status updated to ${newStatus} successfully!`);
+    } catch (error) {
+      console.log(error);
+      let message = 'Failed to update status. Please try again.';
+
+      if (error.response) {
+        const res = error.response.data;
+        message = res.message || res.error || message;
+      } else if (error.request) {
+        message = 'No response from server. Please check your network.';
+      } else if (error.message) {
+        message = error.message;
+      }
+
+      showError(message);
+    } finally {
+      setLoadingStatus(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
   const handleDelete = async (id) => {
     const result = await confirmDelete();
     if (result.isConfirmed) {
@@ -569,12 +970,64 @@ const UsersList = () => {
   };
 
   const getStatusBadge = (status) => {
-    if (status === 'active') {
+    const statusLower = status?.toLowerCase() || 'inactive';
+    if (statusLower === 'active') {
       return <CBadge color="success">Active</CBadge>;
-    } else if (status === 'inactive') {
+    } else if (statusLower === 'inactive') {
       return <CBadge color="danger">Inactive</CBadge>;
     } else {
       return <CBadge color="secondary">{status}</CBadge>;
+    }
+  };
+
+  const getStatusButton = (user) => {
+    const statusLower = user.status?.toLowerCase() || 'inactive';
+    const isLoading = loadingStatus[user.id];
+    
+    if (statusLower === 'active') {
+      return (
+        <CTooltip content="Deactivate User" placement="top">
+          <CButton
+            size="sm"
+            color="warning"
+            variant="outline"
+            className="me-1"
+            onClick={() => handleStatusUpdate(user.id, 'inactive')}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <CSpinner size="sm" />
+            ) : (
+              <>
+                <CIcon icon={cilBan} className="me-1" />
+                Deactivate
+              </>
+            )}
+          </CButton>
+        </CTooltip>
+      );
+    } else {
+      return (
+        <CTooltip content="Activate User" placement="top">
+          <CButton
+            size="sm"
+            color="success"
+            variant="outline"
+            className="me-1"
+            onClick={() => handleStatusUpdate(user.id, 'active')}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <CSpinner size="sm" />
+            ) : (
+              <>
+                <CIcon icon={cilCheckCircle} className="me-1" />
+                Activate
+              </>
+            )}
+          </CButton>
+        </CTooltip>
+      );
     }
   };
 
@@ -629,7 +1082,6 @@ const UsersList = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
-                // placeholder="Search users..."
               />
             </div>
           </div>
@@ -667,14 +1119,21 @@ const UsersList = () => {
                       </CTableDataCell>
                       {showActionColumn && (
                         <CTableDataCell>
-                          <CButton
-                            size="sm"
-                            className='option-button btn-sm'
-                            onClick={(event) => handleClick(event, user.id)}
-                          >
-                            <CIcon icon={cilSettings} />
-                            Options
-                          </CButton>
+                          <div className="d-flex align-items-center">
+                            {/* Active/Inactive Toggle Buttons */}
+                            {getStatusButton(user)}
+                            
+                            {/* Existing Options Menu */}
+                            <CButton
+                              size="sm"
+                              className='option-button btn-sm ms-1'
+                              onClick={(event) => handleClick(event, user.id)}
+                            >
+                              <CIcon icon={cilSettings} />
+                              Options
+                            </CButton>
+                          </div>
+                          
                           <Menu 
                             id={`action-menu-${user.id}`} 
                             anchorEl={anchorEl} 

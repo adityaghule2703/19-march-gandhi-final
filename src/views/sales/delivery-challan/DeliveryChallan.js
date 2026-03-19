@@ -1,3 +1,2114 @@
+// // // import '../../../css/table.css'
+// // // import {
+// // //   React,
+// // //   useState,
+// // //   useEffect,
+// // //   getDefaultSearchFields,
+// // //   useTableFilter,
+// // //   usePagination,
+// // //   axiosInstance,
+// // //   showError,
+// // // } from '../../../utils/tableImports'
+// // // import tvsLogo from '../../../assets/images/logo1.png'
+// // // import { cilPrint } from '@coreui/icons'
+// // // import CIcon from '@coreui/icons-react'
+// // // import {
+// // //   CButton,
+// // //   CCard,
+// // //   CCardBody,
+// // //   CCardHeader,
+// // //   CFormInput,
+// // //   CFormLabel,
+// // //   CTable,
+// // //   CTableBody,
+// // //   CTableHead,
+// // //   CTableHeaderCell,
+// // //   CTableRow,
+// // //   CTableDataCell,
+// // //   CSpinner,
+// // //   CAlert,
+// // //   CModal,
+// // //   CModalHeader,
+// // //   CModalTitle,
+// // //   CModalBody,
+// // //   CModalFooter,
+// // // } from '@coreui/react'
+// // // import { useNavigate } from 'react-router-dom'
+// // // import { 
+// // //   hasSafePagePermission,
+// // //   MODULES, 
+// // //   PAGES,
+// // //   ACTIONS,
+// // //   canViewPage 
+// // // } from '../../../utils/modulePermissions'
+// // // import { useAuth } from '../../../context/AuthContext'
+// // // import { showSuccess } from '../../../utils/sweetAlerts'
+
+// // // const DeliveryChallan = () => {
+// // //   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([])
+// // //   const { currentRecords, PaginationOptions } = usePagination(filteredData)
+// // //   const [error, setError] = useState(null)
+// // //   const [loading, setLoading] = useState(true)
+// // //   const [searchTerm, setSearchTerm] = useState('')
+// // //   const navigate = useNavigate()
+
+// // //   const [formData, setFormData] = useState({
+// // //     chassisNumber: '',
+// // //   })
+// // //   const [bookingData, setBookingData] = useState(null)
+// // //   const [declarations, setDeclarations] = useState([])
+  
+// // //   // Documents Modal States
+// // //   const [documentsModal, setDocumentsModal] = useState(false)
+// // //   const [selectedBookingForDocs, setSelectedBookingForDocs] = useState(null)
+// // //   const [selectedDocuments, setSelectedDocuments] = useState([])
+// // //   const [loadingDocuments, setLoadingDocuments] = useState(false)
+
+// // //   // Get permissions from auth context
+// // //   const { permissions = [] } = useAuth()
+
+// // //   // Permission checks for Delivery Challan page under Sales module
+// // //   // For viewing, we need VIEW permission
+// // //   const canViewDeliveryChallan = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DELIVERY_CHALLAN)
+  
+// // //   // For printing, we need CREATE permission
+// // //   const canCreateDeliveryChallan = hasSafePagePermission(
+// // //     permissions, 
+// // //     MODULES.SALES, 
+// // //     PAGES.SALES.DELIVERY_CHALLAN, 
+// // //     ACTIONS.CREATE
+// // //   )
+
+// // //   useEffect(() => {
+// // //     // Check if user has permission to view this page
+// // //     if (!canViewDeliveryChallan) {
+// // //       showError('You do not have permission to view Delivery Challan')
+// // //       navigate('/dashboard')
+// // //       return
+// // //     }
+    
+// // //     fetchData()
+// // //   }, [])
+
+// // //   useEffect(() => {
+// // //     const fetchDeclarations = async () => {
+// // //       try {
+// // //         const response = await axiosInstance.get('/declarations?formType=delivery_challan')
+// // //         if (response.data.status === 'success') {
+// // //           const sortedDeclarations = response.data.data.declarations.sort(
+// // //             (a, b) => a.priority - b.priority,
+// // //           )
+// // //           setDeclarations(sortedDeclarations)
+// // //         }
+// // //       } catch (error) {
+// // //         const message = showError(error);
+// // //         if (message) {
+// // //           setError(message);
+// // //         }
+// // //       }
+// // //     }
+
+// // //     fetchDeclarations()
+// // //   }, [])
+
+// // //   useEffect(() => {
+// // //     const timer = setTimeout(() => {
+// // //       if (formData.chassisNumber.trim().length > 0) {
+// // //         fetchBookingDetails()
+// // //       }
+// // //     }, 500)
+
+// // //     return () => clearTimeout(timer)
+// // //   }, [formData.chassisNumber])
+
+// // //   const fetchData = async () => {
+// // //     try {
+// // //       setLoading(true)
+// // //       const response = await axiosInstance.get(`/bookings`)
+
+// // //       const branchBookings = response.data.data.bookings.filter(
+// // //         (booking) => booking.bookingType === 'BRANCH' && booking.status === 'ALLOCATED',
+// // //       )
+// // //       setData(branchBookings)
+// // //       setFilteredData(branchBookings)
+// // //     } catch (error) {
+// // //       const message = showError(error);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+      
+// // //     } finally {
+// // //       setLoading(false)
+// // //     }
+// // //   }
+
+// // //   const fetchBookingDetails = async () => {
+// // //     setLoading(true)
+// // //     setError('')
+
+// // //     try {
+// // //       const response = await axiosInstance.get(`/bookings/chassis/${formData.chassisNumber}`)
+
+// // //       if (response.data.success) {
+// // //         setBookingData(response.data.data)
+// // //       } else {
+// // //         setError('No booking found for this chassis number')
+// // //         setBookingData(null)
+// // //       }
+// // //     } catch (err) {
+// // //       const message = showError(error);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+      
+// // //     } finally {
+// // //       setLoading(false)
+// // //     }
+// // //   }
+
+// // //   // Fetch selected documents for a booking
+// // //   const handleOpenDocuments = async (bookingId) => {
+// // //     try {
+// // //       setLoadingDocuments(true)
+// // //       setSelectedBookingForDocs(bookingId)
+      
+// // //       const response = await axiosInstance.get(`/booking-templates/selected/${bookingId}`)
+// // //       setSelectedDocuments(response.data.data.selections || [])
+// // //       setDocumentsModal(true)
+      
+// // //     } catch (error) {
+// // //       const message = showError(error);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+// // //     } finally {
+// // //       setLoadingDocuments(false)
+// // //     }
+// // //   }
+
+// // //   const handlePreviewDocument = async (selectionId, templateName) => {
+// // //     try {
+// // //       const response = await axiosInstance.get(`/booking-templates/preview/${selectionId}`)
+// // //       const previewData = response.data.data
+
+// // //       const printWindow = window.open('', '_blank')
+// // //       printWindow.document.write(generateTemplatePrintHTML(previewData))
+// // //       printWindow.document.close()
+// // //       printWindow.focus()
+      
+// // //     } catch (error) {
+// // //       const message = showError(error);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+// // //     }
+// // //   }
+
+// // //   const generateDeclarationHTML = () => {
+// // //     if (declarations.length === 0) {
+// // //       return `
+// // //         I/We Authorized the dealer or its representative to register the vehicle at RTO In my/Our name as booked by us,
+// // //         However getting the vehicle insured from Insurance company & getting the vehicle registered from RTO is entirely
+// // //         my/our sole responsibility. Registration Number allotted by RTO will be acceptable to me else I will pre book for
+// // //         choice number at RTO at my own. Dealership has no role in RTO Number allocation I/We am/are exclusively responsible
+// // //         for any loss/penalty/Legal action- occurred due to non-compliance of /Delay in Insurance or RTO registration. I have
+// // //         understood and accepted all T & C about warranty as per the Warranty policy of TVS MOTOR COMPANY Ltd & agree to abide
+// // //         the same. I have also understood & accepted that the warranty for Tyres & Battery Lies with concerned Manufacturer or
+// // //         its dealer & I will not claim for warranty of these products to TVS MOTOR COMPANY or to Its Dealer I am being informed
+// // //         about the price breakup, I had understood & agreed upon the same & then had booked the vehicle, I am bound to pay penal
+// // //         interest @ 24% P.A. on delayed payment. I accept that vehicle once sold by dealer shall not be taken back /replaced for
+// // //         any reason.
+// // //       `
+// // //     }
+
+// // //     return declarations.map((declaration) => declaration.content).join('<br/><br/>')
+// // //   }
+
+// // //   const handlePrint = (booking, type) => {
+// // //     if (!booking) {
+// // //       setError('No booking data found')
+// // //       return
+// // //     }
+
+// // //     // Check CREATE permission before printing
+// // //     if (!canCreateDeliveryChallan) {
+// // //       showError('You do not have permission to print delivery challan')
+// // //       return
+// // //     }
+
+// // //     const printWindow = window.open('', '_blank')
+
+// // //     if (type === 'Helmet') {
+// // //       printWindow.document.write(generateHelmetDeclarationHTML(booking))
+// // //     } else {
+// // //       printWindow.document.write(generateDeliveryChallanHTML(booking, type))
+// // //     }
+
+// // //     printWindow.document.close()
+// // //     printWindow.focus()
+// // //   }
+
+// // //   const generateDeliveryChallanHTML = (data, copyType) => {
+// // //     const currentDate = new Date().toLocaleDateString('en-GB')
+// // //     const displayName =
+// // //       data.bookingType === 'SUBDEALER' ? data.subdealer?.name || 'N/A' : data.customerDetails.name
+
+// // //     const displayAddress =
+// // //       data.bookingType === 'SUBDEALER'
+// // //         ? data.subdealer?.location || 'N/A'
+// // //         : `${data.customerDetails.address}, ${data.customerDetails.taluka}, ${data.customerDetails.district}`
+
+// // //     return `
+// // //       <!DOCTYPE html>
+// // //       <html>
+// // //       <head>
+// // //         <title>Sale/Delivery Challan - ${copyType}</title>
+// // //         <style>
+// // //           body {
+// // //             font-family: Courier New;
+// // //             margin: 0;
+// // //             padding: 0;
+// // //           }
+// // //           .page {
+// // //             width: 210mm;
+// // //             min-height: 297mm;
+// // //             margin: 0 auto;
+// // //             padding: 5mm;
+// // //             box-sizing: border-box;
+// // //           }
+// // //           .header-container {
+// // //             display: flex;
+// // //             align-items: center;
+// // //             margin-bottom: 5mm;
+// // //           }
+// // //           .logo {
+// // //             width: 30mm;
+// // //             height: auto;
+// // //             margin-right: 5mm;
+// // //           }
+// // //           .header-text {
+// // //             color:#555555;
+// // //             flex-grow: 1;
+// // //             text-align: center;
+// // //             font-size: 21px;
+// // //             font-weight: 700;
+// // //           }
+
+// // //           table {
+// // //   width: 100%;
+// // //   border-collapse: collapse;
+// // //   margin-bottom: 5mm;
+// // // }
+// // // td {
+// // //   padding: 1mm 0;
+// // //   font-size: 11pt;
+// // // }
+// // // tr.border-top-bottom td {
+// // //   padding: 1mm;
+// // //   width: auto;
+// // // }
+
+// // // tr.data-row td:nth-child(1) {
+// // //   width: 25%;
+// // //   padding-right: 1mm;
+// // // }
+// // // tr.data-row td:nth-child(2) {
+// // //   width: 3%;
+// // //   padding: 0;
+// // // }
+// // // tr.data-row td:nth-child(3),
+// // // tr.data-row td:nth-child(4) {
+// // //   width: auto;
+// // //   padding-left: 1mm;
+// // // }
+// // //           .border-top-bottom {
+// // //            border-top: 2px solid #AAAAAA;
+// // //            border-bottom: 2px solid #AAAAAA;
+// // //           }
+// // //           .declaration {
+// // //             font-size: 11px;
+// // //             text-align: justify;
+// // //             line-height: 1.3;
+// // //             color: #555555;
+// // //           }
+// // //           .signature {
+// // //             text-align: right;
+// // //             margin-top: 10mm;
+// // //           }
+// // //           .account-details{
+// // //           color:#555555;
+// // //           font-weight:bold;
+// // //           }
+// // //           .signature-box {
+// // //             border-top: 2px solid #AAAAAA;
+// // //             border-bottom: 2px solid #AAAAAA;
+// // //             padding: 1px 0;
+// // //             text-align: right;
+// // //             color:#555555;
+// // //            font-weight:bold;
+// // //           }
+// // //           .jurisdiction {
+// // //             text-align: center;
+// // //             font-weight: bold;
+// // //             font-size: 14px;
+// // //             color: #555555
+// // //           }
+// // //           .bold {
+// // //           font-weight: 700;
+// // //           color:#555555;
+
+// // //            }
+// // //           .divider {
+// // //             margin: 5mm 0;
+// // //             padding: 2mm 0;
+// // //           }
+// // //           .copy-title {
+// // //             text-align: center;
+// // //             color:#555555;
+// // //             font-size: 21px;
+// // //             margin-bottom: 5mm;
+// // //             font-weight: 700;
+// // //           }
+// // //           @page {
+// // //             size: A4;
+// // //             margin: 0;
+// // //           }
+// // //         </style>
+// // //       </head>
+// // //       <body>
+// // //         <div class="page">
+// // //           <!-- Customer Copy -->
+// // //           <div class="header-container">
+// // //             <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+// // //             <div class="header-text"> Sale / Delivery challan</div>
+// // //           </div>
+
+// // //           <table>
+// // //             <tr class="border-top-bottom">
+// // //               <td width="20%">Booking No.:</td>
+// // //               <td width="25%"><span class="bold">${data.bookingNumber || 'N/A'}</span></td>
+// // //               <td width="15%">Sales Date</td>
+// // //               <td width="40%"><span class="bold">${currentDate}</span></td>
+// // //             </tr>
+// // //             <tr class="data-row">
+// // //              <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Name' : 'Name'}</td>
+// // //               <td>:</td>
+// // //               <td><span class="bold">${displayName}</span></td>
+// // //             </tr>
+// // //             <tr class="data-row">
+// // //               <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Address' : 'Address'}</td>
+// // //               <td>:</td>
+// // //               <td colspan="2"><span class="bold">${displayAddress}</span></td>
+// // //             </tr>
+// // //             <tr class="data-row">
+// // //               <td>S.E Name</td>
+// // //               <td>:</td>
+// // //               <td colspan="2"><span class="bold">${data.salesExecutive?.name || 'N/A'}</span></td>
+// // //             </tr>
+// // //             <tr class="data-row">
+// // //               <td>Model</td>
+// // //               <td>:</td>
+// // //               <td><span class="bold">${data.model?.model_name || ''}</span></td>
+// // //               <td>Colour : <span class="bold">${data.color?.name || 'N/A'}</span></td>
+// // //             </tr>
+// // //             <tr class="data-row">
+// // //               <td>Chasis No</td>
+// // //               <td>:</td>
+// // //               <td><span class="bold">${data.chassisNumber || ''}</span></td>
+// // //               <td>Key No. : <span class="bold">${data.keyNumber || '0'}</span></td>
+// // //             </tr>
+// // //             <tr class="data-row">
+// // //               <td>Engine No</td>
+// // //               <td>:</td>
+// // //               <td><span class="bold">${data.engineNumber || ''}</span></td>
+// // //               <td></td>
+// // //             </tr>
+// // //             <tr class="data-row">
+// // //               <td>Financer</td>
+// // //               <td>:</td>
+// // //               <td colspan="2"><span class="bold">${data.payment.financer?.name || ''}</span></td>
+// // //             </tr>
+// // //             <tr class="data-row">
+// // //               <td>Total</td>
+// // //               <td>:</td>
+// // //               <td><span class="bold">₹${data.discountedAmount}</span></td>
+// // //             </tr>
+// // //           </table>
+// // //            <div class='account-details'>ACC.DETAILS:
+// // //  ${data.accessories
+// // //    .map((accessory) => (accessory.accessory ? accessory.accessory.name : ''))
+// // //    .filter((name) => name)
+// // //    .join(', ')}
+// // //            </div>
+// // //           <div class="signature-box">
+// // //             <div><b>Authorised Signature</b></div>
+// // //           </div>
+
+// // //           <p class="bold">Customer Declarations:</p>
+// // //           <p class="declaration">
+// // //             ${generateDeclarationHTML()}
+// // //           </p>
+
+// // //           <div>
+// // //             <p class="bold">Customer Signature</p>
+// // //           </div>
+
+// // //           <p class="jurisdiction">Subject To Sangamner Jurisdiction</p>
+
+// // //           <!-- Office Copy -->
+// // //           <div style="page-break-before: always; margin-top: 10mm;">
+// // //             <div class="copy-title">Sale / Delivery challan</div>
+
+// // //             <table>
+// // //               <tr class="border-top-bottom">
+// // //                 <td width="20%">Booking No.:</td>
+// // //                 <td width="25%"><span class="bold">${data.bookingNumber || 'N/A'}</span></td>
+// // //                 <td width="15%">Sales Date</td>
+// // //                 <td width="40%"><span class="bold">${currentDate}</span></td>
+// // //               </tr>
+// // //               <tr>
+// // //                 <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Name' : 'Name'}</td>
+// // //                 <td>:</td>
+// // //                 <td colspan="2"><span class="bold">${displayName}</span></td>
+// // //               </tr>
+// // //               <tr>
+// // //                 <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Address' : 'Address'}</td>
+// // //                 <td>:</td>
+// // //                 <td colspan="2"><span class="bold">${displayAddress}</span></td>
+// // //               </tr>
+// // //               <tr>
+// // //                 <td>S.E Name</td>
+// // //                 <td>:</td>
+// // //                 <td colspan="2"><span class="bold">${data.salesExecutive?.name || ''}</span></td>
+// // //               </tr>
+// // //               <tr>
+// // //                 <td>Model</td>
+// // //                 <td>:</td>
+// // //                 <td><span class="bold">${data.model.model_name || ''}</span></td>
+// // //                 <td>Colour : <span class="bold">${data.color?.name || 'N/A'}</span></td>
+// // //               </tr>
+// // //               <tr>
+// // //                 <td>Chasis No</td>
+// // //                 <td>:</td>
+// // //                 <td><span class="bold">${data.chassisNumber || ''}</span></td>
+// // //                 <td>Key No. : <span class="bold">${data.keyNumber || '0'}</span></td>
+// // //               </tr>
+// // //               <tr>
+// // //                 <td>Engine No</td>
+// // //                 <td>:</td>
+// // //                 <td><span class="bold">${data.engineNumber}</span></td>
+// // //                 <td></td>
+// // //               </tr>
+// // //               <tr>
+// // //                 <td>Financer</td>
+// // //                 <td>:</td>
+// // //                 <td colspan="2"><span class="bold">${data.payment.financer?.name || ''}</span></td>
+// // //               </tr>
+// // //               <tr>
+// // //                 <td>Total</td>
+// // //                 <td>:</td>
+// // //                 <td><span class="bold">₹${data.discountedAmount}</span></td>
+// // //             </tr>
+// // //             </table>
+
+// // //             <div class='account-details'>ACC.DETAILS:
+// // //              ${data.accessories
+// // //                .map((accessory) => (accessory.accessory ? accessory.accessory.name : ''))
+// // //                .filter((name) => name)
+// // //                .join(', ')}
+// // //             </div>
+// // //             <div class="signature-box">
+// // //               <div><b>Authorised Signature</b></div>
+// // //             </div>
+
+// // //             <p class="bold">Customer Declarations:</p>
+// // //             <p class="declaration">
+// // //               ${generateDeclarationHTML()}
+// // //             </p>
+
+// // //             <div>
+// // //               <p class="bold">Customer Signature</p>
+// // //             </div>
+
+// // //             <p class="jurisdiction">Subject To Sangamner Jurisdiction</p>
+// // //           </div>
+// // //         </div>
+// // //       </body>
+// // //       </html>
+// // //     `
+// // //   }
+
+// // //   const generateHelmetDeclarationHTML = (data) => {
+// // //     const currentDate = new Date()
+// // //     const day = currentDate.getDate().toString().padStart(2, '0')
+// // //     const month = (currentDate.getMonth() + 1).toString().padStart(2, '0')
+// // //     const year = currentDate.getFullYear()
+// // //     const formattedDate = `${day}/${month}/${year}`
+
+// // //     return `
+// // // <!DOCTYPE html>
+// // // <html>
+// // // <head>
+// // //     <meta charset="UTF-8">
+// // //     <title>Helmet Declaration</title>
+// // //     <style>
+// // //         html, body {
+// // //             height: 100%;
+// // //             margin: 0;
+// // //             padding: 0;
+// // //             background-color: #f5f5f5;
+// // //             display: flex;
+// // //             justify-content: center;
+// // //             align-items: center;
+// // //         }
+// // //         .declaration-wrapper {
+// // //             width: 210mm;
+// // //             margin: 20px 0;
+// // //         }
+// // //         .declaration-body {
+// // //             font-family: 'Arial Unicode MS', 'Shivaji01', 'Shivaji02', sans-serif;
+// // //             margin: 15mm;
+// // //             padding: 0;
+// // //             font-size: 12pt;
+// // //             line-height: 1.4;
+// // //         }
+// // //         @page {
+// // //             size: A4;
+// // //             margin: 0;
+// // //         }
+// // //         .header {
+// // //             text-align: center;
+// // //             font-weight: bold;
+// // //             font-size: 18pt;
+// // //             margin-bottom: 10mm;
+// // //         }
+// // //         .content {
+// // //             margin-bottom: 5mm;
+// // //             text-align:center;
+// // //         }
+// // //         .customer-info {
+// // //             margin-bottom: 10mm;
+// // //         }
+// // //         .customer-info-row {
+// // //             margin-bottom: 2mm;
+// // //         }
+// // //         .bold {
+// // //             font-weight: bold;
+// // //         }
+// // //         .signature {
+// // //             margin-top: 15mm;
+// // //             display:flex;
+// // //             justify-content:space-between;
+// // //         }
+// // //         .jurisdiction {
+// // //             text-align: center;
+// // //             margin-top: 10mm;
+// // //             font-weight: bold;
+// // //         }
+// // //         .vehicle-details {
+// // //             margin: 5mm 0;
+// // //         }
+// // //         .declaration {
+// // //             margin-top: 10mm;
+// // //             text-align: justify;
+// // //         }
+// // //         .divider {
+// // //             border-top: 2px solid #AAAAAA;
+// // //             margin: 1mm 0;
+// // //         }
+// // //         @media print {
+// // //             html, body {
+// // //                 background: none;
+// // //                 display: block;
+// // //             }
+// // //             .declaration-wrapper {
+// // //                 box-shadow: none;
+// // //                 margin: 0;
+// // //             }
+// // //         }
+// // //     </style>
+// // // </head>
+// // // <body>
+// // //     <div class="declaration-wrapper">
+// // //         <div class="declaration-body">
+// // //             <div class="header">
+// // //                 हेल्मेट प्राप्ती घोषणापत्र
+// // //             </div>
+
+// // //             <div class="content">
+// // //                 केंद्रीय मोटर वाहन नियम १३८ { ४ } { फ }
+// // //             </div>
+// // //             <div class="divider"></div>
+// // //             <div class="declaration">
+// // //                 <p>
+// // //                     मी..${data.customerDetails.name}, असे घोषित करतो कि
+
+// // //                     दि. ${formattedDate} रोजी गांधी मोटार टि व्हि यस नासिक
+
+// // //                     या वितरकाकडून टि व्हि यस..${data.model.model_name}, हे वाहन खरेदी केले आहे.
+
+// // //                     त्याचा तपशील खालील प्रमाणे...
+// // //                 </p>
+// // //                 <div class="vehicle-details">
+// // //                     <div class="customer-info-row"><strong>चेसिस नंबर:</strong> ${data.chassisNumber}</div>
+// // //                     <div class="customer-info-row"><strong>इंजिन नंबर:</strong> ${data.engineNumber}</div>
+// // //                 </div>
+
+// // //                 <p>
+// // //                     केंद्रीय मोटर वाहन नियम १३८ { ४ } { फ } प्रमाणे वितरकाने दुचाकी वितरीत करते वेळी विहित
+// // //                     मानाकनाचे २ (दोन) हेल्मेट पुरवणे/विकत देणे बंधनकारक आहे. त्याचप्रमाणे मला BUREAU OF INDIA STANDARS
+// // //                     UNDER THE BUREAU OF INDIA ACT-1986 { 63 TO 1986 } या प्रमाणे हेल्मेट मिळाले आहे.
+// // //                 </p>
+// // //                 <p>
+// // //                     मी याद्वारे जाहीर करतो/करते की वर दिलेला तपशील माझ्या संपूर्ण माहिती प्रमाणे व तपासा्रमाणे सत्य आहे.
+// // //                 </p>
+// // //             </div>
+
+// // //             <div class="signature">
+// // //                 <div>
+// // //                     स्वाक्षरी व शिक्का
+// // //                     <br>
+// // //                     गांधी मोटर्स<br>
+// // //                     नासिक
+// // //                 </div>
+// // //                 <div>
+// // //                     दुचाकी खरेदिदाराची स्वाक्षरी<br>
+// // //                     नाव :- ${data.customerDetails.name}
+// // //                 </div>
+// // //             </div>
+
+// // //             <div class="jurisdiction">
+// // //                 Subject To Nashik Jurisdiction
+// // //             </div>
+// // //         </div>
+// // //     </div>
+// // // </body>
+// // // </html>
+// // //     `
+// // //   }
+
+// // //   // Generate template print HTML with the same design as Customer/Office Copy
+// // //   const generateTemplatePrintHTML = (previewData) => {
+// // //   const bookingInfo = previewData.booking_info
+// // //   const templateInfo = previewData.template_info
+// // //   const generatedContent = previewData.generated_content
+
+// // //   return `
+// // // <!DOCTYPE html>
+// // // <html>
+// // // <head>
+// // //     <title>${templateInfo.name} - ${bookingInfo.booking_number}</title>
+// // //     <style>
+// // //         body {
+// // //             font-family: Courier New;
+// // //             margin: 0;
+// // //             padding: 0;
+// // //         }
+// // //         .page {
+// // //             width: 210mm;
+// // //             min-height: 297mm;
+// // //             margin: 0 auto;
+// // //             padding: 5mm;
+// // //             box-sizing: border-box;
+// // //         }
+// // //         .header-container {
+// // //             display: flex;
+// // //             align-items: center;
+// // //             margin-bottom: 5mm;
+// // //         }
+// // //         .logo {
+// // //             width: 30mm;
+// // //             height: auto;
+// // //             margin-right: 5mm;
+// // //         }
+// // //         .header-text {
+// // //             color:#555555;
+// // //             flex-grow: 1;
+// // //             text-align: center;
+// // //             font-size: 21px;
+// // //             font-weight: 700;
+// // //         }
+// // //         .content-section {
+// // //             margin: 10mm 0;
+// // //         }
+// // //         .content-title {
+// // //             font-size: 18px;
+// // //             font-weight: bold;
+// // //             color: #555555;
+// // //             margin-bottom: 5mm;
+// // //             text-align: center;
+// // //         }
+// // //         .generated-content {
+// // //             font-size: 12px;
+// // //             line-height: 1.4;
+// // //             color: #555555;
+// // //             text-align: justify;
+// // //             white-space: pre-wrap;
+// // //         }
+// // //         .bold {
+// // //             font-weight: 700;
+// // //             color:#555555;
+// // //         }
+// // //         @page {
+// // //             size: A4;
+// // //             margin: 0;
+// // //         }
+// // //     </style>
+// // // </head>
+// // // <body>
+// // //     <div class="page">
+// // //         <div class="header-container">
+// // //             <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+// // //             <div class="header-text">${templateInfo.name}</div>
+// // //         </div>
+
+// // //         <div class="content-section">
+// // //             ${generatedContent.subject ? `<div class="content-title">${generatedContent.subject}</div>` : ''}
+// // //             <div class="generated-content">
+// // //                 ${generatedContent.content}
+// // //             </div>
+// // //         </div>
+// // //     </div>
+// // // </body>
+// // // </html>
+// // //     `
+// // // }
+
+// // //   const handleSearch = (value) => {
+// // //     setSearchTerm(value)
+// // //     handleFilter(value, getDefaultSearchFields('booking'))
+// // //   }
+
+// // //   if (!canViewDeliveryChallan) {
+// // //     return (
+// // //       <div className="alert alert-danger m-3" role="alert">
+// // //         You do not have permission to view Delivery Challan.
+// // //       </div>
+// // //     )
+// // //   }
+
+// // //   if (loading) {
+// // //     return (
+// // //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+// // //         <CSpinner color="primary" />
+// // //       </div>
+// // //     )
+// // //   }
+
+// // //   return (
+// // //     <div>
+// // //       <div className="title">Delivery Challan/Documents</div>
+// // //       {error && (
+// // //         <CAlert color="danger" className="mb-3">
+// // //           {error}
+// // //         </CAlert>
+// // //       )}
+
+// // //       <CCard className="table-container mt-4">
+// // //         <CCardHeader className="card-header d-flex justify-content-between align-items-center">
+// // //           <div></div>
+// // //           <div className="d-flex">
+// // //             <CFormLabel className="mt-1 m-1">Search:</CFormLabel>
+// // //             <CFormInput
+// // //               type="text"
+// // //               className="d-inline-block square-search"
+// // //               value={searchTerm}
+// // //               onChange={(e) => handleSearch(e.target.value)}
+// // //             />
+// // //           </div>
+// // //         </CCardHeader>
+
+// // //         <CCardBody>
+// // //           <div className="responsive-table-wrapper">
+// // //             <CTable striped bordered hover className="responsive-table">
+// // //               <CTableHead>
+// // //                 <CTableRow>
+// // //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Booking ID</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Model Name</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Customer Name</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Chassis Number</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Customer Copy</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Office Copy</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Documents</CTableHeaderCell>
+// // //                 </CTableRow>
+// // //               </CTableHead>
+// // //               <CTableBody>
+// // //                 {currentRecords.length === 0 ? (
+// // //                   <CTableRow>
+// // //                     <CTableDataCell colSpan="8" className="text-center">
+// // //                       No bookings available
+// // //                     </CTableDataCell>
+// // //                   </CTableRow>
+// // //                 ) : (
+// // //                   currentRecords.map((booking, index) => (
+// // //                     <CTableRow key={booking._id || index}>
+// // //                       <CTableDataCell>{index + 1}</CTableDataCell>
+// // //                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+// // //                       <CTableDataCell>{booking.model?.model_name || ''}</CTableDataCell>
+// // //                       <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
+// // //                       <CTableDataCell>{booking.chassisNumber || ''}</CTableDataCell>
+// // //                       <CTableDataCell>
+// // //                         {canCreateDeliveryChallan ? (
+// // //                           <CButton
+// // //                             size="sm"
+// // //                             color="primary"
+// // //                             className="action-btn"
+// // //                             onClick={() => handlePrint(booking, 'Customer Copy')}
+// // //                           >
+// // //                             <CIcon icon={cilPrint} className="me-1" />
+// // //                             Print
+// // //                           </CButton>
+// // //                         ) : (
+// // //                           <span className="text-muted">No permission</span>
+// // //                         )}
+// // //                       </CTableDataCell>
+// // //                       <CTableDataCell>
+// // //                         {canCreateDeliveryChallan ? (
+// // //                           <CButton
+// // //                             size="sm"
+// // //                             color="info"
+// // //                             className="action-btn"
+// // //                             onClick={() => handlePrint(booking, 'Office Copy')}
+// // //                           >
+// // //                             <CIcon icon={cilPrint} className="me-1" />
+// // //                             Print
+// // //                           </CButton>
+// // //                         ) : (
+// // //                           <span className="text-muted">No permission</span>
+// // //                         )}
+// // //                       </CTableDataCell>
+// // //                       <CTableDataCell>
+// // //                         <CButton
+// // //                           size="sm"
+// // //                           color="success"
+// // //                           className="action-btn"
+// // //                           onClick={() => handleOpenDocuments(booking._id)}
+// // //                         >
+// // //                           <CIcon className="me-1" />
+// // //                           View
+// // //                         </CButton>
+// // //                       </CTableDataCell>
+// // //                     </CTableRow>
+// // //                   ))
+// // //                 )}
+// // //               </CTableBody>
+// // //             </CTable>
+// // //           </div>
+// // //         </CCardBody>
+// // //       </CCard>
+
+// // //       {/* Selected Documents Modal */}
+// // //       <CModal 
+// // //         visible={documentsModal} 
+// // //         onClose={() => {
+// // //           setDocumentsModal(false)
+// // //           setSelectedBookingForDocs(null)
+// // //           setSelectedDocuments([])
+// // //         }}
+// // //         size="lg"
+// // //       >
+// // //         <CModalHeader>
+// // //           <CModalTitle>
+// // //             <CIcon className="me-2" />
+// // //             Selected Documents
+// // //           </CModalTitle>
+// // //         </CModalHeader>
+// // //         <CModalBody>
+// // //           {loadingDocuments ? (
+// // //             <div className="text-center py-5">
+// // //               <CSpinner color="primary" />
+// // //               <p className="mt-3">Loading documents...</p>
+// // //             </div>
+// // //           ) : selectedDocuments.length === 0 ? (
+// // //             <div className="text-center py-5">
+// // //               <CIcon size="xl" className="text-muted mb-3" />
+// // //               <p className="text-muted">No documents selected for this booking</p>
+// // //             </div>
+// // //           ) : (
+// // //             <div className="border rounded p-3">
+// // //               {selectedDocuments.map((selection, index) => (
+// // //                 <div key={selection.selection_id} className="mb-3 p-2 border-bottom">
+// // //                   <div className="d-flex justify-content-between align-items-center mb-2">
+// // //                     <div>
+// // //                       <h6 className="mb-0">{selection.template.template_name}</h6>
+// // //                       <small className="text-muted">
+// // //                         Selected by: {selection.selected_by.name} • 
+// // //                         {new Date(selection.selected_at).toLocaleDateString()}
+// // //                       </small>
+// // //                     </div>
+// // //                     <div className="d-flex gap-2">
+// // //                       <CButton
+// // //                         size="sm"
+// // //                         color="primary"
+// // //                         onClick={() => handlePreviewDocument(selection.selection_id, selection.template.template_name)}
+// // //                       >
+// // //                         <CIcon icon={cilPrint} className="me-1" />
+// // //                         Preview
+// // //                       </CButton>
+// // //                     </div>
+// // //                   </div>
+// // //                   {selection.notes && (
+// // //                     <div className="alert alert-info p-2 mt-2">
+// // //                       <small>
+// // //                         <strong>Notes:</strong> {selection.notes}
+// // //                       </small>
+// // //                     </div>
+// // //                   )}
+// // //                 </div>
+// // //               ))}
+// // //             </div>
+// // //           )}
+// // //         </CModalBody>
+// // //         <CModalFooter>
+// // //           <CButton 
+// // //             color="secondary" 
+// // //             onClick={() => {
+// // //               setDocumentsModal(false)
+// // //               setSelectedBookingForDocs(null)
+// // //               setSelectedDocuments([])
+// // //             }}
+// // //           >
+// // //             Close
+// // //           </CButton>
+// // //         </CModalFooter>
+// // //       </CModal>
+// // //     </div>
+// // //   )
+// // // }
+
+// // // export default DeliveryChallan
+
+
+
+
+
+
+
+
+
+
+
+
+// // import '../../../css/table.css'
+// // import {
+// //   React,
+// //   useState,
+// //   useEffect,
+// //   getDefaultSearchFields,
+// //   useTableFilter,
+// //   axiosInstance,
+// //   showError,
+// // } from '../../../utils/tableImports'
+// // import tvsLogo from '../../../assets/images/logo1.png'
+// // import { cilPrint, cilChevronLeft, cilChevronRight } from '@coreui/icons'
+// // import CIcon from '@coreui/icons-react'
+// // import {
+// //   CButton,
+// //   CCard,
+// //   CCardBody,
+// //   CCardHeader,
+// //   CFormInput,
+// //   CFormLabel,
+// //   CTable,
+// //   CTableBody,
+// //   CTableHead,
+// //   CTableHeaderCell,
+// //   CTableRow,
+// //   CTableDataCell,
+// //   CSpinner,
+// //   CAlert,
+// //   CModal,
+// //   CModalHeader,
+// //   CModalTitle,
+// //   CModalBody,
+// //   CModalFooter,
+// //   CPagination,
+// //   CPaginationItem
+// // } from '@coreui/react'
+// // import { useNavigate } from 'react-router-dom'
+// // import { 
+// //   hasSafePagePermission,
+// //   MODULES, 
+// //   PAGES,
+// //   ACTIONS,
+// //   canViewPage 
+// // } from '../../../utils/modulePermissions'
+// // import { useAuth } from '../../../context/AuthContext'
+// // import { showSuccess } from '../../../utils/sweetAlerts'
+
+// // const DeliveryChallan = () => {
+// //   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([])
+// //   const [error, setError] = useState(null)
+// //   const [loading, setLoading] = useState(true)
+// //   const [searchTerm, setSearchTerm] = useState('')
+// //   const navigate = useNavigate()
+
+// //   // Pagination states
+// //   const [currentPage, setCurrentPage] = useState(1)
+// //   const [recordsPerPage] = useState(100) // Show 100 records per page
+// //   const [totalPages, setTotalPages] = useState(1)
+// //   const [displayedPages, setDisplayedPages] = useState([])
+
+// //   const [formData, setFormData] = useState({
+// //     chassisNumber: '',
+// //   })
+// //   const [bookingData, setBookingData] = useState(null)
+// //   const [declarations, setDeclarations] = useState([])
+  
+// //   // Documents Modal States
+// //   const [documentsModal, setDocumentsModal] = useState(false)
+// //   const [selectedBookingForDocs, setSelectedBookingForDocs] = useState(null)
+// //   const [selectedDocuments, setSelectedDocuments] = useState([])
+// //   const [loadingDocuments, setLoadingDocuments] = useState(false)
+
+// //   // Get permissions from auth context
+// //   const { permissions = [] } = useAuth()
+
+// //   // Permission checks for Delivery Challan page under Sales module
+// //   // For viewing, we need VIEW permission
+// //   const canViewDeliveryChallan = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DELIVERY_CHALLAN)
+  
+// //   // For printing, we need CREATE permission
+// //   const canCreateDeliveryChallan = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.SALES, 
+// //     PAGES.SALES.DELIVERY_CHALLAN, 
+// //     ACTIONS.CREATE
+// //   )
+
+// //   // Calculate pagination
+// //   const calculatePagination = (filteredData) => {
+// //     const total = filteredData.length
+// //     const totalPages = Math.ceil(total / recordsPerPage)
+// //     setTotalPages(totalPages)
+    
+// //     // Calculate displayed page numbers (max 5 pages shown)
+// //     const pages = []
+// //     let startPage = Math.max(1, currentPage - 2)
+// //     let endPage = Math.min(totalPages, currentPage + 2)
+    
+// //     // Adjust if we're near the beginning
+// //     if (currentPage <= 3) {
+// //       endPage = Math.min(5, totalPages)
+// //     }
+    
+// //     // Adjust if we're near the end
+// //     if (currentPage >= totalPages - 2) {
+// //       startPage = Math.max(1, totalPages - 4)
+// //     }
+    
+// //     for (let i = startPage; i <= endPage; i++) {
+// //       pages.push(i)
+// //     }
+    
+// //     setDisplayedPages(pages)
+// //   }
+
+// //   // Get current records for the page
+// //   const getCurrentRecords = () => {
+// //     const indexOfLastRecord = currentPage * recordsPerPage
+// //     const indexOfFirstRecord = indexOfLastRecord - recordsPerPage
+// //     return filteredData.slice(indexOfFirstRecord, indexOfLastRecord)
+// //   }
+
+// //   // Handle page change
+// //   const handlePageChange = (pageNumber) => {
+// //     if (pageNumber < 1 || pageNumber > totalPages) return
+// //     setCurrentPage(pageNumber)
+// //     // Scroll to top when page changes
+// //     window.scrollTo({ top: 0, behavior: 'smooth' })
+// //   }
+
+// //   useEffect(() => {
+// //     // Check if user has permission to view this page
+// //     if (!canViewDeliveryChallan) {
+// //       showError('You do not have permission to view Delivery Challan')
+// //       navigate('/dashboard')
+// //       return
+// //     }
+    
+// //     fetchData()
+// //   }, [])
+
+// //   useEffect(() => {
+// //     const fetchDeclarations = async () => {
+// //       try {
+// //         const response = await axiosInstance.get('/declarations?formType=delivery_challan')
+// //         if (response.data.status === 'success') {
+// //           const sortedDeclarations = response.data.data.declarations.sort(
+// //             (a, b) => a.priority - b.priority,
+// //           )
+// //           setDeclarations(sortedDeclarations)
+// //         }
+// //       } catch (error) {
+// //         const message = showError(error);
+// //         if (message) {
+// //           setError(message);
+// //         }
+// //       }
+// //     }
+
+// //     fetchDeclarations()
+// //   }, [])
+
+// //   useEffect(() => {
+// //     // Recalculate pagination when filteredData changes
+// //     calculatePagination(filteredData)
+// //   }, [filteredData, currentPage])
+
+// //   useEffect(() => {
+// //     const timer = setTimeout(() => {
+// //       if (formData.chassisNumber.trim().length > 0) {
+// //         fetchBookingDetails()
+// //       }
+// //     }, 500)
+
+// //     return () => clearTimeout(timer)
+// //   }, [formData.chassisNumber])
+
+// //   const fetchData = async () => {
+// //     try {
+// //       setLoading(true)
+// //       const response = await axiosInstance.get(`/bookings`)
+
+// //       const branchBookings = response.data.data.bookings.filter(
+// //         (booking) => booking.bookingType === 'BRANCH' && booking.status === 'ALLOCATED',
+// //       )
+// //       setData(branchBookings)
+// //       setFilteredData(branchBookings)
+// //       setCurrentPage(1) // Reset to first page when data changes
+// //     } catch (error) {
+// //       const message = showError(error);
+// //       if (message) {
+// //         setError(message);
+// //       }
+      
+// //     } finally {
+// //       setLoading(false)
+// //     }
+// //   }
+
+// //   const fetchBookingDetails = async () => {
+// //     setLoading(true)
+// //     setError('')
+
+// //     try {
+// //       const response = await axiosInstance.get(`/bookings/chassis/${formData.chassisNumber}`)
+
+// //       if (response.data.success) {
+// //         setBookingData(response.data.data)
+// //       } else {
+// //         setError('No booking found for this chassis number')
+// //         setBookingData(null)
+// //       }
+// //     } catch (err) {
+// //       const message = showError(error);
+// //       if (message) {
+// //         setError(message);
+// //       }
+      
+// //     } finally {
+// //       setLoading(false)
+// //     }
+// //   }
+
+// //   // Fetch selected documents for a booking
+// //   const handleOpenDocuments = async (bookingId) => {
+// //     try {
+// //       setLoadingDocuments(true)
+// //       setSelectedBookingForDocs(bookingId)
+      
+// //       const response = await axiosInstance.get(`/booking-templates/selected/${bookingId}`)
+// //       setSelectedDocuments(response.data.data.selections || [])
+// //       setDocumentsModal(true)
+      
+// //     } catch (error) {
+// //       const message = showError(error);
+// //       if (message) {
+// //         setError(message);
+// //       }
+// //     } finally {
+// //       setLoadingDocuments(false)
+// //     }
+// //   }
+
+// //   const handlePreviewDocument = async (selectionId, templateName) => {
+// //     try {
+// //       const response = await axiosInstance.get(`/booking-templates/preview/${selectionId}`)
+// //       const previewData = response.data.data
+
+// //       const printWindow = window.open('', '_blank')
+// //       printWindow.document.write(generateTemplatePrintHTML(previewData))
+// //       printWindow.document.close()
+// //       printWindow.focus()
+      
+// //     } catch (error) {
+// //       const message = showError(error);
+// //       if (message) {
+// //         setError(message);
+// //       }
+// //     }
+// //   }
+
+// //   const generateDeclarationHTML = () => {
+// //     if (declarations.length === 0) {
+// //       return `
+// //         I/We Authorized the dealer or its representative to register the vehicle at RTO In my/Our name as booked by us,
+// //         However getting the vehicle insured from Insurance company & getting the vehicle registered from RTO is entirely
+// //         my/our sole responsibility. Registration Number allotted by RTO will be acceptable to me else I will pre book for
+// //         choice number at RTO at my own. Dealership has no role in RTO Number allocation I/We am/are exclusively responsible
+// //         for any loss/penalty/Legal action- occurred due to non-compliance of /Delay in Insurance or RTO registration. I have
+// //         understood and accepted all T & C about warranty as per the Warranty policy of TVS MOTOR COMPANY Ltd & agree to abide
+// //         the same. I have also understood & accepted that the warranty for Tyres & Battery Lies with concerned Manufacturer or
+// //         its dealer & I will not claim for warranty of these products to TVS MOTOR COMPANY or to Its Dealer I am being informed
+// //         about the price breakup, I had understood & agreed upon the same & then had booked the vehicle, I am bound to pay penal
+// //         interest @ 24% P.A. on delayed payment. I accept that vehicle once sold by dealer shall not be taken back /replaced for
+// //         any reason.
+// //       `
+// //     }
+
+// //     return declarations.map((declaration) => declaration.content).join('<br/><br/>')
+// //   }
+
+// //   const handlePrint = (booking, type) => {
+// //     if (!booking) {
+// //       setError('No booking data found')
+// //       return
+// //     }
+
+// //     // Check CREATE permission before printing
+// //     if (!canCreateDeliveryChallan) {
+// //       showError('You do not have permission to print delivery challan')
+// //       return
+// //     }
+
+// //     const printWindow = window.open('', '_blank')
+
+// //     if (type === 'Helmet') {
+// //       printWindow.document.write(generateHelmetDeclarationHTML(booking))
+// //     } else {
+// //       printWindow.document.write(generateDeliveryChallanHTML(booking, type))
+// //     }
+
+// //     printWindow.document.close()
+// //     printWindow.focus()
+// //   }
+
+// //   const generateDeliveryChallanHTML = (data, copyType) => {
+// //     const currentDate = new Date().toLocaleDateString('en-GB')
+// //     const displayName =
+// //       data.bookingType === 'SUBDEALER' ? data.subdealer?.name || 'N/A' : data.customerDetails.name
+
+// //     const displayAddress =
+// //       data.bookingType === 'SUBDEALER'
+// //         ? data.subdealer?.location || 'N/A'
+// //         : `${data.customerDetails.address}, ${data.customerDetails.taluka}, ${data.customerDetails.district}`
+
+// //     return `
+// //       <!DOCTYPE html>
+// //       <html>
+// //       <head>
+// //         <title>Sale/Delivery Challan - ${copyType}</title>
+// //         <style>
+// //           body {
+// //             font-family: Courier New;
+// //             margin: 0;
+// //             padding: 0;
+// //           }
+// //           .page {
+// //             width: 210mm;
+// //             min-height: 297mm;
+// //             margin: 0 auto;
+// //             padding: 5mm;
+// //             box-sizing: border-box;
+// //           }
+// //           .header-container {
+// //             display: flex;
+// //             align-items: center;
+// //             margin-bottom: 5mm;
+// //           }
+// //           .logo {
+// //             width: 30mm;
+// //             height: auto;
+// //             margin-right: 5mm;
+// //           }
+// //           .header-text {
+// //             color:#555555;
+// //             flex-grow: 1;
+// //             text-align: center;
+// //             font-size: 21px;
+// //             font-weight: 700;
+// //           }
+
+// //           table {
+// //   width: 100%;
+// //   border-collapse: collapse;
+// //   margin-bottom: 5mm;
+// // }
+// // td {
+// //   padding: 1mm 0;
+// //   font-size: 11pt;
+// // }
+// // tr.border-top-bottom td {
+// //   padding: 1mm;
+// //   width: auto;
+// // }
+
+// // tr.data-row td:nth-child(1) {
+// //   width: 25%;
+// //   padding-right: 1mm;
+// // }
+// // tr.data-row td:nth-child(2) {
+// //   width: 3%;
+// //   padding: 0;
+// // }
+// // tr.data-row td:nth-child(3),
+// // tr.data-row td:nth-child(4) {
+// //   width: auto;
+// //   padding-left: 1mm;
+// // }
+// //           .border-top-bottom {
+// //            border-top: 2px solid #AAAAAA;
+// //            border-bottom: 2px solid #AAAAAA;
+// //           }
+// //           .declaration {
+// //             font-size: 11px;
+// //             text-align: justify;
+// //             line-height: 1.3;
+// //             color: #555555;
+// //           }
+// //           .signature {
+// //             text-align: right;
+// //             margin-top: 10mm;
+// //           }
+// //           .account-details{
+// //           color:#555555;
+// //           font-weight:bold;
+// //           }
+// //           .signature-box {
+// //             border-top: 2px solid #AAAAAA;
+// //             border-bottom: 2px solid #AAAAAA;
+// //             padding: 1px 0;
+// //             text-align: right;
+// //             color:#555555;
+// //            font-weight:bold;
+// //           }
+// //           .jurisdiction {
+// //             text-align: center;
+// //             font-weight: bold;
+// //             font-size: 14px;
+// //             color: #555555
+// //           }
+// //           .bold {
+// //           font-weight: 700;
+// //           color:#555555;
+
+// //            }
+// //           .divider {
+// //             margin: 5mm 0;
+// //             padding: 2mm 0;
+// //           }
+// //           .copy-title {
+// //             text-align: center;
+// //             color:#555555;
+// //             font-size: 21px;
+// //             margin-bottom: 5mm;
+// //             font-weight: 700;
+// //           }
+// //           @page {
+// //             size: A4;
+// //             margin: 0;
+// //           }
+// //         </style>
+// //       </head>
+// //       <body>
+// //         <div class="page">
+// //           <!-- Customer Copy -->
+// //           <div class="header-container">
+// //             <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+// //             <div class="header-text"> Sale / Delivery challan</div>
+// //           </div>
+
+// //           <table>
+// //             <tr class="border-top-bottom">
+// //               <td width="20%">Booking No.:</td>
+// //               <td width="25%"><span class="bold">${data.bookingNumber || 'N/A'}</span></td>
+// //               <td width="15%">Sales Date</td>
+// //               <td width="40%"><span class="bold">${currentDate}</span></td>
+// //             </tr>
+// //             <tr class="data-row">
+// //              <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Name' : 'Name'}</td>
+// //               <td>:</td>
+// //               <td><span class="bold">${displayName}</span></td>
+// //             </tr>
+// //             <tr class="data-row">
+// //               <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Address' : 'Address'}</td>
+// //               <td>:</td>
+// //               <td colspan="2"><span class="bold">${displayAddress}</span></td>
+// //             </tr>
+// //             <tr class="data-row">
+// //               <td>S.E Name</td>
+// //               <td>:</td>
+// //               <td colspan="2"><span class="bold">${data.salesExecutive?.name || 'N/A'}</span></td>
+// //             </tr>
+// //             <tr class="data-row">
+// //               <td>Model</td>
+// //               <td>:</td>
+// //               <td><span class="bold">${data.model?.model_name || ''}</span></td>
+// //               <td>Colour : <span class="bold">${data.color?.name || 'N/A'}</span></td>
+// //             </tr>
+// //             <tr class="data-row">
+// //               <td>Chasis No</td>
+// //               <td>:</td>
+// //               <td><span class="bold">${data.chassisNumber || ''}</span></td>
+// //               <td>Key No. : <span class="bold">${data.keyNumber || '0'}</span></td>
+// //             </tr>
+// //             <tr class="data-row">
+// //               <td>Engine No</td>
+// //               <td>:</td>
+// //               <td><span class="bold">${data.engineNumber || ''}</span></td>
+// //               <td></td>
+// //             </tr>
+// //             <tr class="data-row">
+// //               <td>Financer</td>
+// //               <td>:</td>
+// //               <td colspan="2"><span class="bold">${data.payment.financer?.name || ''}</span></td>
+// //             </tr>
+// //             <tr class="data-row">
+// //               <td>Total</td>
+// //               <td>:</td>
+// //               <td><span class="bold">₹${data.discountedAmount}</span></td>
+// //             </tr>
+// //           </table>
+// //            <div class='account-details'>ACC.DETAILS:
+// //  ${data.accessories
+// //    .map((accessory) => (accessory.accessory ? accessory.accessory.name : ''))
+// //    .filter((name) => name)
+// //    .join(', ')}
+// //            </div>
+// //           <div class="signature-box">
+// //             <div><b>Authorised Signature</b></div>
+// //           </div>
+
+// //           <p class="bold">Customer Declarations:</p>
+// //           <p class="declaration">
+// //             ${generateDeclarationHTML()}
+// //           </p>
+
+// //           <div>
+// //             <p class="bold">Customer Signature</p>
+// //           </div>
+
+// //           <p class="jurisdiction">Subject To Sangamner Jurisdiction</p>
+
+// //           <!-- Office Copy -->
+// //           <div style="page-break-before: always; margin-top: 10mm;">
+// //             <div class="copy-title">Sale / Delivery challan</div>
+
+// //             <table>
+// //               <tr class="border-top-bottom">
+// //                 <td width="20%">Booking No.:</td>
+// //                 <td width="25%"><span class="bold">${data.bookingNumber || 'N/A'}</span></td>
+// //                 <td width="15%">Sales Date</td>
+// //                 <td width="40%"><span class="bold">${currentDate}</span></td>
+// //               </tr>
+// //               <tr>
+// //                 <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Name' : 'Name'}</td>
+// //                 <td>:</td>
+// //                 <td colspan="2"><span class="bold">${displayName}</span></td>
+// //               </tr>
+// //               <tr>
+// //                 <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Address' : 'Address'}</td>
+// //                 <td>:</td>
+// //                 <td colspan="2"><span class="bold">${displayAddress}</span></td>
+// //               </tr>
+// //               <tr>
+// //                 <td>S.E Name</td>
+// //                 <td>:</td>
+// //                 <td colspan="2"><span class="bold">${data.salesExecutive?.name || ''}</span></td>
+// //               </tr>
+// //               <tr>
+// //                 <td>Model</td>
+// //                 <td>:</td>
+// //                 <td><span class="bold">${data.model.model_name || ''}</span></td>
+// //                 <td>Colour : <span class="bold">${data.color?.name || 'N/A'}</span></td>
+// //               </tr>
+// //               <tr>
+// //                 <td>Chasis No</td>
+// //                 <td>:</td>
+// //                 <td><span class="bold">${data.chassisNumber || ''}</span></td>
+// //                 <td>Key No. : <span class="bold">${data.keyNumber || '0'}</span></td>
+// //               </tr>
+// //               <tr>
+// //                 <td>Engine No</td>
+// //                 <td>:</td>
+// //                 <td><span class="bold">${data.engineNumber}</span></td>
+// //                 <td></td>
+// //               </tr>
+// //               <tr>
+// //                 <td>Financer</td>
+// //                 <td>:</td>
+// //                 <td colspan="2"><span class="bold">${data.payment.financer?.name || ''}</span></td>
+// //               </tr>
+// //               <tr>
+// //                 <td>Total</td>
+// //                 <td>:</td>
+// //                 <td><span class="bold">₹${data.discountedAmount}</span></td>
+// //             </tr>
+// //             </table>
+
+// //             <div class='account-details'>ACC.DETAILS:
+// //              ${data.accessories
+// //                .map((accessory) => (accessory.accessory ? accessory.accessory.name : ''))
+// //                .filter((name) => name)
+// //                .join(', ')}
+// //             </div>
+// //             <div class="signature-box">
+// //               <div><b>Authorised Signature</b></div>
+// //             </div>
+
+// //             <p class="bold">Customer Declarations:</p>
+// //             <p class="declaration">
+// //               ${generateDeclarationHTML()}
+// //             </p>
+
+// //             <div>
+// //               <p class="bold">Customer Signature</p>
+// //             </div>
+
+// //             <p class="jurisdiction">Subject To Sangamner Jurisdiction</p>
+// //           </div>
+// //         </div>
+// //       </body>
+// //       </html>
+// //     `
+// //   }
+
+// //   const generateHelmetDeclarationHTML = (data) => {
+// //     const currentDate = new Date()
+// //     const day = currentDate.getDate().toString().padStart(2, '0')
+// //     const month = (currentDate.getMonth() + 1).toString().padStart(2, '0')
+// //     const year = currentDate.getFullYear()
+// //     const formattedDate = `${day}/${month}/${year}`
+
+// //     return `
+// // <!DOCTYPE html>
+// // <html>
+// // <head>
+// //     <meta charset="UTF-8">
+// //     <title>Helmet Declaration</title>
+// //     <style>
+// //         html, body {
+// //             height: 100%;
+// //             margin: 0;
+// //             padding: 0;
+// //             background-color: #f5f5f5;
+// //             display: flex;
+// //             justify-content: center;
+// //             align-items: center;
+// //         }
+// //         .declaration-wrapper {
+// //             width: 210mm;
+// //             margin: 20px 0;
+// //         }
+// //         .declaration-body {
+// //             font-family: 'Arial Unicode MS', 'Shivaji01', 'Shivaji02', sans-serif;
+// //             margin: 15mm;
+// //             padding: 0;
+// //             font-size: 12pt;
+// //             line-height: 1.4;
+// //         }
+// //         @page {
+// //             size: A4;
+// //             margin: 0;
+// //         }
+// //         .header {
+// //             text-align: center;
+// //             font-weight: bold;
+// //             font-size: 18pt;
+// //             margin-bottom: 10mm;
+// //         }
+// //         .content {
+// //             margin-bottom: 5mm;
+// //             text-align:center;
+// //         }
+// //         .customer-info {
+// //             margin-bottom: 10mm;
+// //         }
+// //         .customer-info-row {
+// //             margin-bottom: 2mm;
+// //         }
+// //         .bold {
+// //             font-weight: bold;
+// //         }
+// //         .signature {
+// //             margin-top: 15mm;
+// //             display:flex;
+// //             justify-content:space-between;
+// //         }
+// //         .jurisdiction {
+// //             text-align: center;
+// //             margin-top: 10mm;
+// //             font-weight: bold;
+// //         }
+// //         .vehicle-details {
+// //             margin: 5mm 0;
+// //         }
+// //         .declaration {
+// //             margin-top: 10mm;
+// //             text-align: justify;
+// //         }
+// //         .divider {
+// //             border-top: 2px solid #AAAAAA;
+// //             margin: 1mm 0;
+// //         }
+// //         @media print {
+// //             html, body {
+// //                 background: none;
+// //                 display: block;
+// //             }
+// //             .declaration-wrapper {
+// //                 box-shadow: none;
+// //                 margin: 0;
+// //             }
+// //         }
+// //     </style>
+// // </head>
+// // <body>
+// //     <div class="declaration-wrapper">
+// //         <div class="declaration-body">
+// //             <div class="header">
+// //                 हेल्मेट प्राप्ती घोषणापत्र
+// //             </div>
+
+// //             <div class="content">
+// //                 केंद्रीय मोटर वाहन नियम १३८ { ४ } { फ }
+// //             </div>
+// //             <div class="divider"></div>
+// //             <div class="declaration">
+// //                 <p>
+// //                     मी..${data.customerDetails.name}, असे घोषित करतो कि
+
+// //                     दि. ${formattedDate} रोजी गांधी मोटार टि व्हि यस नासिक
+
+// //                     या वितरकाकडून टि व्हि यस..${data.model.model_name}, हे वाहन खरेदी केले आहे.
+
+// //                     त्याचा तपशील खालील प्रमाणे...
+// //                 </p>
+// //                 <div class="vehicle-details">
+// //                     <div class="customer-info-row"><strong>चेसिस नंबर:</strong> ${data.chassisNumber}</div>
+// //                     <div class="customer-info-row"><strong>इंजिन नंबर:</strong> ${data.engineNumber}</div>
+// //                 </div>
+
+// //                 <p>
+// //                     केंद्रीय मोटर वाहन नियम १३८ { ४ } { फ } प्रमाणे वितरकाने दुचाकी वितरीत करते वेळी विहित
+// //                     मानाकनाचे २ (दोन) हेल्मेट पुरवणे/विकत देणे बंधनकारक आहे. त्याचप्रमाणे मला BUREAU OF INDIA STANDARS
+// //                     UNDER THE BUREAU OF INDIA ACT-1986 { 63 TO 1986 } या प्रमाणे हेल्मेट मिळाले आहे.
+// //                 </p>
+// //                 <p>
+// //                     मी याद्वारे जाहीर करतो/करते की वर दिलेला तपशील माझ्या संपूर्ण माहिती प्रमाणे व तपासा्रमाणे सत्य आहे.
+// //                 </p>
+// //             </div>
+
+// //             <div class="signature">
+// //                 <div>
+// //                     स्वाक्षरी व शिक्का
+// //                     <br>
+// //                     गांधी मोटर्स<br>
+// //                     नासिक
+// //                 </div>
+// //                 <div>
+// //                     दुचाकी खरेदिदाराची स्वाक्षरी<br>
+// //                     नाव :- ${data.customerDetails.name}
+// //                 </div>
+// //             </div>
+
+// //             <div class="jurisdiction">
+// //                 Subject To Nashik Jurisdiction
+// //             </div>
+// //         </div>
+// //     </div>
+// // </body>
+// // </html>
+// //     `
+// //   }
+
+// //   // Generate template print HTML with the same design as Customer/Office Copy
+// //   const generateTemplatePrintHTML = (previewData) => {
+// //   const bookingInfo = previewData.booking_info
+// //   const templateInfo = previewData.template_info
+// //   const generatedContent = previewData.generated_content
+
+// //   return `
+// // <!DOCTYPE html>
+// // <html>
+// // <head>
+// //     <title>${templateInfo.name} - ${bookingInfo.booking_number}</title>
+// //     <style>
+// //         body {
+// //             font-family: Courier New;
+// //             margin: 0;
+// //             padding: 0;
+// //         }
+// //         .page {
+// //             width: 210mm;
+// //             min-height: 297mm;
+// //             margin: 0 auto;
+// //             padding: 5mm;
+// //             box-sizing: border-box;
+// //         }
+// //         .header-container {
+// //             display: flex;
+// //             align-items: center;
+// //             margin-bottom: 5mm;
+// //         }
+// //         .logo {
+// //             width: 30mm;
+// //             height: auto;
+// //             margin-right: 5mm;
+// //         }
+// //         .header-text {
+// //             color:#555555;
+// //             flex-grow: 1;
+// //             text-align: center;
+// //             font-size: 21px;
+// //             font-weight: 700;
+// //         }
+// //         .content-section {
+// //             margin: 10mm 0;
+// //         }
+// //         .content-title {
+// //             font-size: 18px;
+// //             font-weight: bold;
+// //             color: #555555;
+// //             margin-bottom: 5mm;
+// //             text-align: center;
+// //         }
+// //         .generated-content {
+// //             font-size: 12px;
+// //             line-height: 1.4;
+// //             color: #555555;
+// //             text-align: justify;
+// //             white-space: pre-wrap;
+// //         }
+// //         .bold {
+// //             font-weight: 700;
+// //             color:#555555;
+// //         }
+// //         @page {
+// //             size: A4;
+// //             margin: 0;
+// //         }
+// //     </style>
+// // </head>
+// // <body>
+// //     <div class="page">
+// //         <div class="header-container">
+// //             <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+// //             <div class="header-text">${templateInfo.name}</div>
+// //         </div>
+
+// //         <div class="content-section">
+// //             ${generatedContent.subject ? `<div class="content-title">${generatedContent.subject}</div>` : ''}
+// //             <div class="generated-content">
+// //                 ${generatedContent.content}
+// //             </div>
+// //         </div>
+// //     </div>
+// // </body>
+// // </html>
+// //     `
+// // }
+
+// //   const handleSearch = (value) => {
+// //     setSearchTerm(value)
+// //     handleFilter(value, getDefaultSearchFields('booking'))
+// //     setCurrentPage(1) // Reset to first page when searching
+// //   }
+
+// //   const currentRecords = getCurrentRecords()
+
+// //   if (!canViewDeliveryChallan) {
+// //     return (
+// //       <div className="alert alert-danger m-3" role="alert">
+// //         You do not have permission to view Delivery Challan.
+// //       </div>
+// //     )
+// //   }
+
+// //   if (loading) {
+// //     return (
+// //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+// //         <CSpinner color="primary" />
+// //       </div>
+// //     )
+// //   }
+
+// //   return (
+// //     <div>
+// //       <div className="title">Delivery Challan/Documents</div>
+// //       {error && (
+// //         <CAlert color="danger" className="mb-3">
+// //           {error}
+// //         </CAlert>
+// //       )}
+
+// //       <CCard className="table-container mt-4">
+// //         <CCardHeader className="card-header d-flex justify-content-between align-items-center">
+// //           <div></div>
+// //           <div className="d-flex">
+// //             <CFormLabel className="mt-1 m-1">Search:</CFormLabel>
+// //             <CFormInput
+// //               type="text"
+// //               className="d-inline-block square-search"
+// //               value={searchTerm}
+// //               onChange={(e) => handleSearch(e.target.value)}
+// //             />
+// //           </div>
+// //         </CCardHeader>
+
+// //         <CCardBody>
+// //           <div className="responsive-table-wrapper">
+// //             <CTable striped bordered hover className="responsive-table">
+// //               <CTableHead>
+// //                 <CTableRow>
+// //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+// //                   <CTableHeaderCell>Booking ID</CTableHeaderCell>
+// //                   <CTableHeaderCell>Model Name</CTableHeaderCell>
+// //                   <CTableHeaderCell>Customer Name</CTableHeaderCell>
+// //                   <CTableHeaderCell>Chassis Number</CTableHeaderCell>
+// //                   <CTableHeaderCell>Customer Copy</CTableHeaderCell>
+// //                   <CTableHeaderCell>Office Copy</CTableHeaderCell>
+// //                   <CTableHeaderCell>Documents</CTableHeaderCell>
+// //                 </CTableRow>
+// //               </CTableHead>
+// //               <CTableBody>
+// //                 {currentRecords.length === 0 ? (
+// //                   <CTableRow>
+// //                     <CTableDataCell colSpan="8" className="text-center">
+// //                       No bookings available
+// //                     </CTableDataCell>
+// //                   </CTableRow>
+// //                 ) : (
+// //                   currentRecords.map((booking, index) => {
+// //                     const globalIndex = (currentPage - 1) * recordsPerPage + index + 1
+// //                     return (
+// //                       <CTableRow key={booking._id || index}>
+// //                         <CTableDataCell>{globalIndex}</CTableDataCell>
+// //                         <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+// //                         <CTableDataCell>{booking.model?.model_name || ''}</CTableDataCell>
+// //                         <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
+// //                         <CTableDataCell>{booking.chassisNumber || ''}</CTableDataCell>
+// //                         <CTableDataCell>
+// //                           {canCreateDeliveryChallan ? (
+// //                             <CButton
+// //                               size="sm"
+// //                               color="primary"
+// //                               className="action-btn"
+// //                               onClick={() => handlePrint(booking, 'Customer Copy')}
+// //                             >
+// //                               <CIcon icon={cilPrint} className="me-1" />
+// //                               Print
+// //                             </CButton>
+// //                           ) : (
+// //                             <span className="text-muted">No permission</span>
+// //                           )}
+// //                         </CTableDataCell>
+// //                         <CTableDataCell>
+// //                           {canCreateDeliveryChallan ? (
+// //                             <CButton
+// //                               size="sm"
+// //                               color="info"
+// //                               className="action-btn"
+// //                               onClick={() => handlePrint(booking, 'Office Copy')}
+// //                             >
+// //                               <CIcon icon={cilPrint} className="me-1" />
+// //                               Print
+// //                             </CButton>
+// //                           ) : (
+// //                             <span className="text-muted">No permission</span>
+// //                           )}
+// //                         </CTableDataCell>
+// //                         <CTableDataCell>
+// //                           <CButton
+// //                             size="sm"
+// //                             color="success"
+// //                             className="action-btn"
+// //                             onClick={() => handleOpenDocuments(booking._id)}
+// //                           >
+// //                             <CIcon className="me-1" />
+// //                             View
+// //                           </CButton>
+// //                         </CTableDataCell>
+// //                       </CTableRow>
+// //                     )
+// //                   })
+// //                 )}
+// //               </CTableBody>
+// //             </CTable>
+// //           </div>
+
+// //           {/* Pagination Component */}
+// //           {filteredData.length > recordsPerPage && (
+// //             <div className="mt-4">
+// //               <CPagination align="center" aria-label="Page navigation example">
+// //                 {/* Previous Button */}
+// //                 <CPaginationItem 
+// //                   aria-label="Previous" 
+// //                   onClick={() => handlePageChange(currentPage - 1)}
+// //                   disabled={currentPage === 1}
+// //                   className={currentPage === 1 ? 'disabled' : ''}
+// //                 >
+// //                   <CIcon icon={cilChevronLeft} />
+// //                 </CPaginationItem>
+                
+// //                 {/* First Page */}
+// //                 {currentPage > 3 && totalPages > 5 && (
+// //                   <>
+// //                     <CPaginationItem 
+// //                       onClick={() => handlePageChange(1)}
+// //                       active={currentPage === 1}
+// //                     >
+// //                       1
+// //                     </CPaginationItem>
+// //                     {currentPage > 4 && <CPaginationItem disabled>...</CPaginationItem>}
+// //                   </>
+// //                 )}
+                
+// //                 {/* Page Numbers */}
+// //                 {displayedPages.map(page => (
+// //                   <CPaginationItem 
+// //                     key={page}
+// //                     onClick={() => handlePageChange(page)}
+// //                     active={currentPage === page}
+// //                   >
+// //                     {page}
+// //                   </CPaginationItem>
+// //                 ))}
+                
+// //                 {/* Last Page */}
+// //                 {currentPage < totalPages - 2 && totalPages > 5 && (
+// //                   <>
+// //                     {currentPage < totalPages - 3 && <CPaginationItem disabled>...</CPaginationItem>}
+// //                     <CPaginationItem 
+// //                       onClick={() => handlePageChange(totalPages)}
+// //                       active={currentPage === totalPages}
+// //                     >
+// //                       {totalPages}
+// //                     </CPaginationItem>
+// //                   </>
+// //                 )}
+                
+// //                 {/* Next Button */}
+// //                 <CPaginationItem 
+// //                   aria-label="Next" 
+// //                   onClick={() => handlePageChange(currentPage + 1)}
+// //                   disabled={currentPage === totalPages}
+// //                   className={currentPage === totalPages ? 'disabled' : ''}
+// //                 >
+// //                   <CIcon icon={cilChevronRight} />
+// //                 </CPaginationItem>
+// //               </CPagination>
+              
+// //               {/* Pagination Info */}
+// //               <div className="text-center text-muted mt-2">
+// //                 Showing {(currentPage - 1) * recordsPerPage + 1} to {Math.min(currentPage * recordsPerPage, filteredData.length)} of {filteredData.length} entries
+// //               </div>
+// //             </div>
+// //           )}
+// //         </CCardBody>
+// //       </CCard>
+
+// //       {/* Selected Documents Modal */}
+// //       <CModal 
+// //         visible={documentsModal} 
+// //         onClose={() => {
+// //           setDocumentsModal(false)
+// //           setSelectedBookingForDocs(null)
+// //           setSelectedDocuments([])
+// //         }}
+// //         size="lg"
+// //       >
+// //         <CModalHeader>
+// //           <CModalTitle>
+// //             <CIcon className="me-2" />
+// //             Selected Documents
+// //           </CModalTitle>
+// //         </CModalHeader>
+// //         <CModalBody>
+// //           {loadingDocuments ? (
+// //             <div className="text-center py-5">
+// //               <CSpinner color="primary" />
+// //               <p className="mt-3">Loading documents...</p>
+// //             </div>
+// //           ) : selectedDocuments.length === 0 ? (
+// //             <div className="text-center py-5">
+// //               <CIcon size="xl" className="text-muted mb-3" />
+// //               <p className="text-muted">No documents selected for this booking</p>
+// //             </div>
+// //           ) : (
+// //             <div className="border rounded p-3">
+// //               {selectedDocuments.map((selection, index) => (
+// //                 <div key={selection.selection_id} className="mb-3 p-2 border-bottom">
+// //                   <div className="d-flex justify-content-between align-items-center mb-2">
+// //                     <div>
+// //                       <h6 className="mb-0">{selection.template.template_name}</h6>
+// //                       <small className="text-muted">
+// //                         Selected by: {selection.selected_by.name} • 
+// //                         {new Date(selection.selected_at).toLocaleDateString()}
+// //                       </small>
+// //                     </div>
+// //                     <div className="d-flex gap-2">
+// //                       <CButton
+// //                         size="sm"
+// //                         color="primary"
+// //                         onClick={() => handlePreviewDocument(selection.selection_id, selection.template.template_name)}
+// //                       >
+// //                         <CIcon icon={cilPrint} className="me-1" />
+// //                         Preview
+// //                       </CButton>
+// //                     </div>
+// //                   </div>
+// //                   {selection.notes && (
+// //                     <div className="alert alert-info p-2 mt-2">
+// //                       <small>
+// //                         <strong>Notes:</strong> {selection.notes}
+// //                       </small>
+// //                     </div>
+// //                   )}
+// //                 </div>
+// //               ))}
+// //             </div>
+// //           )}
+// //         </CModalBody>
+// //         <CModalFooter>
+// //           <CButton 
+// //             color="secondary" 
+// //             onClick={() => {
+// //               setDocumentsModal(false)
+// //               setSelectedBookingForDocs(null)
+// //               setSelectedDocuments([])
+// //             }}
+// //           >
+// //             Close
+// //           </CButton>
+// //         </CModalFooter>
+// //       </CModal>
+// //     </div>
+// //   )
+// // }
+
+// // export default DeliveryChallan
+
+
+
+
+
+
+
+
+
 // import '../../../css/table.css'
 // import {
 //   React,
@@ -5,12 +2116,11 @@
 //   useEffect,
 //   getDefaultSearchFields,
 //   useTableFilter,
-//   usePagination,
 //   axiosInstance,
 //   showError,
 // } from '../../../utils/tableImports'
 // import tvsLogo from '../../../assets/images/logo1.png'
-// import { cilPrint } from '@coreui/icons'
+// import { cilPrint, cilChevronLeft, cilChevronRight } from '@coreui/icons'
 // import CIcon from '@coreui/icons-react'
 // import {
 //   CButton,
@@ -32,6 +2142,9 @@
 //   CModalTitle,
 //   CModalBody,
 //   CModalFooter,
+//   CPagination,
+//   CPaginationItem,
+//   CFormSelect
 // } from '@coreui/react'
 // import { useNavigate } from 'react-router-dom'
 // import { 
@@ -44,13 +2157,29 @@
 // import { useAuth } from '../../../context/AuthContext'
 // import { showSuccess } from '../../../utils/sweetAlerts'
 
+// // Pagination constants
+// const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
+// const DEFAULT_LIMIT = 100;
+
 // const DeliveryChallan = () => {
-//   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([])
-//   const { currentRecords, PaginationOptions } = usePagination(filteredData)
+//   // Remove useTableFilter since we'll do server-side filtering
+//   const [data, setData] = useState([])
+//   const [filteredData, setFilteredData] = useState([])
 //   const [error, setError] = useState(null)
 //   const [loading, setLoading] = useState(true)
 //   const [searchTerm, setSearchTerm] = useState('')
 //   const navigate = useNavigate()
+
+//   // Pagination states - similar to Receipt component
+//   const [pagination, setPagination] = useState({
+//     docs: [],
+//     total: 0,
+//     pages: 1,
+//     currentPage: 1,
+//     limit: DEFAULT_LIMIT,
+//     loading: false,
+//     search: ''
+//   })
 
 //   const [formData, setFormData] = useState({
 //     chassisNumber: '',
@@ -68,16 +2197,63 @@
 //   const { permissions = [] } = useAuth()
 
 //   // Permission checks for Delivery Challan page under Sales module
-//   // For viewing, we need VIEW permission
 //   const canViewDeliveryChallan = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DELIVERY_CHALLAN)
-  
-//   // For printing, we need CREATE permission
 //   const canCreateDeliveryChallan = hasSafePagePermission(
 //     permissions, 
 //     MODULES.SALES, 
 //     PAGES.SALES.DELIVERY_CHALLAN, 
 //     ACTIONS.CREATE
 //   )
+
+//   // Debounce timer for search
+//   const searchTimer = React.useRef(null);
+
+//   // Fetch data with pagination and search - similar to fetchCustomerTab in Receipt
+//   const fetchData = async (page = pagination.currentPage, limit = pagination.limit, search = pagination.search) => {
+//     try {
+//       setPagination(prev => ({ ...prev, loading: true }))
+      
+//       const params = { 
+//         bookingType: 'BRANCH', 
+//         status: 'ALLOCATED',
+//         page, 
+//         limit 
+//       }
+      
+//       // Add search parameter if provided
+//       if (search) {
+//         params.search = search
+//       }
+      
+//       const response = await axiosInstance.get(`/bookings`, { params })
+      
+//       const responseData = response.data.data
+//       const bookings = responseData.bookings || []
+//       const total = responseData.total || bookings.length
+//       const pages = responseData.pages || Math.ceil(total / limit)
+
+//       setPagination({
+//         docs: bookings,
+//         total: total,
+//         pages: pages,
+//         currentPage: page,
+//         limit: limit,
+//         loading: false,
+//         search: search
+//       })
+      
+//       // Also update data and filteredData for backward compatibility
+//       setData(bookings)
+//       setFilteredData(bookings)
+      
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//       setPagination(prev => ({ ...prev, loading: false, docs: [], total: 0 }))
+//     }
+//   }
 
 //   useEffect(() => {
 //     // Check if user has permission to view this page
@@ -87,7 +2263,7 @@
 //       return
 //     }
     
-//     fetchData()
+//     fetchData(1, DEFAULT_LIMIT, '')
 //   }, [])
 
 //   useEffect(() => {
@@ -120,27 +2296,6 @@
 
 //     return () => clearTimeout(timer)
 //   }, [formData.chassisNumber])
-
-//   const fetchData = async () => {
-//     try {
-//       setLoading(true)
-//       const response = await axiosInstance.get(`/bookings`)
-
-//       const branchBookings = response.data.data.bookings.filter(
-//         (booking) => booking.bookingType === 'BRANCH' && booking.status === 'ALLOCATED',
-//       )
-//       setData(branchBookings)
-//       setFilteredData(branchBookings)
-//     } catch (error) {
-//       const message = showError(error);
-//       if (message) {
-//         setError(message);
-//       }
-      
-//     } finally {
-//       setLoading(false)
-//     }
-//   }
 
 //   const fetchBookingDetails = async () => {
 //     setLoading(true)
@@ -774,9 +2929,131 @@
 //     `
 // }
 
+//   // Handle search with debounce - similar to Receipt component
 //   const handleSearch = (value) => {
 //     setSearchTerm(value)
-//     handleFilter(value, getDefaultSearchFields('booking'))
+//     setPagination(prev => ({ ...prev, search: value }))
+    
+//     clearTimeout(searchTimer.current)
+//     searchTimer.current = setTimeout(() => {
+//       fetchData(1, pagination.limit, value)
+//     }, 400)
+//   }
+
+//   // Handle page change - similar to handlePageChange in Receipt
+//   const handlePageChange = (newPage) => {
+//     if (newPage < 1 || newPage > pagination.pages) return
+//     fetchData(newPage, pagination.limit, pagination.search)
+//     window.scrollTo({ top: 0, behavior: 'smooth' })
+//   }
+
+//   // Handle limit change - similar to handleLimitChange in Receipt
+//   const handleLimitChange = (newLimit) => {
+//     const limit = parseInt(newLimit, 10)
+//     fetchData(1, limit, pagination.search)
+//   }
+
+//   // Render pagination component - similar to renderPagination in Receipt
+//   const renderPagination = () => {
+//     const { currentPage, pages, total, limit, loading } = pagination
+//     if (!total || pages <= 1) return null
+
+//     const start = (currentPage - 1) * limit + 1
+//     const end = Math.min(currentPage * limit, total)
+
+//     let startPage = Math.max(1, currentPage - 2)
+//     let endPage = Math.min(pages, currentPage + 2)
+//     if (currentPage <= 3) endPage = Math.min(5, pages)
+//     if (currentPage >= pages - 2) startPage = Math.max(1, pages - 4)
+
+//     const pageNums = []
+//     for (let i = startPage; i <= endPage; i++) pageNums.push(i)
+
+//     return (
+//       <div className="mt-3 border-top pt-3">
+//         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+//           <div className="d-flex align-items-center gap-2">
+//             <CFormLabel className="mb-0 text-muted" style={{ fontSize: '13px' }}>Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={limit}
+//               onChange={e => handleLimitChange(e.target.value)}
+//               style={{ width: '80px', height: '32px', fontSize: '13px' }}
+//               size="sm"
+//               disabled={loading}
+//             >
+//               {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+//             </CFormSelect>
+//           </div>
+//           <span className="text-muted" style={{ fontSize: '13px' }}>
+//             {loading ? 'Loading…' : `Showing ${start}–${end} of ${total} entries`}
+//           </span>
+//         </div>
+//         {pages > 1 && (
+//           <CPagination align="center" size="sm">
+//             <CPaginationItem 
+//               onClick={() => handlePageChange(1)} 
+//               disabled={currentPage === 1 || loading}
+//             >
+//               «
+//             </CPaginationItem>
+//             <CPaginationItem 
+//               onClick={() => handlePageChange(currentPage - 1)} 
+//               disabled={currentPage === 1 || loading}
+//             >
+//               <CIcon icon={cilChevronLeft} />
+//             </CPaginationItem>
+
+//             {startPage > 1 && (
+//               <>
+//                 <CPaginationItem 
+//                   onClick={() => handlePageChange(1)} 
+//                   disabled={loading}
+//                 >
+//                   1
+//                 </CPaginationItem>
+//                 {startPage > 2 && <CPaginationItem disabled>…</CPaginationItem>}
+//               </>
+//             )}
+
+//             {pageNums.map(p => (
+//               <CPaginationItem 
+//                 key={p} 
+//                 active={p === currentPage} 
+//                 onClick={() => handlePageChange(p)} 
+//                 disabled={loading}
+//               >
+//                 {p}
+//               </CPaginationItem>
+//             ))}
+
+//             {endPage < pages && (
+//               <>
+//                 {endPage < pages - 1 && <CPaginationItem disabled>…</CPaginationItem>}
+//                 <CPaginationItem 
+//                   onClick={() => handlePageChange(pages)} 
+//                   disabled={loading}
+//                 >
+//                   {pages}
+//                 </CPaginationItem>
+//               </>
+//             )}
+
+//             <CPaginationItem 
+//               onClick={() => handlePageChange(currentPage + 1)} 
+//               disabled={currentPage === pages || loading}
+//             >
+//               <CIcon icon={cilChevronRight} />
+//             </CPaginationItem>
+//             <CPaginationItem 
+//               onClick={() => handlePageChange(pages)} 
+//               disabled={currentPage === pages || loading}
+//             >
+//               »
+//             </CPaginationItem>
+//           </CPagination>
+//         )}
+//       </div>
+//     )
 //   }
 
 //   if (!canViewDeliveryChallan) {
@@ -787,7 +3064,7 @@
 //     )
 //   }
 
-//   if (loading) {
+//   if (loading && pagination.docs.length === 0) {
 //     return (
 //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
 //         <CSpinner color="primary" />
@@ -814,12 +3091,20 @@
 //               className="d-inline-block square-search"
 //               value={searchTerm}
 //               onChange={(e) => handleSearch(e.target.value)}
+//               style={{ maxWidth: '350px', height: '30px', borderRadius: '0' }}
+//               placeholder="Search..."
 //             />
 //           </div>
 //         </CCardHeader>
 
 //         <CCardBody>
-//           <div className="responsive-table-wrapper">
+//           {pagination.loading && pagination.docs.length > 0 && (
+//             <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}>
+//               <CSpinner size="sm" color="primary" className="me-2" /> Loading records…
+//             </div>
+//           )}
+          
+//           <div className="responsive-table-wrapper" style={{ opacity: pagination.loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
 //             <CTable striped bordered hover className="responsive-table">
 //               <CTableHead>
 //                 <CTableRow>
@@ -834,67 +3119,1279 @@
 //                 </CTableRow>
 //               </CTableHead>
 //               <CTableBody>
-//                 {currentRecords.length === 0 ? (
+//                 {pagination.docs.length === 0 && !pagination.loading ? (
 //                   <CTableRow>
 //                     <CTableDataCell colSpan="8" className="text-center">
-//                       No bookings available
+//                       {pagination.search ? 'No matching bookings found' : 'No bookings available'}
 //                     </CTableDataCell>
 //                   </CTableRow>
 //                 ) : (
-//                   currentRecords.map((booking, index) => (
-//                     <CTableRow key={booking._id || index}>
-//                       <CTableDataCell>{index + 1}</CTableDataCell>
-//                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
-//                       <CTableDataCell>{booking.model?.model_name || ''}</CTableDataCell>
-//                       <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
-//                       <CTableDataCell>{booking.chassisNumber || ''}</CTableDataCell>
-//                       <CTableDataCell>
-//                         {canCreateDeliveryChallan ? (
+//                   pagination.docs.map((booking, index) => {
+//                     const globalIndex = (pagination.currentPage - 1) * pagination.limit + index + 1
+//                     return (
+//                       <CTableRow key={booking._id || index}>
+//                         <CTableDataCell>{globalIndex}</CTableDataCell>
+//                         <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+//                         <CTableDataCell>{booking.model?.model_name || ''}</CTableDataCell>
+//                         <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
+//                         <CTableDataCell>{booking.chassisNumber || ''}</CTableDataCell>
+//                         <CTableDataCell>
+//                           {canCreateDeliveryChallan ? (
+//                             <CButton
+//                               size="sm"
+//                               color="primary"
+//                               className="action-btn"
+//                               onClick={() => handlePrint(booking, 'Customer Copy')}
+//                             >
+//                               <CIcon icon={cilPrint} className="me-1" />
+//                               Print
+//                             </CButton>
+//                           ) : (
+//                             <span className="text-muted">No permission</span>
+//                           )}
+//                         </CTableDataCell>
+//                         <CTableDataCell>
+//                           {canCreateDeliveryChallan ? (
+//                             <CButton
+//                               size="sm"
+//                               color="info"
+//                               className="action-btn"
+//                               onClick={() => handlePrint(booking, 'Office Copy')}
+//                             >
+//                               <CIcon icon={cilPrint} className="me-1" />
+//                               Print
+//                             </CButton>
+//                           ) : (
+//                             <span className="text-muted">No permission</span>
+//                           )}
+//                         </CTableDataCell>
+//                         <CTableDataCell>
 //                           <CButton
 //                             size="sm"
-//                             color="primary"
+//                             color="success"
 //                             className="action-btn"
-//                             onClick={() => handlePrint(booking, 'Customer Copy')}
+//                             onClick={() => handleOpenDocuments(booking._id)}
 //                           >
-//                             <CIcon icon={cilPrint} className="me-1" />
-//                             Print
+//                             <CIcon className="me-1" />
+//                             View
 //                           </CButton>
-//                         ) : (
-//                           <span className="text-muted">No permission</span>
-//                         )}
-//                       </CTableDataCell>
-//                       <CTableDataCell>
-//                         {canCreateDeliveryChallan ? (
-//                           <CButton
-//                             size="sm"
-//                             color="info"
-//                             className="action-btn"
-//                             onClick={() => handlePrint(booking, 'Office Copy')}
-//                           >
-//                             <CIcon icon={cilPrint} className="me-1" />
-//                             Print
-//                           </CButton>
-//                         ) : (
-//                           <span className="text-muted">No permission</span>
-//                         )}
-//                       </CTableDataCell>
-//                       <CTableDataCell>
-//                         <CButton
-//                           size="sm"
-//                           color="success"
-//                           className="action-btn"
-//                           onClick={() => handleOpenDocuments(booking._id)}
-//                         >
-//                           <CIcon className="me-1" />
-//                           View
-//                         </CButton>
-//                       </CTableDataCell>
-//                     </CTableRow>
-//                   ))
+//                         </CTableDataCell>
+//                       </CTableRow>
+//                     )
+//                   })
 //                 )}
 //               </CTableBody>
 //             </CTable>
 //           </div>
+
+//           {/* Pagination Component */}
+//           {renderPagination()}
+//         </CCardBody>
+//       </CCard>
+
+//       {/* Selected Documents Modal */}
+//       <CModal 
+//         visible={documentsModal} 
+//         onClose={() => {
+//           setDocumentsModal(false)
+//           setSelectedBookingForDocs(null)
+//           setSelectedDocuments([])
+//         }}
+//         size="lg"
+//       >
+//         <CModalHeader>
+//           <CModalTitle>
+//             <CIcon className="me-2" />
+//             Selected Documents
+//           </CModalTitle>
+//         </CModalHeader>
+//         <CModalBody>
+//           {loadingDocuments ? (
+//             <div className="text-center py-5">
+//               <CSpinner color="primary" />
+//               <p className="mt-3">Loading documents...</p>
+//             </div>
+//           ) : selectedDocuments.length === 0 ? (
+//             <div className="text-center py-5">
+//               <CIcon size="xl" className="text-muted mb-3" />
+//               <p className="text-muted">No documents selected for this booking</p>
+//             </div>
+//           ) : (
+//             <div className="border rounded p-3">
+//               {selectedDocuments.map((selection, index) => (
+//                 <div key={selection.selection_id} className="mb-3 p-2 border-bottom">
+//                   <div className="d-flex justify-content-between align-items-center mb-2">
+//                     <div>
+//                       <h6 className="mb-0">{selection.template.template_name}</h6>
+//                       <small className="text-muted">
+//                         Selected by: {selection.selected_by.name} • 
+//                         {new Date(selection.selected_at).toLocaleDateString()}
+//                       </small>
+//                     </div>
+//                     <div className="d-flex gap-2">
+//                       <CButton
+//                         size="sm"
+//                         color="primary"
+//                         onClick={() => handlePreviewDocument(selection.selection_id, selection.template.template_name)}
+//                       >
+//                         <CIcon icon={cilPrint} className="me-1" />
+//                         Preview
+//                       </CButton>
+//                     </div>
+//                   </div>
+//                   {selection.notes && (
+//                     <div className="alert alert-info p-2 mt-2">
+//                       <small>
+//                         <strong>Notes:</strong> {selection.notes}
+//                       </small>
+//                     </div>
+//                   )}
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton 
+//             color="secondary" 
+//             onClick={() => {
+//               setDocumentsModal(false)
+//               setSelectedBookingForDocs(null)
+//               setSelectedDocuments([])
+//             }}
+//           >
+//             Close
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+//     </div>
+//   )
+// }
+
+// export default DeliveryChallan
+
+
+
+
+
+// import '../../../css/table.css'
+// import {
+//   React,
+//   useState,
+//   useEffect,
+//   getDefaultSearchFields,
+//   useTableFilter,
+//   axiosInstance,
+//   showError,
+// } from '../../../utils/tableImports'
+// import tvsLogo from '../../../assets/images/logo1.png'
+// import { cilPrint, cilChevronLeft, cilChevronRight } from '@coreui/icons'
+// import CIcon from '@coreui/icons-react'
+// import {
+//   CButton,
+//   CCard,
+//   CCardBody,
+//   CCardHeader,
+//   CFormInput,
+//   CFormLabel,
+//   CTable,
+//   CTableBody,
+//   CTableHead,
+//   CTableHeaderCell,
+//   CTableRow,
+//   CTableDataCell,
+//   CSpinner,
+//   CAlert,
+//   CModal,
+//   CModalHeader,
+//   CModalTitle,
+//   CModalBody,
+//   CModalFooter,
+//   CPagination,
+//   CPaginationItem,
+//   CFormSelect
+// } from '@coreui/react'
+// import { useNavigate } from 'react-router-dom'
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   ACTIONS,
+//   canViewPage 
+// } from '../../../utils/modulePermissions'
+// import { useAuth } from '../../../context/AuthContext'
+// import { showSuccess } from '../../../utils/sweetAlerts'
+
+// // Pagination constants
+// const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
+// const DEFAULT_LIMIT = 100;
+
+// const DeliveryChallan = () => {
+//   // Remove useTableFilter since we'll do server-side filtering
+//   const [data, setData] = useState([])
+//   const [filteredData, setFilteredData] = useState([])
+//   const [error, setError] = useState(null)
+//   const [loading, setLoading] = useState(true)
+//   const [searchTerm, setSearchTerm] = useState('')
+//   const navigate = useNavigate()
+
+//   // Pagination states - similar to Receipt component
+//   const [pagination, setPagination] = useState({
+//     docs: [],
+//     total: 0,
+//     pages: 1,
+//     currentPage: 1,
+//     limit: DEFAULT_LIMIT,
+//     loading: false,
+//     search: ''
+//   })
+
+//   const [formData, setFormData] = useState({
+//     chassisNumber: '',
+//   })
+//   const [bookingData, setBookingData] = useState(null)
+//   const [declarations, setDeclarations] = useState([])
+  
+//   // Documents Modal States
+//   const [documentsModal, setDocumentsModal] = useState(false)
+//   const [selectedBookingForDocs, setSelectedBookingForDocs] = useState(null)
+//   const [selectedDocuments, setSelectedDocuments] = useState([])
+//   const [loadingDocuments, setLoadingDocuments] = useState(false)
+
+//   // Get permissions from auth context
+//   const { permissions = [] } = useAuth()
+
+//   // Permission checks for Delivery Challan page under Sales module
+//   const canViewDeliveryChallan = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DELIVERY_CHALLAN)
+//   const canCreateDeliveryChallan = hasSafePagePermission(
+//     permissions, 
+//     MODULES.SALES, 
+//     PAGES.SALES.DELIVERY_CHALLAN, 
+//     ACTIONS.CREATE
+//   )
+
+//   // Debounce timer for search
+//   const searchTimer = React.useRef(null);
+
+//   // Fetch data with pagination and search - similar to fetchCustomerTab in Receipt
+//   const fetchData = async (page = pagination.currentPage, limit = pagination.limit, search = pagination.search) => {
+//     try {
+//       setPagination(prev => ({ ...prev, loading: true }))
+      
+//       const params = { 
+//         bookingType: 'BRANCH', 
+//         status: 'ALLOCATED',
+//         page, 
+//         limit 
+//       }
+      
+//       // Add search parameter if provided
+//       if (search) {
+//         params.search = search
+//       }
+      
+//       const response = await axiosInstance.get(`/bookings`, { params })
+      
+//       const responseData = response.data.data
+//       const bookings = responseData.bookings || []
+//       const total = responseData.total || bookings.length
+//       const pages = responseData.pages || Math.ceil(total / limit)
+
+//       setPagination({
+//         docs: bookings,
+//         total: total,
+//         pages: pages,
+//         currentPage: page,
+//         limit: limit,
+//         loading: false,
+//         search: search
+//       })
+      
+//       // Also update data and filteredData for backward compatibility
+//       setData(bookings)
+//       setFilteredData(bookings)
+      
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//       setPagination(prev => ({ ...prev, loading: false, docs: [], total: 0 }))
+//     }
+//   }
+
+//   useEffect(() => {
+//     // Check if user has permission to view this page
+//     if (!canViewDeliveryChallan) {
+//       showError('You do not have permission to view Delivery Challan')
+//       navigate('/dashboard')
+//       return
+//     }
+    
+//     fetchData(1, DEFAULT_LIMIT, '')
+//   }, [])
+
+//   useEffect(() => {
+//     const fetchDeclarations = async () => {
+//       try {
+//         const response = await axiosInstance.get('/declarations?formType=delivery_challan')
+//         if (response.data.status === 'success') {
+//           const sortedDeclarations = response.data.data.declarations.sort(
+//             (a, b) => a.priority - b.priority,
+//           )
+//           setDeclarations(sortedDeclarations)
+//         }
+//       } catch (error) {
+//         const message = showError(error);
+//         if (message) {
+//           setError(message);
+//         }
+//       }
+//     }
+
+//     fetchDeclarations()
+//   }, [])
+
+//   useEffect(() => {
+//     const timer = setTimeout(() => {
+//       if (formData.chassisNumber.trim().length > 0) {
+//         fetchBookingDetails()
+//       }
+//     }, 500)
+
+//     return () => clearTimeout(timer)
+//   }, [formData.chassisNumber])
+
+//   const fetchBookingDetails = async () => {
+//     setLoading(true)
+//     setError('')
+
+//     try {
+//       const response = await axiosInstance.get(`/bookings/chassis/${formData.chassisNumber}`)
+
+//       if (response.data.success) {
+//         setBookingData(response.data.data)
+//       } else {
+//         setError('No booking found for this chassis number')
+//         setBookingData(null)
+//       }
+//     } catch (err) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+      
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   // Fetch selected documents for a booking
+//   const handleOpenDocuments = async (bookingId) => {
+//     try {
+//       setLoadingDocuments(true)
+//       setSelectedBookingForDocs(bookingId)
+      
+//       const response = await axiosInstance.get(`/booking-templates/selected/${bookingId}`)
+//       setSelectedDocuments(response.data.data.selections || [])
+//       setDocumentsModal(true)
+      
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     } finally {
+//       setLoadingDocuments(false)
+//     }
+//   }
+
+//   const handlePreviewDocument = async (selectionId, templateName) => {
+//     try {
+//       const response = await axiosInstance.get(`/booking-templates/preview/${selectionId}`)
+//       const previewData = response.data.data
+
+//       const printWindow = window.open('', '_blank')
+//       printWindow.document.write(generateTemplatePrintHTML(previewData))
+//       printWindow.document.close()
+//       printWindow.focus()
+      
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   }
+
+//   const generateDeclarationHTML = () => {
+//     if (declarations.length === 0) {
+//       return `
+//         I/We Authorized the dealer or its representative to register the vehicle at RTO In my/Our name as booked by us,
+//         However getting the vehicle insured from Insurance company & getting the vehicle registered from RTO is entirely
+//         my/our sole responsibility. Registration Number allotted by RTO will be acceptable to me else I will pre book for
+//         choice number at RTO at my own. Dealership has no role in RTO Number allocation I/We am/are exclusively responsible
+//         for any loss/penalty/Legal action- occurred due to non-compliance of /Delay in Insurance or RTO registration. I have
+//         understood and accepted all T & C about warranty as per the Warranty policy of TVS MOTOR COMPANY Ltd & agree to abide
+//         the same. I have also understood & accepted that the warranty for Tyres & Battery Lies with concerned Manufacturer or
+//         its dealer & I will not claim for warranty of these products to TVS MOTOR COMPANY or to Its Dealer I am being informed
+//         about the price breakup, I had understood & agreed upon the same & then had booked the vehicle, I am bound to pay penal
+//         interest @ 24% P.A. on delayed payment. I accept that vehicle once sold by dealer shall not be taken back /replaced for
+//         any reason.
+//       `
+//     }
+
+//     return declarations.map((declaration) => declaration.content).join('<br/><br/>')
+//   }
+
+//   const handlePrint = (booking, type) => {
+//   if (!booking) {
+//     setError('No booking data found')
+//     return
+//   }
+
+//   // Debug: Log the booking object to see what's available
+//   console.log('Printing booking:', booking)
+//   console.log('Chassis allocation date:', booking.chassisAllocationDate)
+//   console.log('Vehicle ref:', booking.vehicleRef)
+
+//   // Check CREATE permission before printing
+//   if (!canCreateDeliveryChallan) {
+//     showError('You do not have permission to print delivery challan')
+//     return
+//   }
+
+//   const printWindow = window.open('', '_blank')
+
+//   if (type === 'Helmet') {
+//     printWindow.document.write(generateHelmetDeclarationHTML(booking))
+//   } else {
+//     printWindow.document.write(generateDeliveryChallanHTML(booking, type))
+//   }
+
+//   printWindow.document.close()
+//   printWindow.focus()
+// }
+
+//   const generateDeliveryChallanHTML = (data, copyType) => {
+//     const currentDate = new Date().toLocaleDateString('en-GB')
+//     const displayName =
+//       data.bookingType === 'SUBDEALER' ? data.subdealer?.name || 'N/A' : data.customerDetails.name
+
+//     const displayAddress =
+//       data.bookingType === 'SUBDEALER'
+//         ? data.subdealer?.location || 'N/A'
+//         : `${data.customerDetails.address}, ${data.customerDetails.taluka}, ${data.customerDetails.district}`
+
+//     return `
+//       <!DOCTYPE html>
+//       <html>
+//       <head>
+//         <title>Sale/Delivery Challan - ${copyType}</title>
+//         <style>
+//           body {
+//             font-family: Courier New;
+//             margin: 0;
+//             padding: 0;
+//           }
+//           .page {
+//             width: 210mm;
+//             min-height: 297mm;
+//             margin: 0 auto;
+//             padding: 5mm;
+//             box-sizing: border-box;
+//           }
+//           .header-container {
+//             display: flex;
+//             align-items: center;
+//             margin-bottom: 5mm;
+//           }
+//           .logo {
+//             width: 30mm;
+//             height: auto;
+//             margin-right: 5mm;
+//           }
+//           .header-text {
+//             color:#555555;
+//             flex-grow: 1;
+//             text-align: center;
+//             font-size: 21px;
+//             font-weight: 700;
+//           }
+
+//           table {
+//   width: 100%;
+//   border-collapse: collapse;
+//   margin-bottom: 5mm;
+// }
+// td {
+//   padding: 1mm 0;
+//   font-size: 11pt;
+// }
+// tr.border-top-bottom td {
+//   padding: 1mm;
+//   width: auto;
+// }
+
+// tr.data-row td:nth-child(1) {
+//   width: 25%;
+//   padding-right: 1mm;
+// }
+// tr.data-row td:nth-child(2) {
+//   width: 3%;
+//   padding: 0;
+// }
+// tr.data-row td:nth-child(3),
+// tr.data-row td:nth-child(4) {
+//   width: auto;
+//   padding-left: 1mm;
+// }
+//           .border-top-bottom {
+//            border-top: 2px solid #AAAAAA;
+//            border-bottom: 2px solid #AAAAAA;
+//           }
+//           .declaration {
+//             font-size: 11px;
+//             text-align: justify;
+//             line-height: 1.3;
+//             color: #555555;
+//           }
+//           .signature {
+//             text-align: right;
+//             margin-top: 10mm;
+//           }
+//           .account-details{
+//           color:#555555;
+//           font-weight:bold;
+//           }
+//           .signature-box {
+//             border-top: 2px solid #AAAAAA;
+//             border-bottom: 2px solid #AAAAAA;
+//             padding: 1px 0;
+//             text-align: right;
+//             color:#555555;
+//            font-weight:bold;
+//           }
+//           .jurisdiction {
+//             text-align: center;
+//             font-weight: bold;
+//             font-size: 14px;
+//             color: #555555
+//           }
+//           .bold {
+//           font-weight: 700;
+//           color:#555555;
+
+//            }
+//           .divider {
+//             margin: 5mm 0;
+//             padding: 2mm 0;
+//           }
+//           .copy-title {
+//             text-align: center;
+//             color:#555555;
+//             font-size: 21px;
+//             margin-bottom: 5mm;
+//             font-weight: 700;
+//           }
+//           @page {
+//             size: A4;
+//             margin: 0;
+//           }
+//         </style>
+//       </head>
+//       <body>
+//         <div class="page">
+//           <!-- Customer Copy -->
+//           <div class="header-container">
+//             <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+//             <div class="header-text"> Sale / Delivery challan</div>
+//           </div>
+
+//           <table>
+//             <tr class="border-top-bottom">
+//               <td width="20%">Booking No.:</td>
+//               <td width="25%"><span class="bold">${data.bookingNumber || 'N/A'}</span></td>
+//               <td width="15%">Sales Date</td>
+//               <td width="40%"><span class="bold">${currentDate}</span></td>
+//             </tr>
+//             <tr class="data-row">
+//              <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Name' : 'Name'}</td>
+//               <td>:</td>
+//               <td><span class="bold">${displayName}</span></td>
+//             </tr>
+//             <tr class="data-row">
+//               <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Address' : 'Address'}</td>
+//               <td>:</td>
+//               <td colspan="2"><span class="bold">${displayAddress}</span></td>
+//             </tr>
+//             <tr class="data-row">
+//               <td>S.E Name</td>
+//               <td>:</td>
+//               <td colspan="2"><span class="bold">${data.salesExecutive?.name || 'N/A'}</span></td>
+//             </tr>
+//             <tr class="data-row">
+//               <td>Model</td>
+//               <td>:</td>
+//               <td><span class="bold">${data.model?.model_name || ''}</span></td>
+//               <td>Colour : <span class="bold">${data.color?.name || 'N/A'}</span></td>
+//             </tr>
+//             <tr class="data-row">
+//               <td>Chasis No</td>
+//               <td>:</td>
+//               <td><span class="bold">${data.chassisNumber || ''}</span></td>
+//               <td>Key No. : <span class="bold">${data.keyNumber || '0'}</span></td>
+//             </tr>
+//             <tr class="data-row">
+//               <td>Engine No</td>
+//               <td>:</td>
+//               <td><span class="bold">${data.engineNumber || ''}</span></td>
+//               <td></td>
+//             </tr>
+//             <tr class="data-row">
+//               <td>Financer</td>
+//               <td>:</td>
+//               <td colspan="2"><span class="bold">${data.payment.financer?.name || ''}</span></td>
+//             </tr>
+//             <tr class="data-row">
+//               <td>Total</td>
+//               <td>:</td>
+//               <td><span class="bold">₹${data.discountedAmount}</span></td>
+//             </tr>
+//           </table>
+//            <div class='account-details'>ACC.DETAILS:
+//  ${data.accessories
+//    .map((accessory) => (accessory.accessory ? accessory.accessory.name : ''))
+//    .filter((name) => name)
+//    .join(', ')}
+//            </div>
+//           <div class="signature-box">
+//             <div><b>Authorised Signature</b></div>
+//           </div>
+
+//           <p class="bold">Customer Declarations:</p>
+//           <p class="declaration">
+//             ${generateDeclarationHTML()}
+//           </p>
+
+//           <div>
+//             <p class="bold">Customer Signature</p>
+//           </div>
+
+//           <p class="jurisdiction">Subject To Sangamner Jurisdiction</p>
+
+//           <!-- Office Copy -->
+//           <div style="page-break-before: always; margin-top: 10mm;">
+//             <div class="copy-title">Sale / Delivery challan</div>
+
+//             <table>
+//               <tr class="border-top-bottom">
+//                 <td width="20%">Booking No.:</td>
+//                 <td width="25%"><span class="bold">${data.bookingNumber || 'N/A'}</span></td>
+//                 <td width="15%">Sales Date</td>
+//                 <td width="40%"><span class="bold">${currentDate}</span></td>
+//               </tr>
+//               <tr>
+//                 <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Name' : 'Name'}</td>
+//                 <td>:</td>
+//                 <td colspan="2"><span class="bold">${displayName}</span></td>
+//               </tr>
+//               <tr>
+//                 <td>${data.bookingType === 'SUBDEALER' ? 'Subdealer Address' : 'Address'}</td>
+//                 <td>:</td>
+//                 <td colspan="2"><span class="bold">${displayAddress}</span></td>
+//               </tr>
+//               <tr>
+//                 <td>S.E Name</td>
+//                 <td>:</td>
+//                 <td colspan="2"><span class="bold">${data.salesExecutive?.name || ''}</span></td>
+//               </tr>
+//               <tr>
+//                 <td>Model</td>
+//                 <td>:</td>
+//                 <td><span class="bold">${data.model.model_name || ''}</span></td>
+//                 <td>Colour : <span class="bold">${data.color?.name || 'N/A'}</span></td>
+//               </tr>
+//               <tr>
+//                 <td>Chasis No</td>
+//                 <td>:</td>
+//                 <td><span class="bold">${data.chassisNumber || ''}</span></td>
+//                 <td>Key No. : <span class="bold">${data.keyNumber || '0'}</span></td>
+//               </tr>
+//               <tr>
+//                 <td>Engine No</td>
+//                 <td>:</td>
+//                 <td><span class="bold">${data.engineNumber}</span></td>
+//                 <td></td>
+//               </tr>
+//               <tr>
+//                 <td>Financer</td>
+//                 <td>:</td>
+//                 <td colspan="2"><span class="bold">${data.payment.financer?.name || ''}</span></td>
+//               </tr>
+//               <tr>
+//                 <td>Total</td>
+//                 <td>:</td>
+//                 <td><span class="bold">₹${data.discountedAmount}</span></td>
+//             </tr>
+//             </table>
+
+//             <div class='account-details'>ACC.DETAILS:
+//              ${data.accessories
+//                .map((accessory) => (accessory.accessory ? accessory.accessory.name : ''))
+//                .filter((name) => name)
+//                .join(', ')}
+//             </div>
+//             <div class="signature-box">
+//               <div><b>Authorised Signature</b></div>
+//             </div>
+
+//             <p class="bold">Customer Declarations:</p>
+//             <p class="declaration">
+//               ${generateDeclarationHTML()}
+//             </p>
+
+//             <div>
+//               <p class="bold">Customer Signature</p>
+//             </div>
+
+//             <p class="jurisdiction">Subject To Sangamner Jurisdiction</p>
+//           </div>
+//         </div>
+//       </body>
+//       </html>
+//     `
+//   }
+
+//  const generateHelmetDeclarationHTML = (data) => {
+//   // Try multiple possible locations for the allocation date
+//   let allocationDate = null;
+  
+//   // Check various possible locations for the date
+//   if (data.chassisAllocationDate) {
+//     allocationDate = new Date(data.chassisAllocationDate);
+//   } else if (data.vehicleRef?.allocationHistory?.[0]?.allocatedAt) {
+//     // Check in vehicleRef allocation history
+//     allocationDate = new Date(data.vehicleRef.allocationHistory[0].allocatedAt);
+//   } else if (data.allocationDate) {
+//     allocationDate = new Date(data.allocationDate);
+//   } else if (data.allocatedAt) {
+//     allocationDate = new Date(data.allocatedAt);
+//   }
+  
+//   // If still no date found, log a warning and use current date as fallback
+//   if (!allocationDate) {
+//     console.warn('No chassis allocation date found for booking:', data.bookingNumber);
+//     allocationDate = new Date();
+//   }
+  
+//   const day = allocationDate.getDate().toString().padStart(2, '0');
+//   const month = (allocationDate.getMonth() + 1).toString().padStart(2, '0');
+//   const year = allocationDate.getFullYear();
+//   const formattedDate = `${day}/${month}/${year}`;
+
+//   console.log('Using date for helmet declaration:', formattedDate); // Debug log
+
+//   return `
+// <!DOCTYPE html>
+// <html>
+// <head>
+//     <meta charset="UTF-8">
+//     <title>Helmet Declaration</title>
+//     <style>
+//         html, body {
+//             height: 100%;
+//             margin: 0;
+//             padding: 0;
+//             background-color: #f5f5f5;
+//             display: flex;
+//             justify-content: center;
+//             align-items: center;
+//         }
+//         .declaration-wrapper {
+//             width: 210mm;
+//             margin: 20px 0;
+//         }
+//         .declaration-body {
+//             font-family: 'Arial Unicode MS', 'Shivaji01', 'Shivaji02', sans-serif;
+//             margin: 15mm;
+//             padding: 0;
+//             font-size: 12pt;
+//             line-height: 1.4;
+//         }
+//         @page {
+//             size: A4;
+//             margin: 0;
+//         }
+//         .header {
+//             text-align: center;
+//             font-weight: bold;
+//             font-size: 18pt;
+//             margin-bottom: 10mm;
+//         }
+//         .content {
+//             margin-bottom: 5mm;
+//             text-align:center;
+//         }
+//         .customer-info {
+//             margin-bottom: 10mm;
+//         }
+//         .customer-info-row {
+//             margin-bottom: 2mm;
+//         }
+//         .bold {
+//             font-weight: bold;
+//         }
+//         .signature {
+//             margin-top: 15mm;
+//             display:flex;
+//             justify-content:space-between;
+//         }
+//         .jurisdiction {
+//             text-align: center;
+//             margin-top: 10mm;
+//             font-weight: bold;
+//         }
+//         .vehicle-details {
+//             margin: 5mm 0;
+//         }
+//         .declaration {
+//             margin-top: 10mm;
+//             text-align: justify;
+//         }
+//         .divider {
+//             border-top: 2px solid #AAAAAA;
+//             margin: 1mm 0;
+//         }
+//         @media print {
+//             html, body {
+//                 background: none;
+//                 display: block;
+//             }
+//             .declaration-wrapper {
+//                 box-shadow: none;
+//                 margin: 0;
+//             }
+//         }
+//     </style>
+// </head>
+// <body>
+//     <div class="declaration-wrapper">
+//         <div class="declaration-body">
+//             <div class="header">
+//                 हेल्मेट प्राप्ती घोषणापत्र
+//             </div>
+
+//             <div class="content">
+//                 केंद्रीय मोटर वाहन नियम १३८ ( ४ ) ( फ )
+//             </div>
+//             <div class="divider"></div>
+//             <div class="declaration">
+//                 <p>
+//                     मी ${data.customerDetails?.name || ''}, असे घोषित करतो कि
+//                     दि. ${formattedDate} रोजी गांधी मोटार टि व्हि यस नासिक
+//                     या वितरकाकडून टि व्हि यस ${data.model?.model_name || ''}, हे वाहन खरेदी केले आहे.
+//                     त्याचा तपशील खालील प्रमाणे...
+//                 </p>
+//                 <div class="vehicle-details">
+//                     <div class="customer-info-row"><strong>चेसिस नंबर:</strong> ${data.chassisNumber || ''}</div>
+//                     <div class="customer-info-row"><strong>इंजिन नंबर:</strong> ${data.engineNumber || ''}</div>
+//                 </div>
+
+//                 <p>
+//                     केंद्रीय मोटर वाहन नियम १३८ ( ४ ) ( फ ) प्रमाणे वितरकाने दुचाकी वितरीत करते वेळी विहित
+//                     मानाकनाचे २ (दोन) हेल्मेट पुरवणे/विकत देणे बंधनकारक आहे. त्याचप्रमाणे मला BUREAU OF INDIA STANDARS
+//                     UNDER THE BUREAU OF INDIA ACT-1986 ( 63 TO 1986 ) या प्रमाणे हेल्मेट मिळाले आहे.
+//                 </p>
+//                 <p>
+//                     मी याद्वारे जाहीर करतो/करते की वर दिलेला तपशील माझ्या संपूर्ण माहिती प्रमाणे व तपासा्रमाणे सत्य आहे.
+//                 </p>
+//             </div>
+
+//             <div class="signature">
+//                 <div>
+//                     स्वाक्षरी व शिक्का
+//                     <br>
+//                     गांधी मोटर्स<br>
+//                     नासिक
+//                 </div>
+//                 <div>
+//                     दुचाकी खरेदिदाराची स्वाक्षरी
+//                     <br>
+//                     नाव :- ${data.customerDetails?.name || ''}
+//                 </div>
+//             </div>
+
+//             <div class="jurisdiction">
+//                 Subject To Nashik Jurisdiction
+//             </div>
+//         </div>
+//     </div>
+// </body>
+// </html>
+//     `
+// }
+
+//   // Generate template print HTML with the same design as Customer/Office Copy
+//   const generateTemplatePrintHTML = (previewData) => {
+//   const bookingInfo = previewData.booking_info
+//   const templateInfo = previewData.template_info
+//   const generatedContent = previewData.generated_content
+
+//   return `
+// <!DOCTYPE html>
+// <html>
+// <head>
+//     <title>${templateInfo.name} - ${bookingInfo.booking_number}</title>
+//     <style>
+//         body {
+//             font-family: Courier New;
+//             margin: 0;
+//             padding: 0;
+//         }
+//         .page {
+//             width: 210mm;
+//             min-height: 297mm;
+//             margin: 0 auto;
+//             padding: 5mm;
+//             box-sizing: border-box;
+//         }
+//         .header-container {
+//             display: flex;
+//             align-items: center;
+//             margin-bottom: 5mm;
+//         }
+//         .logo {
+//             width: 30mm;
+//             height: auto;
+//             margin-right: 5mm;
+//         }
+//         .header-text {
+//             color:#555555;
+//             flex-grow: 1;
+//             text-align: center;
+//             font-size: 21px;
+//             font-weight: 700;
+//         }
+//         .content-section {
+//             margin: 10mm 0;
+//         }
+//         .content-title {
+//             font-size: 18px;
+//             font-weight: bold;
+//             color: #555555;
+//             margin-bottom: 5mm;
+//             text-align: center;
+//         }
+//         .generated-content {
+//             font-size: 12px;
+//             line-height: 1.4;
+//             color: #555555;
+//             text-align: justify;
+//             white-space: pre-wrap;
+//         }
+//         .bold {
+//             font-weight: 700;
+//             color:#555555;
+//         }
+//         @page {
+//             size: A4;
+//             margin: 0;
+//         }
+//     </style>
+// </head>
+// <body>
+//     <div class="page">
+//         <div class="header-container">
+//             <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+//             <div class="header-text">${templateInfo.name}</div>
+//         </div>
+
+//         <div class="content-section">
+//             ${generatedContent.subject ? `<div class="content-title">${generatedContent.subject}</div>` : ''}
+//             <div class="generated-content">
+//                 ${generatedContent.content}
+//             </div>
+//         </div>
+//     </div>
+// </body>
+// </html>
+//     `
+// }
+
+//   // Handle search with debounce - similar to Receipt component
+//   const handleSearch = (value) => {
+//     setSearchTerm(value)
+//     setPagination(prev => ({ ...prev, search: value }))
+    
+//     clearTimeout(searchTimer.current)
+//     searchTimer.current = setTimeout(() => {
+//       fetchData(1, pagination.limit, value)
+//     }, 400)
+//   }
+
+//   // Handle page change - similar to handlePageChange in Receipt
+//   const handlePageChange = (newPage) => {
+//     if (newPage < 1 || newPage > pagination.pages) return
+//     fetchData(newPage, pagination.limit, pagination.search)
+//     window.scrollTo({ top: 0, behavior: 'smooth' })
+//   }
+
+//   // Handle limit change - similar to handleLimitChange in Receipt
+//   const handleLimitChange = (newLimit) => {
+//     const limit = parseInt(newLimit, 10)
+//     fetchData(1, limit, pagination.search)
+//   }
+
+//   // Render pagination component - similar to renderPagination in Receipt
+//   const renderPagination = () => {
+//     const { currentPage, pages, total, limit, loading } = pagination
+//     if (!total || pages <= 1) return null
+
+//     const start = (currentPage - 1) * limit + 1
+//     const end = Math.min(currentPage * limit, total)
+
+//     let startPage = Math.max(1, currentPage - 2)
+//     let endPage = Math.min(pages, currentPage + 2)
+//     if (currentPage <= 3) endPage = Math.min(5, pages)
+//     if (currentPage >= pages - 2) startPage = Math.max(1, pages - 4)
+
+//     const pageNums = []
+//     for (let i = startPage; i <= endPage; i++) pageNums.push(i)
+
+//     return (
+//       <div className="mt-3 border-top pt-3">
+//         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+//           <div className="d-flex align-items-center gap-2">
+//             <CFormLabel className="mb-0 text-muted" style={{ fontSize: '13px' }}>Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={limit}
+//               onChange={e => handleLimitChange(e.target.value)}
+//               style={{ width: '80px', height: '32px', fontSize: '13px' }}
+//               size="sm"
+//               disabled={loading}
+//             >
+//               {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+//             </CFormSelect>
+//           </div>
+//           <span className="text-muted" style={{ fontSize: '13px' }}>
+//             {loading ? 'Loading…' : `Showing ${start}–${end} of ${total} entries`}
+//           </span>
+//         </div>
+//         {pages > 1 && (
+//           <CPagination align="center" size="sm">
+//             <CPaginationItem 
+//               onClick={() => handlePageChange(1)} 
+//               disabled={currentPage === 1 || loading}
+//             >
+//               «
+//             </CPaginationItem>
+//             <CPaginationItem 
+//               onClick={() => handlePageChange(currentPage - 1)} 
+//               disabled={currentPage === 1 || loading}
+//             >
+//               <CIcon icon={cilChevronLeft} />
+//             </CPaginationItem>
+
+//             {startPage > 1 && (
+//               <>
+//                 <CPaginationItem 
+//                   onClick={() => handlePageChange(1)} 
+//                   disabled={loading}
+//                 >
+//                   1
+//                 </CPaginationItem>
+//                 {startPage > 2 && <CPaginationItem disabled>…</CPaginationItem>}
+//               </>
+//             )}
+
+//             {pageNums.map(p => (
+//               <CPaginationItem 
+//                 key={p} 
+//                 active={p === currentPage} 
+//                 onClick={() => handlePageChange(p)} 
+//                 disabled={loading}
+//               >
+//                 {p}
+//               </CPaginationItem>
+//             ))}
+
+//             {endPage < pages && (
+//               <>
+//                 {endPage < pages - 1 && <CPaginationItem disabled>…</CPaginationItem>}
+//                 <CPaginationItem 
+//                   onClick={() => handlePageChange(pages)} 
+//                   disabled={loading}
+//                 >
+//                   {pages}
+//                 </CPaginationItem>
+//               </>
+//             )}
+
+//             <CPaginationItem 
+//               onClick={() => handlePageChange(currentPage + 1)} 
+//               disabled={currentPage === pages || loading}
+//             >
+//               <CIcon icon={cilChevronRight} />
+//             </CPaginationItem>
+//             <CPaginationItem 
+//               onClick={() => handlePageChange(pages)} 
+//               disabled={currentPage === pages || loading}
+//             >
+//               »
+//             </CPaginationItem>
+//           </CPagination>
+//         )}
+//       </div>
+//     )
+//   }
+
+//   if (!canViewDeliveryChallan) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view Delivery Challan.
+//       </div>
+//     )
+//   }
+
+//   if (loading && pagination.docs.length === 0) {
+//     return (
+//       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+//         <CSpinner color="primary" />
+//       </div>
+//     )
+//   }
+
+//   return (
+//     <div>
+//       <div className="title">Delivery Challan/Documents</div>
+//       {error && (
+//         <CAlert color="danger" className="mb-3">
+//           {error}
+//         </CAlert>
+//       )}
+
+//       <CCard className="table-container mt-4">
+//         <CCardHeader className="card-header d-flex justify-content-between align-items-center">
+//           <div></div>
+//           <div className="d-flex">
+//             <CFormLabel className="mt-1 m-1">Search:</CFormLabel>
+//             <CFormInput
+//               type="text"
+//               className="d-inline-block square-search"
+//               value={searchTerm}
+//               onChange={(e) => handleSearch(e.target.value)}
+//               style={{ maxWidth: '350px', height: '30px', borderRadius: '0' }}
+//               placeholder="Search..."
+//             />
+//           </div>
+//         </CCardHeader>
+
+//         <CCardBody>
+//           {pagination.loading && pagination.docs.length > 0 && (
+//             <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}>
+//               <CSpinner size="sm" color="primary" className="me-2" /> Loading records…
+//             </div>
+//           )}
+          
+//           <div className="responsive-table-wrapper" style={{ opacity: pagination.loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//             <CTable striped bordered hover className="responsive-table">
+//               <CTableHead>
+//                 <CTableRow>
+//                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+//                   <CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                   <CTableHeaderCell>Model Name</CTableHeaderCell>
+//                   <CTableHeaderCell>Customer Name</CTableHeaderCell>
+//                   <CTableHeaderCell>Chassis Number</CTableHeaderCell>
+//                   <CTableHeaderCell>Customer Copy</CTableHeaderCell>
+//                   <CTableHeaderCell>Helmet Declaration</CTableHeaderCell>
+//                   <CTableHeaderCell>Office Copy</CTableHeaderCell>
+//                   <CTableHeaderCell>Documents</CTableHeaderCell>
+//                 </CTableRow>
+//               </CTableHead>
+//               <CTableBody>
+//                 {pagination.docs.length === 0 && !pagination.loading ? (
+//                   <CTableRow>
+//                     <CTableDataCell colSpan="9" className="text-center">
+//                       {pagination.search ? 'No matching bookings found' : 'No bookings available'}
+//                     </CTableDataCell>
+//                   </CTableRow>
+//                 ) : (
+//                   pagination.docs.map((booking, index) => {
+//                     const globalIndex = (pagination.currentPage - 1) * pagination.limit + index + 1
+//                     return (
+//                       <CTableRow key={booking._id || index}>
+//                         <CTableDataCell>{globalIndex}</CTableDataCell>
+//                         <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+//                         <CTableDataCell>{booking.model?.model_name || ''}</CTableDataCell>
+//                         <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
+//                         <CTableDataCell>{booking.chassisNumber || ''}</CTableDataCell>
+//                         <CTableDataCell>
+//                           {canCreateDeliveryChallan ? (
+//                             <CButton
+//                               size="sm"
+//                               color="primary"
+//                               className="action-btn"
+//                               onClick={() => handlePrint(booking, 'Customer Copy')}
+//                             >
+//                               <CIcon icon={cilPrint} className="me-1" />
+//                               Print
+//                             </CButton>
+//                           ) : (
+//                             <span className="text-muted">No permission</span>
+//                           )}
+//                         </CTableDataCell>
+//                         <CTableDataCell>
+//                           {canCreateDeliveryChallan ? (
+//                             <CButton
+//                               size="sm"
+//                               color="warning"
+//                               className="action-btn"
+//                               onClick={() => handlePrint(booking, 'Helmet')}
+//                             >
+//                               <CIcon icon={cilPrint} className="me-1" />
+//                               Print
+//                             </CButton>
+//                           ) : (
+//                             <span className="text-muted">No permission</span>
+//                           )}
+//                         </CTableDataCell>
+//                         <CTableDataCell>
+//                           {canCreateDeliveryChallan ? (
+//                             <CButton
+//                               size="sm"
+//                               color="info"
+//                               className="action-btn"
+//                               onClick={() => handlePrint(booking, 'Office Copy')}
+//                             >
+//                               <CIcon icon={cilPrint} className="me-1" />
+//                               Print
+//                             </CButton>
+//                           ) : (
+//                             <span className="text-muted">No permission</span>
+//                           )}
+//                         </CTableDataCell>
+//                         <CTableDataCell>
+//                           <CButton
+//                             size="sm"
+//                             color="success"
+//                             className="action-btn"
+//                             onClick={() => handleOpenDocuments(booking._id)}
+//                           >
+//                             <CIcon className="me-1" />
+//                             View
+//                           </CButton>
+//                         </CTableDataCell>
+//                       </CTableRow>
+//                     )
+//                   })
+//                 )}
+//               </CTableBody>
+//             </CTable>
+//           </div>
+
+//           {/* Pagination Component */}
+//           {renderPagination()}
 //         </CCardBody>
 //       </CCard>
 
@@ -984,12 +4481,6 @@
 
 
 
-
-
-
-
-
-
 import '../../../css/table.css'
 import {
   React,
@@ -1024,7 +4515,8 @@ import {
   CModalBody,
   CModalFooter,
   CPagination,
-  CPaginationItem
+  CPaginationItem,
+  CFormSelect
 } from '@coreui/react'
 import { useNavigate } from 'react-router-dom'
 import { 
@@ -1037,18 +4529,29 @@ import {
 import { useAuth } from '../../../context/AuthContext'
 import { showSuccess } from '../../../utils/sweetAlerts'
 
+// Pagination constants
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
+const DEFAULT_LIMIT = 100;
+
 const DeliveryChallan = () => {
-  const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([])
+  // Remove useTableFilter since we'll do server-side filtering
+  const [data, setData] = useState([])
+  const [filteredData, setFilteredData] = useState([])
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const navigate = useNavigate()
 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1)
-  const [recordsPerPage] = useState(100) // Show 100 records per page
-  const [totalPages, setTotalPages] = useState(1)
-  const [displayedPages, setDisplayedPages] = useState([])
+  // Pagination states - similar to Receipt component
+  const [pagination, setPagination] = useState({
+    docs: [],
+    total: 0,
+    pages: 1,
+    currentPage: 1,
+    limit: DEFAULT_LIMIT,
+    loading: false,
+    search: ''
+  })
 
   const [formData, setFormData] = useState({
     chassisNumber: '',
@@ -1065,11 +4568,14 @@ const DeliveryChallan = () => {
   // Get permissions from auth context
   const { permissions = [] } = useAuth()
 
-  // Permission checks for Delivery Challan page under Sales module
-  // For viewing, we need VIEW permission
-  const canViewDeliveryChallan = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DELIVERY_CHALLAN)
+  // Add this ref to track component mount status
+  const isMounted = React.useRef(true);
   
-  // For printing, we need CREATE permission
+  // Debounce timer for search
+  const searchTimer = React.useRef(null);
+
+  // Permission checks for Delivery Challan page under Sales module
+  const canViewDeliveryChallan = canViewPage(permissions, MODULES.SALES, PAGES.SALES.DELIVERY_CHALLAN)
   const canCreateDeliveryChallan = hasSafePagePermission(
     permissions, 
     MODULES.SALES, 
@@ -1077,50 +4583,76 @@ const DeliveryChallan = () => {
     ACTIONS.CREATE
   )
 
-  // Calculate pagination
-  const calculatePagination = (filteredData) => {
-    const total = filteredData.length
-    const totalPages = Math.ceil(total / recordsPerPage)
-    setTotalPages(totalPages)
+  // Fetch data with pagination and search - similar to fetchCustomerTab in Receipt
+  const fetchData = async (page = pagination.currentPage, limit = pagination.limit, search = pagination.search) => {
+    // Don't set loading if component is unmounting
+    if (!isMounted.current) return;
     
-    // Calculate displayed page numbers (max 5 pages shown)
-    const pages = []
-    let startPage = Math.max(1, currentPage - 2)
-    let endPage = Math.min(totalPages, currentPage + 2)
-    
-    // Adjust if we're near the beginning
-    if (currentPage <= 3) {
-      endPage = Math.min(5, totalPages)
+    try {
+      setPagination(prev => ({ ...prev, loading: true }))
+      setError(null) // Clear any previous errors
+      
+      const params = { 
+        bookingType: 'BRANCH', 
+        status: 'ALLOCATED',
+        page, 
+        limit 
+      }
+      
+      // Add search parameter if provided
+      if (search && search.trim()) {
+        params.search = search.trim()
+      }
+      
+      const response = await axiosInstance.get(`/bookings`, { params })
+      
+      if (!isMounted.current) return;
+
+      const responseData = response.data.data || {}
+      const bookings = responseData.bookings || []
+      const total = responseData.total || bookings.length
+      const pages = responseData.pages || Math.ceil(total / limit) || 1
+
+      // CRITICAL: Always set loading to false, even with empty results
+      setPagination({
+        docs: bookings,
+        total: total,
+        pages: pages,
+        currentPage: page,
+        limit: limit,
+        loading: false, // ALWAYS set loading to false
+        search: search
+      })
+      
+      // Also update data and filteredData for backward compatibility
+      setData(bookings)
+      setFilteredData(bookings)
+      
+    } catch (error) {
+      if (!isMounted.current) return;
+      
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+      
+      // CRITICAL: Always set loading to false and provide empty docs
+      setPagination({
+        docs: [],
+        total: 0,
+        pages: 1,
+        currentPage: 1,
+        limit: limit,
+        loading: false, // ALWAYS set loading to false
+        search: search
+      })
     }
-    
-    // Adjust if we're near the end
-    if (currentPage >= totalPages - 2) {
-      startPage = Math.max(1, totalPages - 4)
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i)
-    }
-    
-    setDisplayedPages(pages)
   }
 
-  // Get current records for the page
-  const getCurrentRecords = () => {
-    const indexOfLastRecord = currentPage * recordsPerPage
-    const indexOfFirstRecord = indexOfLastRecord - recordsPerPage
-    return filteredData.slice(indexOfFirstRecord, indexOfLastRecord)
-  }
-
-  // Handle page change
-  const handlePageChange = (pageNumber) => {
-    if (pageNumber < 1 || pageNumber > totalPages) return
-    setCurrentPage(pageNumber)
-    // Scroll to top when page changes
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
+  // Add this to your useEffect that fetches data initially
   useEffect(() => {
+    isMounted.current = true;
+    
     // Check if user has permission to view this page
     if (!canViewDeliveryChallan) {
       showError('You do not have permission to view Delivery Challan')
@@ -1128,7 +4660,15 @@ const DeliveryChallan = () => {
       return
     }
     
-    fetchData()
+    fetchData(1, DEFAULT_LIMIT, '')
+    
+    return () => {
+      isMounted.current = false;
+      // Clear any pending search timers
+      if (searchTimer.current) {
+        clearTimeout(searchTimer.current);
+      }
+    };
   }, [])
 
   useEffect(() => {
@@ -1153,11 +4693,6 @@ const DeliveryChallan = () => {
   }, [])
 
   useEffect(() => {
-    // Recalculate pagination when filteredData changes
-    calculatePagination(filteredData)
-  }, [filteredData, currentPage])
-
-  useEffect(() => {
     const timer = setTimeout(() => {
       if (formData.chassisNumber.trim().length > 0) {
         fetchBookingDetails()
@@ -1166,28 +4701,6 @@ const DeliveryChallan = () => {
 
     return () => clearTimeout(timer)
   }, [formData.chassisNumber])
-
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const response = await axiosInstance.get(`/bookings`)
-
-      const branchBookings = response.data.data.bookings.filter(
-        (booking) => booking.bookingType === 'BRANCH' && booking.status === 'ALLOCATED',
-      )
-      setData(branchBookings)
-      setFilteredData(branchBookings)
-      setCurrentPage(1) // Reset to first page when data changes
-    } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }
-      
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const fetchBookingDetails = async () => {
     setLoading(true)
@@ -1272,28 +4785,33 @@ const DeliveryChallan = () => {
   }
 
   const handlePrint = (booking, type) => {
-    if (!booking) {
-      setError('No booking data found')
-      return
-    }
-
-    // Check CREATE permission before printing
-    if (!canCreateDeliveryChallan) {
-      showError('You do not have permission to print delivery challan')
-      return
-    }
-
-    const printWindow = window.open('', '_blank')
-
-    if (type === 'Helmet') {
-      printWindow.document.write(generateHelmetDeclarationHTML(booking))
-    } else {
-      printWindow.document.write(generateDeliveryChallanHTML(booking, type))
-    }
-
-    printWindow.document.close()
-    printWindow.focus()
+  if (!booking) {
+    setError('No booking data found')
+    return
   }
+
+  // Debug: Log the booking object to see what's available
+  console.log('Printing booking:', booking)
+  console.log('Chassis allocation date:', booking.chassisAllocationDate)
+  console.log('Vehicle ref:', booking.vehicleRef)
+
+  // Check CREATE permission before printing
+  if (!canCreateDeliveryChallan) {
+    showError('You do not have permission to print delivery challan')
+    return
+  }
+
+  const printWindow = window.open('', '_blank')
+
+  if (type === 'Helmet') {
+    printWindow.document.write(generateHelmetDeclarationHTML(booking))
+  } else {
+    printWindow.document.write(generateDeliveryChallanHTML(booking, type))
+  }
+
+  printWindow.document.close()
+  printWindow.focus()
+}
 
   const generateDeliveryChallanHTML = (data, copyType) => {
     const currentDate = new Date().toLocaleDateString('en-GB')
@@ -1585,14 +5103,36 @@ tr.data-row td:nth-child(4) {
     `
   }
 
-  const generateHelmetDeclarationHTML = (data) => {
-    const currentDate = new Date()
-    const day = currentDate.getDate().toString().padStart(2, '0')
-    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0')
-    const year = currentDate.getFullYear()
-    const formattedDate = `${day}/${month}/${year}`
+ const generateHelmetDeclarationHTML = (data) => {
+  // Try multiple possible locations for the allocation date
+  let allocationDate = null;
+  
+  // Check various possible locations for the date
+  if (data.chassisAllocationDate) {
+    allocationDate = new Date(data.chassisAllocationDate);
+  } else if (data.vehicleRef?.allocationHistory?.[0]?.allocatedAt) {
+    // Check in vehicleRef allocation history
+    allocationDate = new Date(data.vehicleRef.allocationHistory[0].allocatedAt);
+  } else if (data.allocationDate) {
+    allocationDate = new Date(data.allocationDate);
+  } else if (data.allocatedAt) {
+    allocationDate = new Date(data.allocatedAt);
+  }
+  
+  // If still no date found, log a warning and use current date as fallback
+  if (!allocationDate) {
+    console.warn('No chassis allocation date found for booking:', data.bookingNumber);
+    allocationDate = new Date();
+  }
+  
+  const day = allocationDate.getDate().toString().padStart(2, '0');
+  const month = (allocationDate.getMonth() + 1).toString().padStart(2, '0');
+  const year = allocationDate.getFullYear();
+  const formattedDate = `${day}/${month}/${year}`;
 
-    return `
+  console.log('Using date for helmet declaration:', formattedDate); // Debug log
+
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -1683,28 +5223,25 @@ tr.data-row td:nth-child(4) {
             </div>
 
             <div class="content">
-                केंद्रीय मोटर वाहन नियम १३८ { ४ } { फ }
+                केंद्रीय मोटर वाहन नियम १३८ ( ४ ) ( फ )
             </div>
             <div class="divider"></div>
             <div class="declaration">
                 <p>
-                    मी..${data.customerDetails.name}, असे घोषित करतो कि
-
+                    मी ${data.customerDetails?.name || ''}, असे घोषित करतो कि
                     दि. ${formattedDate} रोजी गांधी मोटार टि व्हि यस नासिक
-
-                    या वितरकाकडून टि व्हि यस..${data.model.model_name}, हे वाहन खरेदी केले आहे.
-
+                    या वितरकाकडून टि व्हि यस ${data.model?.model_name || ''}, हे वाहन खरेदी केले आहे.
                     त्याचा तपशील खालील प्रमाणे...
                 </p>
                 <div class="vehicle-details">
-                    <div class="customer-info-row"><strong>चेसिस नंबर:</strong> ${data.chassisNumber}</div>
-                    <div class="customer-info-row"><strong>इंजिन नंबर:</strong> ${data.engineNumber}</div>
+                    <div class="customer-info-row"><strong>चेसिस नंबर:</strong> ${data.chassisNumber || ''}</div>
+                    <div class="customer-info-row"><strong>इंजिन नंबर:</strong> ${data.engineNumber || ''}</div>
                 </div>
 
                 <p>
-                    केंद्रीय मोटर वाहन नियम १३८ { ४ } { फ } प्रमाणे वितरकाने दुचाकी वितरीत करते वेळी विहित
+                    केंद्रीय मोटर वाहन नियम १३८ ( ४ ) ( फ ) प्रमाणे वितरकाने दुचाकी वितरीत करते वेळी विहित
                     मानाकनाचे २ (दोन) हेल्मेट पुरवणे/विकत देणे बंधनकारक आहे. त्याचप्रमाणे मला BUREAU OF INDIA STANDARS
-                    UNDER THE BUREAU OF INDIA ACT-1986 { 63 TO 1986 } या प्रमाणे हेल्मेट मिळाले आहे.
+                    UNDER THE BUREAU OF INDIA ACT-1986 ( 63 TO 1986 ) या प्रमाणे हेल्मेट मिळाले आहे.
                 </p>
                 <p>
                     मी याद्वारे जाहीर करतो/करते की वर दिलेला तपशील माझ्या संपूर्ण माहिती प्रमाणे व तपासा्रमाणे सत्य आहे.
@@ -1719,8 +5256,9 @@ tr.data-row td:nth-child(4) {
                     नासिक
                 </div>
                 <div>
-                    दुचाकी खरेदिदाराची स्वाक्षरी<br>
-                    नाव :- ${data.customerDetails.name}
+                    दुचाकी खरेदिदाराची स्वाक्षरी
+                    <br>
+                    नाव :- ${data.customerDetails?.name || ''}
                 </div>
             </div>
 
@@ -1732,7 +5270,7 @@ tr.data-row td:nth-child(4) {
 </body>
 </html>
     `
-  }
+}
 
   // Generate template print HTML with the same design as Customer/Office Copy
   const generateTemplatePrintHTML = (previewData) => {
@@ -1821,13 +5359,148 @@ tr.data-row td:nth-child(4) {
     `
 }
 
+  // Handle search with debounce - similar to Receipt component
   const handleSearch = (value) => {
+    if (!canViewDeliveryChallan) {
+      return;
+    }
+    
     setSearchTerm(value)
-    handleFilter(value, getDefaultSearchFields('booking'))
-    setCurrentPage(1) // Reset to first page when searching
+    setError(null) // Clear any previous errors when starting new search
+    
+    // Clear any pending search timer
+    if (searchTimer.current) {
+      clearTimeout(searchTimer.current);
+    }
+    
+    searchTimer.current = setTimeout(() => {
+      // Only fetch if component is still mounted
+      if (isMounted.current) {
+        // If search is empty or just spaces, fetch without search parameter
+        if (!value.trim()) {
+          fetchData(1, pagination.limit, '')
+        } else {
+          fetchData(1, pagination.limit, value)
+        }
+      }
+    }, 400)
   }
 
-  const currentRecords = getCurrentRecords()
+  // Handle page change - similar to handlePageChange in Receipt
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > pagination.pages) return
+    fetchData(newPage, pagination.limit, pagination.search)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Handle limit change - similar to handleLimitChange in Receipt
+  const handleLimitChange = (newLimit) => {
+    const limit = parseInt(newLimit, 10)
+    fetchData(1, limit, pagination.search)
+  }
+
+  // Render pagination component - similar to renderPagination in Receipt
+  const renderPagination = () => {
+    const { currentPage, pages, total, limit, loading } = pagination
+    if (!total || pages <= 1) return null
+
+    const start = (currentPage - 1) * limit + 1
+    const end = Math.min(currentPage * limit, total)
+
+    let startPage = Math.max(1, currentPage - 2)
+    let endPage = Math.min(pages, currentPage + 2)
+    if (currentPage <= 3) endPage = Math.min(5, pages)
+    if (currentPage >= pages - 2) startPage = Math.max(1, pages - 4)
+
+    const pageNums = []
+    for (let i = startPage; i <= endPage; i++) pageNums.push(i)
+
+    return (
+      <div className="mt-3 border-top pt-3">
+        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+          <div className="d-flex align-items-center gap-2">
+            <CFormLabel className="mb-0 text-muted" style={{ fontSize: '13px' }}>Records per page:</CFormLabel>
+            <CFormSelect
+              value={limit}
+              onChange={e => handleLimitChange(e.target.value)}
+              style={{ width: '80px', height: '32px', fontSize: '13px' }}
+              size="sm"
+              disabled={loading}
+            >
+              {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+            </CFormSelect>
+          </div>
+          <span className="text-muted" style={{ fontSize: '13px' }}>
+            {loading ? 'Loading…' : `Showing ${start}–${end} of ${total} entries`}
+          </span>
+        </div>
+        {pages > 1 && (
+          <CPagination align="center" size="sm">
+            <CPaginationItem 
+              onClick={() => handlePageChange(1)} 
+              disabled={currentPage === 1 || loading}
+            >
+              «
+            </CPaginationItem>
+            <CPaginationItem 
+              onClick={() => handlePageChange(currentPage - 1)} 
+              disabled={currentPage === 1 || loading}
+            >
+              <CIcon icon={cilChevronLeft} />
+            </CPaginationItem>
+
+            {startPage > 1 && (
+              <>
+                <CPaginationItem 
+                  onClick={() => handlePageChange(1)} 
+                  disabled={loading}
+                >
+                  1
+                </CPaginationItem>
+                {startPage > 2 && <CPaginationItem disabled>…</CPaginationItem>}
+              </>
+            )}
+
+            {pageNums.map(p => (
+              <CPaginationItem 
+                key={p} 
+                active={p === currentPage} 
+                onClick={() => handlePageChange(p)} 
+                disabled={loading}
+              >
+                {p}
+              </CPaginationItem>
+            ))}
+
+            {endPage < pages && (
+              <>
+                {endPage < pages - 1 && <CPaginationItem disabled>…</CPaginationItem>}
+                <CPaginationItem 
+                  onClick={() => handlePageChange(pages)} 
+                  disabled={loading}
+                >
+                  {pages}
+                </CPaginationItem>
+              </>
+            )}
+
+            <CPaginationItem 
+              onClick={() => handlePageChange(currentPage + 1)} 
+              disabled={currentPage === pages || loading}
+            >
+              <CIcon icon={cilChevronRight} />
+            </CPaginationItem>
+            <CPaginationItem 
+              onClick={() => handlePageChange(pages)} 
+              disabled={currentPage === pages || loading}
+            >
+              »
+            </CPaginationItem>
+          </CPagination>
+        )}
+      </div>
+    )
+  }
 
   if (!canViewDeliveryChallan) {
     return (
@@ -1837,7 +5510,8 @@ tr.data-row td:nth-child(4) {
     )
   }
 
-  if (loading) {
+  // Show initial loading only on first load
+  if (loading && pagination.docs.length === 0 && !pagination.search) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
         <CSpinner color="primary" />
@@ -1856,7 +5530,9 @@ tr.data-row td:nth-child(4) {
 
       <CCard className="table-container mt-4">
         <CCardHeader className="card-header d-flex justify-content-between align-items-center">
-          <div></div>
+          <div className="text-muted">
+            Total Records: {pagination.total}
+          </div>
           <div className="d-flex">
             <CFormLabel className="mt-1 m-1">Search:</CFormLabel>
             <CFormInput
@@ -1864,12 +5540,20 @@ tr.data-row td:nth-child(4) {
               className="d-inline-block square-search"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
+              style={{ maxWidth: '350px', height: '30px', borderRadius: '0' }}
+              placeholder="Search by Booking ID or Customer Name..."
             />
           </div>
         </CCardHeader>
 
         <CCardBody>
-          <div className="responsive-table-wrapper">
+          {pagination.loading && (
+            <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}>
+              <CSpinner size="sm" color="primary" className="me-2" /> Searching records…
+            </div>
+          )}
+          
+          <div className="responsive-table-wrapper" style={{ opacity: pagination.loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
             <CTable striped bordered hover className="responsive-table">
               <CTableHead>
                 <CTableRow>
@@ -1879,20 +5563,21 @@ tr.data-row td:nth-child(4) {
                   <CTableHeaderCell>Customer Name</CTableHeaderCell>
                   <CTableHeaderCell>Chassis Number</CTableHeaderCell>
                   <CTableHeaderCell>Customer Copy</CTableHeaderCell>
+                  <CTableHeaderCell>Helmet Declaration</CTableHeaderCell>
                   <CTableHeaderCell>Office Copy</CTableHeaderCell>
                   <CTableHeaderCell>Documents</CTableHeaderCell>
                 </CTableRow>
               </CTableHead>
               <CTableBody>
-                {currentRecords.length === 0 ? (
+                {pagination.docs.length === 0 && !pagination.loading ? (
                   <CTableRow>
-                    <CTableDataCell colSpan="8" className="text-center">
-                      No bookings available
+                    <CTableDataCell colSpan="9" className="text-center">
+                      {pagination.search ? `No matching bookings found for "${pagination.search}"` : 'No bookings available'}
                     </CTableDataCell>
                   </CTableRow>
                 ) : (
-                  currentRecords.map((booking, index) => {
-                    const globalIndex = (currentPage - 1) * recordsPerPage + index + 1
+                  pagination.docs.map((booking, index) => {
+                    const globalIndex = (pagination.currentPage - 1) * pagination.limit + index + 1
                     return (
                       <CTableRow key={booking._id || index}>
                         <CTableDataCell>{globalIndex}</CTableDataCell>
@@ -1907,6 +5592,21 @@ tr.data-row td:nth-child(4) {
                               color="primary"
                               className="action-btn"
                               onClick={() => handlePrint(booking, 'Customer Copy')}
+                            >
+                              <CIcon icon={cilPrint} className="me-1" />
+                              Print
+                            </CButton>
+                          ) : (
+                            <span className="text-muted">No permission</span>
+                          )}
+                        </CTableDataCell>
+                        <CTableDataCell>
+                          {canCreateDeliveryChallan ? (
+                            <CButton
+                              size="sm"
+                              color="warning"
+                              className="action-btn"
+                              onClick={() => handlePrint(booking, 'Helmet')}
                             >
                               <CIcon icon={cilPrint} className="me-1" />
                               Print
@@ -1949,74 +5649,8 @@ tr.data-row td:nth-child(4) {
             </CTable>
           </div>
 
-          {/* Pagination Component */}
-          {filteredData.length > recordsPerPage && (
-            <div className="mt-4">
-              <CPagination align="center" aria-label="Page navigation example">
-                {/* Previous Button */}
-                <CPaginationItem 
-                  aria-label="Previous" 
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={currentPage === 1 ? 'disabled' : ''}
-                >
-                  <CIcon icon={cilChevronLeft} />
-                </CPaginationItem>
-                
-                {/* First Page */}
-                {currentPage > 3 && totalPages > 5 && (
-                  <>
-                    <CPaginationItem 
-                      onClick={() => handlePageChange(1)}
-                      active={currentPage === 1}
-                    >
-                      1
-                    </CPaginationItem>
-                    {currentPage > 4 && <CPaginationItem disabled>...</CPaginationItem>}
-                  </>
-                )}
-                
-                {/* Page Numbers */}
-                {displayedPages.map(page => (
-                  <CPaginationItem 
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    active={currentPage === page}
-                  >
-                    {page}
-                  </CPaginationItem>
-                ))}
-                
-                {/* Last Page */}
-                {currentPage < totalPages - 2 && totalPages > 5 && (
-                  <>
-                    {currentPage < totalPages - 3 && <CPaginationItem disabled>...</CPaginationItem>}
-                    <CPaginationItem 
-                      onClick={() => handlePageChange(totalPages)}
-                      active={currentPage === totalPages}
-                    >
-                      {totalPages}
-                    </CPaginationItem>
-                  </>
-                )}
-                
-                {/* Next Button */}
-                <CPaginationItem 
-                  aria-label="Next" 
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={currentPage === totalPages ? 'disabled' : ''}
-                >
-                  <CIcon icon={cilChevronRight} />
-                </CPaginationItem>
-              </CPagination>
-              
-              {/* Pagination Info */}
-              <div className="text-center text-muted mt-2">
-                Showing {(currentPage - 1) * recordsPerPage + 1} to {Math.min(currentPage * recordsPerPage, filteredData.length)} of {filteredData.length} entries
-              </div>
-            </div>
-          )}
+          {/* Pagination Component - only show if there are records */}
+          {pagination.total > 0 && renderPagination()}
         </CCardBody>
       </CCard>
 

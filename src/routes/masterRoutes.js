@@ -145,6 +145,9 @@ const InsuranceProvidersList = React.lazy(() => import('../views/masters/insuran
 const AddBroker = React.lazy(() => import('../views/masters/broker/AddBroker'))
 const BrokerList = React.lazy(() => import('../views/masters/broker/BrokerList'))
 
+const Wallpaper = React.lazy(() => import('../views/masters/wallpaper/Wallpaper'))
+const AddWallpaper = React.lazy(() => import('../views/masters/wallpaper/AddWallpaper'))
+
 const BrokerCommissionRange = React.lazy(() => import('../views/masters/commission-range/BrokerRange'))
 const CommissionRangeList = React.lazy(() => import('../views/masters/commission-range/RangeList')) 
 
@@ -225,6 +228,10 @@ export const masterRoutes = [
   
     { path:'/broker/commission-range', name:'Broker Commission', element:CommissionRangeList},
     { path:'/broker/add-range', name:'Add Commission Range', element:BrokerCommissionRange},
+
+    { path:'/wallpaper/wallpaper', name:'Wallpaper', element:Wallpaper },
+    { path:'/wallpaper/add-wallpaper', name:"Add Wallpaper", element:AddWallpaper},
+    { path:'/wallpaper/update-wallpaper/:id', name:"Update Wallpaper", element:AddWallpaper},
   
     // Add Vertical Master routes
     { path:'/vertical-master/vertical-master-list', name:'Vertical Master List', element: VerticalMasterList},

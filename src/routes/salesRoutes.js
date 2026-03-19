@@ -23,7 +23,7 @@ export const salesRoutes = [
   
     { path:'/delivery-challan', name:'Delivery Challan', element:DeliveryChallan},
     { path:'/invoice', name:'GST Invoice', element:Invoice},
-     { path:'/dummy-invoice', name:'Dummy Invoice', element:DummyInvoice},
+     { path:'/dummy-invoice', name:'Proforma Invoice', element:DummyInvoice},
     { path:'/helmet-invoice', name:'Helmet Invoice', element:HelmetInvoice},
     { path:'/deal-form', name:'Deal Form', element:DealForm},
     { path:'/upload-deal', name:'Upload Deal', element:UploadDealForm},

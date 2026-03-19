@@ -3920,7 +3920,7 @@ const getNav = (userPermissions = []) => {
   if (canViewPage(userPermissions, MODULES.SALES, PAGES.SALES.DUMMY_INVOICE)) {
     salesItems.push({
       component: CNavItem,
-      name: 'DUMMY Invoice',
+      name: 'Proforma Invoice',
       to: '/dummy-invoice',
     });
   }
@@ -4186,6 +4186,14 @@ const getNav = (userPermissions = []) => {
       to: '/rto/rc-confirmation',
     });
   }
+
+  if (canViewPage(userPermissions, MODULES.RTO, PAGES.RTO.RC_CONFIRMATION)) {
+    rtoItems.push({
+      component: CNavItem,
+      name: 'HSRP Update On Vahan Portal',
+      to: '/rto/vahanportal',
+    });
+  }
   
   if (canViewPage(userPermissions, MODULES.RTO, PAGES.RTO.REPORT)) {
     rtoItems.push({
@@ -4355,6 +4363,14 @@ const getNav = (userPermissions = []) => {
       to: '/documents/documents-list',
     });
   }
+
+  // if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS)) {
+  //   mastersItems.push({
+  //     component: CNavItem,
+  //     name: 'Wallpaper',
+  //     to: '/wallpaper/wallpaper',
+  //   })
+  // }
   
   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.TERMS_CONDITIONS)) {
     mastersItems.push({

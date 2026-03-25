@@ -27158,109 +27158,227 @@ function Receipt() {
     }
   };
 
-  const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
-    const exchangeBrokerName    = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
-    const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
-    const currentDate           = new Date().toLocaleDateString('en-GB');
-    const receiptDate           = data.recentPayment?.receiptDate ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB') : currentDate;
-    const recentPaymentAmount   = data.recentPaymentAmount || 0;
-    const recentPaymentAmountRef  = data.recentPayment?.transactionReference || "-";
-    const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
-    const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
-    const receiptNumber = data.recentPayment?.receiptNumber || "-";
-    const qrCodeImage   = data.qrCodeImage || '';
-    const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
-    const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
-    const branchName = data.branch?.name || data.bookingDetails?.branch?.name || 'GANDHI TVS';
+ const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+  const exchangeBrokerName    = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+  const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
+  const currentDate           = new Date().toLocaleDateString('en-GB');
+  const receiptDate           = data.recentPayment?.receiptDate ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB') : currentDate;
+  const recentPaymentAmount   = data.recentPaymentAmount || 0;
+  const recentPaymentAmountRef  = data.recentPayment?.transactionReference || "-";
+  const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+  const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+  const receiptNumber = data.recentPayment?.receiptNumber || "-";
+  const qrCodeImage   = data.qrCodeImage || '';
+  const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+  const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
+  const branchName = data.branch?.name || data.bookingDetails?.branch?.name || 'GANDHI TVS';
 
-    if (isFirstReceipt) {
-      const filteredPriceComponents = data.priceComponents.filter((comp) => {
-        const headerKey = comp.header?.header_key?.toUpperCase() || '';
-        return !(/INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey) ||
-                 /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey) ||
-                 /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey));
-      });
-      const priceComponentsWithGST = filteredPriceComponents.map((component) => {
-        const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
-        const unitCost    = component.originalValue;
-        const lineTotal   = component.originalValue;
-        const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
-        const totalGST    = lineTotal - taxableValue;
-        const cgstAmount  = totalGST / 2;
-        const sgstAmount  = totalGST / 2;
-        return { ...component, unitCost, taxableValue, cgstAmount, sgstAmount, gstAmount: totalGST, gstRatePercentage, discount: 0, lineTotal };
-      });
-      const findComp = (kws) => data.priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
-      const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
-      const rtoCharges = findComp(['RTO','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
-      const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || data.hypothecationCharges || 0;
-      const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
-      const totalB = insuranceCharges + rtoCharges + hpCharges;
-      const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
-      const grandTotal = totalA + totalB - subsidyDisplay;
+  if (isFirstReceipt) {
+    const filteredPriceComponents = data.priceComponents.filter((comp) => {
+      const headerKey = comp.header?.header_key?.toUpperCase() || '';
+      return !(/INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey) ||
+               /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey) ||
+               /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey));
+    });
+    const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+      const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+      const unitCost    = component.originalValue;
+      const lineTotal   = component.originalValue;
+      const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+      const totalGST    = lineTotal - taxableValue;
+      const cgstAmount  = totalGST / 2;
+      const sgstAmount  = totalGST / 2;
+      return { ...component, unitCost, taxableValue, cgstAmount, sgstAmount, gstAmount: totalGST, gstRatePercentage, discount: 0, lineTotal };
+    });
+    const findComp = (kws) => data.priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
+    const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
+    const rtoCharges = findComp(['RTO','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
+    const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || data.hypothecationCharges || 0;
+    const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+    const totalB = insuranceCharges + rtoCharges + hpCharges;
+    const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+    const grandTotal = totalA + totalB - subsidyDisplay;
 
-      return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
-      <style>
-        body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
-        .page { width: 210mm; height: 297mm; margin: 0 auto; }
-        .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
-        .header-left { width: 60%; }
-        .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-        .logo-qr-container { display: flex; align-items: center; gap: 20px; justify-content: flex-end; margin-bottom: 10px; width: 100%; }
-        .logo { height: 81px; }
-        .qr-code-extra-big { width: 151px; height: 151px; border: 1px solid #ccc; }
-        .dealer-info { text-align: left; font-size: 15px; line-height: 1.2; }
-        .customer-info-container { display: flex; font-size: 15px; }
-        .customer-info-left { width: 50%; }
-        .customer-info-right { width: 50%; }
-        .customer-info-row { margin: 1mm 0; line-height: 1.2; }
-        .customer-info-row .value { font-weight: 700; }
-        table { width: 100%; border-collapse: collapse; font-size: 10pt; margin: 2mm 0; }
-        th, td { padding: 1mm; border: 1px solid #000; vertical-align: top; }
-        .no-border { border: none !important; font-size: 15px; }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .bold { font-weight: bold; }
-        .divider { border-top: 2px solid #AAAAAA; }
-        .totals-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
-        .totals-table td { border: none; padding: 1mm; }
-        .total-divider { border-top: 2px solid #AAAAAA; height: 1px; margin: 2px 0; }
-        .broker-info { display:flex; justify-content:space-between; padding:2px; }
-        .status-box { background-color: #e8f5e8; border: 2px solid #c3e6c3; border-radius: 4px; padding: 16px; margin: 11px 0; text-align: center; font-weight: bold; font-size: 21px; color: #495057; }
-        .amount-in-words { font-style: italic; margin-top: 6px; color: #333; padding: 6px; }
-        .amount-in-words .value { font-weight: 700; font-style: normal; }
-        .note { padding:2px; margin:3px; }
-        .note .value { font-weight: 700; }
-        .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 11px; margin: 11px 0; }
-        .receipt-info-row { margin: 2px 0; }
-        .receipt-info-row .value { font-weight: 700; }
-        .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 14px; }
-        .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 105px; display: inline-block; }
-        .payment-grid-item .value { font-weight: 700; }
-        .signature-box { margin-top: 6mm; font-size: 10pt; }
-        .signature-line { border-top: 1px dashed #000; width: 41mm; display: inline-block; margin: 0 5mm; }
-        @page { size: A4; margin: 0; }
-        @media print { body { padding: 5mm; } }
-      </style></head><body><div class="page">
+    return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
+    <style>
+      body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
+      .page { width: 210mm; height: 297mm; margin: 0 auto; }
+      .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
+      .header-left { width: 60%; }
+      .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+      .logo-qr-container { display: flex; align-items: center; gap: 20px; justify-content: flex-end; margin-bottom: 10px; width: 100%; }
+      .logo { height: 81px; }
+      .qr-code-extra-big { width: 151px; height: 151px; border: 1px solid #ccc; }
+      .dealer-info { text-align: left; font-size: 15px; line-height: 1.2; }
+      .customer-info-container { display: flex; font-size: 15px; }
+      .customer-info-left { width: 50%; }
+      .customer-info-right { width: 50%; }
+      .customer-info-row { margin: 1mm 0; line-height: 1.2; }
+      .customer-info-row .value { font-weight: 700; }
+      table { width: 100%; border-collapse: collapse; font-size: 10pt; margin: 2mm 0; }
+      th, td { padding: 1mm; border: 1px solid #000; vertical-align: top; }
+      .no-border { border: none !important; font-size: 15px; }
+      .text-right { text-align: right; }
+      .text-center { text-align: center; }
+      .bold { font-weight: bold; }
+      .divider { border-top: 2px solid #AAAAAA; }
+      .totals-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
+      .totals-table td { border: none; padding: 1mm; }
+      .total-divider { border-top: 2px solid #AAAAAA; height: 1px; margin: 2px 0; }
+      .broker-info { display:flex; justify-content:space-between; padding:2px; }
+      .status-box { background-color: #e8f5e8; border: 2px solid #c3e6c3; border-radius: 4px; padding: 16px; margin: 11px 0; text-align: center; font-weight: bold; font-size: 21px; color: #495057; }
+      .amount-in-words { font-style: italic; margin-top: 6px; color: #333; padding: 6px; }
+      .amount-in-words .value { font-weight: 700; font-style: normal; }
+      .note { padding:2px; margin:3px; }
+      .note .value { font-weight: 700; }
+      .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 11px; margin: 11px 0; }
+      .receipt-info-row { margin: 2px 0; }
+      .receipt-info-row .value { font-weight: 700; }
+      .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 14px; }
+      .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 105px; display: inline-block; }
+      .payment-grid-item .value { font-weight: 700; }
+      .signature-box { margin-top: 6mm; font-size: 10pt; }
+      .signature-line { border-top: 1px dashed #000; width: 41mm; display: inline-block; margin: 0 5mm; }
+      @page { size: A4; margin: 0; }
+      @media print { body { padding: 5mm; } }
+    </style></head><body><div class="page">
+      <div class="header-container">
+        <div class="header-left">
+          <h2 style="margin:3;font-size:16pt;">GANDHI MOTORS PVT LTD</h2>
+          <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik, 7498993672<br>GSTIN: ${data.branch?.gst_number || ''}<br>${branchName}</div>
+        </div>
+        <div class="header-right">
+          <div class="logo-qr-container">
+            <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+            ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />` : ''}
+          </div>
+          <div style="margin-top: 6px; font-size: 14px;">Date: ${receiptDate}</div>
+          <div style="margin-top: 6px; font-size: 14px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+          ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 13px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 12px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="receipt-info" style="padding: 8px;">
+        <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
+        <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+        <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+      </div>
+      <div class="customer-info-container">
+        <div class="customer-info-left">
+          <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+          <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+          <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</span></div>
+          <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+          <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
+        </div>
+        <div class="customer-info-right">
+          <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+          <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+          <div class="customer-info-row">
+            <strong>Payment Type:</strong> 
+            <span class="value">
+              ${data.payment?.type === 'FINANCE' && !data.hpa 
+                ? `${data.payment?.type || 'CASH'} (NO HPA SCHEME APPLICABLE)`
+                : data.payment?.type || 'CASH'
+              }
+            </span>
+          </div>
+          ${data.hpa && data.payment?.type === 'FINANCE' && data.payment?.financer?.name ? `
+            <div class="customer-info-row">
+              <strong>Financer:</strong> <span class="value">${data.payment.financer.name}</span>
+            </div>
+          ` : ''}
+          <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
+        </div>
+      </div>
+      <div class="payment-info-box">
+        <div class="receipt-info" style="padding: 4px;">
+          <div class="payment-grid-2col">
+            <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${recentPaymentAmount.toFixed(2)}</span></div>
+            <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+            <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+            <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+            <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+          </div>
+        </div>
+        <div class="amount-in-words"><strong>(In Words):</strong> <span class="value">${recentPaymentAmountInWords} Only</span></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:25%">Particulars</th><th style="width:8%">HSN CODE</th><th style="width:8%">Unit Cost</th>
+            <th style="width:8%">Taxable</th><th style="width:5%">CGST</th><th style="width:8%">CGST AMOUNT</th>
+            <th style="width:5%">SGST</th><th style="width:8%">SGST AMOUNT</th><th style="width:7%">DISCOUNT</th><th style="width:10%">LINE TOTAL</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${priceComponentsWithGST.map(c => `
+            <tr>
+              <td>${c.header?.header_key || ''}</td>
+              <td>${c.header?.metadata?.hsn_code || ''}</td>
+              <td>${c.unitCost.toFixed(2)}</td>
+              <td>${c.taxableValue.toFixed(2)}</td>
+              <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
+              <td>${c.cgstAmount.toFixed(2)}</td>
+              <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
+              <td>${c.sgstAmount.toFixed(2)}</td>
+              <td>${c.discount.toFixed(2)}</td>
+              <td>${c.lineTotal.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <table class="totals-table">
+        <tr><td class="no-border" style="width:80%"><strong>Total(A)</strong></td><td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td></tr>
+        <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
+        <tr><td class="no-border"><strong>INSURANCE CHARGES</strong></td><td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td></tr>
+        <tr><td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td><td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td></tr>
+        <tr><td class="no-border"><strong>HP CHARGES</strong></td><td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td></tr>
+        ${isEV && subsidyAmount > 0 ? `<tr><td class="no-border"><strong>SUBSIDY AMOUNT</strong></td><td class="no-border text-right" style="color:green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td></tr>` : ''}
+        <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
+        <tr><td class="no-border"><strong>TOTAL(B)</strong></td><td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td></tr>
+        <tr><td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td><td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td></tr>
+      </table>
+      <div class="broker-info">
+        <div><strong>Ex. Broker/ Sub Dealer:</strong> <span>${exchangeBrokerName}</span></div>
+        <div><strong>Ex. Veh No:</strong> <span>${exchangeVehicleNumber}</span></div>
+      </div>
+      <div class="note"><strong>Notes:</strong> <span class="value">Booking Awaiting approval as discount exceed</span></div>
+      <div class="divider"></div>
+      <div style="margin-top:2mm;"><div><strong>Booking Status: </strong></div><div class="status-box"><span>${data.finalStatus || 'Status: Not Available'}</span></div></div>
+      <div class="divider"></div>
+      <div class="divider" style="margin-top: 5mm;"></div>
+      <div class="signature-box">
+        <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+          <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
+          <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Sales Executive</div></div>
+          <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Manager</div></div>
+          <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
+        </div>
+      </div>
+    </div></body></html>`;
+  } else {
+    const copyBlock = (isDuplicate) => `
+      <div class="receipt-copy">
         <div class="header-container">
           <div class="header-left">
-            <h2 style="margin:3;font-size:16pt;">GANDHI MOTORS PVT LTD</h2>
+            <h2 style="margin:2;font-size:13pt;">GANDHI MOTORS PVT LTD</h2>
             <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik, 7498993672<br>GSTIN: ${data.branch?.gst_number || ''}<br>${branchName}</div>
           </div>
           <div class="header-right">
             <div class="logo-qr-container">
               <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
-              ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />` : ''}
+              ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
             </div>
-            <div style="margin-top: 6px; font-size: 14px;">Date: ${receiptDate}</div>
-            <div style="margin-top: 6px; font-size: 14px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-            ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 13px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 12px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
+            <div style="margin-top: 4px; font-size: 12px;">Date: ${receiptDate}</div>
+            <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+            ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 11px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 10px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
           </div>
         </div>
         <div class="divider"></div>
-        <div class="receipt-info" style="padding: 8px;">
-          <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
+        <div class="receipt-info" style="padding: 6px;">
+          <div class="receipt-info-row"><strong>Payment Receipt${isDuplicate ? ' (DUPLICATE)' : ''}</strong></div>
           <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
           <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
         </div>
@@ -27268,15 +27386,27 @@ function Receipt() {
           <div class="customer-info-left">
             <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
             <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
-            <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</span></div>
+            <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
             <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
             <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
           </div>
           <div class="customer-info-right">
             <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
             <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
-            <div class="customer-info-row"><strong>Payment Type:</strong> <span class="value">${data.payment?.type || 'CASH'}</span></div>
-            <div class="customer-info-row"><strong>Financer:</strong> <span class="value">${data.payment?.financer?.name || ''}</span></div>
+            <div class="customer-info-row">
+              <strong>Payment Type:</strong> 
+              <span class="value">
+                ${data.payment?.type === 'FINANCE' && !data.hpa 
+                  ? `${data.payment?.type || 'CASH'} (NO HPA SCHEME APPLICABLE)`
+                  : data.payment?.type || 'CASH'
+                }
+              </span>
+            </div>
+            ${data.hpa && data.payment?.type === 'FINANCE' && data.payment?.financer?.name ? `
+              <div class="customer-info-row">
+                <strong>Financer:</strong> <span class="value">${data.payment.financer.name}</span>
+              </div>
+            ` : ''}
             <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
           </div>
         </div>
@@ -27290,42 +27420,9 @@ function Receipt() {
               <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
             </div>
           </div>
-          <div class="amount-in-words"><strong>(In Words):</strong> <span class="value">${recentPaymentAmountInWords} Only</span></div>
         </div>
-        <table>
-          <tr>
-            <th style="width:25%">Particulars</th><th style="width:8%">HSN CODE</th><th style="width:8%">Unit Cost</th>
-            <th style="width:8%">Taxable</th><th style="width:5%">CGST</th><th style="width:8%">CGST AMOUNT</th>
-            <th style="width:5%">SGST</th><th style="width:8%">SGST AMOUNT</th><th style="width:7%">DISCOUNT</th><th style="width:10%">LINE TOTAL</th>
-          </tr>
-          ${priceComponentsWithGST.map(c => `<tr>
-            <td>${c.header?.header_key || ''}</td><td>${c.header?.metadata?.hsn_code || ''}</td>
-            <td>${c.unitCost.toFixed(2)}</td><td>${c.taxableValue.toFixed(2)}</td>
-            <td>${(c.gstRatePercentage/2).toFixed(2)}%</td><td>${c.cgstAmount.toFixed(2)}</td>
-            <td>${(c.gstRatePercentage/2).toFixed(2)}%</td><td>${c.sgstAmount.toFixed(2)}</td>
-            <td>${c.discount.toFixed(2)}</td><td>${c.lineTotal.toFixed(2)}</td>
-          </tr>`).join('')}
-        </table>
-        <table class="totals-table">
-          <tr><td class="no-border" style="width:80%"><strong>Total(A)</strong></td><td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td></tr>
-          <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
-          <tr><td class="no-border"><strong>INSURANCE CHARGES</strong></td><td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td></tr>
-          <tr><td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td><td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td></tr>
-          <tr><td class="no-border"><strong>HP CHARGES</strong></td><td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td></tr>
-          ${isEV && subsidyAmount > 0 ? `<tr><td class="no-border"><strong>SUBSIDY AMOUNT</strong></td><td class="no-border text-right" style="color:green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td></tr>` : ''}
-          <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
-          <tr><td class="no-border"><strong>TOTAL(B)</strong></td><td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td></tr>
-          <tr><td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td><td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td></tr>
-        </table>
-        <div class="broker-info">
-          <div><strong>Ex. Broker/ Sub Dealer:</strong> <span>${exchangeBrokerName}</span></div>
-          <div><strong>Ex. Veh No:</strong> <span>${exchangeVehicleNumber}</span></div>
-        </div>
-        <div class="note"><strong>Notes:</strong> <span class="value">Booking Awaiting approval as discount exceed</span></div>
+        <div class="note"><strong>Notes:</strong> <span class="value"></span></div>
         <div class="divider"></div>
-        <div style="margin-top:2mm;"><div><strong>Booking Status: </strong></div><div class="status-box"><span>${data.finalStatus || 'Status: Not Available'}</span></div></div>
-        <div class="divider"></div>
-        <div class="divider" style="margin-top: 5mm;"></div>
         <div class="signature-box">
           <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
@@ -27334,111 +27431,49 @@ function Receipt() {
             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
           </div>
         </div>
-      </div></body></html>`;
-    } else {
-      const copyBlock = (isDuplicate) => `
-        <div class="receipt-copy">
-          <div class="header-container">
-            <div class="header-left">
-              <h2 style="margin:2;font-size:13pt;">GANDHI MOTORS PVT LTD</h2>
-              <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik, 7498993672<br>GSTIN: ${data.branch?.gst_number || ''}<br>${branchName}</div>
-            </div>
-            <div class="header-right">
-              <div class="logo-qr-container">
-                <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
-                ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
-              </div>
-              <div style="margin-top: 4px; font-size: 12px;">Date: ${receiptDate}</div>
-              <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-              ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 11px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 10px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
-            </div>
-          </div>
-          <div class="divider"></div>
-          <div class="receipt-info" style="padding: 6px;">
-            <div class="receipt-info-row"><strong>Payment Receipt${isDuplicate ? ' (DUPLICATE)' : ''}</strong></div>
-            <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
-            <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
-          </div>
-          <div class="customer-info-container">
-            <div class="customer-info-left">
-              <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
-              <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
-              <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
-              <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
-              <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
-            </div>
-            <div class="customer-info-right">
-              <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
-              <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
-              <div class="customer-info-row"><strong>Payment Type:</strong> <span class="value">${data.payment?.type || 'CASH'}</span></div>
-              <div class="customer-info-row"><strong>Financer:</strong> <span class="value">${data.payment?.financer?.name || ''}</span></div>
-              <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
-            </div>
-          </div>
-          <div class="payment-info-box">
-            <div class="receipt-info" style="padding: 4px;">
-              <div class="payment-grid-2col">
-                <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${recentPaymentAmount.toFixed(2)}</span></div>
-                <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
-                <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
-                <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
-                <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
-              </div>
-            </div>
-          </div>
-          <div class="note"><strong>Notes:</strong> <span class="value"></span></div>
-          <div class="divider"></div>
-          <div class="signature-box">
-            <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
-              <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
-              <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Sales Executive</div></div>
-              <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Manager</div></div>
-              <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
-            </div>
-          </div>
-        </div>`;
+      </div>`;
 
-      return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
-      <style>
-        body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
-        .page { width: 210mm; height: 297mm; margin: 0 auto; }
-        .receipt-copy { height: 138mm; page-break-inside: avoid; }
-        .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
-        .header-left { width: 60%; }
-        .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-        .logo-qr-container { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-bottom: 5px; width: 100%; }
-        .logo { height: 61px; }
-        .qr-code-small { width: 101px; height: 101px; border: 1px solid #ccc; }
-        .dealer-info { text-align: left; font-size: 13px; line-height: 1.1; }
-        .customer-info-container { display: flex; font-size: 13px; }
-        .customer-info-left { width: 50%; }
-        .customer-info-right { width: 50%; }
-        .customer-info-row { margin: 0.5mm 0; line-height: 1.1; }
-        .customer-info-row .value { font-weight: 700; }
-        .divider { border-top: 1px solid #AAAAAA; margin: 2mm 0; }
-        .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 9px; margin: 9px 0; font-size: 13px; }
-        .receipt-info-row { margin: 2px 0; }
-        .receipt-info-row .value { font-weight: 700; }
-        .payment-info-box { margin: 6px 0; }
-        .signature-box { margin-top: 4mm; font-size: 9pt; }
-        .signature-line { border-top: 1px dashed #000; width: 36mm; display: inline-block; margin: 0 3mm; }
-        .cutting-line { border-top: 2px dashed #333; margin: 11mm 0; text-align: center; position: relative; }
-        .cutting-line::before { content: "✂ Cut Here ✂"; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: white; padding: 0 11px; font-size: 11px; color: #666; }
-        .note { padding:2px; margin:3px; font-size: 12px; }
-        .note .value { font-weight: 700; }
-        .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 13px; }
-        .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 100px; display: inline-block; }
-        .payment-grid-item .value { font-weight: 700; }
-        @page { size: A4; margin: 0; }
-        @media print { body { padding: 5mm; } .receipt-copy { page-break-inside: avoid; } }
-      </style></head><body><div class="page">
-        ${copyBlock(false)}
-        <div class="cutting-line"></div>
-        ${copyBlock(true)}
-      </div></body></html>`;
-    }
-  };
+    return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
+    <style>
+      body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
+      .page { width: 210mm; height: 297mm; margin: 0 auto; }
+      .receipt-copy { height: 138mm; page-break-inside: avoid; }
+      .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
+      .header-left { width: 60%; }
+      .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+      .logo-qr-container { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-bottom: 5px; width: 100%; }
+      .logo { height: 61px; }
+      .qr-code-small { width: 101px; height: 101px; border: 1px solid #ccc; }
+      .dealer-info { text-align: left; font-size: 13px; line-height: 1.1; }
+      .customer-info-container { display: flex; font-size: 13px; }
+      .customer-info-left { width: 50%; }
+      .customer-info-right { width: 50%; }
+      .customer-info-row { margin: 0.5mm 0; line-height: 1.1; }
+      .customer-info-row .value { font-weight: 700; }
+      .divider { border-top: 1px solid #AAAAAA; margin: 2mm 0; }
+      .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 9px; margin: 9px 0; font-size: 13px; }
+      .receipt-info-row { margin: 2px 0; }
+      .receipt-info-row .value { font-weight: 700; }
+      .payment-info-box { margin: 6px 0; }
+      .signature-box { margin-top: 4mm; font-size: 9pt; }
+      .signature-line { border-top: 1px dashed #000; width: 36mm; display: inline-block; margin: 0 3mm; }
+      .cutting-line { border-top: 2px dashed #333; margin: 11mm 0; text-align: center; position: relative; }
+      .cutting-line::before { content: "✂ Cut Here ✂"; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: white; padding: 0 11px; font-size: 11px; color: #666; }
+      .note { padding:2px; margin:3px; font-size: 12px; }
+      .note .value { font-weight: 700; }
+      .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 13px; }
+      .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 100px; display: inline-block; }
+      .payment-grid-item .value { font-weight: 700; }
+      @page { size: A4; margin: 0; }
+      @media print { body { padding: 5mm; } .receipt-copy { page-break-inside: avoid; } }
+    </style></head><body><div class="page">
+      ${copyBlock(false)}
+      <div class="cutting-line"></div>
+      ${copyBlock(true)}
+    </div></body></html>`;
+  }
+};
 
   // ══════════════════════════════════════════════════════════════════════════
   //  TABLE RENDERERS

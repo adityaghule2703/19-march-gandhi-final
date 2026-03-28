@@ -1,3 +1,421 @@
+// // import '../../../css/table.css';
+// // import {
+// //   React,
+// //   useState,
+// //   useEffect,
+// //   Link,
+// //   Menu,
+// //   MenuItem,
+// //   SearchOutlinedIcon,
+// //   getDefaultSearchFields,
+// //   useTableFilter,
+// //   usePagination,
+// //   confirmDelete,
+// //   showError,
+// //   showSuccess,
+// //   axiosInstance
+// // } from '../../../utils/tableImports';
+// // import { 
+// //   hasSafePagePermission,
+// //   MODULES, 
+// //   PAGES,
+// //   ACTIONS,
+// //   canViewPage,
+// //   canCreateInPage,
+// //   canUpdateInPage,
+// //   canDeleteInPage 
+// // } from '../../../utils/modulePermissions';
+// // import { 
+// //   CButton, 
+// //   CCard, 
+// //   CCardBody, 
+// //   CCardHeader, 
+// //   CFormInput, 
+// //   CFormLabel, 
+// //   CTable, 
+// //   CTableBody, 
+// //   CTableHead, 
+// //   CTableHeaderCell, 
+// //   CTableRow,
+// //   CTableDataCell,
+// //   CSpinner,
+// //   CBadge,
+// //   CFormSwitch
+// // } from '@coreui/react';
+// // import CIcon from '@coreui/icons-react';
+// // import { cilPlus, cilSettings, cilPencil, cilTrash, cilCheckCircle, cilXCircle } from '@coreui/icons';
+// // import { useAuth } from '../../../context/AuthContext';
+
+// // const BrokerList = () => {
+// //   const [anchorEl, setAnchorEl] = useState(null);
+// //   const [menuId, setMenuId] = useState(null);
+// //   const [loading, setLoading] = useState(true);
+// //   const [error, setError] = useState(null);
+// //   const [searchTerm, setSearchTerm] = useState('');
+// //   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
+
+// //   const { currentRecords, PaginationOptions } = usePagination(filteredData);
+// //   const { permissions } = useAuth();
+  
+// //   // Page-level permission checks for Brokers page under Masters module
+// //   const hasBrokersView = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.MASTERS, 
+// //     PAGES.MASTERS.BROKERS, 
+// //     ACTIONS.VIEW
+// //   );
+  
+// //   const hasBrokersCreate = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.MASTERS, 
+// //     PAGES.MASTERS.BROKERS, 
+// //     ACTIONS.CREATE
+// //   );
+  
+// //   const hasBrokersUpdate = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.MASTERS, 
+// //     PAGES.MASTERS.BROKERS, 
+// //     ACTIONS.UPDATE
+// //   );
+  
+// //   const hasBrokersDelete = hasSafePagePermission(
+// //     permissions, 
+// //     MODULES.MASTERS, 
+// //     PAGES.MASTERS.BROKERS, 
+// //     ACTIONS.DELETE
+// //   );
+
+// //   // Using convenience functions for cleaner code
+// //   const canViewBrokers = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKERS);
+// //   const canCreateBrokers = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKERS);
+// //   const canUpdateBrokers = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKERS);
+// //   const canDeleteBrokers = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.BROKERS);
+  
+// //   const showActionColumn = canUpdateBrokers || canDeleteBrokers;
+
+// //   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+// //   const branchId = storedUser.branch?._id;
+// //   const userRole = localStorage.getItem('userRole');
+
+// //   useEffect(() => {
+// //     if (!canViewBrokers) {
+// //       showError('You do not have permission to view Brokers');
+// //       return;
+// //     }
+    
+// //     fetchData();
+// //   }, [canViewBrokers]);
+
+// //   const fetchData = async () => {
+// //     try {
+// //       setLoading(true);
+// //       const response = await axiosInstance.get(`/brokers`);
+// //       const allBrokers = response.data.data;
+
+// //       let filtered = allBrokers;
+
+// //       // Only filter by branch if user is NOT superadmin and has a branchId
+// //       if (userRole !== 'SUPERADMIN' && branchId) {
+// //         filtered = allBrokers
+// //           .map((broker) => ({
+// //             ...broker,
+// //             branches: broker.branches.filter((br) => br.branch?._id === branchId)
+// //           }))
+// //           .filter((broker) => broker.branches.length > 0);
+// //       }
+
+// //       setData(filtered);
+// //       setFilteredData(filtered);
+// //     } catch (error) {
+// //       const message = showError(error);
+// //       if (message) {
+// //         setError(message);
+// //       }
+// //     } finally {
+// //       setLoading(false);
+// //     }
+// //   };
+
+// //   const handleClick = (event, id) => {
+// //     setAnchorEl(event.currentTarget);
+// //     setMenuId(id);
+// //   };
+
+// //   const handleClose = () => {
+// //     setAnchorEl(null);
+// //     setMenuId(null);
+// //   };
+
+// //   const handleDelete = async (id) => {
+// //     if (!canDeleteBrokers) {
+// //       showError('You do not have permission to delete brokers');
+// //       return;
+// //     }
+    
+// //     const result = await confirmDelete();
+// //     if (result.isConfirmed) {
+// //       try {
+// //         await axiosInstance.delete(`/brokers/${id}`);
+// //         setData(data.filter((broker) => broker.id !== id));
+// //         fetchData();
+// //         showSuccess();
+// //       } catch (error) {
+// //         console.log(error);
+// //         showError(error);
+// //       }
+// //     }
+// //   };
+
+// //   const formatCommissionRanges = (commissionConfigurations) => {
+// //     const variableConfig = commissionConfigurations.find((config) => config.commissionType === 'VARIABLE');
+
+// //     if (!variableConfig || !variableConfig.commissionRanges || variableConfig.commissionRanges.length === 0) {
+// //       return <CBadge color="secondary">N/A</CBadge>;
+// //     }
+
+// //     return (
+// //       <div style={{ fontSize: '0.875rem' }}>
+// //         {variableConfig.commissionRanges.map((range, index) => (
+// //           <div key={index} className="mb-1">
+// //             <CBadge color="info" className="me-1">
+// //               ₹{range.commissionRangeMaster.minAmount} - ₹{range.commissionRangeMaster.maxAmount}
+// //             </CBadge>
+// //             : ₹{range.amount}
+// //           </div>
+// //         ))}
+// //       </div>
+// //     );
+// //   };
+
+// //   const getFixedCommission = (commissionConfigurations) => {
+// //     const fixedConfig = commissionConfigurations.find((config) => config.commissionType === 'FIXED');
+
+// //     return fixedConfig ? `₹${fixedConfig.fixedCommission}` : '';
+// //   };
+
+// //   const getCommissionTypes = (commissionConfigurations) => {
+// //     return commissionConfigurations
+// //       .filter((config) => config.isActive)
+// //       .map((config) => config.commissionType)
+// //       .join(', ');
+// //   };
+
+// //   const handleOtpToggle = async (brokerId, currentOtpStatus) => {
+// //     if (!canUpdateBrokers) {
+// //       showError('You do not have permission to update broker OTP settings');
+// //       return;
+// //     }
+    
+// //     try {
+// //       await axiosInstance.post(`/brokers/${brokerId}/toggle-otp`);
+// //       const updatedData = data.map((broker) => {
+// //         if (broker.id === brokerId) {
+// //           return {
+// //             ...broker,
+// //             otp_required: !currentOtpStatus
+// //           };
+// //         }
+// //         return broker;
+// //       });
+
+// //       setData(updatedData);
+// //       setFilteredData(updatedData);
+// //       showSuccess('OTP requirement updated successfully!');
+// //     } catch (error) {
+// //       console.error('Error toggling OTP:', error);
+// //       showError('Failed to update OTP requirement', error);
+// //       fetchData();
+// //     }
+// //   };
+
+// //   const handleSearch = (value) => {
+// //     setSearchTerm(value);
+// //     handleFilter(value, getDefaultSearchFields('broker'));
+// //   };
+
+// //   if (!canViewBrokers) {
+// //     return (
+// //       <div className="alert alert-danger m-3" role="alert">
+// //         You do not have permission to view Brokers.
+// //       </div>
+// //     );
+// //   }
+
+// //   if (loading) {
+// //     return (
+// //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+// //         <CSpinner color="primary" />
+// //       </div>
+// //     );
+// //   }
+
+// //   if (error) {
+// //     return (
+// //       <div className="alert alert-danger" role="alert">
+// //       {error}
+// //       </div>
+// //     );
+// //   }
+
+// //   return (
+// //     <div>
+// //       <div className='title'>Brokers</div>
+    
+// //       <CCard className='table-container mt-4'>
+// //         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
+// //           <div>
+// //             {canCreateBrokers && (
+// //               <Link to="/broker/add-broker">
+// //                 <CButton size="sm" className="action-btn me-1">
+// //                   <CIcon icon={cilPlus} className='icon'/> New Broker
+// //                 </CButton>
+// //               </Link>
+// //             )}
+// //           </div>
+// //         </CCardHeader>
+        
+// //         <CCardBody>
+// //           <div className="d-flex justify-content-between mb-3">
+// //             <div></div>
+// //             <div className='d-flex'>
+// //               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+// //               <CFormInput
+// //                 type="text"
+// //                 className="d-inline-block square-search"
+// //                 value={searchTerm}
+// //                 onChange={(e) => handleSearch(e.target.value)}
+// //               />
+// //             </div>
+// //           </div>
+          
+// //           <div className="responsive-table-wrapper">
+// //             <CTable striped bordered hover className='responsive-table'>
+// //               <CTableHead>
+// //                 <CTableRow>
+// //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+// //                   <CTableHeaderCell>Name</CTableHeaderCell>
+// //                   <CTableHeaderCell>Mobile Number</CTableHeaderCell>
+// //                   <CTableHeaderCell>Email</CTableHeaderCell>
+// //                   <CTableHeaderCell>Branch</CTableHeaderCell>
+// //                   <CTableHeaderCell>Commission Type</CTableHeaderCell>
+// //                   <CTableHeaderCell>Fixed Commission</CTableHeaderCell>
+// //                   <CTableHeaderCell>Commission Ranges</CTableHeaderCell>
+// //                   <CTableHeaderCell>OTP Required?</CTableHeaderCell>
+// //                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
+// //                 </CTableRow>
+// //               </CTableHead>
+// //               <CTableBody>
+// //                 {currentRecords.length === 0 ? (
+// //                   <CTableRow>
+// //                     <CTableDataCell colSpan={showActionColumn ? "11" : "10"} className="text-center">
+// //                       <CBadge color="secondary">No brokers available</CBadge>
+// //                     </CTableDataCell>
+// //                   </CTableRow>
+// //                 ) : (
+// //                   currentRecords.flatMap((broker, index) => {
+// //                     const otp_required = broker.otp_required;
+// //                     return broker.branches.map((branch, branchIndex) => {
+// //                       const activeConfigs = branch.commissionConfigurations.filter((config) => config.isActive);
+
+// //                       return (
+// //                         <CTableRow key={`${broker.id}-${branchIndex}`}>
+// //                           {branchIndex === 0 ? (
+// //                             <>
+// //                               <CTableDataCell rowSpan={broker.branches.length}>{index + 1}</CTableDataCell>
+// //                               <CTableDataCell rowSpan={broker.branches.length}>
+// //                                 {broker.name}
+// //                               </CTableDataCell>
+// //                               <CTableDataCell rowSpan={broker.branches.length}>{broker.mobile}</CTableDataCell>
+// //                               <CTableDataCell rowSpan={broker.branches.length}>{broker.email}</CTableDataCell>
+// //                             </>
+// //                           ) : null}
+
+// //                           <CTableDataCell>
+// //                           {branch.branch?.name || ''}
+// //                           </CTableDataCell>
+// //                           <CTableDataCell>{getCommissionTypes(activeConfigs)}</CTableDataCell>
+// //                           <CTableDataCell>
+// //                             {activeConfigs.some((config) => config.commissionType === 'FIXED') ? getFixedCommission(activeConfigs) : ''}
+// //                           </CTableDataCell>
+// //                           <CTableDataCell>
+// //                             {activeConfigs.some((config) => config.commissionType === 'VARIABLE')
+// //                               ? formatCommissionRanges(activeConfigs)
+// //                               :" "}
+// //                           </CTableDataCell>
+
+// //                           {branchIndex === 0 ? (
+// //                             <>
+// //                               <CTableDataCell rowSpan={broker.branches.length}>
+// //                                 <div className="align-items-center">
+// //                                   <CFormSwitch
+// //                                     checked={otp_required}
+// //                                     onChange={() => handleOtpToggle(broker.id, otp_required)}
+// //                                     className="ms-2"
+// //                                     disabled={!canUpdateBrokers}
+// //                                   />
+// //                                 </div>
+// //                               </CTableDataCell>
+// //                               {showActionColumn && (
+// //                                 <CTableDataCell rowSpan={broker.branches.length}>
+// //                                   <CButton
+// //                                     size="sm"
+// //                                     className='option-button btn-sm'
+// //                                     onClick={(event) => handleClick(event, broker.id)}
+// //                                     disabled={!canUpdateBrokers && !canDeleteBrokers}
+// //                                   >
+// //                                     <CIcon icon={cilSettings} />
+// //                                     Options
+// //                                   </CButton>
+// //                                   <Menu
+// //                                     id={`action-menu-${broker.id}`}
+// //                                     anchorEl={anchorEl}
+// //                                     open={menuId === broker.id}
+// //                                     onClose={handleClose}
+// //                                   >
+// //                                     {canUpdateBrokers && (
+// //                                       <Link className="Link" to={`/broker/update-broker/${broker.id}`}>
+// //                                         <MenuItem style={{ color: 'black' }}>
+// //                                           <CIcon icon={cilPencil} className="me-2" />
+// //                                           Edit
+// //                                         </MenuItem>
+// //                                       </Link>
+// //                                     )}
+// //                                     {canDeleteBrokers && (
+// //                                       <MenuItem onClick={() => handleDelete(broker.id)}>
+// //                                         <CIcon icon={cilTrash} className="me-2" />
+// //                                         Delete
+// //                                       </MenuItem>
+// //                                     )}
+// //                                   </Menu>
+// //                                 </CTableDataCell>
+// //                               )}
+// //                             </>
+// //                           ) : null}
+// //                         </CTableRow>
+// //                       );
+// //                     });
+// //                   })
+// //                 )}
+// //               </CTableBody>
+// //             </CTable>
+// //           </div>
+// //         </CCardBody>
+// //       </CCard>
+// //     </div>
+// //   );
+// // };
+
+// // export default BrokerList;
+
+
+
+
+
+
+
+
+
 // import '../../../css/table.css';
 // import {
 //   React,
@@ -57,6 +475,15 @@
 //   const { currentRecords, PaginationOptions } = usePagination(filteredData);
 //   const { permissions } = useAuth();
   
+//   // Get user data from localStorage
+//   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  
+//   // Check if user is superadmin
+//   const isSuperAdmin = storedUser.roles?.some(role => role.isSuperAdmin === true);
+  
+//   // Get branch ID if not superadmin
+//   const branchId = !isSuperAdmin && storedUser.branch?._id ? storedUser.branch._id : null;
+  
 //   // Page-level permission checks for Brokers page under Masters module
 //   const hasBrokersView = hasSafePagePermission(
 //     permissions, 
@@ -94,10 +521,6 @@
   
 //   const showActionColumn = canUpdateBrokers || canDeleteBrokers;
 
-//   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-//   const branchId = storedUser.branch?._id;
-//   const userRole = localStorage.getItem('userRole');
-
 //   useEffect(() => {
 //     if (!canViewBrokers) {
 //       showError('You do not have permission to view Brokers');
@@ -116,7 +539,7 @@
 //       let filtered = allBrokers;
 
 //       // Only filter by branch if user is NOT superadmin and has a branchId
-//       if (userRole !== 'SUPERADMIN' && branchId) {
+//       if (!isSuperAdmin && branchId) {
 //         filtered = allBrokers
 //           .map((broker) => ({
 //             ...broker,
@@ -411,11 +834,6 @@
 
 
 
-
-
-
-
-
 import '../../../css/table.css';
 import {
   React,
@@ -481,9 +899,6 @@ const BrokerList = () => {
   // Check if user is superadmin
   const isSuperAdmin = storedUser.roles?.some(role => role.isSuperAdmin === true);
   
-  // Get branch ID if not superadmin
-  const branchId = !isSuperAdmin && storedUser.branch?._id ? storedUser.branch._id : null;
-  
   // Page-level permission checks for Brokers page under Masters module
   const hasBrokersView = hasSafePagePermission(
     permissions, 
@@ -536,20 +951,9 @@ const BrokerList = () => {
       const response = await axiosInstance.get(`/brokers`);
       const allBrokers = response.data.data;
 
-      let filtered = allBrokers;
-
-      // Only filter by branch if user is NOT superadmin and has a branchId
-      if (!isSuperAdmin && branchId) {
-        filtered = allBrokers
-          .map((broker) => ({
-            ...broker,
-            branches: broker.branches.filter((br) => br.branch?._id === branchId)
-          }))
-          .filter((broker) => broker.branches.length > 0);
-      }
-
-      setData(filtered);
-      setFilteredData(filtered);
+      // REMOVED: Branch filtering logic - now showing all brokers without any branch filtering
+      setData(allBrokers);
+      setFilteredData(allBrokers);
     } catch (error) {
       const message = showError(error);
       if (message) {

@@ -878,7 +878,7 @@ const fetchTab = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, s
     const canUploadKyc = () => [canUploadKycInPendingApprovals, canUploadKycInApprovedTab, false, canUploadKycInAllocatedTab, canUploadKycInRejectedDiscount][tabIndex] ?? false;
     const canUploadFin = () => [canUploadFinanceInPendingApprovals, canUploadFinanceInApprovedTab, false, canUploadFinanceInAllocatedTab, canUploadFinanceInRejectedDiscount][tabIndex] ?? false;
     const canEditThis  = () => tabIndex === 0 ? canEditInPendingApprovalsTab : tabIndex === 4 ? canEditInRejectedDiscountTab : false;
-    const getDocumentUrl = path => `https://sgm.gmplmis.com/api-dealership/api/v1/uploads${path}`;
+    const getDocumentUrl = path => `https://gmplmis.com/dealership-api/api/v1/uploads${path}`;
 
     // ── Cancellation tabs ────────────────────────────────────────────────────
     if (tabIndex === TAB.CANCELLED || tabIndex === TAB.REJECTED_CANCELLED) {

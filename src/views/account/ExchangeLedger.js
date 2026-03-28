@@ -1,3 +1,3820 @@
+// // // import '../../css/table.css';
+// // // import {
+// // //   React,
+// // //   useState,
+// // //   useEffect,
+// // //   Menu,
+// // //   MenuItem,
+// // //   useTableFilter,
+// // //   usePagination,
+// // //   axiosInstance,
+// // //   showError
+// // // } from '../../utils/tableImports';
+// // // import tvsLogo from '../../assets/images/logo.png';
+// // // import '../../css/invoice.css';
+// // // import config from '../../config';
+// // // import ExchangeLedgerModel from './ExchangeLedgerModel';
+// // // import {
+// // //   CCard,
+// // //   CCardBody,
+// // //   CCardHeader,
+// // //   CFormInput,
+// // //   CFormLabel,
+// // //   CTable,
+// // //   CTableBody,
+// // //   CTableHead,
+// // //   CTableHeaderCell,
+// // //   CTableRow,
+// // //   CTableDataCell,
+// // //   CSpinner,
+// // //   CModal,
+// // //   CModalHeader,
+// // //   CModalTitle,
+// // //   CModalBody,
+// // //   CModalFooter,
+// // //   CButton,
+// // //   CFormSelect,
+// // //   CAlert,
+// // //   CDropdown,
+// // //   CDropdownToggle,
+// // //   CDropdownMenu,
+// // //   CDropdownItem
+// // // } from '@coreui/react';
+// // // import CIcon from '@coreui/icons-react';
+// // // import { cilPlus, cilSettings, cilSearch, cilZoomOut, cilPrint, cilCloudDownload } from '@coreui/icons';
+// // // import { useAuth } from '../../context/AuthContext';
+// // // import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// // // import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+// // // import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// // // import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// // // import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// // // import TextField from '@mui/material/TextField';
+// // // import Swal from 'sweetalert2';
+// // // import QRCode from 'qrcode';
+
+// // // // Import date-fns locale for Indian date format
+// // // import { enIN } from 'date-fns/locale';
+
+// // // // Import permission utilities
+// // // import { 
+// // //   MODULES, 
+// // //   PAGES,
+// // //   canViewPage,
+// // //   canCreateInPage,
+// // //   canUpdateInPage,
+// // //   canDeleteInPage 
+// // // } from '../../utils/modulePermissions';
+// // // import { useCallback } from 'react';
+
+// // // const ExchangeLedger = () => {
+// // //   const [anchorEl, setAnchorEl] = useState(null);
+// // //   const [menuId, setMenuId] = useState(null);
+// // //   const [loading, setLoading] = useState(true);
+// // //   const [error, setError] = useState(null);
+// // //   const [searchTerm, setSearchTerm] = useState('');
+// // //   const [showModal, setShowModal] = useState(false);
+// // //   const [selectedledger, setSelectedledger] = useState(null);
+// // //   const [groupedData, setGroupedData] = useState([]);
+// // //   const [expandedBrokers, setExpandedBrokers] = useState({});
+// // //   const [showFilterModal, setShowFilterModal] = useState(false);
+// // //   const [branches, setBranches] = useState([]);
+// // //   const [selectedBranch, setSelectedBranch] = useState('');
+// // //   const [isFiltered, setIsFiltered] = useState(false);
+// // //   const [selectedBranchName, setSelectedBranchName] = useState('');
+// // //   const [successMessage, setSuccessMessage] = useState('');
+  
+// // //   // ============ RECEIPTS FETCHING STATES ============
+// // //   const [transactionsData, setTransactionsData] = useState({});
+// // //   const [loadingTransactions, setLoadingTransactions] = useState({});
+// // //   const [transactionsFetched, setTransactionsFetched] = useState({});
+  
+// // //   // Export modal state
+// // //   const [showExportModal, setShowExportModal] = useState(false);
+// // //   const [exportStartDate, setExportStartDate] = useState(null);
+// // //   const [exportEndDate, setExportEndDate] = useState(null);
+// // //   const [exportBranchId, setExportBranchId] = useState('');
+// // //   const [exportError, setExportError] = useState('');
+// // //   const [exportLoading, setExportLoading] = useState(false);
+
+// // //   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
+// // //   const { currentRecords, PaginationOptions } = usePagination(filteredData);
+// // //   const { permissions } = useAuth();
+
+// // //   // Page-level permission checks for Exchange Ledger under ACCOUNT module
+// // //   const canViewExchangeLedger = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+// // //   const canCreateExchangeLedger = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+// // //   const canUpdateExchangeLedger = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+// // //   const canDeleteExchangeLedger = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+  
+// // //   const showActionColumn = canCreateExchangeLedger || canViewExchangeLedger;
+
+// // //   // Format date to DD-MM-YYYY for display
+// // //   const formatDateDDMMYYYY = (date) => {
+// // //     if (!date) return '';
+// // //     const day = String(date.getDate()).padStart(2, '0');
+// // //     const month = String(date.getMonth() + 1).padStart(2, '0');
+// // //     const year = date.getFullYear();
+// // //     return `${day}-${month}-${year}`;
+// // //   };
+
+// // //   // Format date to YYYY-MM-DD for API
+// // //   const formatDateForAPI = (date) => {
+// // //     if (!date) return '';
+// // //     const year = date.getFullYear();
+// // //     const month = String(date.getMonth() + 1).padStart(2, '0');
+// // //     const day = String(date.getDate()).padStart(2, '0');
+// // //     return `${year}-${month}-${day}`;
+// // //   };
+
+// // //   useEffect(() => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     fetchData();
+// // //     fetchBranches();
+// // //   }, [canViewExchangeLedger]);
+
+// // //   useEffect(() => {
+// // //     if (data.length > 0) {
+// // //       const grouped = groupDataByBroker(data, isFiltered);
+// // //       setGroupedData(grouped);
+// // //       setFilteredData(grouped);
+      
+// // //       // Initialize transactions data structure
+// // //       const initialTransactionsMap = {};
+// // //       grouped.forEach(brokerData => {
+// // //         const key = brokerData.broker._id;
+// // //         initialTransactionsMap[key] = [];
+        
+// // //         // Also initialize for branches if needed
+// // //         if (!isFiltered && brokerData.branches) {
+// // //           brokerData.branches.forEach(branch => {
+// // //             const branchKey = `${brokerData.broker._id}-${branch.branchId}`;
+// // //             initialTransactionsMap[branchKey] = [];
+// // //           });
+// // //         }
+// // //       });
+// // //       setTransactionsData(initialTransactionsMap);
+// // //     }
+// // //   }, [data, isFiltered]);
+
+// // //   const fetchBranches = async () => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     try {
+// // //       const response = await axiosInstance.get('/branches');
+// // //       setBranches(response.data.data);
+// // //     } catch (error) {
+// // //       const message = showError(error);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+// // //     }
+// // //   };
+
+// // //   const fetchData = async (branchId = null) => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     try {
+// // //       setLoading(true);
+// // //       let url = '/broker-ledger/summary/detailed';
+// // //       if (branchId) {
+// // //         url = `/broker-ledger/summary/branch/${branchId}`;
+// // //       }
+
+// // //       const response = await axiosInstance.get(url);
+
+// // //       if (branchId) {
+// // //         const branchName = branches.find((b) => b._id === branchId)?.name || 'Selected Branch';
+// // //         setSelectedBranchName(branchName);
+
+// // //         const branchData = response.data.data.brokers.map((broker) => ({
+// // //           broker: broker.broker,
+// // //           branch: {
+// // //             _id: response.data.data.branch,
+// // //             name: branchName
+// // //           },
+// // //           bookings: {
+// // //             total: broker.totalBookings,
+// // //             details: []
+// // //           },
+// // //           financials: {
+// // //             totalExchangeAmount: broker.totalExchangeAmount,
+// // //             ledger: {
+// // //               currentBalance: broker.ledger.currentBalance,
+// // //               onAccount: broker.ledger.onAccount,
+// // //               totalCredit: broker.ledger.totalCredit || 0,
+// // //               totalDebit: broker.ledger.totalDebit || 0,
+// // //               outstandingAmount: broker.ledger.outstandingAmount || 0,
+// // //               transactions: broker.ledger.transactions || 0
+// // //             },
+// // //             summary: {
+// // //               totalReceived: broker.summary?.totalReceived || 0,
+// // //               totalPayable: broker.summary?.totalPayable || 0,
+// // //               netBalance: broker.ledger.currentBalance
+// // //             }
+// // //           },
+// // //           recentTransactions: [],
+// // //           association: {
+// // //             isActive: true
+// // //           }
+// // //         }));
+
+// // //         setData(branchData);
+// // //         setIsFiltered(true);
+// // //       } else {
+// // //         setData(response.data.data.brokers);
+// // //         setIsFiltered(false);
+// // //         setSelectedBranchName('');
+// // //       }
+// // //     } catch (error) {
+// // //       const message = showError(error);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+// // //     } finally {
+// // //       setLoading(false);
+// // //     }
+// // //   };
+
+// // //   // ============ FETCH TRANSACTIONS FOR BROKER (REQUIRES BOTH IDs) ============
+// // //   const fetchTransactionsForBroker = useCallback(async (brokerId, branchId) => {
+// // //     // Both IDs are required - don't proceed if either is missing
+// // //     if (!brokerId || !branchId) {
+// // //       console.log('Cannot fetch transactions: Both brokerId and branchId are required');
+// // //       return;
+// // //     }
+    
+// // //     const key = `${brokerId}-${branchId}`;
+    
+// // //     if (transactionsFetched[key] || loadingTransactions[key]) {
+// // //       return;
+// // //     }
+
+// // //     try {
+// // //       setLoadingTransactions(prev => ({ ...prev, [key]: true }));
+      
+// // //       const response = await axiosInstance.get(`/broker-ledger/branch-transactions/${brokerId}/${branchId}`);
+      
+// // //       const transactions = response.data.data.transactions || [];
+      
+// // //       setTransactionsData(prev => ({
+// // //         ...prev,
+// // //         [key]: transactions
+// // //       }));
+      
+// // //       setTransactionsFetched(prev => ({
+// // //         ...prev,
+// // //         [key]: true
+// // //       }));
+// // //     } catch (error) {
+// // //       console.error(`Error fetching transactions for broker ${brokerId} and branch ${branchId}:`, error);
+// // //       setTransactionsData(prev => ({
+// // //         ...prev,
+// // //         [key]: []
+// // //       }));
+// // //       setTransactionsFetched(prev => ({
+// // //         ...prev,
+// // //         [key]: true
+// // //       }));
+// // //     } finally {
+// // //       setLoadingTransactions(prev => ({ ...prev, [key]: false }));
+// // //     }
+// // //   }, [transactionsFetched, loadingTransactions]);
+
+// // //   // ============ PRINT RECEIPT FUNCTION - FIXED ============
+// // //   const printBrokerReceipt = async (transactionId) => {
+// // //     try {
+// // //       console.log('Fetching transaction with ID:', transactionId);
+      
+// // //       const response = await axiosInstance.get(`/broker-ledger/transaction/${transactionId}`);
+// // //       console.log('Transaction response:', response.data);
+      
+// // //       const transaction = response.data.data;
+      
+// // //       if (!transaction) {
+// // //         showError('Transaction data not found');
+// // //         return;
+// // //       }
+      
+// // //       const receivedDate = transaction.dateFormatted || 
+// // //                           new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+      
+// // //       const currentDate = new Date().toLocaleDateString('en-GB');
+      
+// // //       const brokerName = transaction.broker?.name || 'N/A';
+// // //       const branchName = transaction.branch?.name || 'N/A';
+// // //       const branchAddress = transaction.branch?.address || '';
+// // //       const branchPhone = transaction.branch?.phone || '';
+// // //       const branchEmail = transaction.branch?.email || '';
+      
+// // //       const qrText = `GANDHI MOTORS PVT LTD
+// // // Broker: ${brokerName}
+// // // Branch: ${branchName}
+// // // Receipt No: ${transaction.referenceNumber || transaction._id}
+// // // Amount: ₹${transaction.amount || 0}
+// // // Payment Mode: ${transaction.modeOfPayment || 'Cash'}
+// // // Date: ${receivedDate}`;
+
+// // //       let qrCodeImage = '';
+// // //       try {
+// // //         qrCodeImage = await QRCode.toDataURL(qrText, {
+// // //           width: 150,
+// // //           margin: 2,
+// // //           color: {
+// // //             dark: '#000000',
+// // //             light: '#FFFFFF'
+// // //           },
+// // //           errorCorrectionLevel: 'H'
+// // //         });
+// // //       } catch (error) {
+// // //         console.error('Error generating QR code:', error);
+// // //         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
+// // //           <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150">
+// // //             <rect width="150" height="150" fill="white"/>
+// // //             <rect x="10" y="10" width="130" height="130" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+// // //             <text x="75" y="70" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">QR CODE</text>
+// // //             <text x="75" y="90" text-anchor="middle" font-family="Arial" font-size="8" fill="#666">Receipt: ${transaction.referenceNumber || ''}</text>
+// // //           </svg>
+// // //         `);
+// // //       }
+
+// // //       const receiptHTML = generateReceiptHTML(transaction, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail);
+
+// // //       const printWindow = window.open('', '_blank');
+// // //       printWindow.document.write(receiptHTML);
+// // //       printWindow.document.close();
+      
+// // //       printWindow.onload = function() {
+// // //         printWindow.focus();
+// // //         printWindow.print();
+// // //       };
+      
+// // //     } catch (err) {
+// // //       console.error('Error fetching transaction details:', err);
+// // //       console.error('Error response:', err.response?.data);
+// // //       showError('Failed to load receipt. Please try again.');
+// // //     }
+// // //   };
+
+// // //   // ============ GENERATE RECEIPT HTML ============
+// // //   const generateReceiptHTML = (transaction, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail) => {
+// // //     const receiptNumber = transaction.referenceNumber || transaction._id || 'N/A';
+// // //     const amount = transaction.amount || 0;
+// // //     const paymentMode = transaction.modeOfPayment || 'Cash';
+// // //     const remark = transaction.remark || '';
+// // //     const referenceNumber = transaction.referenceNumber || '';
+// // //     const approvalStatus = transaction.approvalStatus || 'Pending';
+// // //     const cashLocation = transaction.cashLocation?.name || '';
+// // //     const bankName = transaction.bank?.name || '';
+// // //     const subPaymentMode = transaction.subPaymentMode?.payment_mode || '';
+    
+// // //     const amountInWords = numberToWordsSimple(amount);
+
+// // //     return `<!DOCTYPE html>
+// // // <html>
+// // // <head>
+// // //   <title>Broker Payment Receipt - ${receiptNumber}</title>
+// // //   <style>
+// // //     body {
+// // //       font-family: "Courier New", Courier, monospace;
+// // //       margin: 0;
+// // //       padding: 10mm;
+// // //       font-size: 14px;
+// // //       color: #333;
+// // //     }
+// // //     .page {
+// // //       width: 210mm;
+// // //       margin: 0 auto;
+// // //     }
+// // //     .receipt-copy {
+// // //       height: auto;
+// // //       min-height: 130mm;
+// // //       page-break-inside: avoid;
+// // //     }
+// // //     .header-container {
+// // //       display: flex;
+// // //       justify-content: space-between;
+// // //       margin-bottom: 2mm;
+// // //       align-items: flex-start;
+// // //     }
+// // //     .header-left {
+// // //       width: 60%;
+// // //     }
+// // //     .header-right {
+// // //       width: 40%;
+// // //       text-align: right;
+// // //       display: flex;
+// // //       flex-direction: column;
+// // //       align-items: flex-end;
+// // //     }
+// // //     .logo-qr-container {
+// // //       display: flex;
+// // //       align-items: center;
+// // //       gap: 10px;
+// // //       justify-content: flex-end;
+// // //       margin-bottom: 5px;
+// // //       width: 100%;
+// // //     }
+// // //     .logo {
+// // //       height: 50px;
+// // //     }
+// // //     .qr-code-small {
+// // //       width: 80px;
+// // //       height: 80px;
+// // //       border: 1px solid #ccc;
+// // //     }
+// // //     .dealer-info {
+// // //       text-align: left;
+// // //       font-size: 12px;
+// // //       line-height: 1.2;
+// // //     }
+// // //     .dealer-name {
+// // //       font-size: 16px;
+// // //       font-weight: bold;
+// // //       margin: 0 0 3px 0;
+// // //     }
+// // //     .broker-info-container {
+// // //       display: flex;
+// // //       font-size: 12px;
+// // //       margin: 10px 0;
+// // //     }
+// // //     .broker-info-left {
+// // //       width: 50%;
+// // //     }
+// // //     .broker-info-right {
+// // //       width: 50%;
+// // //     }
+// // //     .info-row {
+// // //       margin: 2mm 0;
+// // //       line-height: 1.2;
+// // //     }
+// // //     .divider {
+// // //       border-top: 2px solid #AAAAAA;
+// // //       margin: 3mm 0;
+// // //     }
+// // //     .receipt-info {
+// // //       background-color: #f8f9fa;
+// // //       border: 1px solid #dee2e6;
+// // //       border-radius: 4px;
+// // //       padding: 8px;
+// // //       margin: 10px 0;
+// // //       font-size: 12px;
+// // //     }
+// // //     .payment-info-box {
+// // //       margin: 10px 0;
+// // //     }
+// // //     .signature-box {
+// // //       margin-top: 15mm;
+// // //       font-size: 10pt;
+// // //     }
+// // //     .signature-line {
+// // //       border-top: 1px dashed #000;
+// // //       width: 40mm;
+// // //       display: inline-block;
+// // //       margin: 0 5mm;
+// // //     }
+// // //     .cutting-line {
+// // //       border-top: 2px dashed #333;
+// // //       margin: 15mm 0 10mm 0;
+// // //       text-align: center;
+// // //       position: relative;
+// // //     }
+// // //     .cutting-line::before {
+// // //       content: "✂ Cut Here ✂";
+// // //       position: absolute;
+// // //       top: -10px;
+// // //       left: 50%;
+// // //       transform: translateX(-50%);
+// // //       background: white;
+// // //       padding: 0 10px;
+// // //       font-size: 12px;
+// // //       color: #666;
+// // //     }
+// // //     .note {
+// // //       padding: 1px;
+// // //       margin: 2px;
+// // //       font-size: 11px;
+// // //     }
+// // //     .amount-in-words {
+// // //       font-style: italic;
+// // //       margin-top: 8px;
+// // //       padding: 5px;
+// // //       font-size: 12px;
+// // //       border-top: 1px dashed #ccc;
+// // //     }
+// // //     .status-badge {
+// // //       display: inline-block;
+// // //       padding: 3px 8px;
+// // //       border-radius: 12px;
+// // //       font-size: 11px;
+// // //       font-weight: bold;
+// // //       background-color: ${approvalStatus === 'Approved' ? '#d4edda' : approvalStatus === 'Rejected' ? '#f8d7da' : '#fff3cd'};
+// // //       color: ${approvalStatus === 'Approved' ? '#155724' : approvalStatus === 'Rejected' ? '#721c24' : '#856404'};
+// // //       border: 1px solid ${approvalStatus === 'Approved' ? '#c3e6cb' : approvalStatus === 'Rejected' ? '#f5c6cb' : '#ffeeba'};
+// // //     }
+// // //     .footer-note {
+// // //       font-size: 9px;
+// // //       color: #777;
+// // //       text-align: center;
+// // //       margin-top: 5mm;
+// // //     }
+// // //     .payment-details {
+// // //       margin-top: 10px;
+// // //       border-collapse: collapse;
+// // //       width: 100%;
+// // //     }
+// // //     .payment-details td {
+// // //       padding: 4px;
+// // //       border: none;
+// // //     }
+// // //     @page {
+// // //       size: A4;
+// // //       margin: 10mm;
+// // //     }
+// // //     @media print {
+// // //       body {
+// // //         padding: 0;
+// // //       }
+// // //       .receipt-copy {
+// // //         page-break-inside: avoid;
+// // //       }
+// // //     }
+// // //   </style>
+// // // </head>
+// // // <body>
+// // //   <div class="page">
+// // //     <!-- FIRST COPY -->
+// // //     <div class="receipt-copy">
+// // //       <div class="header-container">
+// // //         <div class="header-left">
+// // //           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
+// // //           <div class="dealer-info">
+// // //             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+// // //             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// // //             Upnagar, Nashik Road, Nashik - 422101<br>
+// // //             Phone: 7498903672
+// // //           </div>
+// // //         </div>
+// // //         <div class="header-right">
+// // //           <div class="logo-qr-container">
+// // //             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
+// // //             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+// // //           </div>
+// // //           <div style="margin-top: 3px; font-size: 11px;">Date: ${currentDate}</div>
+// // //           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+// // //         </div>
+// // //       </div>
+      
+// // //       <div class="divider"></div>
+
+// // //       <div class="receipt-info">
+// // //         <div><strong>BROKER PAYMENT RECEIPT</strong></div>
+// // //         <div><strong>Receipt Date:</strong> ${receivedDate}</div>
+        
+// // //       </div>
+
+// // //       <div class="broker-info-container">
+// // //         <div class="broker-info-left">
+// // //           <div class="info-row"><strong>Broker Name:</strong> ${brokerName}</div>
+// // //           <div class="info-row"><strong>Branch:</strong> ${branchName}</div>
+// // //           <div class="info-row"><strong>Payment Mode:</strong> ${paymentMode}</div>
+// // //           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> ${cashLocation}</div>` : ''}
+// // //           ${bankName ? `<div class="info-row"><strong>Bank:</strong> ${bankName}</div>` : ''}
+// // //         </div>
+// // //         <div class="broker-info-right">
+// // //           <div class="info-row"><strong>Reference No:</strong> ${referenceNumber}</div>
+// // //           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> ${subPaymentMode}</div>` : ''}
+// // //           <div class="info-row"><strong>Branch Address:</strong> ${branchAddress}</div>
+// // //           <div class="info-row"><strong>Branch Phone:</strong> ${branchPhone}</div>
+// // //         </div>
+// // //       </div>
+
+// // //       <div class="payment-info-box">
+// // //         <div class="receipt-info">
+// // //           <div style="display: flex; justify-content: space-between;">
+// // //             <span><strong>Receipt Amount:</strong></span>
+// // //             <span style="font-size: 16px; font-weight: bold;">₹${amount.toLocaleString('en-IN')}</span>
+// // //           </div>
+// // //           ${remark ? `<div style="margin-top: 5px;"><strong>Remark:</strong> ${remark}</div>` : ''}
+// // //         </div>
+        
+// // //         <div class="amount-in-words">
+// // //           <strong>Amount in words:</strong> ${amountInWords} Only
+// // //         </div>
+// // //       </div>
+
+// // //       <div class="note">
+// // //         <strong>Notes:</strong> This is a system generated receipt for Broker On-Account payment.
+// // //       </div>
+      
+// // //       <div class="divider"></div>
+
+// // //       <div class="signature-box">
+// // //         <div style="display: flex; justify-content: space-between;">
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Broker's Signature</div>
+// // //           </div>
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Authorised Signatory</div>
+// // //           </div>
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Accountant</div>
+// // //           </div>
+// // //         </div>
+// // //       </div>
+      
+// // //       <div class="footer-note">
+// // //         This is a computer generated receipt - valid without signature
+// // //       </div>
+// // //     </div>
+
+// // //     <!-- CUTTING LINE -->
+// // //     <div class="cutting-line"></div>
+
+// // //     <!-- SECOND COPY (DUPLICATE) -->
+// // //     <div class="receipt-copy">
+// // //       <div class="header-container">
+// // //         <div class="header-left">
+// // //           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
+// // //           <div class="dealer-info">
+// // //             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+// // //             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// // //             Upnagar, Nashik Road, Nashik - 422101<br>
+// // //             Phone: 7498903672
+// // //           </div>
+// // //         </div>
+// // //         <div class="header-right">
+// // //           <div class="logo-qr-container">
+// // //             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
+// // //             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+// // //           </div>
+// // //           <div style="margin-top: 3px; font-size: 11px;">Date: ${currentDate}</div>
+// // //           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+// // //         </div>
+// // //       </div>
+      
+// // //       <div class="divider"></div>
+
+// // //       <div class="receipt-info">
+// // //         <div><strong>BROKER PAYMENT RECEIPT (DUPLICATE)</strong></div>
+// // //         <div><strong>Receipt Date:</strong> ${receivedDate}</div>
+    
+// // //       </div>
+
+// // //       <div class="broker-info-container">
+// // //         <div class="broker-info-left">
+// // //           <div class="info-row"><strong>Broker Name:</strong> ${brokerName}</div>
+// // //           <div class="info-row"><strong>Branch:</strong> ${branchName}</div>
+// // //           <div class="info-row"><strong>Payment Mode:</strong> ${paymentMode}</div>
+// // //           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> ${cashLocation}</div>` : ''}
+// // //           ${bankName ? `<div class="info-row"><strong>Bank:</strong> ${bankName}</div>` : ''}
+// // //         </div>
+// // //         <div class="broker-info-right">
+// // //           <div class="info-row"><strong>Reference No:</strong> ${referenceNumber}</div>
+// // //           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> ${subPaymentMode}</div>` : ''}
+// // //           <div class="info-row"><strong>Branch Address:</strong> ${branchAddress}</div>
+// // //           <div class="info-row"><strong>Branch Phone:</strong> ${branchPhone}</div>
+// // //         </div>
+// // //       </div>
+
+// // //       <div class="payment-info-box">
+// // //         <div class="receipt-info">
+// // //           <div style="display: flex; justify-content: space-between;">
+// // //             <span><strong>Receipt Amount:</strong></span>
+// // //             <span style="font-size: 16px; font-weight: bold;">₹${amount.toLocaleString('en-IN')}</span>
+// // //           </div>
+// // //           ${remark ? `<div style="margin-top: 5px;"><strong>Remark:</strong> ${remark}</div>` : ''}
+// // //         </div>
+        
+// // //         <div class="amount-in-words">
+// // //           <strong>Amount in words:</strong> ${amountInWords} Only
+// // //         </div>
+// // //       </div>
+
+// // //       <div class="note">
+// // //         <strong>Notes:</strong> This is a system generated receipt for Broker On-Account payment.
+// // //       </div>
+      
+// // //       <div class="divider"></div>
+
+// // //       <div class="signature-box">
+// // //         <div style="display: flex; justify-content: space-between;">
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Broker's Signature</div>
+// // //           </div>
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Authorised Signatory</div>
+// // //           </div>
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Accountant</div>
+// // //           </div>
+// // //         </div>
+// // //       </div>
+      
+// // //       <div class="footer-note">
+// // //         This is a computer generated receipt - valid without signature
+// // //       </div>
+// // //     </div>
+// // //   </div>
+// // // </body>
+// // // </html>`;
+// // //   };
+
+// // //   // ============ SIMPLE NUMBER TO WORDS FUNCTION ============
+// // //   const numberToWordsSimple = (num) => {
+// // //     if (num === 0) return 'Zero';
+    
+// // //     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+// // //                   'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+// // //                   'Seventeen', 'Eighteen', 'Nineteen'];
+// // //     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+// // //     const numToWords = (n) => {
+// // //       if (n < 20) return ones[n];
+// // //       if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+// // //       if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '');
+// // //       if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '');
+// // //       if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
+// // //       return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
+// // //     };
+    
+// // //     return numToWords(Math.floor(num)) + (num % 1 ? ' point ' + num.toString().split('.')[1] : '');
+// // //   };
+
+// // //   const handleBranchFilter = async () => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     if (selectedBranch) {
+// // //       await fetchData(selectedBranch);
+// // //     } else {
+// // //       await fetchData();
+// // //     }
+// // //     setShowFilterModal(false);
+// // //   };
+
+// // //   const clearFilter = async () => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     setSelectedBranch('');
+// // //     await fetchData();
+// // //     setShowFilterModal(false);
+// // //   };
+
+// // //   const groupDataByBroker = (brokersData, isFilteredMode = false) => {
+// // //     const brokerMap = {};
+
+// // //     brokersData.forEach((item) => {
+// // //       const brokerId = item.broker._id;
+
+// // //       if (!brokerMap[brokerId]) {
+// // //         brokerMap[brokerId] = {
+// // //           broker: item.broker,
+// // //           branches: [],
+// // //           totalBookings: 0,
+// // //           totalExchangeAmount: 0,
+// // //           totalCredit: 0,
+// // //           totalDebit: 0,
+// // //           onAccount: 0,
+// // //           currentBalance: 0,
+// // //           outstandingAmount: 0
+// // //         };
+// // //       }
+
+// // //       if (isFilteredMode) {
+// // //         brokerMap[brokerId].branches = [
+// // //           {
+// // //             name: item.branch.name,
+// // //             branchId: item.branch._id,
+// // //             bookings: item.bookings.total,
+// // //             exchangeAmount: item.financials.totalExchangeAmount,
+// // //             credit: item.financials.ledger.totalCredit,
+// // //             debit: item.financials.ledger.totalDebit,
+// // //             onAccount: item.financials.ledger.onAccount,
+// // //             currentBalance: item.financials.ledger.currentBalance,
+// // //             outstandingAmount: item.financials.ledger.outstandingAmount
+// // //           }
+// // //         ];
+
+// // //         brokerMap[brokerId].totalBookings = item.bookings.total;
+// // //         brokerMap[brokerId].totalExchangeAmount = item.financials.totalExchangeAmount;
+// // //         brokerMap[brokerId].totalCredit = item.financials.ledger.totalCredit;
+// // //         brokerMap[brokerId].totalDebit = item.financials.ledger.totalDebit;
+// // //         brokerMap[brokerId].onAccount = item.financials.ledger.onAccount;
+// // //         brokerMap[brokerId].currentBalance = item.financials.ledger.currentBalance;
+// // //         brokerMap[brokerId].outstandingAmount = item.financials.ledger.outstandingAmount;
+// // //       } else {
+// // //         brokerMap[brokerId].branches.push({
+// // //           name: item.branch.name,
+// // //           branchId: item.branch._id,
+// // //           bookings: item.bookings.total,
+// // //           exchangeAmount: item.financials.totalExchangeAmount,
+// // //           credit: item.financials.ledger.totalCredit,
+// // //           debit: item.financials.ledger.totalDebit,
+// // //           onAccount: item.financials.ledger.onAccount,
+// // //           currentBalance: item.financials.ledger.currentBalance,
+// // //           outstandingAmount: item.financials.ledger.outstandingAmount
+// // //         });
+
+// // //         brokerMap[brokerId].totalBookings += item.bookings.total;
+// // //         brokerMap[brokerId].totalExchangeAmount += item.financials.totalExchangeAmount;
+// // //         brokerMap[brokerId].totalCredit += item.financials.ledger.totalCredit;
+// // //         brokerMap[brokerId].totalDebit += item.financials.ledger.totalDebit;
+// // //         brokerMap[brokerId].onAccount += item.financials.ledger.onAccount;
+// // //         brokerMap[brokerId].currentBalance += item.financials.ledger.currentBalance;
+// // //         brokerMap[brokerId].outstandingAmount += item.financials.ledger.outstandingAmount;
+// // //       }
+// // //     });
+
+// // //     return Object.values(brokerMap);
+// // //   };
+
+// // //   const toggleBrokerExpansion = (brokerId) => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     if (!isFiltered) {
+// // //       setExpandedBrokers((prev) => ({
+// // //         ...prev,
+// // //         [brokerId]: !prev[brokerId]
+// // //       }));
+// // //     }
+// // //   };
+
+// // //   const handleClick = (event, id, brokerData = null, branchId = null) => {
+// // //     if (!canViewExchangeLedger && !canCreateExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     setAnchorEl(event.currentTarget);
+// // //     setMenuId(id);
+// // //     if (brokerData) {
+// // //       setSelectedledger({ ...brokerData, branchId });
+// // //     }
+// // //   };
+
+// // //   const handleClose = () => {
+// // //     setAnchorEl(null);
+// // //     setMenuId(null);
+// // //   };
+
+// // //   const handleAddClick = (brokerData, branchId = null) => {
+// // //     if (!canCreateExchangeLedger) {
+// // //       showError('You do not have permission to add payments');
+// // //       return;
+// // //     }
+    
+// // //     setSelectedledger({ ...brokerData, branchId });
+// // //     setShowModal(true);
+// // //     handleClose();
+// // //   };
+
+// // //   const handleViewLedger = async (brokerData, branchId = null) => {
+// // //     if (!canViewExchangeLedger) {
+// // //       showError('You do not have permission to view ledgers');
+// // //       return;
+// // //     }
+    
+// // //     try {
+// // //       let url = `/broker-ledger/statement/${brokerData.broker?._id}`;
+// // //       if (branchId) {
+// // //         url += `?branchId=${branchId}`;
+// // //       }
+
+// // //       const res = await axiosInstance.get(url);
+// // //       const ledgerData = res.data.data;
+// // //       const ledgerUrl = `${config.baseURL}/brokerData.html?ledgerId=${brokerData._id}`;
+// // //       let totalCredit = 0;
+// // //       let totalDebit = 0;
+// // //       const totalOnAccount = ledgerData.summary?.totalOnAccount ?? ledgerData.onAccountBalance ?? 0;
+
+// // //       ledgerData.transactions?.forEach((entry) => {
+// // //         if (entry.type === 'CREDIT') {
+// // //           totalCredit += entry.amount;
+// // //         } else if (entry.type === 'DEBIT') {
+// // //           totalDebit += entry.amount;
+// // //         }
+// // //       });
+// // //       const finalBalance = totalDebit - totalCredit;
+// // //       const availableOnAccount2 = totalOnAccount - totalCredit;
+
+// // //       const win = window.open('', '_blank');
+// // //       win.document.write(`
+// // //           <!DOCTYPE html>
+// // //           <html>
+// // //             <head>
+// // //               <title>Customer Ledger</title>
+// // //               <style>
+// // //                 @page {
+// // //                   size: A4;
+// // //                   margin: 15mm 10mm;
+// // //                 }
+// // //                 body {
+// // //                   font-family: Arial;
+// // //                   width: 100%;
+// // //                   margin: 0;
+// // //                   padding: 0;
+// // //                   font-size: 14px;
+// // //                   line-height: 1.3;
+// // //                   font-family: Courier New;
+// // //                 }
+// // //                 .container {
+// // //                   width: 190mm;
+// // //                   margin: 0 auto;
+// // //                   padding: 5mm;
+// // //                 }
+// // //                 .header-container {
+// // //                   display: flex;
+// // //                   justify-content:space-between;
+// // //                   margin-bottom: 3mm;
+// // //                 }
+// // //                 .header-text{
+// // //                   font-size:20px;
+// // //                   font-weight:bold;
+// // //                 }
+// // //                 .logo {
+// // //                   width: 30mm;
+// // //                   height: auto;
+// // //                   margin-right: 5mm;
+// // //                 }
+// // //                 .header {
+// // //                   text-align: left;
+// // //                 }
+// // //                 .divider {
+// // //                   border-top: 2px solid #AAAAAA;
+// // //                   margin: 3mm 0;
+// // //                 }
+// // //                 .header h2 {
+// // //                   margin: 2mm 0;
+// // //                   font-size: 12pt;
+// // //                   font-weight: bold;
+// // //                 }
+// // //                 .header div {
+// // //                   font-size: 14px;
+// // //                 }
+// // //                 .customer-info {
+// // //                   display: grid;
+// // //                   grid-template-columns: repeat(2, 1fr);
+// // //                   gap: 2mm;
+// // //                   margin-bottom: 5mm;
+// // //                   font-size: 14px;
+// // //                 }
+// // //                 .customer-info div {
+// // //                   display: flex;
+// // //                 }
+// // //                 .customer-info strong {
+// // //                   min-width: 30mm;
+// // //                   display: inline-block;
+// // //                 }
+// // //                 table {
+// // //                   width: 100%;
+// // //                   border-collapse: collapse;
+// // //                   margin-bottom: 5mm;
+// // //                   font-size: 14px;
+// // //                   page-break-inside: avoid;
+// // //                 }
+// // //                 th, td {
+// // //                   border: 1px solid #000;
+// // //                   padding: 2mm;
+// // //                   text-align: left;
+// // //                 }
+// // //                 th {
+// // //                   background-color: #f0f0f0;
+// // //                   font-weight: bold;
+// // //                 }
+// // //                 .footer {
+// // //                   margin-top: 10mm;
+// // //                   display: flex;
+// // //                   justify-content: space-between;
+// // //                   align-items: flex-end;
+// // //                   font-size: 14px;
+// // //                 }
+// // //                 .footer-left {
+// // //                   text-align: left;
+// // //                 }
+// // //                 .footer-right {
+// // //                   text-align: right;
+// // //                 }
+// // //                 .qr-code {
+// // //                   width: 35mm;
+// // //                   height: 35mm;
+// // //                 }
+// // //                 .text-right {
+// // //                   text-align: right;
+// // //                 }
+// // //                 .text-left {
+// // //                   text-align: left;
+// // //                 }
+// // //                 .text-center {
+// // //                   text-align: center;
+// // //                 }
+// // //                 @media print {
+// // //                   body {
+// // //                     width: 190mm;
+// // //                     height: 277mm;
+// // //                   }
+// // //                   .no-print {
+// // //                     display: none;
+// // //                   }
+// // //                 }
+// // //               </style>
+// // //             </head>
+// // //             <body>
+// // //               <div class="container">
+// // //                 <div class="header-container">
+// // //                   <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+// // //                   <div class="header-text"> GANDHI TVS</div>
+// // //                 </div>
+// // //                 <div class="header">
+// // //                   <div>
+// // //                     Authorised Main Dealer: TVS Motor Company Ltd.<br>
+// // //                     Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// // //                     Upnagar, Nashik Road, Nashik - 422101<br>
+// // //                     Phone: 7498903672
+// // //                   </div>
+// // //                 </div>
+// // //                 <div class="divider"></div>
+// // //                 <div class="customer-info">
+// // //                   <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || 'N/A'}</div>
+// // //                   <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+// // //                 </div>
+
+// // //                 <table>
+// // //                   <thead>
+// // //                     <tr>
+// // //                       <th width="15%">Date</th>
+// // //                       <th width="35%">Description</th>
+// // //                       <th width="15%">Receipt/VC No</th>
+// // //                       <th width="10%" class="text-right">Credit (₹)</th>
+// // //                       <th width="10%" class="text-right">Debit (₹)</th>
+// // //                       <th width="15%" class="text-right">Balance (₹)</th>
+// // //                     </tr>
+// // //                   </thead>
+// // //                   <tbody>
+// // //                     ${ledgerData.transactions
+// // //   ?.map(
+// // //     (entry) => {
+// // //       let exchangeVehicleNumber = '';
+// // //       let exchangeChassisNumber = '';
+// // //       let exchangePrice = '';
+// // //       let exchangeStatus = '';
+// // //       let bookingNumber = entry.booking?.bookingNumber || '';
+      
+// // //       if (entry.exchangeVehicle && entry.exchangeVehicle.VehicleNumber) {
+// // //         exchangeVehicleNumber = entry.exchangeVehicle.VehicleNumber || '';
+// // //         exchangeChassisNumber = entry.exchangeVehicle.ChassisNumber || '';
+// // //         exchangePrice = entry.exchangeVehicle.PriceFormatted || '';
+// // //         exchangeStatus = entry.exchangeVehicle.Status || '';
+// // //       } else if (entry.exchangeDisplay && entry.exchangeDisplay.VehicleNumber) {
+// // //         exchangeVehicleNumber = entry.exchangeDisplay.VehicleNumber || '';
+// // //         exchangeChassisNumber = entry.exchangeDisplay.ChassisNumber || '';
+// // //         exchangePrice = entry.exchangeDisplay.Price || '';
+// // //         exchangeStatus = entry.exchangeDisplay.Status || '';
+// // //       } else if (entry.booking?.exchange?.display) {
+// // //         const exchangeDisplay = entry.booking.exchange.display;
+// // //         exchangeVehicleNumber = exchangeDisplay.vehicleNumber || '';
+// // //         exchangeChassisNumber = exchangeDisplay.chassisNumber || '';
+// // //         exchangePrice = exchangeDisplay.price ? `₹${exchangeDisplay.price.toLocaleString('en-IN')}` : '';
+// // //         exchangeStatus = exchangeDisplay.status || '';
+// // //       } else if (entry.booking?.exchange?.details) {
+// // //         const exchangeDetails = entry.booking.exchange.details;
+// // //         exchangeVehicleNumber = exchangeDetails.vehicleNumber || '';
+// // //         exchangeChassisNumber = exchangeDetails.chassisNumber || '';
+// // //         exchangePrice = exchangeDetails.price ? `₹${exchangeDetails.price.toLocaleString('en-IN')}` : '';
+// // //         exchangeStatus = exchangeDetails.status || '';
+// // //       }
+      
+// // //       return `
+// // //       <tr>
+// // //         <td>${new Date(entry.date).toLocaleDateString() || 'N/A'}</td>
+// // //         <td>
+// // //           Booking No: ${bookingNumber || '-'}<br>
+// // //           Customer: ${entry.booking?.customer?.name || '-'}<br>
+       
+// // //           ${entry.mode || ''}
+// // //           ${exchangeVehicleNumber ? `<br>Exchange Vehicle: ${exchangeVehicleNumber}` : ''}
+// // //           ${exchangeChassisNumber ? `<br>Exchange Chassis: ${exchangeChassisNumber}` : ''}
+// // //         </td>
+// // //         <td>${entry.receiptNumber || ''}</td>
+// // //         <td class="text-right">${entry.type === 'CREDIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
+// // //         <td class="text-right">${entry.type === 'DEBIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
+// // //         <td class="text-right"></td>
+// // //       </tr>
+// // //     `;
+// // //     }
+// // //   )
+// // //   .join('')}
+// // //                       <tr>
+// // //                       <td colspan="3" class="text-left"><strong>Total OnAccount</strong></td>
+// // //                       <td class="text-right"></td>
+// // //                       <td class="text-right"></td>
+// // //                       <td class="text-right"><strong>${availableOnAccount2.toLocaleString('en-IN')}</strong></td>
+// // //                     </tr>
+// // //                     <tr>
+// // //                       <td colspan="3" class="text-left"><strong>Total</strong></td>
+// // //                       <td class="text-right"><strong>${totalCredit.toLocaleString('en-IN')}</strong></td>
+// // //                       <td class="text-right"><strong>${totalDebit.toLocaleString('en-IN')}</strong></td>
+// // //                       <td class="text-right"><strong>${finalBalance.toLocaleString('en-IN')}</strong></td>
+// // //                     </tr>
+
+// // //                   </tbody>
+// // //                 </table>
+
+// // //                 <div class="footer">
+// // //                   <div class="footer-left">
+// // //                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}"
+// // //                          class="qr-code"
+// // //                          alt="QR Code" />
+// // //                   </div>
+// // //                   <div class="footer-right">
+// // //                     <p>For, Gandhi TVS</p>
+// // //                     <p>Authorised Signatory</p>
+// // //                   </div>
+// // //                 </div>
+// // //               </div>
+
+// // //               <script>
+// // //                 window.onload = function() {
+// // //                   setTimeout(() => {
+// // //                     window.print();
+// // //                   }, 300);
+// // //                 };
+// // //               </script>
+// // //             </body>
+// // //           </html>
+// // //         `);
+// // //     } catch (err) {
+// // //       console.error('Error fetching ledger:', err);
+// // //       const message = showError(err);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+// // //     }
+// // //     handleClose();
+// // //   };
+
+// // //   const handleSearch = (value) => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     setSearchTerm(value);
+// // //     handleFilter(value, ['broker.name']);
+// // //   };
+
+// // //   const handlePaymentSaved = (message) => {
+// // //     setSuccessMessage(message);
+// // //     setTimeout(() => setSuccessMessage(''), 3000);
+// // //     fetchData();
+// // //   };
+
+// // //   const handleOpenExportModal = () => {
+// // //     if (!canCreateExchangeLedger) {
+// // //       showError('You do not have permission to export reports');
+// // //       return;
+// // //     }
+    
+// // //     setShowExportModal(true);
+// // //     setExportError('');
+// // //     if (isFiltered && selectedBranch) {
+// // //       setExportBranchId(selectedBranch);
+// // //     }
+// // //   };
+
+// // //   const handleCloseExportModal = () => {
+// // //     setShowExportModal(false);
+// // //     setExportStartDate(null);
+// // //     setExportEndDate(null);
+// // //     setExportBranchId('');
+// // //     setExportError('');
+// // //     setExportLoading(false);
+// // //   };
+
+// // //   const handleExcelExport = async () => {
+// // //     if (!canCreateExchangeLedger) {
+// // //       showError('You do not have permission to export reports');
+// // //       return;
+// // //     }
+    
+// // //     setExportError('');
+    
+// // //     if (!exportBranchId) {
+// // //       setExportError('Please select a branch');
+// // //       return;
+// // //     }
+
+// // //     if (!exportStartDate || !exportEndDate) {
+// // //       setExportError('Please select both start and end dates');
+// // //       return;
+// // //     }
+
+// // //     if (exportStartDate > exportEndDate) {
+// // //       setExportError('Start date cannot be after end date');
+// // //       return;
+// // //     }
+
+// // //     try {
+// // //       setExportLoading(true);
+      
+// // //       const formattedStartDate = formatDateForAPI(exportStartDate);
+// // //       const formattedEndDate = formatDateForAPI(exportEndDate);
+
+// // //       const params = new URLSearchParams({
+// // //         branchId: exportBranchId,
+// // //         startDate: formattedStartDate,
+// // //         endDate: formattedEndDate
+// // //       });
+
+// // //       const response = await axiosInstance.get(
+// // //         `/reports/brokers?${params.toString()}`,
+// // //         { responseType: 'blob' }
+// // //       );
+
+// // //       const contentType = response.headers['content-type'];
+      
+// // //       if (contentType && contentType.includes('application/json')) {
+// // //         const text = await new Promise((resolve, reject) => {
+// // //           const reader = new FileReader();
+// // //           reader.onload = () => resolve(reader.result);
+// // //           reader.onerror = reject;
+// // //           reader.readAsText(response.data);
+// // //         });
+        
+// // //         const errorData = JSON.parse(text);
+        
+// // //         if (!errorData.success && errorData.message) {
+// // //           setExportError(errorData.message);
+// // //           Swal.fire({
+// // //             icon: 'error',
+// // //             title: 'Export Failed',
+// // //             text: errorData.message,
+// // //           });
+// // //           return;
+// // //         }
+// // //       }
+
+// // //       const blob = new Blob([response.data], { 
+// // //         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+// // //       });
+      
+// // //       const url = window.URL.createObjectURL(blob);
+// // //       const link = document.createElement('a');
+// // //       link.href = url;
+      
+// // //       const branchName = branches.find(b => b._id === exportBranchId)?.name || 'Branch';
+// // //       const startDateStr = formatDateDDMMYYYY(exportStartDate);
+// // //       const endDateStr = formatDateDDMMYYYY(exportEndDate);
+// // //       const fileName = `Brokers_Report_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+// // //       link.setAttribute('download', fileName);
+      
+// // //       document.body.appendChild(link);
+// // //       link.click();
+// // //       link.remove();
+      
+// // //       window.URL.revokeObjectURL(url);
+      
+// // //       Swal.fire({
+// // //         toast: true,
+// // //         position: 'top-end',
+// // //         icon: 'success',
+// // //         title: 'Excel exported successfully!',
+// // //         showConfirmButton: false,
+// // //         timer: 3000,
+// // //         timerProgressBar: true
+// // //       });
+
+// // //       handleCloseExportModal();
+      
+// // //     } catch (error) {
+// // //       console.error('Error exporting report:', error);
+      
+// // //       if (error.response && error.response.data instanceof Blob) {
+// // //         try {
+// // //           const text = await new Promise((resolve, reject) => {
+// // //             const reader = new FileReader();
+// // //             reader.onload = () => resolve(reader.result);
+// // //             reader.onerror = reject;
+// // //             reader.readAsText(error.response.data);
+// // //           });
+          
+// // //           const errorData = JSON.parse(text);
+          
+// // //           if (errorData.message) {
+// // //             setExportError(errorData.message);
+// // //             Swal.fire({
+// // //               icon: 'error',
+// // //               title: 'Export Failed',
+// // //               text: errorData.message,
+// // //             });
+// // //           }
+// // //         } catch (parseError) {
+// // //           console.error('Error parsing error response:', parseError);
+// // //           setExportError('Failed to export report');
+// // //           Swal.fire({
+// // //             icon: 'error',
+// // //             title: 'Export Failed',
+// // //             text: 'Failed to export report',
+// // //           });
+// // //         }
+// // //       } else if (error.response?.data?.message) {
+// // //         setExportError(error.response.data.message);
+// // //         Swal.fire({
+// // //           icon: 'error',
+// // //           title: 'Export Failed',
+// // //           text: error.response.data.message,
+// // //         });
+// // //       } else if (error.message) {
+// // //         setExportError(error.message);
+// // //         Swal.fire({
+// // //           icon: 'error',
+// // //           title: 'Export Failed',
+// // //           text: error.message,
+// // //         });
+// // //       } else {
+// // //         setExportError('Failed to export report');
+// // //         Swal.fire({
+// // //           icon: 'error',
+// // //           title: 'Export Failed',
+// // //           text: 'Failed to export report',
+// // //         });
+// // //       }
+      
+// // //     } finally {
+// // //       setExportLoading(false);
+// // //     }
+// // //   };
+
+// // //   if (!canViewExchangeLedger) {
+// // //     return (
+// // //       <div className="alert alert-danger m-3" role="alert">
+// // //         You do not have permission to view Exchange Ledger.
+// // //       </div>
+// // //     );
+// // //   }
+
+// // //   if (loading) {
+// // //     return (
+// // //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+// // //         <CSpinner color="primary" />
+// // //       </div>
+// // //     );
+// // //   }
+
+// // //   if (error) {
+// // //     return (
+// // //       <div className="alert alert-danger" role="alert">
+// // //         {error}
+// // //       </div>
+// // //     );
+// // //   }
+
+// // //   const totalColumns = isFiltered ? 12 : 13;
+// // //   const actionColumnIndex = showActionColumn ? 1 : 0;
+
+// // //   return (
+// // //     <div>
+// // //       <div className='title'>Exchange Ledger {isFiltered && `- ${selectedBranchName}`}</div>
+      
+// // //       {successMessage && (
+// // //         <CAlert color="success" className="mb-3">
+// // //           {successMessage}
+// // //         </CAlert>
+// // //       )}
+    
+// // //       <CCard className='table-container mt-4'>
+// // //         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
+// // //           <div>
+// // //             <CButton 
+// // //               size="sm" 
+// // //               className="action-btn me-1"
+// // //               onClick={() => setShowFilterModal(true)}
+// // //               disabled={!canViewExchangeLedger}
+// // //             >
+// // //               <CIcon icon={cilSearch} className='me-1' />
+// // //               Search
+// // //             </CButton>
+// // //             {isFiltered && (
+// // //               <CButton 
+// // //                 size="sm" 
+// // //                 className="action-btn me-1"
+// // //                 onClick={clearFilter}
+// // //                 disabled={!canViewExchangeLedger}
+// // //               >
+// // //                 <CIcon icon={cilZoomOut} className='me-1' />
+// // //                 Clear Filter
+// // //               </CButton>
+// // //             )}
+            
+// // //             {canCreateExchangeLedger && (
+// // //               <CButton 
+// // //                 size="sm" 
+// // //                 className="action-btn me-1"
+// // //                 onClick={handleOpenExportModal}
+// // //                 title="Export Excel Report"
+// // //               >
+// // //                 <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+// // //                 Export Report
+// // //               </CButton>
+// // //             )}
+// // //           </div>
+// // //         </CCardHeader>
+        
+// // //         <CCardBody>
+// // //           <div className="d-flex justify-content-between mb-3">
+// // //             <div></div>
+// // //             <div className='d-flex'>
+// // //               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+// // //               <CFormInput
+// // //                 type="text"
+// // //                 className="d-inline-block square-search"
+// // //                 value={searchTerm}
+// // //                 onChange={(e) => handleSearch(e.target.value)}
+// // //                 disabled={!canViewExchangeLedger}
+// // //               />
+// // //             </div>
+// // //           </div>
+          
+// // //           <div className="responsive-table-wrapper">
+// // //             <CTable striped bordered hover className='responsive-table'>
+// // //               <CTableHead>
+// // //                 <CTableRow>
+// // //                   {!isFiltered && <CTableHeaderCell></CTableHeaderCell>}
+// // //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Exchange Broker Name</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Mobile</CTableHeaderCell>
+// // //                   {!isFiltered && <CTableHeaderCell>Branch</CTableHeaderCell>}
+// // //                   <CTableHeaderCell>Total Bookings</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Total Exchange Amount</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Total Received</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Total Payable</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Opening Balance</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Current Balance</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Outstanding Amount</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Receipts</CTableHeaderCell>
+// // //                   {showActionColumn && <CTableHeaderCell>Actions</CTableHeaderCell>}
+// // //                 </CTableRow>
+// // //               </CTableHead>
+// // //               <CTableBody>
+// // //                 {currentRecords.length === 0 ? (
+// // //                   <CTableRow>
+// // //                     <CTableDataCell colSpan={totalColumns + actionColumnIndex} className="text-center">
+// // //                       No ledger details available
+// // //                     </CTableDataCell>
+// // //                   </CTableRow>
+// // //                 ) : (
+// // //                   currentRecords.map((brokerData, index) => {
+// // //                     const brokerId = brokerData.broker._id;
+// // //                     const hasTransactions = transactionsFetched[brokerId] && transactionsData[brokerId]?.length > 0;
+// // //                     const isLoading = loadingTransactions[brokerId];
+// // //                     const transactions = transactionsData[brokerId] || [];
+                    
+// // //                     const sortedTransactions = [...transactions].sort((a, b) => {
+// // //                       const dateA = new Date(a.date || a.createdAt || 0);
+// // //                       const dateB = new Date(b.date || b.createdAt || 0);
+// // //                       return dateB - dateA;
+// // //                     });
+                    
+// // //                     return (
+// // //                       <>
+// // //                         <CTableRow key={brokerData.broker._id} className="broker-summary-row">
+// // //                           {!isFiltered && (
+// // //                             <CTableDataCell>
+// // //                               <CButton
+// // //                                 color="link"
+// // //                                 size="sm"
+// // //                                 onClick={() => toggleBrokerExpansion(brokerData.broker._id)}
+// // //                                 disabled={!canViewExchangeLedger}
+// // //                               >
+// // //                                 {expandedBrokers[brokerData.broker._id] ? '▼' : '►'}
+// // //                               </CButton>
+// // //                             </CTableDataCell>
+// // //                           )}
+// // //                           <CTableDataCell>{index + 1}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.broker.name || 'N/A'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.broker.mobile || 'N/A'}</CTableDataCell>
+// // //                           {!isFiltered && <CTableDataCell>All Branches</CTableDataCell>}
+// // //                           <CTableDataCell>{brokerData.totalBookings || 0}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.totalExchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.totalCredit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.totalDebit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                          
+// // //                           {/* Receipts Column - Only show for filtered view or expanded branches */}
+// // //                           <CTableDataCell>
+// // //                             {isFiltered ? (
+// // //                               // When filtered by branch, we can show receipts
+// // //                               isLoading ? (
+// // //                                 <CSpinner size="sm" color="info" />
+// // //                               ) : sortedTransactions.length > 0 ? (
+// // //                                 <CDropdown>
+// // //                                   <CDropdownToggle size="sm" color="info" variant="outline">
+// // //                                     {sortedTransactions.length} Receipt{sortedTransactions.length > 1 ? 's' : ''}
+// // //                                   </CDropdownToggle>
+// // //                                   <CDropdownMenu>
+// // //                                     {sortedTransactions.map((transaction, txIndex) => {
+// // //                                       const transactionId = transaction._id;
+// // //                                       const transactionNumber = transaction.referenceNumber || 'N/A';
+// // //                                       const transactionAmount = transaction.amount || 0;
+// // //                                       const transactionDate = transaction.dateFormatted || 
+// // //                                                             new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+                                      
+// // //                                       return (
+// // //                                         <CDropdownItem 
+// // //                                           key={transactionId || txIndex} 
+// // //                                           onClick={() => printBrokerReceipt(transactionId)}
+// // //                                         >
+// // //                                           <div className="d-flex align-items-center">
+// // //                                             <CIcon icon={cilPrint} className="me-2" />
+// // //                                             <div>
+// // //                                               <div><strong>Receipt #{txIndex + 1}</strong></div>
+// // //                                               <small>
+// // //                                                 ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
+// // //                                               </small>
+// // //                                             </div>
+// // //                                           </div>
+// // //                                         </CDropdownItem>
+// // //                                       );
+// // //                                     })}
+// // //                                   </CDropdownMenu>
+// // //                                 </CDropdown>
+// // //                               ) : transactionsFetched[brokerId] ? (
+// // //                                 <span className="text-muted">No receipts</span>
+// // //                               ) : (
+// // //                                 brokerData.branches && brokerData.branches.length > 0 ? (
+// // //                                   <CButton
+// // //                                     size="sm"
+// // //                                     color="light"
+// // //                                     onClick={() => fetchTransactionsForBroker(brokerId, brokerData.branches[0].branchId)}
+// // //                                     disabled={isLoading}
+// // //                                   >
+// // //                                     <CIcon icon={cilCloudDownload} className="me-1" />
+// // //                                     Load Receipts
+// // //                                   </CButton>
+// // //                                 ) : (
+// // //                                   <span className="text-muted">No branch data</span>
+// // //                                 )
+// // //                               )
+// // //                             ) : (
+// // //                               // When showing all branches, show message to expand
+// // //                               <span className="text-muted small">Expand to view receipts</span>
+// // //                             )}
+// // //                           </CTableDataCell>
+                          
+// // //                           {showActionColumn && (
+// // //                             <CTableDataCell>
+// // //                               <CButton
+// // //                                 size="sm"
+// // //                                 className='option-button btn-sm'
+// // //                                 onClick={(event) => handleClick(event, brokerData.broker._id, brokerData)}
+// // //                                 disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
+// // //                               >
+// // //                                 <CIcon icon={cilSettings} />
+// // //                                 Options
+// // //                               </CButton>
+// // //                               <Menu
+// // //                                 id={`action-menu-${brokerData.broker._id}`}
+// // //                                 anchorEl={anchorEl}
+// // //                                 open={menuId === brokerData.broker._id}
+// // //                                 onClose={handleClose}
+// // //                               >
+// // //                                 {canCreateExchangeLedger && (
+// // //                                   <MenuItem onClick={() => handleAddClick(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
+// // //                                     <CIcon icon={cilPlus} className="me-2" />
+// // //                                     Add Payment
+// // //                                   </MenuItem>
+// // //                                 )}
+// // //                                 {canViewExchangeLedger && (
+// // //                                   <MenuItem
+// // //                                     onClick={() => handleViewLedger(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}
+// // //                                   >
+// // //                                     View Ledger
+// // //                                   </MenuItem>
+// // //                                 )}
+// // //                               </Menu>
+// // //                             </CTableDataCell>
+// // //                           )}
+// // //                         </CTableRow>
+                        
+// // //                         {!isFiltered &&
+// // //                           expandedBrokers[brokerData.broker._id] &&
+// // //                           brokerData.branches.map((branch, branchIndex) => {
+// // //                             const branchKey = `${brokerId}-${branch.branchId}`;
+// // //                             const hasBranchTransactions = transactionsFetched[branchKey] && transactionsData[branchKey]?.length > 0;
+// // //                             const isBranchLoading = loadingTransactions[branchKey];
+// // //                             const branchTransactions = transactionsData[branchKey] || [];
+                            
+// // //                             const sortedBranchTransactions = [...branchTransactions].sort((a, b) => {
+// // //                               const dateA = new Date(a.date || a.createdAt || 0);
+// // //                               const dateB = new Date(b.date || b.createdAt || 0);
+// // //                               return dateB - dateA;
+// // //                             });
+                            
+// // //                             return (
+// // //                               <CTableRow key={`${brokerData.broker._id}-${branch.branchId}`} className="branch-detail-row">
+// // //                                 <CTableDataCell></CTableDataCell>
+// // //                                 <CTableDataCell></CTableDataCell>
+// // //                                 <CTableDataCell></CTableDataCell>
+// // //                                 <CTableDataCell></CTableDataCell>
+// // //                                 <CTableDataCell>{branch.name || 'N/A'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.bookings || 0}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.exchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                                
+// // //                                 {/* Receipts Column for Branch */}
+// // //                                 <CTableDataCell>
+// // //                                   {isBranchLoading ? (
+// // //                                     <CSpinner size="sm" color="info" />
+// // //                                   ) : sortedBranchTransactions.length > 0 ? (
+// // //                                     <CDropdown>
+// // //                                       <CDropdownToggle size="sm" color="info" variant="outline">
+// // //                                         {sortedBranchTransactions.length} Receipt{sortedBranchTransactions.length > 1 ? 's' : ''}
+// // //                                       </CDropdownToggle>
+// // //                                       <CDropdownMenu>
+// // //                                         {sortedBranchTransactions.map((transaction, txIndex) => {
+// // //                                           const transactionId = transaction._id;
+// // //                                           const transactionNumber = transaction.referenceNumber || 'N/A';
+// // //                                           const transactionAmount = transaction.amount || 0;
+// // //                                           const transactionDate = transaction.dateFormatted || 
+// // //                                                                 new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+                                          
+// // //                                           return (
+// // //                                             <CDropdownItem 
+// // //                                               key={transactionId || txIndex} 
+// // //                                               onClick={() => printBrokerReceipt(transactionId)}
+// // //                                             >
+// // //                                               <div className="d-flex align-items-center">
+// // //                                                 <CIcon icon={cilPrint} className="me-2" />
+// // //                                                 <div>
+// // //                                                   <div><strong>Receipt #{txIndex + 1}</strong></div>
+// // //                                                   <small>
+// // //                                                     ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
+// // //                                                   </small>
+// // //                                                 </div>
+// // //                                               </div>
+// // //                                             </CDropdownItem>
+// // //                                           );
+// // //                                         })}
+// // //                                       </CDropdownMenu>
+// // //                                     </CDropdown>
+// // //                                   ) : transactionsFetched[branchKey] ? (
+// // //                                     <span className="text-muted">No receipts</span>
+// // //                                   ) : (
+// // //                                     <CButton
+// // //                                       size="sm"
+// // //                                       color="light"
+// // //                                       onClick={() => fetchTransactionsForBroker(brokerId, branch.branchId)}
+// // //                                       disabled={isBranchLoading}
+// // //                                     >
+// // //                                       <CIcon icon={cilCloudDownload} className="me-1" />
+// // //                                       Load Receipts
+// // //                                     </CButton>
+// // //                                   )}
+// // //                                 </CTableDataCell>
+                                
+// // //                                 {showActionColumn && (
+// // //                                   <CTableDataCell>
+// // //                                     <CButton
+// // //                                       size="sm"
+// // //                                       className='option-button btn-sm'
+// // //                                       onClick={(event) =>
+// // //                                         handleClick(event, `${brokerData.broker._id}-${branch.branchId}`, brokerData, branch.branchId)
+// // //                                       }
+// // //                                       disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
+// // //                                     >
+// // //                                       <CIcon icon={cilSettings} />
+// // //                                       Options
+// // //                                     </CButton>
+// // //                                     <Menu
+// // //                                       id={`action-menu-${brokerData.broker._id}-${branch.branchId}`}
+// // //                                       anchorEl={anchorEl}
+// // //                                       open={menuId === `${brokerData.broker._id}-${branch.branchId}`}
+// // //                                       onClose={handleClose}
+// // //                                     >
+// // //                                       {canCreateExchangeLedger && (
+// // //                                         <MenuItem onClick={() => handleAddClick(brokerData, branch.branchId)}>
+// // //                                           <CIcon icon={cilPlus} className="me-2" />
+// // //                                           Add Payment
+// // //                                         </MenuItem>
+// // //                                       )}
+// // //                                       {canViewExchangeLedger && (
+// // //                                         <MenuItem onClick={() => handleViewLedger(brokerData, branch.branchId)}>
+// // //                                           View Ledger
+// // //                                         </MenuItem>
+// // //                                       )}
+// // //                                     </Menu>
+// // //                                   </CTableDataCell>
+// // //                                 )}
+// // //                               </CTableRow>
+// // //                             );
+// // //                           })}
+// // //                       </>
+// // //                     );
+// // //                   })
+// // //                 )}
+// // //               </CTableBody>
+// // //             </CTable>
+// // //           </div>
+// // //         </CCardBody>
+// // //       </CCard>
+
+// // //       <CModal alignment="center" visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
+// // //         <CModalHeader>
+// // //           <CModalTitle>Search</CModalTitle>
+// // //         </CModalHeader>
+// // //         <CModalBody>
+// // //           <div className="mb-3">
+// // //             <CFormLabel>Select Branch</CFormLabel>
+// // //             <CFormSelect 
+// // //               value={selectedBranch} 
+// // //               onChange={(e) => setSelectedBranch(e.target.value)}
+// // //               disabled={!canViewExchangeLedger}
+// // //             >
+// // //               <option value="ALL">All Branches</option>
+             
+// // //               {branches.map((branch) => (
+// // //                 <option key={branch._id} value={branch._id}>
+// // //                   {branch.name || 'N/A'}
+// // //                 </option>
+// // //               ))}
+// // //             </CFormSelect>
+// // //           </div>
+// // //         </CModalBody>
+// // //         <CModalFooter>
+// // //           <CButton 
+// // //             color="primary" 
+// // //             onClick={handleBranchFilter}
+// // //             disabled={!canViewExchangeLedger}
+// // //           >
+// // //             Search
+// // //           </CButton>
+// // //         </CModalFooter>
+// // //       </CModal>
+      
+// // //       {/* Export Report Modal */}
+// // //       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal} size="lg">
+// // //         <CModalHeader>
+// // //           <CModalTitle>
+// // //             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+// // //             Export Brokers Report
+// // //           </CModalTitle>
+// // //         </CModalHeader>
+// // //         <CModalBody>
+// // //           {exportError && (
+// // //             <CAlert color="warning" className="mb-3">
+// // //               {exportError}
+// // //             </CAlert>
+// // //           )}
+          
+// // //           <LocalizationProvider 
+// // //             dateAdapter={AdapterDateFns} 
+// // //             adapterLocale={enIN}
+// // //           >
+// // //             <div className="mb-3">
+// // //               <CFormLabel>Select Branch</CFormLabel>
+// // //               <CFormSelect 
+// // //                 value={exportBranchId} 
+// // //                 onChange={(e) => {
+// // //                   setExportBranchId(e.target.value);
+// // //                   setExportError('');
+// // //                 }}
+// // //                 disabled={!canCreateExchangeLedger}
+// // //               >
+// // //                 <option value="">-- Select Branch --</option>
+// // //                 <option value="ALL">All Branches</option>
+// // //                 {branches.map((branch) => (
+// // //                   <option key={branch._id} value={branch._id}>
+// // //                     {branch.name || 'N/A'}
+// // //                   </option>
+// // //                 ))}
+// // //               </CFormSelect>
+// // //             </div>
+            
+// // //             <div className="mb-3">
+// // //               <DatePicker
+// // //                 label="Start Date"
+// // //                 value={exportStartDate}
+// // //                 onChange={(newValue) => {
+// // //                   setExportStartDate(newValue);
+// // //                   setExportError('');
+// // //                 }}
+// // //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+// // //                 inputFormat="dd/MM/yyyy"
+// // //                 mask="__/__/____"
+// // //                 views={['day', 'month', 'year']}
+// // //                 disabled={!canCreateExchangeLedger}
+// // //               />
+// // //             </div>
+// // //             <div className="mb-3">
+// // //               <DatePicker
+// // //                 label="End Date"
+// // //                 value={exportEndDate}
+// // //                 onChange={(newValue) => {
+// // //                   setExportEndDate(newValue);
+// // //                   setExportError('');
+// // //                 }}
+// // //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+// // //                 inputFormat="dd/MM/yyyy"
+// // //                 mask="__/__/____"
+// // //                 minDate={exportStartDate}
+// // //                 views={['day', 'month', 'year']}
+// // //                 disabled={!canCreateExchangeLedger}
+// // //               />
+// // //             </div>
+// // //           </LocalizationProvider>
+// // //         </CModalBody>
+// // //         <CModalFooter>
+// // //           <CButton color="secondary" onClick={handleCloseExportModal}>
+// // //             Cancel
+// // //           </CButton>
+// // //           <CButton 
+// // //             className="submit-button"
+// // //             onClick={handleExcelExport}
+// // //             disabled={!exportStartDate || !exportEndDate || !exportBranchId || !canCreateExchangeLedger || exportLoading}
+// // //           >
+// // //             {exportLoading ? (
+// // //               <>
+// // //                 <CSpinner size="sm" className="me-2" />
+// // //                 Exporting...
+// // //               </>
+// // //             ) : 'Export Excel'}
+// // //           </CButton>
+// // //         </CModalFooter>
+// // //       </CModal>
+      
+// // //       <ExchangeLedgerModel 
+// // //         show={showModal} 
+// // //         onClose={() => setShowModal(false)} 
+// // //         brokerData={selectedledger} 
+// // //         refreshData={fetchData}
+// // //         onPaymentSaved={handlePaymentSaved}
+// // //         canCreateExchangeLedger={canCreateExchangeLedger}
+// // //         onPaymentSuccess={(receiptId) => {
+// // //           if (receiptId) {
+// // //             setTimeout(() => {
+// // //               printBrokerReceipt(receiptId);
+// // //             }, 500);
+// // //           }
+// // //         }}
+// // //       />
+// // //     </div>
+// // //   );
+// // // };
+
+// // // export default ExchangeLedger;
+
+
+
+
+
+
+
+
+
+// // // import '../../css/table.css';
+// // // import {
+// // //   React,
+// // //   useState,
+// // //   useEffect,
+// // //   Menu,
+// // //   MenuItem,
+// // //   useTableFilter,
+// // //   usePagination,
+// // //   axiosInstance,
+// // //   showError
+// // // } from '../../utils/tableImports';
+// // // import tvsLogo from '../../assets/images/logo.png';
+// // // import '../../css/invoice.css';
+// // // import config from '../../config';
+// // // import ExchangeLedgerModel from './ExchangeLedgerModel';
+// // // import {
+// // //   CCard,
+// // //   CCardBody,
+// // //   CCardHeader,
+// // //   CFormInput,
+// // //   CFormLabel,
+// // //   CTable,
+// // //   CTableBody,
+// // //   CTableHead,
+// // //   CTableHeaderCell,
+// // //   CTableRow,
+// // //   CTableDataCell,
+// // //   CSpinner,
+// // //   CModal,
+// // //   CModalHeader,
+// // //   CModalTitle,
+// // //   CModalBody,
+// // //   CModalFooter,
+// // //   CButton,
+// // //   CFormSelect,
+// // //   CAlert,
+// // //   CDropdown,
+// // //   CDropdownToggle,
+// // //   CDropdownMenu,
+// // //   CDropdownItem
+// // // } from '@coreui/react';
+// // // import CIcon from '@coreui/icons-react';
+// // // import { cilPlus, cilSettings, cilSearch, cilZoomOut, cilPrint, cilCloudDownload } from '@coreui/icons';
+// // // import { useAuth } from '../../context/AuthContext';
+// // // import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// // // import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+// // // import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// // // import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// // // import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// // // import TextField from '@mui/material/TextField';
+// // // import Swal from 'sweetalert2';
+// // // import QRCode from 'qrcode';
+
+// // // // Import date-fns locale for Indian date format
+// // // import { enIN } from 'date-fns/locale';
+
+// // // // Import permission utilities
+// // // import { 
+// // //   MODULES, 
+// // //   PAGES,
+// // //   canViewPage,
+// // //   canCreateInPage,
+// // //   canUpdateInPage,
+// // //   canDeleteInPage 
+// // // } from '../../utils/modulePermissions';
+// // // import { useCallback } from 'react';
+
+// // // const ExchangeLedger = () => {
+// // //   const [anchorEl, setAnchorEl] = useState(null);
+// // //   const [menuId, setMenuId] = useState(null);
+// // //   const [loading, setLoading] = useState(true);
+// // //   const [error, setError] = useState(null);
+// // //   const [searchTerm, setSearchTerm] = useState('');
+// // //   const [showModal, setShowModal] = useState(false);
+// // //   const [selectedledger, setSelectedledger] = useState(null);
+// // //   const [groupedData, setGroupedData] = useState([]);
+// // //   const [expandedBrokers, setExpandedBrokers] = useState({});
+// // //   const [showFilterModal, setShowFilterModal] = useState(false);
+// // //   const [branches, setBranches] = useState([]);
+// // //   const [selectedBranch, setSelectedBranch] = useState('');
+// // //   const [isFiltered, setIsFiltered] = useState(false);
+// // //   const [selectedBranchName, setSelectedBranchName] = useState('');
+// // //   const [successMessage, setSuccessMessage] = useState('');
+  
+// // //   // ============ RECEIPTS FETCHING STATES ============
+// // //   const [transactionsData, setTransactionsData] = useState({});
+// // //   const [loadingTransactions, setLoadingTransactions] = useState({});
+// // //   const [transactionsFetched, setTransactionsFetched] = useState({});
+  
+// // //   // Export modal state
+// // //   const [showExportModal, setShowExportModal] = useState(false);
+// // //   const [exportStartDate, setExportStartDate] = useState(null);
+// // //   const [exportEndDate, setExportEndDate] = useState(null);
+// // //   const [exportBranchId, setExportBranchId] = useState('');
+// // //   const [exportError, setExportError] = useState('');
+// // //   const [exportLoading, setExportLoading] = useState(false);
+
+// // //   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
+// // //   const { currentRecords, PaginationOptions } = usePagination(filteredData);
+// // //   const { permissions } = useAuth();
+
+// // //   // Page-level permission checks for Exchange Ledger under ACCOUNT module
+// // //   const canViewExchangeLedger = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+// // //   const canCreateExchangeLedger = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+// // //   const canUpdateExchangeLedger = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+// // //   const canDeleteExchangeLedger = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+  
+// // //   const showActionColumn = canCreateExchangeLedger || canViewExchangeLedger;
+
+// // //   // Format date to DD-MM-YYYY for display
+// // //   const formatDateDDMMYYYY = (date) => {
+// // //     if (!date) return '';
+// // //     const day = String(date.getDate()).padStart(2, '0');
+// // //     const month = String(date.getMonth() + 1).padStart(2, '0');
+// // //     const year = date.getFullYear();
+// // //     return `${day}-${month}-${year}`;
+// // //   };
+
+// // //   // Format date to YYYY-MM-DD for API
+// // //   const formatDateForAPI = (date) => {
+// // //     if (!date) return '';
+// // //     const year = date.getFullYear();
+// // //     const month = String(date.getMonth() + 1).padStart(2, '0');
+// // //     const day = String(date.getDate()).padStart(2, '0');
+// // //     return `${year}-${month}-${day}`;
+// // //   };
+
+// // //   useEffect(() => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     fetchData();
+// // //     fetchBranches();
+// // //   }, [canViewExchangeLedger]);
+
+// // //   useEffect(() => {
+// // //     if (data.length > 0) {
+// // //       const grouped = groupDataByBroker(data, isFiltered);
+// // //       setGroupedData(grouped);
+// // //       setFilteredData(grouped);
+      
+// // //       // Initialize transactions data structure
+// // //       const initialTransactionsMap = {};
+// // //       grouped.forEach(brokerData => {
+// // //         const key = brokerData.broker._id;
+// // //         initialTransactionsMap[key] = [];
+        
+// // //         // Also initialize for branches if needed
+// // //         if (!isFiltered && brokerData.branches) {
+// // //           brokerData.branches.forEach(branch => {
+// // //             const branchKey = `${brokerData.broker._id}-${branch.branchId}`;
+// // //             initialTransactionsMap[branchKey] = [];
+// // //           });
+// // //         }
+// // //       });
+// // //       setTransactionsData(initialTransactionsMap);
+// // //     }
+// // //   }, [data, isFiltered]);
+
+// // //   const fetchBranches = async () => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     try {
+// // //       const response = await axiosInstance.get('/branches');
+// // //       setBranches(response.data.data);
+// // //     } catch (error) {
+// // //       const message = showError(error);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+// // //     }
+// // //   };
+
+// // //   const fetchData = async (branchId = null) => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     try {
+// // //       setLoading(true);
+// // //       let url = '/broker-ledger/summary/detailed';
+// // //       if (branchId) {
+// // //         url = `/broker-ledger/summary/branch/${branchId}`;
+// // //       }
+
+// // //       const response = await axiosInstance.get(url);
+
+// // //       if (branchId) {
+// // //         const branchName = branches.find((b) => b._id === branchId)?.name || 'Selected Branch';
+// // //         setSelectedBranchName(branchName);
+
+// // //         const branchData = response.data.data.brokers.map((broker) => ({
+// // //           broker: broker.broker,
+// // //           branch: {
+// // //             _id: response.data.data.branch,
+// // //             name: branchName
+// // //           },
+// // //           bookings: {
+// // //             total: broker.totalBookings,
+// // //             details: []
+// // //           },
+// // //           financials: {
+// // //             totalExchangeAmount: broker.totalExchangeAmount,
+// // //             ledger: {
+// // //               currentBalance: broker.ledger.currentBalance,
+// // //               onAccount: broker.ledger.onAccount,
+// // //               totalCredit: broker.ledger.totalCredit || 0,
+// // //               totalDebit: broker.ledger.totalDebit || 0,
+// // //               outstandingAmount: broker.ledger.outstandingAmount || 0,
+// // //               transactions: broker.ledger.transactions || 0
+// // //             },
+// // //             summary: {
+// // //               totalReceived: broker.summary?.totalReceived || 0,
+// // //               totalPayable: broker.summary?.totalPayable || 0,
+// // //               netBalance: broker.ledger.currentBalance
+// // //             }
+// // //           },
+// // //           recentTransactions: [],
+// // //           association: {
+// // //             isActive: true
+// // //           }
+// // //         }));
+
+// // //         setData(branchData);
+// // //         setIsFiltered(true);
+// // //       } else {
+// // //         setData(response.data.data.brokers);
+// // //         setIsFiltered(false);
+// // //         setSelectedBranchName('');
+// // //       }
+// // //     } catch (error) {
+// // //       const message = showError(error);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+// // //     } finally {
+// // //       setLoading(false);
+// // //     }
+// // //   };
+
+// // //   // ============ FETCH TRANSACTIONS FOR BROKER (REQUIRES BOTH IDs) ============
+// // //   const fetchTransactionsForBroker = useCallback(async (brokerId, branchId) => {
+// // //     // Both IDs are required - don't proceed if either is missing
+// // //     if (!brokerId || !branchId) {
+// // //       console.log('Cannot fetch transactions: Both brokerId and branchId are required');
+// // //       return;
+// // //     }
+    
+// // //     const key = `${brokerId}-${branchId}`;
+    
+// // //     if (transactionsFetched[key] || loadingTransactions[key]) {
+// // //       return;
+// // //     }
+
+// // //     try {
+// // //       setLoadingTransactions(prev => ({ ...prev, [key]: true }));
+      
+// // //       const response = await axiosInstance.get(`/broker-ledger/branch-transactions/${brokerId}/${branchId}`);
+      
+// // //       const transactions = response.data.data.transactions || [];
+      
+// // //       setTransactionsData(prev => ({
+// // //         ...prev,
+// // //         [key]: transactions
+// // //       }));
+      
+// // //       setTransactionsFetched(prev => ({
+// // //         ...prev,
+// // //         [key]: true
+// // //       }));
+// // //     } catch (error) {
+// // //       console.error(`Error fetching transactions for broker ${brokerId} and branch ${branchId}:`, error);
+// // //       setTransactionsData(prev => ({
+// // //         ...prev,
+// // //         [key]: []
+// // //       }));
+// // //       setTransactionsFetched(prev => ({
+// // //         ...prev,
+// // //         [key]: true
+// // //       }));
+// // //     } finally {
+// // //       setLoadingTransactions(prev => ({ ...prev, [key]: false }));
+// // //     }
+// // //   }, [transactionsFetched, loadingTransactions]);
+
+// // //   // ============ PRINT RECEIPT FUNCTION - FIXED ============
+// // //   const printBrokerReceipt = async (transactionId) => {
+// // //     try {
+// // //       console.log('Fetching transaction with ID:', transactionId);
+      
+// // //       const response = await axiosInstance.get(`/broker-ledger/transaction/${transactionId}`);
+// // //       console.log('Transaction response:', response.data);
+      
+// // //       const transaction = response.data.data;
+      
+// // //       if (!transaction) {
+// // //         showError('Transaction data not found');
+// // //         return;
+// // //       }
+      
+// // //       const receivedDate = transaction.dateFormatted || 
+// // //                           new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+      
+// // //       const currentDate = new Date().toLocaleDateString('en-GB');
+      
+// // //       const brokerName = transaction.broker?.name || 'N/A';
+// // //       const branchName = transaction.branch?.name || 'N/A';
+// // //       const branchAddress = transaction.branch?.address || '';
+// // //       const branchPhone = transaction.branch?.phone || '';
+// // //       const branchEmail = transaction.branch?.email || '';
+      
+// // //       const qrText = `GANDHI MOTORS PVT LTD
+// // // Broker: ${brokerName}
+// // // Branch: ${branchName}
+// // // Receipt No: ${transaction.referenceNumber || transaction._id}
+// // // Amount: ₹${transaction.amount || 0}
+// // // Payment Mode: ${transaction.modeOfPayment || 'Cash'}
+// // // Date: ${receivedDate}`;
+
+// // //       let qrCodeImage = '';
+// // //       try {
+// // //         qrCodeImage = await QRCode.toDataURL(qrText, {
+// // //           width: 150,
+// // //           margin: 2,
+// // //           color: {
+// // //             dark: '#000000',
+// // //             light: '#FFFFFF'
+// // //           },
+// // //           errorCorrectionLevel: 'H'
+// // //         });
+// // //       } catch (error) {
+// // //         console.error('Error generating QR code:', error);
+// // //         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
+// // //           <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150">
+// // //             <rect width="150" height="150" fill="white"/>
+// // //             <rect x="10" y="10" width="130" height="130" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
+// // //             <text x="75" y="70" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">QR CODE</text>
+// // //             <text x="75" y="90" text-anchor="middle" font-family="Arial" font-size="8" fill="#666">Receipt: ${transaction.referenceNumber || ''}</text>
+// // //           </svg>
+// // //         `);
+// // //       }
+
+// // //       const receiptHTML = generateReceiptHTML(transaction, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail);
+
+// // //       const printWindow = window.open('', '_blank');
+// // //       printWindow.document.write(receiptHTML);
+// // //       printWindow.document.close();
+      
+// // //       printWindow.onload = function() {
+// // //         printWindow.focus();
+// // //         printWindow.print();
+// // //       };
+      
+// // //     } catch (err) {
+// // //       console.error('Error fetching transaction details:', err);
+// // //       console.error('Error response:', err.response?.data);
+// // //       showError('Failed to load receipt. Please try again.');
+// // //     }
+// // //   };
+
+// // //   // ============ GENERATE RECEIPT HTML ============
+// // //   // ============ GENERATE RECEIPT HTML ============
+// // // const generateReceiptHTML = (transaction, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail) => {
+// // //   const receiptNumber = transaction.referenceNumber || transaction._id || 'N/A';
+// // //   const amount = transaction.amount || 0;
+// // //   const paymentMode = transaction.modeOfPayment || 'Cash';
+// // //   const remark = transaction.remark || '';
+// // //   const referenceNumber = transaction.referenceNumber || '';
+// // //   const approvalStatus = transaction.approvalStatus || 'Pending';
+// // //   const cashLocation = transaction.cashLocation?.name || '';
+// // //   const bankName = transaction.bank?.name || '';
+// // //   const subPaymentMode = transaction.subPaymentMode?.payment_mode || '';
+  
+// // //   const amountInWords = numberToWordsSimple(amount);
+
+// // //   return `<!DOCTYPE html>
+// // // <html>
+// // // <head>
+// // //   <title>Broker Payment Receipt - ${receiptNumber}</title>
+// // //   <style>
+// // //     body {
+// // //       font-family: "Courier New", Courier, monospace;
+// // //       margin: 0;
+// // //       padding: 10mm;
+// // //       font-size: 15px;
+// // //       color: #333;
+// // //     }
+// // //     .page {
+// // //       width: 210mm;
+// // //       margin: 0 auto;
+// // //     }
+// // //     .receipt-copy {
+// // //       height: auto;
+// // //       min-height: 130mm;
+// // //       page-break-inside: avoid;
+// // //     }
+// // //     .header-container {
+// // //       display: flex;
+// // //       justify-content: space-between;
+// // //       margin-bottom: 2mm;
+// // //       align-items: flex-start;
+// // //     }
+// // //     .header-left {
+// // //       width: 60%;
+// // //     }
+// // //     .header-right {
+// // //       width: 40%;
+// // //       text-align: right;
+// // //       display: flex;
+// // //       flex-direction: column;
+// // //       align-items: flex-end;
+// // //     }
+// // //     .logo-qr-container {
+// // //       display: flex;
+// // //       align-items: center;
+// // //       gap: 10px;
+// // //       justify-content: flex-end;
+// // //       margin-bottom: 5px;
+// // //       width: 100%;
+// // //     }
+// // //     .logo {
+// // //       height: 51px;
+// // //     }
+// // //     .qr-code-small {
+// // //       width: 81px;
+// // //       height: 81px;
+// // //       border: 1px solid #ccc;
+// // //     }
+// // //     .dealer-info {
+// // //       text-align: left;
+// // //       font-size: 13px;
+// // //       line-height: 1.2;
+// // //     }
+// // //     .dealer-name {
+// // //       font-size: 17px;
+// // //       font-weight: bold;
+// // //       margin: 0 0 3px 0;
+// // //     }
+// // //     .broker-info-container {
+// // //       display: flex;
+// // //       font-size: 14px;
+// // //       margin: 10px 0;
+// // //     }
+// // //     .broker-info-left {
+// // //       width: 50%;
+// // //     }
+// // //     .broker-info-right {
+// // //       width: 50%;
+// // //     }
+// // //     .info-row {
+// // //       margin: 2mm 0;
+// // //       line-height: 1.2;
+// // //     }
+// // //     /* Style for values in info rows */
+// // //     .info-row .value {
+// // //       font-weight: 700;
+// // //     }
+// // //     .divider {
+// // //       border-top: 2px solid #AAAAAA;
+// // //       margin: 3mm 0;
+// // //     }
+// // //     .receipt-info {
+// // //       background-color: #f8f9fa;
+// // //       border: 1px solid #dee2e6;
+// // //       border-radius: 4px;
+// // //       padding: 9px;
+// // //       margin: 11px 0;
+// // //       font-size: 14px;
+// // //     }
+// // //     .receipt-info .value {
+// // //       font-weight: 700;
+// // //     }
+// // //     .payment-info-box {
+// // //       margin: 11px 0;
+// // //     }
+// // //     .signature-box {
+// // //       margin-top: 16mm;
+// // //       font-size: 11pt;
+// // //     }
+// // //     .signature-line {
+// // //       border-top: 1px dashed #000;
+// // //       width: 41mm;
+// // //       display: inline-block;
+// // //       margin: 0 5mm;
+// // //     }
+// // //     .cutting-line {
+// // //       border-top: 2px dashed #333;
+// // //       margin: 16mm 0 11mm 0;
+// // //       text-align: center;
+// // //       position: relative;
+// // //     }
+// // //     .cutting-line::before {
+// // //       content: "✂ Cut Here ✂";
+// // //       position: absolute;
+// // //       top: -11px;
+// // //       left: 50%;
+// // //       transform: translateX(-50%);
+// // //       background: white;
+// // //       padding: 0 11px;
+// // //       font-size: 13px;
+// // //       color: #666;
+// // //     }
+// // //     .note {
+// // //       padding: 2px;
+// // //       margin: 3px;
+// // //       font-size: 12px;
+// // //     }
+// // //     .note .value {
+// // //       font-weight: 700;
+// // //     }
+// // //     .amount-in-words {
+// // //       font-style: italic;
+// // //       margin-top: 9px;
+// // //       padding: 6px;
+// // //       font-size: 13px;
+// // //       border-top: 1px dashed #ccc;
+// // //     }
+// // //     .amount-in-words .value {
+// // //       font-weight: 700;
+// // //       font-style: normal;
+// // //     }
+// // //     .status-badge {
+// // //       display: inline-block;
+// // //       padding: 4px 9px;
+// // //       border-radius: 12px;
+// // //       font-size: 12px;
+// // //       font-weight: bold;
+// // //       background-color: ${approvalStatus === 'Approved' ? '#d4edda' : approvalStatus === 'Rejected' ? '#f8d7da' : '#fff3cd'};
+// // //       color: ${approvalStatus === 'Approved' ? '#155724' : approvalStatus === 'Rejected' ? '#721c24' : '#856404'};
+// // //       border: 1px solid ${approvalStatus === 'Approved' ? '#c3e6cb' : approvalStatus === 'Rejected' ? '#f5c6cb' : '#ffeeba'};
+// // //     }
+// // //     .footer-note {
+// // //       font-size: 10px;
+// // //       color: #777;
+// // //       text-align: center;
+// // //       margin-top: 5mm;
+// // //     }
+// // //     .payment-details {
+// // //       margin-top: 10px;
+// // //       border-collapse: collapse;
+// // //       width: 100%;
+// // //     }
+// // //     .payment-details td {
+// // //       padding: 4px;
+// // //       border: none;
+// // //     }
+// // //     /* 2-column grid for payment info */
+// // //     .payment-grid-2col {
+// // //       display: grid;
+// // //       grid-template-columns: 1fr 1fr;
+// // //       gap: 4px 15px;
+// // //       padding: 4px;
+// // //       font-size: 14px;
+// // //     }
+// // //     .payment-grid-item {
+// // //       padding: 2px 0;
+// // //       line-height: 1.3;
+// // //     }
+// // //     .payment-grid-item strong {
+// // //       font-weight: 600;
+// // //       margin-right: 5px;
+// // //       min-width: 110px;
+// // //       display: inline-block;
+// // //     }
+// // //     .payment-grid-item .value {
+// // //       font-weight: 700;
+// // //     }
+// // //     @page {
+// // //       size: A4;
+// // //       margin: 10mm;
+// // //     }
+// // //     @media print {
+// // //       body {
+// // //         padding: 0;
+// // //       }
+// // //       .receipt-copy {
+// // //         page-break-inside: avoid;
+// // //       }
+// // //     }
+// // //   </style>
+// // // </head>
+// // // <body>
+// // //   <div class="page">
+// // //     <!-- FIRST COPY -->
+// // //     <div class="receipt-copy">
+// // //       <div class="header-container">
+// // //         <div class="header-left">
+// // //           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
+// // //           <div class="dealer-info">
+// // //             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+// // //             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// // //             Upnagar, Nashik Road, Nashik - 422101<br>
+// // //             Phone: 7498903672
+// // //           </div>
+// // //         </div>
+// // //         <div class="header-right">
+// // //           <div class="logo-qr-container">
+// // //             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
+// // //             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+// // //           </div>
+// // //           <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
+// // //           <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+// // //         </div>
+// // //       </div>
+      
+// // //       <div class="divider"></div>
+
+// // //       <div class="receipt-info">
+// // //         <div><strong>BROKER PAYMENT RECEIPT</strong></div>
+// // //         <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
+// // //       </div>
+
+// // //       <div class="broker-info-container">
+// // //         <div class="broker-info-left">
+// // //           <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
+// // //           <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
+// // //           <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
+// // //           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
+// // //           ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
+// // //         </div>
+// // //         <div class="broker-info-right">
+// // //           <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
+// // //           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
+// // //           <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
+// // //           <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
+// // //         </div>
+// // //       </div>
+
+// // //       <div class="payment-info-box">
+// // //         <div class="receipt-info" style="padding: 5px;">
+// // //           <!-- Payment Information Grid - 2 columns (2 rows) with existing fields only -->
+// // //           <div class="payment-grid-2col">
+// // //             <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
+           
+// // //           </div>
+// // //         </div>
+        
+// // //         <div class="amount-in-words">
+// // //           <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
+// // //         </div>
+// // //       </div>
+
+// // //       <div class="note">
+// // //         <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
+// // //       </div>
+      
+// // //       <div class="divider"></div>
+
+// // //       <div class="signature-box">
+// // //         <div style="display: flex; justify-content: space-between;">
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Broker's Signature</div>
+// // //           </div>
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Authorised Signatory</div>
+// // //           </div>
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Accountant</div>
+// // //           </div>
+// // //         </div>
+// // //       </div>
+      
+// // //       <div class="footer-note">
+// // //         This is a computer generated receipt - valid without signature
+// // //       </div>
+// // //     </div>
+
+// // //     <!-- CUTTING LINE -->
+// // //     <div class="cutting-line"></div>
+
+// // //     <!-- SECOND COPY (DUPLICATE) -->
+// // //     <div class="receipt-copy">
+// // //       <div class="header-container">
+// // //         <div class="header-left">
+// // //           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
+// // //           <div class="dealer-info">
+// // //             Authorized Main Dealer: TVS Motor Company Ltd.<br>
+// // //             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// // //             Upnagar, Nashik Road, Nashik - 422101<br>
+// // //             Phone: 7498903672
+// // //           </div>
+// // //         </div>
+// // //         <div class="header-right">
+// // //           <div class="logo-qr-container">
+// // //             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
+// // //             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+// // //           </div>
+// // //           <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
+// // //           <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+// // //         </div>
+// // //       </div>
+      
+// // //       <div class="divider"></div>
+
+// // //       <div class="receipt-info">
+// // //         <div><strong>BROKER PAYMENT RECEIPT (DUPLICATE)</strong></div>
+// // //         <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
+// // //       </div>
+
+// // //       <div class="broker-info-container">
+// // //         <div class="broker-info-left">
+// // //           <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
+// // //           <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
+// // //           <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
+// // //           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
+// // //           ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
+// // //         </div>
+// // //         <div class="broker-info-right">
+// // //           <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
+// // //           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
+// // //           <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
+// // //           <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
+// // //         </div>
+// // //       </div>
+
+// // //       <div class="payment-info-box">
+// // //         <div class="receipt-info" style="padding: 5px;">
+// // //           <!-- Payment Information Grid - 2 columns (2 rows) with existing fields only -->
+// // //           <div class="payment-grid-2col">
+// // //             <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
+            
+// // //         </div>
+        
+// // //         <div class="amount-in-words">
+// // //           <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
+// // //         </div>
+// // //       </div>
+
+// // //       <div class="note">
+// // //         <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
+// // //       </div>
+      
+// // //       <div class="divider"></div>
+
+// // //       <div class="signature-box">
+// // //         <div style="display: flex; justify-content: space-between;">
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Broker's Signature</div>
+// // //           </div>
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Authorised Signatory</div>
+// // //           </div>
+// // //           <div style="text-align:center; width: 30%;">
+// // //             <div class="signature-line"></div>
+// // //             <div>Accountant</div>
+// // //           </div>
+// // //         </div>
+// // //       </div>
+      
+// // //       <div class="footer-note">
+// // //         This is a computer generated receipt - valid without signature
+// // //       </div>
+// // //     </div>
+// // //   </div>
+// // // </body>
+// // // </html>`;
+// // // };
+
+// // //   // ============ SIMPLE NUMBER TO WORDS FUNCTION ============
+// // //   const numberToWordsSimple = (num) => {
+// // //     if (num === 0) return 'Zero';
+    
+// // //     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+// // //                   'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+// // //                   'Seventeen', 'Eighteen', 'Nineteen'];
+// // //     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+// // //     const numToWords = (n) => {
+// // //       if (n < 20) return ones[n];
+// // //       if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+// // //       if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '');
+// // //       if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '');
+// // //       if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
+// // //       return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
+// // //     };
+    
+// // //     return numToWords(Math.floor(num)) + (num % 1 ? ' point ' + num.toString().split('.')[1] : '');
+// // //   };
+
+// // //   const handleBranchFilter = async () => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     if (selectedBranch) {
+// // //       await fetchData(selectedBranch);
+// // //     } else {
+// // //       await fetchData();
+// // //     }
+// // //     setShowFilterModal(false);
+// // //   };
+
+// // //   const clearFilter = async () => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     setSelectedBranch('');
+// // //     await fetchData();
+// // //     setShowFilterModal(false);
+// // //   };
+
+// // //   const groupDataByBroker = (brokersData, isFilteredMode = false) => {
+// // //     const brokerMap = {};
+
+// // //     brokersData.forEach((item) => {
+// // //       const brokerId = item.broker._id;
+
+// // //       if (!brokerMap[brokerId]) {
+// // //         brokerMap[brokerId] = {
+// // //           broker: item.broker,
+// // //           branches: [],
+// // //           totalBookings: 0,
+// // //           totalExchangeAmount: 0,
+// // //           totalCredit: 0,
+// // //           totalDebit: 0,
+// // //           onAccount: 0,
+// // //           currentBalance: 0,
+// // //           outstandingAmount: 0
+// // //         };
+// // //       }
+
+// // //       if (isFilteredMode) {
+// // //         brokerMap[brokerId].branches = [
+// // //           {
+// // //             name: item.branch.name,
+// // //             branchId: item.branch._id,
+// // //             bookings: item.bookings.total,
+// // //             exchangeAmount: item.financials.totalExchangeAmount,
+// // //             credit: item.financials.ledger.totalCredit,
+// // //             debit: item.financials.ledger.totalDebit,
+// // //             onAccount: item.financials.ledger.onAccount,
+// // //             currentBalance: item.financials.ledger.currentBalance,
+// // //             outstandingAmount: item.financials.ledger.outstandingAmount
+// // //           }
+// // //         ];
+
+// // //         brokerMap[brokerId].totalBookings = item.bookings.total;
+// // //         brokerMap[brokerId].totalExchangeAmount = item.financials.totalExchangeAmount;
+// // //         brokerMap[brokerId].totalCredit = item.financials.ledger.totalCredit;
+// // //         brokerMap[brokerId].totalDebit = item.financials.ledger.totalDebit;
+// // //         brokerMap[brokerId].onAccount = item.financials.ledger.onAccount;
+// // //         brokerMap[brokerId].currentBalance = item.financials.ledger.currentBalance;
+// // //         brokerMap[brokerId].outstandingAmount = item.financials.ledger.outstandingAmount;
+// // //       } else {
+// // //         brokerMap[brokerId].branches.push({
+// // //           name: item.branch.name,
+// // //           branchId: item.branch._id,
+// // //           bookings: item.bookings.total,
+// // //           exchangeAmount: item.financials.totalExchangeAmount,
+// // //           credit: item.financials.ledger.totalCredit,
+// // //           debit: item.financials.ledger.totalDebit,
+// // //           onAccount: item.financials.ledger.onAccount,
+// // //           currentBalance: item.financials.ledger.currentBalance,
+// // //           outstandingAmount: item.financials.ledger.outstandingAmount
+// // //         });
+
+// // //         brokerMap[brokerId].totalBookings += item.bookings.total;
+// // //         brokerMap[brokerId].totalExchangeAmount += item.financials.totalExchangeAmount;
+// // //         brokerMap[brokerId].totalCredit += item.financials.ledger.totalCredit;
+// // //         brokerMap[brokerId].totalDebit += item.financials.ledger.totalDebit;
+// // //         brokerMap[brokerId].onAccount += item.financials.ledger.onAccount;
+// // //         brokerMap[brokerId].currentBalance += item.financials.ledger.currentBalance;
+// // //         brokerMap[brokerId].outstandingAmount += item.financials.ledger.outstandingAmount;
+// // //       }
+// // //     });
+
+// // //     return Object.values(brokerMap);
+// // //   };
+
+// // //   const toggleBrokerExpansion = (brokerId) => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     if (!isFiltered) {
+// // //       setExpandedBrokers((prev) => ({
+// // //         ...prev,
+// // //         [brokerId]: !prev[brokerId]
+// // //       }));
+// // //     }
+// // //   };
+
+// // //   const handleClick = (event, id, brokerData = null, branchId = null) => {
+// // //     if (!canViewExchangeLedger && !canCreateExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     setAnchorEl(event.currentTarget);
+// // //     setMenuId(id);
+// // //     if (brokerData) {
+// // //       setSelectedledger({ ...brokerData, branchId });
+// // //     }
+// // //   };
+
+// // //   const handleClose = () => {
+// // //     setAnchorEl(null);
+// // //     setMenuId(null);
+// // //   };
+
+// // //   const handleAddClick = (brokerData, branchId = null) => {
+// // //     if (!canCreateExchangeLedger) {
+// // //       showError('You do not have permission to add payments');
+// // //       return;
+// // //     }
+    
+// // //     setSelectedledger({ ...brokerData, branchId });
+// // //     setShowModal(true);
+// // //     handleClose();
+// // //   };
+
+// // //   const handleViewLedger = async (brokerData, branchId = null) => {
+// // //     if (!canViewExchangeLedger) {
+// // //       showError('You do not have permission to view ledgers');
+// // //       return;
+// // //     }
+    
+// // //     try {
+// // //       let url = `/broker-ledger/statement/${brokerData.broker?._id}`;
+// // //       if (branchId) {
+// // //         url += `?branchId=${branchId}`;
+// // //       }
+
+// // //       const res = await axiosInstance.get(url);
+// // //       const ledgerData = res.data.data;
+// // //       const ledgerUrl = `${config.baseURL}/brokerData.html?ledgerId=${brokerData._id}`;
+// // //       let totalCredit = 0;
+// // //       let totalDebit = 0;
+// // //       const totalOnAccount = ledgerData.summary?.totalOnAccount ?? ledgerData.onAccountBalance ?? 0;
+
+// // //       ledgerData.transactions?.forEach((entry) => {
+// // //         if (entry.type === 'CREDIT') {
+// // //           totalCredit += entry.amount;
+// // //         } else if (entry.type === 'DEBIT') {
+// // //           totalDebit += entry.amount;
+// // //         }
+// // //       });
+// // //       const finalBalance = totalDebit - totalCredit;
+// // //       const availableOnAccount2 = totalOnAccount - totalCredit;
+
+// // //       const win = window.open('', '_blank');
+// // //       win.document.write(`
+// // //           <!DOCTYPE html>
+// // //           <html>
+// // //             <head>
+// // //               <title>Customer Ledger</title>
+// // //               <style>
+// // //                 @page {
+// // //                   size: A4;
+// // //                   margin: 15mm 10mm;
+// // //                 }
+// // //                 body {
+// // //                   font-family: Arial;
+// // //                   width: 100%;
+// // //                   margin: 0;
+// // //                   padding: 0;
+// // //                   font-size: 14px;
+// // //                   line-height: 1.3;
+// // //                   font-family: Courier New;
+// // //                 }
+// // //                 .container {
+// // //                   width: 190mm;
+// // //                   margin: 0 auto;
+// // //                   padding: 5mm;
+// // //                 }
+// // //                 .header-container {
+// // //                   display: flex;
+// // //                   justify-content:space-between;
+// // //                   margin-bottom: 3mm;
+// // //                 }
+// // //                 .header-text{
+// // //                   font-size:20px;
+// // //                   font-weight:bold;
+// // //                 }
+// // //                 .logo {
+// // //                   width: 30mm;
+// // //                   height: auto;
+// // //                   margin-right: 5mm;
+// // //                 }
+// // //                 .header {
+// // //                   text-align: left;
+// // //                 }
+// // //                 .divider {
+// // //                   border-top: 2px solid #AAAAAA;
+// // //                   margin: 3mm 0;
+// // //                 }
+// // //                 .header h2 {
+// // //                   margin: 2mm 0;
+// // //                   font-size: 12pt;
+// // //                   font-weight: bold;
+// // //                 }
+// // //                 .header div {
+// // //                   font-size: 14px;
+// // //                 }
+// // //                 .customer-info {
+// // //                   display: grid;
+// // //                   grid-template-columns: repeat(2, 1fr);
+// // //                   gap: 2mm;
+// // //                   margin-bottom: 5mm;
+// // //                   font-size: 14px;
+// // //                 }
+// // //                 .customer-info div {
+// // //                   display: flex;
+// // //                 }
+// // //                 .customer-info strong {
+// // //                   min-width: 30mm;
+// // //                   display: inline-block;
+// // //                 }
+// // //                 table {
+// // //                   width: 100%;
+// // //                   border-collapse: collapse;
+// // //                   margin-bottom: 5mm;
+// // //                   font-size: 14px;
+// // //                   page-break-inside: avoid;
+// // //                 }
+// // //                 th, td {
+// // //                   border: 1px solid #000;
+// // //                   padding: 2mm;
+// // //                   text-align: left;
+// // //                 }
+// // //                 th {
+// // //                   background-color: #f0f0f0;
+// // //                   font-weight: bold;
+// // //                 }
+// // //                 .footer {
+// // //                   margin-top: 10mm;
+// // //                   display: flex;
+// // //                   justify-content: space-between;
+// // //                   align-items: flex-end;
+// // //                   font-size: 14px;
+// // //                 }
+// // //                 .footer-left {
+// // //                   text-align: left;
+// // //                 }
+// // //                 .footer-right {
+// // //                   text-align: right;
+// // //                 }
+// // //                 .qr-code {
+// // //                   width: 35mm;
+// // //                   height: 35mm;
+// // //                 }
+// // //                 .text-right {
+// // //                   text-align: right;
+// // //                 }
+// // //                 .text-left {
+// // //                   text-align: left;
+// // //                 }
+// // //                 .text-center {
+// // //                   text-align: center;
+// // //                 }
+// // //                 @media print {
+// // //                   body {
+// // //                     width: 190mm;
+// // //                     height: 277mm;
+// // //                   }
+// // //                   .no-print {
+// // //                     display: none;
+// // //                   }
+// // //                 }
+// // //               </style>
+// // //             </head>
+// // //             <body>
+// // //               <div class="container">
+// // //                 <div class="header-container">
+// // //                   <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+// // //                   <div class="header-text"> GANDHI TVS</div>
+// // //                 </div>
+// // //                 <div class="header">
+// // //                   <div>
+// // //                     Authorised Main Dealer: TVS Motor Company Ltd.<br>
+// // //                     Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// // //                     Upnagar, Nashik Road, Nashik - 422101<br>
+// // //                     Phone: 7498903672
+// // //                   </div>
+// // //                 </div>
+// // //                 <div class="divider"></div>
+// // //                 <div class="customer-info">
+// // //                   <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || 'N/A'}</div>
+// // //                   <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+// // //                 </div>
+
+// // //                 <table>
+// // //                   <thead>
+// // //                     <tr>
+// // //                       <th width="15%">Date</th>
+// // //                       <th width="35%">Description</th>
+// // //                       <th width="15%">Receipt/VC No</th>
+// // //                       <th width="10%" class="text-right">Credit (₹)</th>
+// // //                       <th width="10%" class="text-right">Debit (₹)</th>
+// // //                       <th width="15%" class="text-right">Balance (₹)</th>
+// // //                     </tr>
+// // //                   </thead>
+// // //                   <tbody>
+// // //                     ${ledgerData.transactions
+// // //   ?.map(
+// // //     (entry) => {
+// // //       let exchangeVehicleNumber = '';
+// // //       let exchangeChassisNumber = '';
+// // //       let exchangePrice = '';
+// // //       let exchangeStatus = '';
+// // //       let bookingNumber = entry.booking?.bookingNumber || '';
+      
+// // //       if (entry.exchangeVehicle && entry.exchangeVehicle.VehicleNumber) {
+// // //         exchangeVehicleNumber = entry.exchangeVehicle.VehicleNumber || '';
+// // //         exchangeChassisNumber = entry.exchangeVehicle.ChassisNumber || '';
+// // //         exchangePrice = entry.exchangeVehicle.PriceFormatted || '';
+// // //         exchangeStatus = entry.exchangeVehicle.Status || '';
+// // //       } else if (entry.exchangeDisplay && entry.exchangeDisplay.VehicleNumber) {
+// // //         exchangeVehicleNumber = entry.exchangeDisplay.VehicleNumber || '';
+// // //         exchangeChassisNumber = entry.exchangeDisplay.ChassisNumber || '';
+// // //         exchangePrice = entry.exchangeDisplay.Price || '';
+// // //         exchangeStatus = entry.exchangeDisplay.Status || '';
+// // //       } else if (entry.booking?.exchange?.display) {
+// // //         const exchangeDisplay = entry.booking.exchange.display;
+// // //         exchangeVehicleNumber = exchangeDisplay.vehicleNumber || '';
+// // //         exchangeChassisNumber = exchangeDisplay.chassisNumber || '';
+// // //         exchangePrice = exchangeDisplay.price ? `₹${exchangeDisplay.price.toLocaleString('en-IN')}` : '';
+// // //         exchangeStatus = exchangeDisplay.status || '';
+// // //       } else if (entry.booking?.exchange?.details) {
+// // //         const exchangeDetails = entry.booking.exchange.details;
+// // //         exchangeVehicleNumber = exchangeDetails.vehicleNumber || '';
+// // //         exchangeChassisNumber = exchangeDetails.chassisNumber || '';
+// // //         exchangePrice = exchangeDetails.price ? `₹${exchangeDetails.price.toLocaleString('en-IN')}` : '';
+// // //         exchangeStatus = exchangeDetails.status || '';
+// // //       }
+      
+// // //       return `
+// // //       <tr>
+// // //         <td>${new Date(entry.date).toLocaleDateString() || 'N/A'}</td>
+// // //         <td>
+// // //           Booking No: ${bookingNumber || '-'}<br>
+// // //           Customer: ${entry.booking?.customer?.name || '-'}<br>
+       
+// // //           ${entry.mode || ''}
+// // //           ${exchangeVehicleNumber ? `<br>Exchange Vehicle: ${exchangeVehicleNumber}` : ''}
+// // //           ${exchangeChassisNumber ? `<br>Exchange Chassis: ${exchangeChassisNumber}` : ''}
+// // //         </td>
+// // //         <td>${entry.receiptNumber || ''}</td>
+// // //         <td class="text-right">${entry.type === 'CREDIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
+// // //         <td class="text-right">${entry.type === 'DEBIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
+// // //         <td class="text-right"></td>
+// // //       </tr>
+// // //     `;
+// // //     }
+// // //   )
+// // //   .join('')}
+// // //                       <tr>
+// // //                       <td colspan="3" class="text-left"><strong>Total OnAccount</strong></td>
+// // //                       <td class="text-right"></td>
+// // //                       <td class="text-right"></td>
+// // //                       <td class="text-right"><strong>${availableOnAccount2.toLocaleString('en-IN')}</strong></td>
+// // //                     </tr>
+// // //                     <tr>
+// // //                       <td colspan="3" class="text-left"><strong>Total</strong></td>
+// // //                       <td class="text-right"><strong>${totalCredit.toLocaleString('en-IN')}</strong></td>
+// // //                       <td class="text-right"><strong>${totalDebit.toLocaleString('en-IN')}</strong></td>
+// // //                       <td class="text-right"><strong>${finalBalance.toLocaleString('en-IN')}</strong></td>
+// // //                     </tr>
+
+// // //                   </tbody>
+// // //                 </table>
+
+// // //                 <div class="footer">
+// // //                   <div class="footer-left">
+// // //                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}"
+// // //                          class="qr-code"
+// // //                          alt="QR Code" />
+// // //                   </div>
+// // //                   <div class="footer-right">
+// // //                     <p>For, Gandhi TVS</p>
+// // //                     <p>Authorised Signatory</p>
+// // //                   </div>
+// // //                 </div>
+// // //               </div>
+
+// // //               <script>
+// // //                 window.onload = function() {
+// // //                   setTimeout(() => {
+// // //                     window.print();
+// // //                   }, 300);
+// // //                 };
+// // //               </script>
+// // //             </body>
+// // //           </html>
+// // //         `);
+// // //     } catch (err) {
+// // //       console.error('Error fetching ledger:', err);
+// // //       const message = showError(err);
+// // //       if (message) {
+// // //         setError(message);
+// // //       }
+// // //     }
+// // //     handleClose();
+// // //   };
+
+// // //   const handleSearch = (value) => {
+// // //     if (!canViewExchangeLedger) {
+// // //       return;
+// // //     }
+    
+// // //     setSearchTerm(value);
+// // //     handleFilter(value, ['broker.name']);
+// // //   };
+
+// // //   const handlePaymentSaved = (message) => {
+// // //     setSuccessMessage(message);
+// // //     setTimeout(() => setSuccessMessage(''), 3000);
+// // //     fetchData();
+// // //   };
+
+// // //   const handleOpenExportModal = () => {
+// // //     if (!canCreateExchangeLedger) {
+// // //       showError('You do not have permission to export reports');
+// // //       return;
+// // //     }
+    
+// // //     setShowExportModal(true);
+// // //     setExportError('');
+// // //     if (isFiltered && selectedBranch) {
+// // //       setExportBranchId(selectedBranch);
+// // //     }
+// // //   };
+
+// // //   const handleCloseExportModal = () => {
+// // //     setShowExportModal(false);
+// // //     setExportStartDate(null);
+// // //     setExportEndDate(null);
+// // //     setExportBranchId('');
+// // //     setExportError('');
+// // //     setExportLoading(false);
+// // //   };
+
+// // //   const handleExcelExport = async () => {
+// // //     if (!canCreateExchangeLedger) {
+// // //       showError('You do not have permission to export reports');
+// // //       return;
+// // //     }
+    
+// // //     setExportError('');
+    
+// // //     if (!exportBranchId) {
+// // //       setExportError('Please select a branch');
+// // //       return;
+// // //     }
+
+// // //     if (!exportStartDate || !exportEndDate) {
+// // //       setExportError('Please select both start and end dates');
+// // //       return;
+// // //     }
+
+// // //     if (exportStartDate > exportEndDate) {
+// // //       setExportError('Start date cannot be after end date');
+// // //       return;
+// // //     }
+
+// // //     try {
+// // //       setExportLoading(true);
+      
+// // //       const formattedStartDate = formatDateForAPI(exportStartDate);
+// // //       const formattedEndDate = formatDateForAPI(exportEndDate);
+
+// // //       const params = new URLSearchParams({
+// // //         branchId: exportBranchId,
+// // //         startDate: formattedStartDate,
+// // //         endDate: formattedEndDate
+// // //       });
+
+// // //       const response = await axiosInstance.get(
+// // //         `/reports/brokers?${params.toString()}`,
+// // //         { responseType: 'blob' }
+// // //       );
+
+// // //       const contentType = response.headers['content-type'];
+      
+// // //       if (contentType && contentType.includes('application/json')) {
+// // //         const text = await new Promise((resolve, reject) => {
+// // //           const reader = new FileReader();
+// // //           reader.onload = () => resolve(reader.result);
+// // //           reader.onerror = reject;
+// // //           reader.readAsText(response.data);
+// // //         });
+        
+// // //         const errorData = JSON.parse(text);
+        
+// // //         if (!errorData.success && errorData.message) {
+// // //           setExportError(errorData.message);
+// // //           Swal.fire({
+// // //             icon: 'error',
+// // //             title: 'Export Failed',
+// // //             text: errorData.message,
+// // //           });
+// // //           return;
+// // //         }
+// // //       }
+
+// // //       const blob = new Blob([response.data], { 
+// // //         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+// // //       });
+      
+// // //       const url = window.URL.createObjectURL(blob);
+// // //       const link = document.createElement('a');
+// // //       link.href = url;
+      
+// // //       const branchName = branches.find(b => b._id === exportBranchId)?.name || 'Branch';
+// // //       const startDateStr = formatDateDDMMYYYY(exportStartDate);
+// // //       const endDateStr = formatDateDDMMYYYY(exportEndDate);
+// // //       const fileName = `Brokers_Report_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+// // //       link.setAttribute('download', fileName);
+      
+// // //       document.body.appendChild(link);
+// // //       link.click();
+// // //       link.remove();
+      
+// // //       window.URL.revokeObjectURL(url);
+      
+// // //       Swal.fire({
+// // //         toast: true,
+// // //         position: 'top-end',
+// // //         icon: 'success',
+// // //         title: 'Excel exported successfully!',
+// // //         showConfirmButton: false,
+// // //         timer: 3000,
+// // //         timerProgressBar: true
+// // //       });
+
+// // //       handleCloseExportModal();
+      
+// // //     } catch (error) {
+// // //       console.error('Error exporting report:', error);
+      
+// // //       if (error.response && error.response.data instanceof Blob) {
+// // //         try {
+// // //           const text = await new Promise((resolve, reject) => {
+// // //             const reader = new FileReader();
+// // //             reader.onload = () => resolve(reader.result);
+// // //             reader.onerror = reject;
+// // //             reader.readAsText(error.response.data);
+// // //           });
+          
+// // //           const errorData = JSON.parse(text);
+          
+// // //           if (errorData.message) {
+// // //             setExportError(errorData.message);
+// // //             Swal.fire({
+// // //               icon: 'error',
+// // //               title: 'Export Failed',
+// // //               text: errorData.message,
+// // //             });
+// // //           }
+// // //         } catch (parseError) {
+// // //           console.error('Error parsing error response:', parseError);
+// // //           setExportError('Failed to export report');
+// // //           Swal.fire({
+// // //             icon: 'error',
+// // //             title: 'Export Failed',
+// // //             text: 'Failed to export report',
+// // //           });
+// // //         }
+// // //       } else if (error.response?.data?.message) {
+// // //         setExportError(error.response.data.message);
+// // //         Swal.fire({
+// // //           icon: 'error',
+// // //           title: 'Export Failed',
+// // //           text: error.response.data.message,
+// // //         });
+// // //       } else if (error.message) {
+// // //         setExportError(error.message);
+// // //         Swal.fire({
+// // //           icon: 'error',
+// // //           title: 'Export Failed',
+// // //           text: error.message,
+// // //         });
+// // //       } else {
+// // //         setExportError('Failed to export report');
+// // //         Swal.fire({
+// // //           icon: 'error',
+// // //           title: 'Export Failed',
+// // //           text: 'Failed to export report',
+// // //         });
+// // //       }
+      
+// // //     } finally {
+// // //       setExportLoading(false);
+// // //     }
+// // //   };
+
+// // //   if (!canViewExchangeLedger) {
+// // //     return (
+// // //       <div className="alert alert-danger m-3" role="alert">
+// // //         You do not have permission to view Exchange Ledger.
+// // //       </div>
+// // //     );
+// // //   }
+
+// // //   if (loading) {
+// // //     return (
+// // //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+// // //         <CSpinner color="primary" />
+// // //       </div>
+// // //     );
+// // //   }
+
+// // //   if (error) {
+// // //     return (
+// // //       <div className="alert alert-danger" role="alert">
+// // //         {error}
+// // //       </div>
+// // //     );
+// // //   }
+
+// // //   const totalColumns = isFiltered ? 12 : 13;
+// // //   const actionColumnIndex = showActionColumn ? 1 : 0;
+
+// // //   return (
+// // //     <div>
+// // //       <div className='title'>Exchange Ledger {isFiltered && `- ${selectedBranchName}`}</div>
+      
+// // //       {successMessage && (
+// // //         <CAlert color="success" className="mb-3">
+// // //           {successMessage}
+// // //         </CAlert>
+// // //       )}
+    
+// // //       <CCard className='table-container mt-4'>
+// // //         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
+// // //           <div>
+// // //             <CButton 
+// // //               size="sm" 
+// // //               className="action-btn me-1"
+// // //               onClick={() => setShowFilterModal(true)}
+// // //               disabled={!canViewExchangeLedger}
+// // //             >
+// // //               <CIcon icon={cilSearch} className='me-1' />
+// // //               Search
+// // //             </CButton>
+// // //             {isFiltered && (
+// // //               <CButton 
+// // //                 size="sm" 
+// // //                 className="action-btn me-1"
+// // //                 onClick={clearFilter}
+// // //                 disabled={!canViewExchangeLedger}
+// // //               >
+// // //                 <CIcon icon={cilZoomOut} className='me-1' />
+// // //                 Clear Filter
+// // //               </CButton>
+// // //             )}
+            
+// // //             {canCreateExchangeLedger && (
+// // //               <CButton 
+// // //                 size="sm" 
+// // //                 className="action-btn me-1"
+// // //                 onClick={handleOpenExportModal}
+// // //                 title="Export Excel Report"
+// // //               >
+// // //                 <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+// // //                 Export Report
+// // //               </CButton>
+// // //             )}
+// // //           </div>
+// // //         </CCardHeader>
+        
+// // //         <CCardBody>
+// // //           <div className="d-flex justify-content-between mb-3">
+// // //             <div></div>
+// // //             <div className='d-flex'>
+// // //               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+// // //               <CFormInput
+// // //                 type="text"
+// // //                 className="d-inline-block square-search"
+// // //                 value={searchTerm}
+// // //                 onChange={(e) => handleSearch(e.target.value)}
+// // //                 disabled={!canViewExchangeLedger}
+// // //               />
+// // //             </div>
+// // //           </div>
+          
+// // //           <div className="responsive-table-wrapper">
+// // //             <CTable striped bordered hover className='responsive-table'>
+// // //               <CTableHead>
+// // //                 <CTableRow>
+// // //                   {!isFiltered && <CTableHeaderCell></CTableHeaderCell>}
+// // //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Exchange Broker Name</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Mobile</CTableHeaderCell>
+// // //                   {!isFiltered && <CTableHeaderCell>Branch</CTableHeaderCell>}
+// // //                   <CTableHeaderCell>Total Bookings</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Total Exchange Amount</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Total Received</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Total Payable</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Opening Balance</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Current Balance</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Outstanding Amount</CTableHeaderCell>
+// // //                   <CTableHeaderCell>Receipts</CTableHeaderCell>
+// // //                   {showActionColumn && <CTableHeaderCell>Actions</CTableHeaderCell>}
+// // //                 </CTableRow>
+// // //               </CTableHead>
+// // //               <CTableBody>
+// // //                 {currentRecords.length === 0 ? (
+// // //                   <CTableRow>
+// // //                     <CTableDataCell colSpan={totalColumns + actionColumnIndex} className="text-center">
+// // //                       No ledger details available
+// // //                     </CTableDataCell>
+// // //                   </CTableRow>
+// // //                 ) : (
+// // //                   currentRecords.map((brokerData, index) => {
+// // //                     const brokerId = brokerData.broker._id;
+// // //                     const hasTransactions = transactionsFetched[brokerId] && transactionsData[brokerId]?.length > 0;
+// // //                     const isLoading = loadingTransactions[brokerId];
+// // //                     const transactions = transactionsData[brokerId] || [];
+                    
+// // //                     const sortedTransactions = [...transactions].sort((a, b) => {
+// // //                       const dateA = new Date(a.date || a.createdAt || 0);
+// // //                       const dateB = new Date(b.date || b.createdAt || 0);
+// // //                       return dateB - dateA;
+// // //                     });
+                    
+// // //                     return (
+// // //                       <>
+// // //                         <CTableRow key={brokerData.broker._id} className="broker-summary-row">
+// // //                           {!isFiltered && (
+// // //                             <CTableDataCell>
+// // //                               <CButton
+// // //                                 color="link"
+// // //                                 size="sm"
+// // //                                 onClick={() => toggleBrokerExpansion(brokerData.broker._id)}
+// // //                                 disabled={!canViewExchangeLedger}
+// // //                               >
+// // //                                 {expandedBrokers[brokerData.broker._id] ? '▼' : '►'}
+// // //                               </CButton>
+// // //                             </CTableDataCell>
+// // //                           )}
+// // //                           <CTableDataCell>{index + 1}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.broker.name || 'N/A'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.broker.mobile || 'N/A'}</CTableDataCell>
+// // //                           {!isFiltered && <CTableDataCell>All Branches</CTableDataCell>}
+// // //                           <CTableDataCell>{brokerData.totalBookings || 0}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.totalExchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.totalCredit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.totalDebit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                           <CTableDataCell>{brokerData.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                          
+// // //                           {/* Receipts Column - Only show for filtered view or expanded branches */}
+// // //                           <CTableDataCell>
+// // //                             {isFiltered ? (
+// // //                               // When filtered by branch, we can show receipts
+// // //                               isLoading ? (
+// // //                                 <CSpinner size="sm" color="info" />
+// // //                               ) : sortedTransactions.length > 0 ? (
+// // //                                 <CDropdown>
+// // //                                   <CDropdownToggle size="sm" color="info" variant="outline">
+// // //                                     {sortedTransactions.length} Receipt{sortedTransactions.length > 1 ? 's' : ''}
+// // //                                   </CDropdownToggle>
+// // //                                   <CDropdownMenu>
+// // //                                     {sortedTransactions.map((transaction, txIndex) => {
+// // //                                       const transactionId = transaction._id;
+// // //                                       const transactionNumber = transaction.referenceNumber || 'N/A';
+// // //                                       const transactionAmount = transaction.amount || 0;
+// // //                                       const transactionDate = transaction.dateFormatted || 
+// // //                                                             new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+                                      
+// // //                                       return (
+// // //                                         <CDropdownItem 
+// // //                                           key={transactionId || txIndex} 
+// // //                                           onClick={() => printBrokerReceipt(transactionId)}
+// // //                                         >
+// // //                                           <div className="d-flex align-items-center">
+// // //                                             <CIcon icon={cilPrint} className="me-2" />
+// // //                                             <div>
+// // //                                               <div><strong>Receipt #{txIndex + 1}</strong></div>
+// // //                                               <small>
+// // //                                                 ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
+// // //                                               </small>
+// // //                                             </div>
+// // //                                           </div>
+// // //                                         </CDropdownItem>
+// // //                                       );
+// // //                                     })}
+// // //                                   </CDropdownMenu>
+// // //                                 </CDropdown>
+// // //                               ) : transactionsFetched[brokerId] ? (
+// // //                                 <span className="text-muted">No receipts</span>
+// // //                               ) : (
+// // //                                 brokerData.branches && brokerData.branches.length > 0 ? (
+// // //                                   <CButton
+// // //                                     size="sm"
+// // //                                     color="light"
+// // //                                     onClick={() => fetchTransactionsForBroker(brokerId, brokerData.branches[0].branchId)}
+// // //                                     disabled={isLoading}
+// // //                                   >
+// // //                                     <CIcon icon={cilCloudDownload} className="me-1" />
+// // //                                     Load Receipts
+// // //                                   </CButton>
+// // //                                 ) : (
+// // //                                   <span className="text-muted">No branch data</span>
+// // //                                 )
+// // //                               )
+// // //                             ) : (
+// // //                               // When showing all branches, show message to expand
+// // //                               <span className="text-muted small">Expand to view receipts</span>
+// // //                             )}
+// // //                           </CTableDataCell>
+                          
+// // //                           {showActionColumn && (
+// // //                             <CTableDataCell>
+// // //                               <CButton
+// // //                                 size="sm"
+// // //                                 className='option-button btn-sm'
+// // //                                 onClick={(event) => handleClick(event, brokerData.broker._id, brokerData)}
+// // //                                 disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
+// // //                               >
+// // //                                 <CIcon icon={cilSettings} />
+// // //                                 Options
+// // //                               </CButton>
+// // //                               <Menu
+// // //                                 id={`action-menu-${brokerData.broker._id}`}
+// // //                                 anchorEl={anchorEl}
+// // //                                 open={menuId === brokerData.broker._id}
+// // //                                 onClose={handleClose}
+// // //                               >
+// // //                                 {canCreateExchangeLedger && (
+// // //                                   <MenuItem onClick={() => handleAddClick(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
+// // //                                     <CIcon icon={cilPlus} className="me-2" />
+// // //                                     Add Payment
+// // //                                   </MenuItem>
+// // //                                 )}
+// // //                                 {canViewExchangeLedger && (
+// // //                                   <MenuItem
+// // //                                     onClick={() => handleViewLedger(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}
+// // //                                   >
+// // //                                     View Ledger
+// // //                                   </MenuItem>
+// // //                                 )}
+// // //                               </Menu>
+// // //                             </CTableDataCell>
+// // //                           )}
+// // //                         </CTableRow>
+                        
+// // //                         {!isFiltered &&
+// // //                           expandedBrokers[brokerData.broker._id] &&
+// // //                           brokerData.branches.map((branch, branchIndex) => {
+// // //                             const branchKey = `${brokerId}-${branch.branchId}`;
+// // //                             const hasBranchTransactions = transactionsFetched[branchKey] && transactionsData[branchKey]?.length > 0;
+// // //                             const isBranchLoading = loadingTransactions[branchKey];
+// // //                             const branchTransactions = transactionsData[branchKey] || [];
+                            
+// // //                             const sortedBranchTransactions = [...branchTransactions].sort((a, b) => {
+// // //                               const dateA = new Date(a.date || a.createdAt || 0);
+// // //                               const dateB = new Date(b.date || b.createdAt || 0);
+// // //                               return dateB - dateA;
+// // //                             });
+                            
+// // //                             return (
+// // //                               <CTableRow key={`${brokerData.broker._id}-${branch.branchId}`} className="branch-detail-row">
+// // //                                 <CTableDataCell></CTableDataCell>
+// // //                                 <CTableDataCell></CTableDataCell>
+// // //                                 <CTableDataCell></CTableDataCell>
+// // //                                 <CTableDataCell></CTableDataCell>
+// // //                                 <CTableDataCell>{branch.name || 'N/A'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.bookings || 0}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.exchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// // //                                 <CTableDataCell>{branch.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                                
+// // //                                 {/* Receipts Column for Branch */}
+// // //                                 <CTableDataCell>
+// // //                                   {isBranchLoading ? (
+// // //                                     <CSpinner size="sm" color="info" />
+// // //                                   ) : sortedBranchTransactions.length > 0 ? (
+// // //                                     <CDropdown>
+// // //                                       <CDropdownToggle size="sm" color="info" variant="outline">
+// // //                                         {sortedBranchTransactions.length} Receipt{sortedBranchTransactions.length > 1 ? 's' : ''}
+// // //                                       </CDropdownToggle>
+// // //                                       <CDropdownMenu>
+// // //                                         {sortedBranchTransactions.map((transaction, txIndex) => {
+// // //                                           const transactionId = transaction._id;
+// // //                                           const transactionNumber = transaction.referenceNumber || 'N/A';
+// // //                                           const transactionAmount = transaction.amount || 0;
+// // //                                           const transactionDate = transaction.dateFormatted || 
+// // //                                                                 new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+                                          
+// // //                                           return (
+// // //                                             <CDropdownItem 
+// // //                                               key={transactionId || txIndex} 
+// // //                                               onClick={() => printBrokerReceipt(transactionId)}
+// // //                                             >
+// // //                                               <div className="d-flex align-items-center">
+// // //                                                 <CIcon icon={cilPrint} className="me-2" />
+// // //                                                 <div>
+// // //                                                   <div><strong>Receipt #{txIndex + 1}</strong></div>
+// // //                                                   <small>
+// // //                                                     ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
+// // //                                                   </small>
+// // //                                                 </div>
+// // //                                               </div>
+// // //                                             </CDropdownItem>
+// // //                                           );
+// // //                                         })}
+// // //                                       </CDropdownMenu>
+// // //                                     </CDropdown>
+// // //                                   ) : transactionsFetched[branchKey] ? (
+// // //                                     <span className="text-muted">No receipts</span>
+// // //                                   ) : (
+// // //                                     <CButton
+// // //                                       size="sm"
+// // //                                       color="light"
+// // //                                       onClick={() => fetchTransactionsForBroker(brokerId, branch.branchId)}
+// // //                                       disabled={isBranchLoading}
+// // //                                     >
+// // //                                       <CIcon icon={cilCloudDownload} className="me-1" />
+// // //                                       Load Receipts
+// // //                                     </CButton>
+// // //                                   )}
+// // //                                 </CTableDataCell>
+                                
+// // //                                 {showActionColumn && (
+// // //                                   <CTableDataCell>
+// // //                                     <CButton
+// // //                                       size="sm"
+// // //                                       className='option-button btn-sm'
+// // //                                       onClick={(event) =>
+// // //                                         handleClick(event, `${brokerData.broker._id}-${branch.branchId}`, brokerData, branch.branchId)
+// // //                                       }
+// // //                                       disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
+// // //                                     >
+// // //                                       <CIcon icon={cilSettings} />
+// // //                                       Options
+// // //                                     </CButton>
+// // //                                     <Menu
+// // //                                       id={`action-menu-${brokerData.broker._id}-${branch.branchId}`}
+// // //                                       anchorEl={anchorEl}
+// // //                                       open={menuId === `${brokerData.broker._id}-${branch.branchId}`}
+// // //                                       onClose={handleClose}
+// // //                                     >
+// // //                                       {canCreateExchangeLedger && (
+// // //                                         <MenuItem onClick={() => handleAddClick(brokerData, branch.branchId)}>
+// // //                                           <CIcon icon={cilPlus} className="me-2" />
+// // //                                           Add Payment
+// // //                                         </MenuItem>
+// // //                                       )}
+// // //                                       {canViewExchangeLedger && (
+// // //                                         <MenuItem onClick={() => handleViewLedger(brokerData, branch.branchId)}>
+// // //                                           View Ledger
+// // //                                         </MenuItem>
+// // //                                       )}
+// // //                                     </Menu>
+// // //                                   </CTableDataCell>
+// // //                                 )}
+// // //                               </CTableRow>
+// // //                             );
+// // //                           })}
+// // //                       </>
+// // //                     );
+// // //                   })
+// // //                 )}
+// // //               </CTableBody>
+// // //             </CTable>
+// // //           </div>
+// // //         </CCardBody>
+// // //       </CCard>
+
+// // //       <CModal alignment="center" visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
+// // //         <CModalHeader>
+// // //           <CModalTitle>Search</CModalTitle>
+// // //         </CModalHeader>
+// // //         <CModalBody>
+// // //           <div className="mb-3">
+// // //             <CFormLabel>Select Branch</CFormLabel>
+// // //             <CFormSelect 
+// // //               value={selectedBranch} 
+// // //               onChange={(e) => setSelectedBranch(e.target.value)}
+// // //               disabled={!canViewExchangeLedger}
+// // //             >
+// // //               <option value="ALL">All Branches</option>
+             
+// // //               {branches.map((branch) => (
+// // //                 <option key={branch._id} value={branch._id}>
+// // //                   {branch.name || 'N/A'}
+// // //                 </option>
+// // //               ))}
+// // //             </CFormSelect>
+// // //           </div>
+// // //         </CModalBody>
+// // //         <CModalFooter>
+// // //           <CButton 
+// // //             color="primary" 
+// // //             onClick={handleBranchFilter}
+// // //             disabled={!canViewExchangeLedger}
+// // //           >
+// // //             Search
+// // //           </CButton>
+// // //         </CModalFooter>
+// // //       </CModal>
+      
+// // //       {/* Export Report Modal */}
+// // //       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal} size="lg">
+// // //         <CModalHeader>
+// // //           <CModalTitle>
+// // //             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+// // //             Export Brokers Report
+// // //           </CModalTitle>
+// // //         </CModalHeader>
+// // //         <CModalBody>
+// // //           {exportError && (
+// // //             <CAlert color="warning" className="mb-3">
+// // //               {exportError}
+// // //             </CAlert>
+// // //           )}
+          
+// // //           <LocalizationProvider 
+// // //             dateAdapter={AdapterDateFns} 
+// // //             adapterLocale={enIN}
+// // //           >
+// // //             <div className="mb-3">
+// // //               <CFormLabel>Select Branch</CFormLabel>
+// // //               <CFormSelect 
+// // //                 value={exportBranchId} 
+// // //                 onChange={(e) => {
+// // //                   setExportBranchId(e.target.value);
+// // //                   setExportError('');
+// // //                 }}
+// // //                 disabled={!canCreateExchangeLedger}
+// // //               >
+// // //                 <option value="">-- Select Branch --</option>
+// // //                 <option value="ALL">All Branches</option>
+// // //                 {branches.map((branch) => (
+// // //                   <option key={branch._id} value={branch._id}>
+// // //                     {branch.name || 'N/A'}
+// // //                   </option>
+// // //                 ))}
+// // //               </CFormSelect>
+// // //             </div>
+            
+// // //             <div className="mb-3">
+// // //               <DatePicker
+// // //                 label="Start Date"
+// // //                 value={exportStartDate}
+// // //                 onChange={(newValue) => {
+// // //                   setExportStartDate(newValue);
+// // //                   setExportError('');
+// // //                 }}
+// // //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+// // //                 inputFormat="dd/MM/yyyy"
+// // //                 mask="__/__/____"
+// // //                 views={['day', 'month', 'year']}
+// // //                 disabled={!canCreateExchangeLedger}
+// // //               />
+// // //             </div>
+// // //             <div className="mb-3">
+// // //               <DatePicker
+// // //                 label="End Date"
+// // //                 value={exportEndDate}
+// // //                 onChange={(newValue) => {
+// // //                   setExportEndDate(newValue);
+// // //                   setExportError('');
+// // //                 }}
+// // //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+// // //                 inputFormat="dd/MM/yyyy"
+// // //                 mask="__/__/____"
+// // //                 minDate={exportStartDate}
+// // //                 views={['day', 'month', 'year']}
+// // //                 disabled={!canCreateExchangeLedger}
+// // //               />
+// // //             </div>
+// // //           </LocalizationProvider>
+// // //         </CModalBody>
+// // //         <CModalFooter>
+// // //           <CButton color="secondary" onClick={handleCloseExportModal}>
+// // //             Cancel
+// // //           </CButton>
+// // //           <CButton 
+// // //             className="submit-button"
+// // //             onClick={handleExcelExport}
+// // //             disabled={!exportStartDate || !exportEndDate || !exportBranchId || !canCreateExchangeLedger || exportLoading}
+// // //           >
+// // //             {exportLoading ? (
+// // //               <>
+// // //                 <CSpinner size="sm" className="me-2" />
+// // //                 Exporting...
+// // //               </>
+// // //             ) : 'Export Excel'}
+// // //           </CButton>
+// // //         </CModalFooter>
+// // //       </CModal>
+      
+// // //       <ExchangeLedgerModel 
+// // //         show={showModal} 
+// // //         onClose={() => setShowModal(false)} 
+// // //         brokerData={selectedledger} 
+// // //         refreshData={fetchData}
+// // //         onPaymentSaved={handlePaymentSaved}
+// // //         canCreateExchangeLedger={canCreateExchangeLedger}
+// // //         onPaymentSuccess={(receiptId) => {
+// // //           if (receiptId) {
+// // //             setTimeout(() => {
+// // //               printBrokerReceipt(receiptId);
+// // //             }, 500);
+// // //           }
+// // //         }}
+// // //       />
+// // //     </div>
+// // //   );
+// // // };
+
+// // // export default ExchangeLedger;
+
+
+
+
+
 // // import '../../css/table.css';
 // // import {
 // //   React,
@@ -287,37 +4104,47 @@
 // //     }
 // //   }, [transactionsFetched, loadingTransactions]);
 
-// //   // ============ PRINT RECEIPT FUNCTION - FIXED ============
-// //   const printBrokerReceipt = async (transactionId) => {
+// //   // ============ PRINT RECEIPT FUNCTION - USING BRANCH TRANSACTIONS API ============
+// //   const printBrokerReceipt = async (transactionId, brokerId, branchId) => {
 // //     try {
-// //       console.log('Fetching transaction with ID:', transactionId);
+// //       console.log('Fetching transactions for broker:', brokerId, 'branch:', branchId);
       
-// //       const response = await axiosInstance.get(`/broker-ledger/transaction/${transactionId}`);
-// //       console.log('Transaction response:', response.data);
+// //       // Fetch all transactions for this broker and branch
+// //       const response = await axiosInstance.get(`/broker-ledger/branch-transactions/${brokerId}/${branchId}`);
+// //       console.log('Transactions response:', response.data);
       
-// //       const transaction = response.data.data;
+// //       const transactionData = response.data.data;
+      
+// //       // Find the specific transaction by ID
+// //       const transaction = transactionData.transactions?.find(t => t._id === transactionId);
       
 // //       if (!transaction) {
-// //         showError('Transaction data not found');
+// //         showError('Transaction not found');
 // //         return;
 // //       }
+      
+// //       console.log('Found transaction:', transaction);
+      
+// //       // Get the amount from the transaction object
+// //       const amount = transaction.amount || 0;
+// //       console.log('Amount being used:', amount);
       
 // //       const receivedDate = transaction.dateFormatted || 
 // //                           new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
       
 // //       const currentDate = new Date().toLocaleDateString('en-GB');
       
-// //       const brokerName = transaction.broker?.name || 'N/A';
-// //       const branchName = transaction.branch?.name || 'N/A';
-// //       const branchAddress = transaction.branch?.address || '';
-// //       const branchPhone = transaction.branch?.phone || '';
-// //       const branchEmail = transaction.branch?.email || '';
+// //       const brokerName = transactionData.broker?.name || 'N/A';
+// //       const branchName = transactionData.branch?.name || 'N/A';
+// //       const branchAddress = transactionData.branch?.address || '';
+// //       const branchPhone = transactionData.branch?.phone || '';
+// //       const branchEmail = transactionData.branch?.email || '';
       
 // //       const qrText = `GANDHI MOTORS PVT LTD
 // // Broker: ${brokerName}
 // // Branch: ${branchName}
 // // Receipt No: ${transaction.referenceNumber || transaction._id}
-// // Amount: ₹${transaction.amount || 0}
+// // Amount: ₹${amount}
 // // Payment Mode: ${transaction.modeOfPayment || 'Cash'}
 // // Date: ${receivedDate}`;
 
@@ -344,7 +4171,8 @@
 // //         `);
 // //       }
 
-// //       const receiptHTML = generateReceiptHTML(transaction, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail);
+// //       // Pass the transaction object and the transactionData
+// //       const receiptHTML = generateReceiptHTML(transaction, transactionData, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail);
 
 // //       const printWindow = window.open('', '_blank');
 // //       printWindow.document.write(receiptHTML);
@@ -363,7 +4191,7 @@
 // //   };
 
 // //   // ============ GENERATE RECEIPT HTML ============
-// //   const generateReceiptHTML = (transaction, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail) => {
+// //   const generateReceiptHTML = (transaction, transactionData, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail) => {
 // //     const receiptNumber = transaction.referenceNumber || transaction._id || 'N/A';
 // //     const amount = transaction.amount || 0;
 // //     const paymentMode = transaction.modeOfPayment || 'Cash';
@@ -377,5442 +4205,1614 @@
 // //     const amountInWords = numberToWordsSimple(amount);
 
 // //     return `<!DOCTYPE html>
-// // <html>
-// // <head>
-// //   <title>Broker Payment Receipt - ${receiptNumber}</title>
-// //   <style>
-// //     body {
-// //       font-family: "Courier New", Courier, monospace;
-// //       margin: 0;
-// //       padding: 10mm;
-// //       font-size: 14px;
-// //       color: #333;
-// //     }
-// //     .page {
-// //       width: 210mm;
-// //       margin: 0 auto;
-// //     }
-// //     .receipt-copy {
-// //       height: auto;
-// //       min-height: 130mm;
-// //       page-break-inside: avoid;
-// //     }
-// //     .header-container {
-// //       display: flex;
-// //       justify-content: space-between;
-// //       margin-bottom: 2mm;
-// //       align-items: flex-start;
-// //     }
-// //     .header-left {
-// //       width: 60%;
-// //     }
-// //     .header-right {
-// //       width: 40%;
-// //       text-align: right;
-// //       display: flex;
-// //       flex-direction: column;
-// //       align-items: flex-end;
-// //     }
-// //     .logo-qr-container {
-// //       display: flex;
-// //       align-items: center;
-// //       gap: 10px;
-// //       justify-content: flex-end;
-// //       margin-bottom: 5px;
-// //       width: 100%;
-// //     }
-// //     .logo {
-// //       height: 50px;
-// //     }
-// //     .qr-code-small {
-// //       width: 80px;
-// //       height: 80px;
-// //       border: 1px solid #ccc;
-// //     }
-// //     .dealer-info {
-// //       text-align: left;
-// //       font-size: 12px;
-// //       line-height: 1.2;
-// //     }
-// //     .dealer-name {
-// //       font-size: 16px;
-// //       font-weight: bold;
-// //       margin: 0 0 3px 0;
-// //     }
-// //     .broker-info-container {
-// //       display: flex;
-// //       font-size: 12px;
-// //       margin: 10px 0;
-// //     }
-// //     .broker-info-left {
-// //       width: 50%;
-// //     }
-// //     .broker-info-right {
-// //       width: 50%;
-// //     }
-// //     .info-row {
-// //       margin: 2mm 0;
-// //       line-height: 1.2;
-// //     }
-// //     .divider {
-// //       border-top: 2px solid #AAAAAA;
-// //       margin: 3mm 0;
-// //     }
-// //     .receipt-info {
-// //       background-color: #f8f9fa;
-// //       border: 1px solid #dee2e6;
-// //       border-radius: 4px;
-// //       padding: 8px;
-// //       margin: 10px 0;
-// //       font-size: 12px;
-// //     }
-// //     .payment-info-box {
-// //       margin: 10px 0;
-// //     }
-// //     .signature-box {
-// //       margin-top: 15mm;
-// //       font-size: 10pt;
-// //     }
-// //     .signature-line {
-// //       border-top: 1px dashed #000;
-// //       width: 40mm;
-// //       display: inline-block;
-// //       margin: 0 5mm;
-// //     }
-// //     .cutting-line {
-// //       border-top: 2px dashed #333;
-// //       margin: 15mm 0 10mm 0;
-// //       text-align: center;
-// //       position: relative;
-// //     }
-// //     .cutting-line::before {
-// //       content: "✂ Cut Here ✂";
-// //       position: absolute;
-// //       top: -10px;
-// //       left: 50%;
-// //       transform: translateX(-50%);
-// //       background: white;
-// //       padding: 0 10px;
-// //       font-size: 12px;
-// //       color: #666;
-// //     }
-// //     .note {
-// //       padding: 1px;
-// //       margin: 2px;
-// //       font-size: 11px;
-// //     }
-// //     .amount-in-words {
-// //       font-style: italic;
-// //       margin-top: 8px;
-// //       padding: 5px;
-// //       font-size: 12px;
-// //       border-top: 1px dashed #ccc;
-// //     }
-// //     .status-badge {
-// //       display: inline-block;
-// //       padding: 3px 8px;
-// //       border-radius: 12px;
-// //       font-size: 11px;
-// //       font-weight: bold;
-// //       background-color: ${approvalStatus === 'Approved' ? '#d4edda' : approvalStatus === 'Rejected' ? '#f8d7da' : '#fff3cd'};
-// //       color: ${approvalStatus === 'Approved' ? '#155724' : approvalStatus === 'Rejected' ? '#721c24' : '#856404'};
-// //       border: 1px solid ${approvalStatus === 'Approved' ? '#c3e6cb' : approvalStatus === 'Rejected' ? '#f5c6cb' : '#ffeeba'};
-// //     }
-// //     .footer-note {
-// //       font-size: 9px;
-// //       color: #777;
-// //       text-align: center;
-// //       margin-top: 5mm;
-// //     }
-// //     .payment-details {
-// //       margin-top: 10px;
-// //       border-collapse: collapse;
-// //       width: 100%;
-// //     }
-// //     .payment-details td {
-// //       padding: 4px;
-// //       border: none;
-// //     }
-// //     @page {
-// //       size: A4;
-// //       margin: 10mm;
-// //     }
-// //     @media print {
+// //   <html>
+// //   <head>
+// //     <title>Broker Payment Receipt - ${receiptNumber}</title>
+// //     <style>
 // //       body {
-// //         padding: 0;
+// //         font-family: "Courier New", Courier, monospace;
+// //         margin: 0;
+// //         padding: 10mm;
+// //         font-size: 15px;
+// //         color: #333;
+// //       }
+// //       .page {
+// //         width: 210mm;
+// //         margin: 0 auto;
 // //       }
 // //       .receipt-copy {
+// //         height: auto;
+// //         min-height: 130mm;
 // //         page-break-inside: avoid;
 // //       }
-// //     }
-// //   </style>
-// // </head>
-// // <body>
-// //   <div class="page">
-// //     <!-- FIRST COPY -->
-// //     <div class="receipt-copy">
-// //       <div class="header-container">
-// //         <div class="header-left">
-// //           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
-// //           <div class="dealer-info">
-// //             Authorized Main Dealer: TVS Motor Company Ltd.<br>
-// //             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-// //             Upnagar, Nashik Road, Nashik - 422101<br>
-// //             Phone: 7498903672
+// //       .header-container {
+// //         display: flex;
+// //         justify-content: space-between;
+// //         margin-bottom: 2mm;
+// //         align-items: flex-start;
+// //       }
+// //       .header-left {
+// //         width: 60%;
+// //       }
+// //       .header-right {
+// //         width: 40%;
+// //         text-align: right;
+// //         display: flex;
+// //         flex-direction: column;
+// //         align-items: flex-end;
+// //       }
+// //       .logo-qr-container {
+// //         display: flex;
+// //         align-items: center;
+// //         gap: 10px;
+// //         justify-content: flex-end;
+// //         margin-bottom: 5px;
+// //         width: 100%;
+// //       }
+// //       .logo {
+// //         height: 51px;
+// //       }
+// //       .qr-code-small {
+// //         width: 81px;
+// //         height: 81px;
+// //         border: 1px solid #ccc;
+// //       }
+// //       .dealer-info {
+// //         text-align: left;
+// //         font-size: 13px;
+// //         line-height: 1.2;
+// //       }
+// //       .dealer-name {
+// //         font-size: 17px;
+// //         font-weight: bold;
+// //         margin: 0 0 3px 0;
+// //       }
+// //       .broker-info-container {
+// //         display: flex;
+// //         font-size: 14px;
+// //         margin: 10px 0;
+// //       }
+// //       .broker-info-left {
+// //         width: 50%;
+// //       }
+// //       .broker-info-right {
+// //         width: 50%;
+// //       }
+// //       .info-row {
+// //         margin: 2mm 0;
+// //         line-height: 1.2;
+// //       }
+// //       /* Style for values in info rows */
+// //       .info-row .value {
+// //         font-weight: 700;
+// //       }
+// //       .divider {
+// //         border-top: 2px solid #AAAAAA;
+// //         margin: 3mm 0;
+// //       }
+// //       .receipt-info {
+// //         background-color: #f8f9fa;
+// //         border: 1px solid #dee2e6;
+// //         border-radius: 4px;
+// //         padding: 9px;
+// //         margin: 11px 0;
+// //         font-size: 14px;
+// //       }
+// //       .receipt-info .value {
+// //         font-weight: 700;
+// //       }
+// //       .payment-info-box {
+// //         margin: 11px 0;
+// //       }
+// //       .signature-box {
+// //         margin-top: 16mm;
+// //         font-size: 11pt;
+// //       }
+// //       .signature-line {
+// //         border-top: 1px dashed #000;
+// //         width: 41mm;
+// //         display: inline-block;
+// //         margin: 0 5mm;
+// //       }
+// //       .cutting-line {
+// //         border-top: 2px dashed #333;
+// //         margin: 16mm 0 11mm 0;
+// //         text-align: center;
+// //         position: relative;
+// //       }
+// //       .cutting-line::before {
+// //         content: "✂ Cut Here ✂";
+// //         position: absolute;
+// //         top: -11px;
+// //         left: 50%;
+// //         transform: translateX(-50%);
+// //         background: white;
+// //         padding: 0 11px;
+// //         font-size: 13px;
+// //         color: #666;
+// //       }
+// //       .note {
+// //         padding: 2px;
+// //         margin: 3px;
+// //         font-size: 12px;
+// //       }
+// //       .note .value {
+// //         font-weight: 700;
+// //       }
+// //       .amount-in-words {
+// //         font-style: italic;
+// //         margin-top: 9px;
+// //         padding: 6px;
+// //         font-size: 13px;
+// //         border-top: 1px dashed #ccc;
+// //       }
+// //       .amount-in-words .value {
+// //         font-weight: 700;
+// //         font-style: normal;
+// //       }
+// //       .status-badge {
+// //         display: inline-block;
+// //         padding: 4px 9px;
+// //         border-radius: 12px;
+// //         font-size: 12px;
+// //         font-weight: bold;
+// //         background-color: ${approvalStatus === 'Approved' ? '#d4edda' : approvalStatus === 'Rejected' ? '#f8d7da' : '#fff3cd'};
+// //         color: ${approvalStatus === 'Approved' ? '#155724' : approvalStatus === 'Rejected' ? '#721c24' : '#856404'};
+// //         border: 1px solid ${approvalStatus === 'Approved' ? '#c3e6cb' : approvalStatus === 'Rejected' ? '#f5c6cb' : '#ffeeba'};
+// //       }
+// //       .footer-note {
+// //         font-size: 10px;
+// //         color: #777;
+// //         text-align: center;
+// //         margin-top: 5mm;
+// //       }
+// //       .payment-details {
+// //         margin-top: 10px;
+// //         border-collapse: collapse;
+// //         width: 100%;
+// //       }
+// //       .payment-details td {
+// //         padding: 4px;
+// //         border: none;
+// //       }
+// //       /* 2-column grid for payment info */
+// //       .payment-grid-2col {
+// //         display: grid;
+// //         grid-template-columns: 1fr 1fr;
+// //         gap: 4px 15px;
+// //         padding: 4px;
+// //         font-size: 14px;
+// //       }
+// //       .payment-grid-item {
+// //         padding: 2px 0;
+// //         line-height: 1.3;
+// //       }
+// //       .payment-grid-item strong {
+// //         font-weight: 600;
+// //         margin-right: 5px;
+// //         min-width: 110px;
+// //         display: inline-block;
+// //       }
+// //       .payment-grid-item .value {
+// //         font-weight: 700;
+// //       }
+// //       @page {
+// //         size: A4;
+// //         margin: 10mm;
+// //       }
+// //       @media print {
+// //         body {
+// //           padding: 0;
+// //         }
+// //         .receipt-copy {
+// //           page-break-inside: avoid;
+// //         }
+// //       }
+// //     </style>
+// //   </head>
+// //   <body>
+// //     <div class="page">
+// //       <!-- FIRST COPY -->
+// //       <div class="receipt-copy">
+// //         <div class="header-container">
+// //           <div class="header-left">
+// //             <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
+// //             <div class="dealer-info">
+// //               Authorized Main Dealer: TVS Motor Company Ltd.<br>
+// //               Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// //               Upnagar, Nashik Road, Nashik - 422101<br>
+// //               Phone: 7498903672
+// //             </div>
+// //           </div>
+// //           <div class="header-right">
+// //             <div class="logo-qr-container">
+// //               <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
+// //               ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+// //             </div>
+// //             <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
+// //             <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
 // //           </div>
 // //         </div>
-// //         <div class="header-right">
-// //           <div class="logo-qr-container">
-// //             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
-// //             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
-// //           </div>
-// //           <div style="margin-top: 3px; font-size: 11px;">Date: ${currentDate}</div>
-// //           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-// //         </div>
-// //       </div>
-      
-// //       <div class="divider"></div>
-
-// //       <div class="receipt-info">
-// //         <div><strong>BROKER PAYMENT RECEIPT</strong></div>
-// //         <div><strong>Receipt Date:</strong> ${receivedDate}</div>
         
-// //       </div>
-
-// //       <div class="broker-info-container">
-// //         <div class="broker-info-left">
-// //           <div class="info-row"><strong>Broker Name:</strong> ${brokerName}</div>
-// //           <div class="info-row"><strong>Branch:</strong> ${branchName}</div>
-// //           <div class="info-row"><strong>Payment Mode:</strong> ${paymentMode}</div>
-// //           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> ${cashLocation}</div>` : ''}
-// //           ${bankName ? `<div class="info-row"><strong>Bank:</strong> ${bankName}</div>` : ''}
-// //         </div>
-// //         <div class="broker-info-right">
-// //           <div class="info-row"><strong>Reference No:</strong> ${referenceNumber}</div>
-// //           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> ${subPaymentMode}</div>` : ''}
-// //           <div class="info-row"><strong>Branch Address:</strong> ${branchAddress}</div>
-// //           <div class="info-row"><strong>Branch Phone:</strong> ${branchPhone}</div>
-// //         </div>
-// //       </div>
-
-// //       <div class="payment-info-box">
+// //         <div class="divider"></div>
+  
 // //         <div class="receipt-info">
-// //           <div style="display: flex; justify-content: space-between;">
-// //             <span><strong>Receipt Amount:</strong></span>
-// //             <span style="font-size: 16px; font-weight: bold;">₹${amount.toLocaleString('en-IN')}</span>
+// //           <div><strong>BROKER PAYMENT RECEIPT</strong></div>
+// //           <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
+// //         </div>
+  
+// //         <div class="broker-info-container">
+// //           <div class="broker-info-left">
+// //             <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
+// //             <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
+// //             <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
+// //             ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
+// //             ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
 // //           </div>
-// //           ${remark ? `<div style="margin-top: 5px;"><strong>Remark:</strong> ${remark}</div>` : ''}
+// //           <div class="broker-info-right">
+// //             <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
+// //             ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
+// //             <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
+// //             <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
+// //           </div>
+// //         </div>
+  
+// //         <div class="payment-info-box">
+// //           <div class="receipt-info" style="padding: 5px;">
+// //             <!-- Payment Information Grid - 2 columns (2 rows) with existing fields only -->
+// //             <div class="payment-grid-2col">
+// //               <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
+             
+// //             </div>
+// //           </div>
+          
+// //           <div class="amount-in-words">
+// //             <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
+// //           </div>
+// //         </div>
+  
+// //         <div class="note">
+// //           <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
 // //         </div>
         
-// //         <div class="amount-in-words">
-// //           <strong>Amount in words:</strong> ${amountInWords} Only
-// //         </div>
-// //       </div>
-
-// //       <div class="note">
-// //         <strong>Notes:</strong> This is a system generated receipt for Broker On-Account payment.
-// //       </div>
-      
-// //       <div class="divider"></div>
-
-// //       <div class="signature-box">
-// //         <div style="display: flex; justify-content: space-between;">
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Broker's Signature</div>
-// //           </div>
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Authorised Signatory</div>
-// //           </div>
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Accountant</div>
+// //         <div class="divider"></div>
+  
+// //         <div class="signature-box">
+// //           <div style="display: flex; justify-content: space-between;">
+// //             <div style="text-align:center; width: 30%;">
+// //               <div class="signature-line"></div>
+// //               <div>Broker's Signature</div>
+// //             </div>
+// //             <div style="text-align:center; width: 30%;">
+// //               <div class="signature-line"></div>
+// //               <div>Authorised Signatory</div>
+// //             </div>
+// //             <div style="text-align:center; width: 30%;">
+// //               <div class="signature-line"></div>
+// //               <div>Accountant</div>
+// //             </div>
 // //           </div>
 // //         </div>
+        
+// //         <div class="footer-note">
+// //           This is a computer generated receipt - valid without signature
+// //         </div>
 // //       </div>
-      
-// //       <div class="footer-note">
-// //         This is a computer generated receipt - valid without signature
-// //       </div>
-// //     </div>
-
-// //     <!-- CUTTING LINE -->
-// //     <div class="cutting-line"></div>
-
-// //     <!-- SECOND COPY (DUPLICATE) -->
-// //     <div class="receipt-copy">
-// //       <div class="header-container">
-// //         <div class="header-left">
-// //           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
-// //           <div class="dealer-info">
-// //             Authorized Main Dealer: TVS Motor Company Ltd.<br>
-// //             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-// //             Upnagar, Nashik Road, Nashik - 422101<br>
-// //             Phone: 7498903672
+  
+// //       <!-- CUTTING LINE -->
+// //       <div class="cutting-line"></div>
+  
+// //       <!-- SECOND COPY (DUPLICATE) -->
+// //       <div class="receipt-copy">
+// //         <div class="header-container">
+// //           <div class="header-left">
+// //             <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
+// //             <div class="dealer-info">
+// //               Authorized Main Dealer: TVS Motor Company Ltd.<br>
+// //               Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// //               Upnagar, Nashik Road, Nashik - 422101<br>
+// //               Phone: 7498903672
+// //             </div>
+// //           </div>
+// //           <div class="header-right">
+// //             <div class="logo-qr-container">
+// //               <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
+// //               ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+// //             </div>
+// //             <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
+// //             <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
 // //           </div>
 // //         </div>
-// //         <div class="header-right">
-// //           <div class="logo-qr-container">
-// //             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
-// //             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
-// //           </div>
-// //           <div style="margin-top: 3px; font-size: 11px;">Date: ${currentDate}</div>
-// //           <div style="margin-top: 3px; font-size: 11px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-// //         </div>
-// //       </div>
-      
-// //       <div class="divider"></div>
-
-// //       <div class="receipt-info">
-// //         <div><strong>BROKER PAYMENT RECEIPT (DUPLICATE)</strong></div>
-// //         <div><strong>Receipt Date:</strong> ${receivedDate}</div>
-    
-// //       </div>
-
-// //       <div class="broker-info-container">
-// //         <div class="broker-info-left">
-// //           <div class="info-row"><strong>Broker Name:</strong> ${brokerName}</div>
-// //           <div class="info-row"><strong>Branch:</strong> ${branchName}</div>
-// //           <div class="info-row"><strong>Payment Mode:</strong> ${paymentMode}</div>
-// //           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> ${cashLocation}</div>` : ''}
-// //           ${bankName ? `<div class="info-row"><strong>Bank:</strong> ${bankName}</div>` : ''}
-// //         </div>
-// //         <div class="broker-info-right">
-// //           <div class="info-row"><strong>Reference No:</strong> ${referenceNumber}</div>
-// //           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> ${subPaymentMode}</div>` : ''}
-// //           <div class="info-row"><strong>Branch Address:</strong> ${branchAddress}</div>
-// //           <div class="info-row"><strong>Branch Phone:</strong> ${branchPhone}</div>
-// //         </div>
-// //       </div>
-
-// //       <div class="payment-info-box">
+        
+// //         <div class="divider"></div>
+  
 // //         <div class="receipt-info">
-// //           <div style="display: flex; justify-content: space-between;">
-// //             <span><strong>Receipt Amount:</strong></span>
-// //             <span style="font-size: 16px; font-weight: bold;">₹${amount.toLocaleString('en-IN')}</span>
-// //           </div>
-// //           ${remark ? `<div style="margin-top: 5px;"><strong>Remark:</strong> ${remark}</div>` : ''}
+// //           <div><strong>BROKER PAYMENT RECEIPT (DUPLICATE)</strong></div>
+// //           <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
 // //         </div>
-        
-// //         <div class="amount-in-words">
-// //           <strong>Amount in words:</strong> ${amountInWords} Only
-// //         </div>
-// //       </div>
-
-// //       <div class="note">
-// //         <strong>Notes:</strong> This is a system generated receipt for Broker On-Account payment.
-// //       </div>
-      
-// //       <div class="divider"></div>
-
-// //       <div class="signature-box">
-// //         <div style="display: flex; justify-content: space-between;">
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Broker's Signature</div>
+  
+// //         <div class="broker-info-container">
+// //           <div class="broker-info-left">
+// //             <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
+// //             <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
+// //             <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
+// //             ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
+// //             ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
 // //           </div>
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Authorised Signatory</div>
-// //           </div>
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Accountant</div>
+// //           <div class="broker-info-right">
+// //             <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
+// //             ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
+// //             <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
+// //             <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
 // //           </div>
 // //         </div>
-// //       </div>
-      
-// //       <div class="footer-note">
-// //         This is a computer generated receipt - valid without signature
-// //       </div>
-// //     </div>
-// //   </div>
-// // </body>
-// // </html>`;
-// //   };
-
-// //   // ============ SIMPLE NUMBER TO WORDS FUNCTION ============
-// //   const numberToWordsSimple = (num) => {
-// //     if (num === 0) return 'Zero';
-    
-// //     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-// //                   'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-// //                   'Seventeen', 'Eighteen', 'Nineteen'];
-// //     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    
-// //     const numToWords = (n) => {
-// //       if (n < 20) return ones[n];
-// //       if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
-// //       if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '');
-// //       if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '');
-// //       if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
-// //       return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
-// //     };
-    
-// //     return numToWords(Math.floor(num)) + (num % 1 ? ' point ' + num.toString().split('.')[1] : '');
-// //   };
-
-// //   const handleBranchFilter = async () => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     if (selectedBranch) {
-// //       await fetchData(selectedBranch);
-// //     } else {
-// //       await fetchData();
-// //     }
-// //     setShowFilterModal(false);
-// //   };
-
-// //   const clearFilter = async () => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     setSelectedBranch('');
-// //     await fetchData();
-// //     setShowFilterModal(false);
-// //   };
-
-// //   const groupDataByBroker = (brokersData, isFilteredMode = false) => {
-// //     const brokerMap = {};
-
-// //     brokersData.forEach((item) => {
-// //       const brokerId = item.broker._id;
-
-// //       if (!brokerMap[brokerId]) {
-// //         brokerMap[brokerId] = {
-// //           broker: item.broker,
-// //           branches: [],
-// //           totalBookings: 0,
-// //           totalExchangeAmount: 0,
-// //           totalCredit: 0,
-// //           totalDebit: 0,
-// //           onAccount: 0,
-// //           currentBalance: 0,
-// //           outstandingAmount: 0
-// //         };
-// //       }
-
-// //       if (isFilteredMode) {
-// //         brokerMap[brokerId].branches = [
-// //           {
-// //             name: item.branch.name,
-// //             branchId: item.branch._id,
-// //             bookings: item.bookings.total,
-// //             exchangeAmount: item.financials.totalExchangeAmount,
-// //             credit: item.financials.ledger.totalCredit,
-// //             debit: item.financials.ledger.totalDebit,
-// //             onAccount: item.financials.ledger.onAccount,
-// //             currentBalance: item.financials.ledger.currentBalance,
-// //             outstandingAmount: item.financials.ledger.outstandingAmount
-// //           }
-// //         ];
-
-// //         brokerMap[brokerId].totalBookings = item.bookings.total;
-// //         brokerMap[brokerId].totalExchangeAmount = item.financials.totalExchangeAmount;
-// //         brokerMap[brokerId].totalCredit = item.financials.ledger.totalCredit;
-// //         brokerMap[brokerId].totalDebit = item.financials.ledger.totalDebit;
-// //         brokerMap[brokerId].onAccount = item.financials.ledger.onAccount;
-// //         brokerMap[brokerId].currentBalance = item.financials.ledger.currentBalance;
-// //         brokerMap[brokerId].outstandingAmount = item.financials.ledger.outstandingAmount;
-// //       } else {
-// //         brokerMap[brokerId].branches.push({
-// //           name: item.branch.name,
-// //           branchId: item.branch._id,
-// //           bookings: item.bookings.total,
-// //           exchangeAmount: item.financials.totalExchangeAmount,
-// //           credit: item.financials.ledger.totalCredit,
-// //           debit: item.financials.ledger.totalDebit,
-// //           onAccount: item.financials.ledger.onAccount,
-// //           currentBalance: item.financials.ledger.currentBalance,
-// //           outstandingAmount: item.financials.ledger.outstandingAmount
-// //         });
-
-// //         brokerMap[brokerId].totalBookings += item.bookings.total;
-// //         brokerMap[brokerId].totalExchangeAmount += item.financials.totalExchangeAmount;
-// //         brokerMap[brokerId].totalCredit += item.financials.ledger.totalCredit;
-// //         brokerMap[brokerId].totalDebit += item.financials.ledger.totalDebit;
-// //         brokerMap[brokerId].onAccount += item.financials.ledger.onAccount;
-// //         brokerMap[brokerId].currentBalance += item.financials.ledger.currentBalance;
-// //         brokerMap[brokerId].outstandingAmount += item.financials.ledger.outstandingAmount;
-// //       }
-// //     });
-
-// //     return Object.values(brokerMap);
-// //   };
-
-// //   const toggleBrokerExpansion = (brokerId) => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     if (!isFiltered) {
-// //       setExpandedBrokers((prev) => ({
-// //         ...prev,
-// //         [brokerId]: !prev[brokerId]
-// //       }));
-// //     }
-// //   };
-
-// //   const handleClick = (event, id, brokerData = null, branchId = null) => {
-// //     if (!canViewExchangeLedger && !canCreateExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     setAnchorEl(event.currentTarget);
-// //     setMenuId(id);
-// //     if (brokerData) {
-// //       setSelectedledger({ ...brokerData, branchId });
-// //     }
-// //   };
-
-// //   const handleClose = () => {
-// //     setAnchorEl(null);
-// //     setMenuId(null);
-// //   };
-
-// //   const handleAddClick = (brokerData, branchId = null) => {
-// //     if (!canCreateExchangeLedger) {
-// //       showError('You do not have permission to add payments');
-// //       return;
-// //     }
-    
-// //     setSelectedledger({ ...brokerData, branchId });
-// //     setShowModal(true);
-// //     handleClose();
-// //   };
-
-// //   const handleViewLedger = async (brokerData, branchId = null) => {
-// //     if (!canViewExchangeLedger) {
-// //       showError('You do not have permission to view ledgers');
-// //       return;
-// //     }
-    
-// //     try {
-// //       let url = `/broker-ledger/statement/${brokerData.broker?._id}`;
-// //       if (branchId) {
-// //         url += `?branchId=${branchId}`;
-// //       }
-
-// //       const res = await axiosInstance.get(url);
-// //       const ledgerData = res.data.data;
-// //       const ledgerUrl = `${config.baseURL}/brokerData.html?ledgerId=${brokerData._id}`;
-// //       let totalCredit = 0;
-// //       let totalDebit = 0;
-// //       const totalOnAccount = ledgerData.summary?.totalOnAccount ?? ledgerData.onAccountBalance ?? 0;
-
-// //       ledgerData.transactions?.forEach((entry) => {
-// //         if (entry.type === 'CREDIT') {
-// //           totalCredit += entry.amount;
-// //         } else if (entry.type === 'DEBIT') {
-// //           totalDebit += entry.amount;
-// //         }
-// //       });
-// //       const finalBalance = totalDebit - totalCredit;
-// //       const availableOnAccount2 = totalOnAccount - totalCredit;
-
-// //       const win = window.open('', '_blank');
-// //       win.document.write(`
-// //           <!DOCTYPE html>
-// //           <html>
-// //             <head>
-// //               <title>Customer Ledger</title>
-// //               <style>
-// //                 @page {
-// //                   size: A4;
-// //                   margin: 15mm 10mm;
-// //                 }
-// //                 body {
-// //                   font-family: Arial;
-// //                   width: 100%;
-// //                   margin: 0;
-// //                   padding: 0;
-// //                   font-size: 14px;
-// //                   line-height: 1.3;
-// //                   font-family: Courier New;
-// //                 }
-// //                 .container {
-// //                   width: 190mm;
-// //                   margin: 0 auto;
-// //                   padding: 5mm;
-// //                 }
-// //                 .header-container {
-// //                   display: flex;
-// //                   justify-content:space-between;
-// //                   margin-bottom: 3mm;
-// //                 }
-// //                 .header-text{
-// //                   font-size:20px;
-// //                   font-weight:bold;
-// //                 }
-// //                 .logo {
-// //                   width: 30mm;
-// //                   height: auto;
-// //                   margin-right: 5mm;
-// //                 }
-// //                 .header {
-// //                   text-align: left;
-// //                 }
-// //                 .divider {
-// //                   border-top: 2px solid #AAAAAA;
-// //                   margin: 3mm 0;
-// //                 }
-// //                 .header h2 {
-// //                   margin: 2mm 0;
-// //                   font-size: 12pt;
-// //                   font-weight: bold;
-// //                 }
-// //                 .header div {
-// //                   font-size: 14px;
-// //                 }
-// //                 .customer-info {
-// //                   display: grid;
-// //                   grid-template-columns: repeat(2, 1fr);
-// //                   gap: 2mm;
-// //                   margin-bottom: 5mm;
-// //                   font-size: 14px;
-// //                 }
-// //                 .customer-info div {
-// //                   display: flex;
-// //                 }
-// //                 .customer-info strong {
-// //                   min-width: 30mm;
-// //                   display: inline-block;
-// //                 }
-// //                 table {
-// //                   width: 100%;
-// //                   border-collapse: collapse;
-// //                   margin-bottom: 5mm;
-// //                   font-size: 14px;
-// //                   page-break-inside: avoid;
-// //                 }
-// //                 th, td {
-// //                   border: 1px solid #000;
-// //                   padding: 2mm;
-// //                   text-align: left;
-// //                 }
-// //                 th {
-// //                   background-color: #f0f0f0;
-// //                   font-weight: bold;
-// //                 }
-// //                 .footer {
-// //                   margin-top: 10mm;
-// //                   display: flex;
-// //                   justify-content: space-between;
-// //                   align-items: flex-end;
-// //                   font-size: 14px;
-// //                 }
-// //                 .footer-left {
-// //                   text-align: left;
-// //                 }
-// //                 .footer-right {
-// //                   text-align: right;
-// //                 }
-// //                 .qr-code {
-// //                   width: 35mm;
-// //                   height: 35mm;
-// //                 }
-// //                 .text-right {
-// //                   text-align: right;
-// //                 }
-// //                 .text-left {
-// //                   text-align: left;
-// //                 }
-// //                 .text-center {
-// //                   text-align: center;
-// //                 }
-// //                 @media print {
-// //                   body {
-// //                     width: 190mm;
-// //                     height: 277mm;
-// //                   }
-// //                   .no-print {
-// //                     display: none;
-// //                   }
-// //                 }
-// //               </style>
-// //             </head>
-// //             <body>
-// //               <div class="container">
-// //                 <div class="header-container">
-// //                   <img src="${tvsLogo}" class="logo" alt="TVS Logo">
-// //                   <div class="header-text"> GANDHI TVS</div>
-// //                 </div>
-// //                 <div class="header">
-// //                   <div>
-// //                     Authorised Main Dealer: TVS Motor Company Ltd.<br>
-// //                     Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-// //                     Upnagar, Nashik Road, Nashik - 422101<br>
-// //                     Phone: 7498903672
-// //                   </div>
-// //                 </div>
-// //                 <div class="divider"></div>
-// //                 <div class="customer-info">
-// //                   <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || 'N/A'}</div>
-// //                   <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
-// //                 </div>
-
-// //                 <table>
-// //                   <thead>
-// //                     <tr>
-// //                       <th width="15%">Date</th>
-// //                       <th width="35%">Description</th>
-// //                       <th width="15%">Receipt/VC No</th>
-// //                       <th width="10%" class="text-right">Credit (₹)</th>
-// //                       <th width="10%" class="text-right">Debit (₹)</th>
-// //                       <th width="15%" class="text-right">Balance (₹)</th>
-// //                     </tr>
-// //                   </thead>
-// //                   <tbody>
-// //                     ${ledgerData.transactions
-// //   ?.map(
-// //     (entry) => {
-// //       let exchangeVehicleNumber = '';
-// //       let exchangeChassisNumber = '';
-// //       let exchangePrice = '';
-// //       let exchangeStatus = '';
-// //       let bookingNumber = entry.booking?.bookingNumber || '';
-      
-// //       if (entry.exchangeVehicle && entry.exchangeVehicle.VehicleNumber) {
-// //         exchangeVehicleNumber = entry.exchangeVehicle.VehicleNumber || '';
-// //         exchangeChassisNumber = entry.exchangeVehicle.ChassisNumber || '';
-// //         exchangePrice = entry.exchangeVehicle.PriceFormatted || '';
-// //         exchangeStatus = entry.exchangeVehicle.Status || '';
-// //       } else if (entry.exchangeDisplay && entry.exchangeDisplay.VehicleNumber) {
-// //         exchangeVehicleNumber = entry.exchangeDisplay.VehicleNumber || '';
-// //         exchangeChassisNumber = entry.exchangeDisplay.ChassisNumber || '';
-// //         exchangePrice = entry.exchangeDisplay.Price || '';
-// //         exchangeStatus = entry.exchangeDisplay.Status || '';
-// //       } else if (entry.booking?.exchange?.display) {
-// //         const exchangeDisplay = entry.booking.exchange.display;
-// //         exchangeVehicleNumber = exchangeDisplay.vehicleNumber || '';
-// //         exchangeChassisNumber = exchangeDisplay.chassisNumber || '';
-// //         exchangePrice = exchangeDisplay.price ? `₹${exchangeDisplay.price.toLocaleString('en-IN')}` : '';
-// //         exchangeStatus = exchangeDisplay.status || '';
-// //       } else if (entry.booking?.exchange?.details) {
-// //         const exchangeDetails = entry.booking.exchange.details;
-// //         exchangeVehicleNumber = exchangeDetails.vehicleNumber || '';
-// //         exchangeChassisNumber = exchangeDetails.chassisNumber || '';
-// //         exchangePrice = exchangeDetails.price ? `₹${exchangeDetails.price.toLocaleString('en-IN')}` : '';
-// //         exchangeStatus = exchangeDetails.status || '';
-// //       }
-      
-// //       return `
-// //       <tr>
-// //         <td>${new Date(entry.date).toLocaleDateString() || 'N/A'}</td>
-// //         <td>
-// //           Booking No: ${bookingNumber || '-'}<br>
-// //           Customer: ${entry.booking?.customer?.name || '-'}<br>
-       
-// //           ${entry.mode || ''}
-// //           ${exchangeVehicleNumber ? `<br>Exchange Vehicle: ${exchangeVehicleNumber}` : ''}
-// //           ${exchangeChassisNumber ? `<br>Exchange Chassis: ${exchangeChassisNumber}` : ''}
-// //         </td>
-// //         <td>${entry.receiptNumber || ''}</td>
-// //         <td class="text-right">${entry.type === 'CREDIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
-// //         <td class="text-right">${entry.type === 'DEBIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
-// //         <td class="text-right"></td>
-// //       </tr>
-// //     `;
-// //     }
-// //   )
-// //   .join('')}
-// //                       <tr>
-// //                       <td colspan="3" class="text-left"><strong>Total OnAccount</strong></td>
-// //                       <td class="text-right"></td>
-// //                       <td class="text-right"></td>
-// //                       <td class="text-right"><strong>${availableOnAccount2.toLocaleString('en-IN')}</strong></td>
-// //                     </tr>
-// //                     <tr>
-// //                       <td colspan="3" class="text-left"><strong>Total</strong></td>
-// //                       <td class="text-right"><strong>${totalCredit.toLocaleString('en-IN')}</strong></td>
-// //                       <td class="text-right"><strong>${totalDebit.toLocaleString('en-IN')}</strong></td>
-// //                       <td class="text-right"><strong>${finalBalance.toLocaleString('en-IN')}</strong></td>
-// //                     </tr>
-
-// //                   </tbody>
-// //                 </table>
-
-// //                 <div class="footer">
-// //                   <div class="footer-left">
-// //                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}"
-// //                          class="qr-code"
-// //                          alt="QR Code" />
-// //                   </div>
-// //                   <div class="footer-right">
-// //                     <p>For, Gandhi TVS</p>
-// //                     <p>Authorised Signatory</p>
-// //                   </div>
-// //                 </div>
-// //               </div>
-
-// //               <script>
-// //                 window.onload = function() {
-// //                   setTimeout(() => {
-// //                     window.print();
-// //                   }, 300);
-// //                 };
-// //               </script>
-// //             </body>
-// //           </html>
-// //         `);
-// //     } catch (err) {
-// //       console.error('Error fetching ledger:', err);
-// //       const message = showError(err);
-// //       if (message) {
-// //         setError(message);
-// //       }
-// //     }
-// //     handleClose();
-// //   };
-
-// //   const handleSearch = (value) => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     setSearchTerm(value);
-// //     handleFilter(value, ['broker.name']);
-// //   };
-
-// //   const handlePaymentSaved = (message) => {
-// //     setSuccessMessage(message);
-// //     setTimeout(() => setSuccessMessage(''), 3000);
-// //     fetchData();
-// //   };
-
-// //   const handleOpenExportModal = () => {
-// //     if (!canCreateExchangeLedger) {
-// //       showError('You do not have permission to export reports');
-// //       return;
-// //     }
-    
-// //     setShowExportModal(true);
-// //     setExportError('');
-// //     if (isFiltered && selectedBranch) {
-// //       setExportBranchId(selectedBranch);
-// //     }
-// //   };
-
-// //   const handleCloseExportModal = () => {
-// //     setShowExportModal(false);
-// //     setExportStartDate(null);
-// //     setExportEndDate(null);
-// //     setExportBranchId('');
-// //     setExportError('');
-// //     setExportLoading(false);
-// //   };
-
-// //   const handleExcelExport = async () => {
-// //     if (!canCreateExchangeLedger) {
-// //       showError('You do not have permission to export reports');
-// //       return;
-// //     }
-    
-// //     setExportError('');
-    
-// //     if (!exportBranchId) {
-// //       setExportError('Please select a branch');
-// //       return;
-// //     }
-
-// //     if (!exportStartDate || !exportEndDate) {
-// //       setExportError('Please select both start and end dates');
-// //       return;
-// //     }
-
-// //     if (exportStartDate > exportEndDate) {
-// //       setExportError('Start date cannot be after end date');
-// //       return;
-// //     }
-
-// //     try {
-// //       setExportLoading(true);
-      
-// //       const formattedStartDate = formatDateForAPI(exportStartDate);
-// //       const formattedEndDate = formatDateForAPI(exportEndDate);
-
-// //       const params = new URLSearchParams({
-// //         branchId: exportBranchId,
-// //         startDate: formattedStartDate,
-// //         endDate: formattedEndDate
-// //       });
-
-// //       const response = await axiosInstance.get(
-// //         `/reports/brokers?${params.toString()}`,
-// //         { responseType: 'blob' }
-// //       );
-
-// //       const contentType = response.headers['content-type'];
-      
-// //       if (contentType && contentType.includes('application/json')) {
-// //         const text = await new Promise((resolve, reject) => {
-// //           const reader = new FileReader();
-// //           reader.onload = () => resolve(reader.result);
-// //           reader.onerror = reject;
-// //           reader.readAsText(response.data);
-// //         });
-        
-// //         const errorData = JSON.parse(text);
-        
-// //         if (!errorData.success && errorData.message) {
-// //           setExportError(errorData.message);
-// //           Swal.fire({
-// //             icon: 'error',
-// //             title: 'Export Failed',
-// //             text: errorData.message,
-// //           });
-// //           return;
-// //         }
-// //       }
-
-// //       const blob = new Blob([response.data], { 
-// //         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-// //       });
-      
-// //       const url = window.URL.createObjectURL(blob);
-// //       const link = document.createElement('a');
-// //       link.href = url;
-      
-// //       const branchName = branches.find(b => b._id === exportBranchId)?.name || 'Branch';
-// //       const startDateStr = formatDateDDMMYYYY(exportStartDate);
-// //       const endDateStr = formatDateDDMMYYYY(exportEndDate);
-// //       const fileName = `Brokers_Report_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
-// //       link.setAttribute('download', fileName);
-      
-// //       document.body.appendChild(link);
-// //       link.click();
-// //       link.remove();
-      
-// //       window.URL.revokeObjectURL(url);
-      
-// //       Swal.fire({
-// //         toast: true,
-// //         position: 'top-end',
-// //         icon: 'success',
-// //         title: 'Excel exported successfully!',
-// //         showConfirmButton: false,
-// //         timer: 3000,
-// //         timerProgressBar: true
-// //       });
-
-// //       handleCloseExportModal();
-      
-// //     } catch (error) {
-// //       console.error('Error exporting report:', error);
-      
-// //       if (error.response && error.response.data instanceof Blob) {
-// //         try {
-// //           const text = await new Promise((resolve, reject) => {
-// //             const reader = new FileReader();
-// //             reader.onload = () => resolve(reader.result);
-// //             reader.onerror = reject;
-// //             reader.readAsText(error.response.data);
-// //           });
-          
-// //           const errorData = JSON.parse(text);
-          
-// //           if (errorData.message) {
-// //             setExportError(errorData.message);
-// //             Swal.fire({
-// //               icon: 'error',
-// //               title: 'Export Failed',
-// //               text: errorData.message,
-// //             });
-// //           }
-// //         } catch (parseError) {
-// //           console.error('Error parsing error response:', parseError);
-// //           setExportError('Failed to export report');
-// //           Swal.fire({
-// //             icon: 'error',
-// //             title: 'Export Failed',
-// //             text: 'Failed to export report',
-// //           });
-// //         }
-// //       } else if (error.response?.data?.message) {
-// //         setExportError(error.response.data.message);
-// //         Swal.fire({
-// //           icon: 'error',
-// //           title: 'Export Failed',
-// //           text: error.response.data.message,
-// //         });
-// //       } else if (error.message) {
-// //         setExportError(error.message);
-// //         Swal.fire({
-// //           icon: 'error',
-// //           title: 'Export Failed',
-// //           text: error.message,
-// //         });
-// //       } else {
-// //         setExportError('Failed to export report');
-// //         Swal.fire({
-// //           icon: 'error',
-// //           title: 'Export Failed',
-// //           text: 'Failed to export report',
-// //         });
-// //       }
-      
-// //     } finally {
-// //       setExportLoading(false);
-// //     }
-// //   };
-
-// //   if (!canViewExchangeLedger) {
-// //     return (
-// //       <div className="alert alert-danger m-3" role="alert">
-// //         You do not have permission to view Exchange Ledger.
-// //       </div>
-// //     );
-// //   }
-
-// //   if (loading) {
-// //     return (
-// //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
-// //         <CSpinner color="primary" />
-// //       </div>
-// //     );
-// //   }
-
-// //   if (error) {
-// //     return (
-// //       <div className="alert alert-danger" role="alert">
-// //         {error}
-// //       </div>
-// //     );
-// //   }
-
-// //   const totalColumns = isFiltered ? 12 : 13;
-// //   const actionColumnIndex = showActionColumn ? 1 : 0;
-
-// //   return (
-// //     <div>
-// //       <div className='title'>Exchange Ledger {isFiltered && `- ${selectedBranchName}`}</div>
-      
-// //       {successMessage && (
-// //         <CAlert color="success" className="mb-3">
-// //           {successMessage}
-// //         </CAlert>
-// //       )}
-    
-// //       <CCard className='table-container mt-4'>
-// //         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-// //           <div>
-// //             <CButton 
-// //               size="sm" 
-// //               className="action-btn me-1"
-// //               onClick={() => setShowFilterModal(true)}
-// //               disabled={!canViewExchangeLedger}
-// //             >
-// //               <CIcon icon={cilSearch} className='me-1' />
-// //               Search
-// //             </CButton>
-// //             {isFiltered && (
-// //               <CButton 
-// //                 size="sm" 
-// //                 className="action-btn me-1"
-// //                 onClick={clearFilter}
-// //                 disabled={!canViewExchangeLedger}
-// //               >
-// //                 <CIcon icon={cilZoomOut} className='me-1' />
-// //                 Clear Filter
-// //               </CButton>
-// //             )}
-            
-// //             {canCreateExchangeLedger && (
-// //               <CButton 
-// //                 size="sm" 
-// //                 className="action-btn me-1"
-// //                 onClick={handleOpenExportModal}
-// //                 title="Export Excel Report"
-// //               >
-// //                 <FontAwesomeIcon icon={faFileExcel} className='me-1' />
-// //                 Export Report
-// //               </CButton>
-// //             )}
-// //           </div>
-// //         </CCardHeader>
-        
-// //         <CCardBody>
-// //           <div className="d-flex justify-content-between mb-3">
-// //             <div></div>
-// //             <div className='d-flex'>
-// //               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
-// //               <CFormInput
-// //                 type="text"
-// //                 className="d-inline-block square-search"
-// //                 value={searchTerm}
-// //                 onChange={(e) => handleSearch(e.target.value)}
-// //                 disabled={!canViewExchangeLedger}
-// //               />
-// //             </div>
-// //           </div>
-          
-// //           <div className="responsive-table-wrapper">
-// //             <CTable striped bordered hover className='responsive-table'>
-// //               <CTableHead>
-// //                 <CTableRow>
-// //                   {!isFiltered && <CTableHeaderCell></CTableHeaderCell>}
-// //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
-// //                   <CTableHeaderCell>Exchange Broker Name</CTableHeaderCell>
-// //                   <CTableHeaderCell>Mobile</CTableHeaderCell>
-// //                   {!isFiltered && <CTableHeaderCell>Branch</CTableHeaderCell>}
-// //                   <CTableHeaderCell>Total Bookings</CTableHeaderCell>
-// //                   <CTableHeaderCell>Total Exchange Amount</CTableHeaderCell>
-// //                   <CTableHeaderCell>Total Received</CTableHeaderCell>
-// //                   <CTableHeaderCell>Total Payable</CTableHeaderCell>
-// //                   <CTableHeaderCell>Opening Balance</CTableHeaderCell>
-// //                   <CTableHeaderCell>Current Balance</CTableHeaderCell>
-// //                   <CTableHeaderCell>Outstanding Amount</CTableHeaderCell>
-// //                   <CTableHeaderCell>Receipts</CTableHeaderCell>
-// //                   {showActionColumn && <CTableHeaderCell>Actions</CTableHeaderCell>}
-// //                 </CTableRow>
-// //               </CTableHead>
-// //               <CTableBody>
-// //                 {currentRecords.length === 0 ? (
-// //                   <CTableRow>
-// //                     <CTableDataCell colSpan={totalColumns + actionColumnIndex} className="text-center">
-// //                       No ledger details available
-// //                     </CTableDataCell>
-// //                   </CTableRow>
-// //                 ) : (
-// //                   currentRecords.map((brokerData, index) => {
-// //                     const brokerId = brokerData.broker._id;
-// //                     const hasTransactions = transactionsFetched[brokerId] && transactionsData[brokerId]?.length > 0;
-// //                     const isLoading = loadingTransactions[brokerId];
-// //                     const transactions = transactionsData[brokerId] || [];
-                    
-// //                     const sortedTransactions = [...transactions].sort((a, b) => {
-// //                       const dateA = new Date(a.date || a.createdAt || 0);
-// //                       const dateB = new Date(b.date || b.createdAt || 0);
-// //                       return dateB - dateA;
-// //                     });
-                    
-// //                     return (
-// //                       <>
-// //                         <CTableRow key={brokerData.broker._id} className="broker-summary-row">
-// //                           {!isFiltered && (
-// //                             <CTableDataCell>
-// //                               <CButton
-// //                                 color="link"
-// //                                 size="sm"
-// //                                 onClick={() => toggleBrokerExpansion(brokerData.broker._id)}
-// //                                 disabled={!canViewExchangeLedger}
-// //                               >
-// //                                 {expandedBrokers[brokerData.broker._id] ? '▼' : '►'}
-// //                               </CButton>
-// //                             </CTableDataCell>
-// //                           )}
-// //                           <CTableDataCell>{index + 1}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.broker.name || 'N/A'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.broker.mobile || 'N/A'}</CTableDataCell>
-// //                           {!isFiltered && <CTableDataCell>All Branches</CTableDataCell>}
-// //                           <CTableDataCell>{brokerData.totalBookings || 0}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.totalExchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.totalCredit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.totalDebit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-                          
-// //                           {/* Receipts Column - Only show for filtered view or expanded branches */}
-// //                           <CTableDataCell>
-// //                             {isFiltered ? (
-// //                               // When filtered by branch, we can show receipts
-// //                               isLoading ? (
-// //                                 <CSpinner size="sm" color="info" />
-// //                               ) : sortedTransactions.length > 0 ? (
-// //                                 <CDropdown>
-// //                                   <CDropdownToggle size="sm" color="info" variant="outline">
-// //                                     {sortedTransactions.length} Receipt{sortedTransactions.length > 1 ? 's' : ''}
-// //                                   </CDropdownToggle>
-// //                                   <CDropdownMenu>
-// //                                     {sortedTransactions.map((transaction, txIndex) => {
-// //                                       const transactionId = transaction._id;
-// //                                       const transactionNumber = transaction.referenceNumber || 'N/A';
-// //                                       const transactionAmount = transaction.amount || 0;
-// //                                       const transactionDate = transaction.dateFormatted || 
-// //                                                             new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
-                                      
-// //                                       return (
-// //                                         <CDropdownItem 
-// //                                           key={transactionId || txIndex} 
-// //                                           onClick={() => printBrokerReceipt(transactionId)}
-// //                                         >
-// //                                           <div className="d-flex align-items-center">
-// //                                             <CIcon icon={cilPrint} className="me-2" />
-// //                                             <div>
-// //                                               <div><strong>Receipt #{txIndex + 1}</strong></div>
-// //                                               <small>
-// //                                                 ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
-// //                                               </small>
-// //                                             </div>
-// //                                           </div>
-// //                                         </CDropdownItem>
-// //                                       );
-// //                                     })}
-// //                                   </CDropdownMenu>
-// //                                 </CDropdown>
-// //                               ) : transactionsFetched[brokerId] ? (
-// //                                 <span className="text-muted">No receipts</span>
-// //                               ) : (
-// //                                 brokerData.branches && brokerData.branches.length > 0 ? (
-// //                                   <CButton
-// //                                     size="sm"
-// //                                     color="light"
-// //                                     onClick={() => fetchTransactionsForBroker(brokerId, brokerData.branches[0].branchId)}
-// //                                     disabled={isLoading}
-// //                                   >
-// //                                     <CIcon icon={cilCloudDownload} className="me-1" />
-// //                                     Load Receipts
-// //                                   </CButton>
-// //                                 ) : (
-// //                                   <span className="text-muted">No branch data</span>
-// //                                 )
-// //                               )
-// //                             ) : (
-// //                               // When showing all branches, show message to expand
-// //                               <span className="text-muted small">Expand to view receipts</span>
-// //                             )}
-// //                           </CTableDataCell>
-                          
-// //                           {showActionColumn && (
-// //                             <CTableDataCell>
-// //                               <CButton
-// //                                 size="sm"
-// //                                 className='option-button btn-sm'
-// //                                 onClick={(event) => handleClick(event, brokerData.broker._id, brokerData)}
-// //                                 disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
-// //                               >
-// //                                 <CIcon icon={cilSettings} />
-// //                                 Options
-// //                               </CButton>
-// //                               <Menu
-// //                                 id={`action-menu-${brokerData.broker._id}`}
-// //                                 anchorEl={anchorEl}
-// //                                 open={menuId === brokerData.broker._id}
-// //                                 onClose={handleClose}
-// //                               >
-// //                                 {canCreateExchangeLedger && (
-// //                                   <MenuItem onClick={() => handleAddClick(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
-// //                                     <CIcon icon={cilPlus} className="me-2" />
-// //                                     Add Payment
-// //                                   </MenuItem>
-// //                                 )}
-// //                                 {canViewExchangeLedger && (
-// //                                   <MenuItem
-// //                                     onClick={() => handleViewLedger(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}
-// //                                   >
-// //                                     View Ledger
-// //                                   </MenuItem>
-// //                                 )}
-// //                               </Menu>
-// //                             </CTableDataCell>
-// //                           )}
-// //                         </CTableRow>
-                        
-// //                         {!isFiltered &&
-// //                           expandedBrokers[brokerData.broker._id] &&
-// //                           brokerData.branches.map((branch, branchIndex) => {
-// //                             const branchKey = `${brokerId}-${branch.branchId}`;
-// //                             const hasBranchTransactions = transactionsFetched[branchKey] && transactionsData[branchKey]?.length > 0;
-// //                             const isBranchLoading = loadingTransactions[branchKey];
-// //                             const branchTransactions = transactionsData[branchKey] || [];
-                            
-// //                             const sortedBranchTransactions = [...branchTransactions].sort((a, b) => {
-// //                               const dateA = new Date(a.date || a.createdAt || 0);
-// //                               const dateB = new Date(b.date || b.createdAt || 0);
-// //                               return dateB - dateA;
-// //                             });
-                            
-// //                             return (
-// //                               <CTableRow key={`${brokerData.broker._id}-${branch.branchId}`} className="branch-detail-row">
-// //                                 <CTableDataCell></CTableDataCell>
-// //                                 <CTableDataCell></CTableDataCell>
-// //                                 <CTableDataCell></CTableDataCell>
-// //                                 <CTableDataCell></CTableDataCell>
-// //                                 <CTableDataCell>{branch.name || 'N/A'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.bookings || 0}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.exchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-                                
-// //                                 {/* Receipts Column for Branch */}
-// //                                 <CTableDataCell>
-// //                                   {isBranchLoading ? (
-// //                                     <CSpinner size="sm" color="info" />
-// //                                   ) : sortedBranchTransactions.length > 0 ? (
-// //                                     <CDropdown>
-// //                                       <CDropdownToggle size="sm" color="info" variant="outline">
-// //                                         {sortedBranchTransactions.length} Receipt{sortedBranchTransactions.length > 1 ? 's' : ''}
-// //                                       </CDropdownToggle>
-// //                                       <CDropdownMenu>
-// //                                         {sortedBranchTransactions.map((transaction, txIndex) => {
-// //                                           const transactionId = transaction._id;
-// //                                           const transactionNumber = transaction.referenceNumber || 'N/A';
-// //                                           const transactionAmount = transaction.amount || 0;
-// //                                           const transactionDate = transaction.dateFormatted || 
-// //                                                                 new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
-                                          
-// //                                           return (
-// //                                             <CDropdownItem 
-// //                                               key={transactionId || txIndex} 
-// //                                               onClick={() => printBrokerReceipt(transactionId)}
-// //                                             >
-// //                                               <div className="d-flex align-items-center">
-// //                                                 <CIcon icon={cilPrint} className="me-2" />
-// //                                                 <div>
-// //                                                   <div><strong>Receipt #{txIndex + 1}</strong></div>
-// //                                                   <small>
-// //                                                     ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
-// //                                                   </small>
-// //                                                 </div>
-// //                                               </div>
-// //                                             </CDropdownItem>
-// //                                           );
-// //                                         })}
-// //                                       </CDropdownMenu>
-// //                                     </CDropdown>
-// //                                   ) : transactionsFetched[branchKey] ? (
-// //                                     <span className="text-muted">No receipts</span>
-// //                                   ) : (
-// //                                     <CButton
-// //                                       size="sm"
-// //                                       color="light"
-// //                                       onClick={() => fetchTransactionsForBroker(brokerId, branch.branchId)}
-// //                                       disabled={isBranchLoading}
-// //                                     >
-// //                                       <CIcon icon={cilCloudDownload} className="me-1" />
-// //                                       Load Receipts
-// //                                     </CButton>
-// //                                   )}
-// //                                 </CTableDataCell>
-                                
-// //                                 {showActionColumn && (
-// //                                   <CTableDataCell>
-// //                                     <CButton
-// //                                       size="sm"
-// //                                       className='option-button btn-sm'
-// //                                       onClick={(event) =>
-// //                                         handleClick(event, `${brokerData.broker._id}-${branch.branchId}`, brokerData, branch.branchId)
-// //                                       }
-// //                                       disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
-// //                                     >
-// //                                       <CIcon icon={cilSettings} />
-// //                                       Options
-// //                                     </CButton>
-// //                                     <Menu
-// //                                       id={`action-menu-${brokerData.broker._id}-${branch.branchId}`}
-// //                                       anchorEl={anchorEl}
-// //                                       open={menuId === `${brokerData.broker._id}-${branch.branchId}`}
-// //                                       onClose={handleClose}
-// //                                     >
-// //                                       {canCreateExchangeLedger && (
-// //                                         <MenuItem onClick={() => handleAddClick(brokerData, branch.branchId)}>
-// //                                           <CIcon icon={cilPlus} className="me-2" />
-// //                                           Add Payment
-// //                                         </MenuItem>
-// //                                       )}
-// //                                       {canViewExchangeLedger && (
-// //                                         <MenuItem onClick={() => handleViewLedger(brokerData, branch.branchId)}>
-// //                                           View Ledger
-// //                                         </MenuItem>
-// //                                       )}
-// //                                     </Menu>
-// //                                   </CTableDataCell>
-// //                                 )}
-// //                               </CTableRow>
-// //                             );
-// //                           })}
-// //                       </>
-// //                     );
-// //                   })
-// //                 )}
-// //               </CTableBody>
-// //             </CTable>
-// //           </div>
-// //         </CCardBody>
-// //       </CCard>
-
-// //       <CModal alignment="center" visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
-// //         <CModalHeader>
-// //           <CModalTitle>Search</CModalTitle>
-// //         </CModalHeader>
-// //         <CModalBody>
-// //           <div className="mb-3">
-// //             <CFormLabel>Select Branch</CFormLabel>
-// //             <CFormSelect 
-// //               value={selectedBranch} 
-// //               onChange={(e) => setSelectedBranch(e.target.value)}
-// //               disabled={!canViewExchangeLedger}
-// //             >
-// //               <option value="ALL">All Branches</option>
-             
-// //               {branches.map((branch) => (
-// //                 <option key={branch._id} value={branch._id}>
-// //                   {branch.name || 'N/A'}
-// //                 </option>
-// //               ))}
-// //             </CFormSelect>
-// //           </div>
-// //         </CModalBody>
-// //         <CModalFooter>
-// //           <CButton 
-// //             color="primary" 
-// //             onClick={handleBranchFilter}
-// //             disabled={!canViewExchangeLedger}
-// //           >
-// //             Search
-// //           </CButton>
-// //         </CModalFooter>
-// //       </CModal>
-      
-// //       {/* Export Report Modal */}
-// //       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal} size="lg">
-// //         <CModalHeader>
-// //           <CModalTitle>
-// //             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
-// //             Export Brokers Report
-// //           </CModalTitle>
-// //         </CModalHeader>
-// //         <CModalBody>
-// //           {exportError && (
-// //             <CAlert color="warning" className="mb-3">
-// //               {exportError}
-// //             </CAlert>
-// //           )}
-          
-// //           <LocalizationProvider 
-// //             dateAdapter={AdapterDateFns} 
-// //             adapterLocale={enIN}
-// //           >
-// //             <div className="mb-3">
-// //               <CFormLabel>Select Branch</CFormLabel>
-// //               <CFormSelect 
-// //                 value={exportBranchId} 
-// //                 onChange={(e) => {
-// //                   setExportBranchId(e.target.value);
-// //                   setExportError('');
-// //                 }}
-// //                 disabled={!canCreateExchangeLedger}
-// //               >
-// //                 <option value="">-- Select Branch --</option>
-// //                 <option value="ALL">All Branches</option>
-// //                 {branches.map((branch) => (
-// //                   <option key={branch._id} value={branch._id}>
-// //                     {branch.name || 'N/A'}
-// //                   </option>
-// //                 ))}
-// //               </CFormSelect>
-// //             </div>
-            
-// //             <div className="mb-3">
-// //               <DatePicker
-// //                 label="Start Date"
-// //                 value={exportStartDate}
-// //                 onChange={(newValue) => {
-// //                   setExportStartDate(newValue);
-// //                   setExportError('');
-// //                 }}
-// //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-// //                 inputFormat="dd/MM/yyyy"
-// //                 mask="__/__/____"
-// //                 views={['day', 'month', 'year']}
-// //                 disabled={!canCreateExchangeLedger}
-// //               />
-// //             </div>
-// //             <div className="mb-3">
-// //               <DatePicker
-// //                 label="End Date"
-// //                 value={exportEndDate}
-// //                 onChange={(newValue) => {
-// //                   setExportEndDate(newValue);
-// //                   setExportError('');
-// //                 }}
-// //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-// //                 inputFormat="dd/MM/yyyy"
-// //                 mask="__/__/____"
-// //                 minDate={exportStartDate}
-// //                 views={['day', 'month', 'year']}
-// //                 disabled={!canCreateExchangeLedger}
-// //               />
-// //             </div>
-// //           </LocalizationProvider>
-// //         </CModalBody>
-// //         <CModalFooter>
-// //           <CButton color="secondary" onClick={handleCloseExportModal}>
-// //             Cancel
-// //           </CButton>
-// //           <CButton 
-// //             className="submit-button"
-// //             onClick={handleExcelExport}
-// //             disabled={!exportStartDate || !exportEndDate || !exportBranchId || !canCreateExchangeLedger || exportLoading}
-// //           >
-// //             {exportLoading ? (
-// //               <>
-// //                 <CSpinner size="sm" className="me-2" />
-// //                 Exporting...
-// //               </>
-// //             ) : 'Export Excel'}
-// //           </CButton>
-// //         </CModalFooter>
-// //       </CModal>
-      
-// //       <ExchangeLedgerModel 
-// //         show={showModal} 
-// //         onClose={() => setShowModal(false)} 
-// //         brokerData={selectedledger} 
-// //         refreshData={fetchData}
-// //         onPaymentSaved={handlePaymentSaved}
-// //         canCreateExchangeLedger={canCreateExchangeLedger}
-// //         onPaymentSuccess={(receiptId) => {
-// //           if (receiptId) {
-// //             setTimeout(() => {
-// //               printBrokerReceipt(receiptId);
-// //             }, 500);
-// //           }
-// //         }}
-// //       />
-// //     </div>
-// //   );
-// // };
-
-// // export default ExchangeLedger;
-
-
-
-
-
-
-
-
-
-// // import '../../css/table.css';
-// // import {
-// //   React,
-// //   useState,
-// //   useEffect,
-// //   Menu,
-// //   MenuItem,
-// //   useTableFilter,
-// //   usePagination,
-// //   axiosInstance,
-// //   showError
-// // } from '../../utils/tableImports';
-// // import tvsLogo from '../../assets/images/logo.png';
-// // import '../../css/invoice.css';
-// // import config from '../../config';
-// // import ExchangeLedgerModel from './ExchangeLedgerModel';
-// // import {
-// //   CCard,
-// //   CCardBody,
-// //   CCardHeader,
-// //   CFormInput,
-// //   CFormLabel,
-// //   CTable,
-// //   CTableBody,
-// //   CTableHead,
-// //   CTableHeaderCell,
-// //   CTableRow,
-// //   CTableDataCell,
-// //   CSpinner,
-// //   CModal,
-// //   CModalHeader,
-// //   CModalTitle,
-// //   CModalBody,
-// //   CModalFooter,
-// //   CButton,
-// //   CFormSelect,
-// //   CAlert,
-// //   CDropdown,
-// //   CDropdownToggle,
-// //   CDropdownMenu,
-// //   CDropdownItem
-// // } from '@coreui/react';
-// // import CIcon from '@coreui/icons-react';
-// // import { cilPlus, cilSettings, cilSearch, cilZoomOut, cilPrint, cilCloudDownload } from '@coreui/icons';
-// // import { useAuth } from '../../context/AuthContext';
-// // import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// // import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
-// // import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-// // import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-// // import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-// // import TextField from '@mui/material/TextField';
-// // import Swal from 'sweetalert2';
-// // import QRCode from 'qrcode';
-
-// // // Import date-fns locale for Indian date format
-// // import { enIN } from 'date-fns/locale';
-
-// // // Import permission utilities
-// // import { 
-// //   MODULES, 
-// //   PAGES,
-// //   canViewPage,
-// //   canCreateInPage,
-// //   canUpdateInPage,
-// //   canDeleteInPage 
-// // } from '../../utils/modulePermissions';
-// // import { useCallback } from 'react';
-
-// // const ExchangeLedger = () => {
-// //   const [anchorEl, setAnchorEl] = useState(null);
-// //   const [menuId, setMenuId] = useState(null);
-// //   const [loading, setLoading] = useState(true);
-// //   const [error, setError] = useState(null);
-// //   const [searchTerm, setSearchTerm] = useState('');
-// //   const [showModal, setShowModal] = useState(false);
-// //   const [selectedledger, setSelectedledger] = useState(null);
-// //   const [groupedData, setGroupedData] = useState([]);
-// //   const [expandedBrokers, setExpandedBrokers] = useState({});
-// //   const [showFilterModal, setShowFilterModal] = useState(false);
-// //   const [branches, setBranches] = useState([]);
-// //   const [selectedBranch, setSelectedBranch] = useState('');
-// //   const [isFiltered, setIsFiltered] = useState(false);
-// //   const [selectedBranchName, setSelectedBranchName] = useState('');
-// //   const [successMessage, setSuccessMessage] = useState('');
   
-// //   // ============ RECEIPTS FETCHING STATES ============
-// //   const [transactionsData, setTransactionsData] = useState({});
-// //   const [loadingTransactions, setLoadingTransactions] = useState({});
-// //   const [transactionsFetched, setTransactionsFetched] = useState({});
-  
-// //   // Export modal state
-// //   const [showExportModal, setShowExportModal] = useState(false);
-// //   const [exportStartDate, setExportStartDate] = useState(null);
-// //   const [exportEndDate, setExportEndDate] = useState(null);
-// //   const [exportBranchId, setExportBranchId] = useState('');
-// //   const [exportError, setExportError] = useState('');
-// //   const [exportLoading, setExportLoading] = useState(false);
-
-// //   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
-// //   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-// //   const { permissions } = useAuth();
-
-// //   // Page-level permission checks for Exchange Ledger under ACCOUNT module
-// //   const canViewExchangeLedger = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
-// //   const canCreateExchangeLedger = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
-// //   const canUpdateExchangeLedger = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
-// //   const canDeleteExchangeLedger = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
-  
-// //   const showActionColumn = canCreateExchangeLedger || canViewExchangeLedger;
-
-// //   // Format date to DD-MM-YYYY for display
-// //   const formatDateDDMMYYYY = (date) => {
-// //     if (!date) return '';
-// //     const day = String(date.getDate()).padStart(2, '0');
-// //     const month = String(date.getMonth() + 1).padStart(2, '0');
-// //     const year = date.getFullYear();
-// //     return `${day}-${month}-${year}`;
-// //   };
-
-// //   // Format date to YYYY-MM-DD for API
-// //   const formatDateForAPI = (date) => {
-// //     if (!date) return '';
-// //     const year = date.getFullYear();
-// //     const month = String(date.getMonth() + 1).padStart(2, '0');
-// //     const day = String(date.getDate()).padStart(2, '0');
-// //     return `${year}-${month}-${day}`;
-// //   };
-
-// //   useEffect(() => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     fetchData();
-// //     fetchBranches();
-// //   }, [canViewExchangeLedger]);
-
-// //   useEffect(() => {
-// //     if (data.length > 0) {
-// //       const grouped = groupDataByBroker(data, isFiltered);
-// //       setGroupedData(grouped);
-// //       setFilteredData(grouped);
-      
-// //       // Initialize transactions data structure
-// //       const initialTransactionsMap = {};
-// //       grouped.forEach(brokerData => {
-// //         const key = brokerData.broker._id;
-// //         initialTransactionsMap[key] = [];
-        
-// //         // Also initialize for branches if needed
-// //         if (!isFiltered && brokerData.branches) {
-// //           brokerData.branches.forEach(branch => {
-// //             const branchKey = `${brokerData.broker._id}-${branch.branchId}`;
-// //             initialTransactionsMap[branchKey] = [];
-// //           });
-// //         }
-// //       });
-// //       setTransactionsData(initialTransactionsMap);
-// //     }
-// //   }, [data, isFiltered]);
-
-// //   const fetchBranches = async () => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     try {
-// //       const response = await axiosInstance.get('/branches');
-// //       setBranches(response.data.data);
-// //     } catch (error) {
-// //       const message = showError(error);
-// //       if (message) {
-// //         setError(message);
-// //       }
-// //     }
-// //   };
-
-// //   const fetchData = async (branchId = null) => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     try {
-// //       setLoading(true);
-// //       let url = '/broker-ledger/summary/detailed';
-// //       if (branchId) {
-// //         url = `/broker-ledger/summary/branch/${branchId}`;
-// //       }
-
-// //       const response = await axiosInstance.get(url);
-
-// //       if (branchId) {
-// //         const branchName = branches.find((b) => b._id === branchId)?.name || 'Selected Branch';
-// //         setSelectedBranchName(branchName);
-
-// //         const branchData = response.data.data.brokers.map((broker) => ({
-// //           broker: broker.broker,
-// //           branch: {
-// //             _id: response.data.data.branch,
-// //             name: branchName
-// //           },
-// //           bookings: {
-// //             total: broker.totalBookings,
-// //             details: []
-// //           },
-// //           financials: {
-// //             totalExchangeAmount: broker.totalExchangeAmount,
-// //             ledger: {
-// //               currentBalance: broker.ledger.currentBalance,
-// //               onAccount: broker.ledger.onAccount,
-// //               totalCredit: broker.ledger.totalCredit || 0,
-// //               totalDebit: broker.ledger.totalDebit || 0,
-// //               outstandingAmount: broker.ledger.outstandingAmount || 0,
-// //               transactions: broker.ledger.transactions || 0
-// //             },
-// //             summary: {
-// //               totalReceived: broker.summary?.totalReceived || 0,
-// //               totalPayable: broker.summary?.totalPayable || 0,
-// //               netBalance: broker.ledger.currentBalance
-// //             }
-// //           },
-// //           recentTransactions: [],
-// //           association: {
-// //             isActive: true
-// //           }
-// //         }));
-
-// //         setData(branchData);
-// //         setIsFiltered(true);
-// //       } else {
-// //         setData(response.data.data.brokers);
-// //         setIsFiltered(false);
-// //         setSelectedBranchName('');
-// //       }
-// //     } catch (error) {
-// //       const message = showError(error);
-// //       if (message) {
-// //         setError(message);
-// //       }
-// //     } finally {
-// //       setLoading(false);
-// //     }
-// //   };
-
-// //   // ============ FETCH TRANSACTIONS FOR BROKER (REQUIRES BOTH IDs) ============
-// //   const fetchTransactionsForBroker = useCallback(async (brokerId, branchId) => {
-// //     // Both IDs are required - don't proceed if either is missing
-// //     if (!brokerId || !branchId) {
-// //       console.log('Cannot fetch transactions: Both brokerId and branchId are required');
-// //       return;
-// //     }
-    
-// //     const key = `${brokerId}-${branchId}`;
-    
-// //     if (transactionsFetched[key] || loadingTransactions[key]) {
-// //       return;
-// //     }
-
-// //     try {
-// //       setLoadingTransactions(prev => ({ ...prev, [key]: true }));
-      
-// //       const response = await axiosInstance.get(`/broker-ledger/branch-transactions/${brokerId}/${branchId}`);
-      
-// //       const transactions = response.data.data.transactions || [];
-      
-// //       setTransactionsData(prev => ({
-// //         ...prev,
-// //         [key]: transactions
-// //       }));
-      
-// //       setTransactionsFetched(prev => ({
-// //         ...prev,
-// //         [key]: true
-// //       }));
-// //     } catch (error) {
-// //       console.error(`Error fetching transactions for broker ${brokerId} and branch ${branchId}:`, error);
-// //       setTransactionsData(prev => ({
-// //         ...prev,
-// //         [key]: []
-// //       }));
-// //       setTransactionsFetched(prev => ({
-// //         ...prev,
-// //         [key]: true
-// //       }));
-// //     } finally {
-// //       setLoadingTransactions(prev => ({ ...prev, [key]: false }));
-// //     }
-// //   }, [transactionsFetched, loadingTransactions]);
-
-// //   // ============ PRINT RECEIPT FUNCTION - FIXED ============
-// //   const printBrokerReceipt = async (transactionId) => {
-// //     try {
-// //       console.log('Fetching transaction with ID:', transactionId);
-      
-// //       const response = await axiosInstance.get(`/broker-ledger/transaction/${transactionId}`);
-// //       console.log('Transaction response:', response.data);
-      
-// //       const transaction = response.data.data;
-      
-// //       if (!transaction) {
-// //         showError('Transaction data not found');
-// //         return;
-// //       }
-      
-// //       const receivedDate = transaction.dateFormatted || 
-// //                           new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
-      
-// //       const currentDate = new Date().toLocaleDateString('en-GB');
-      
-// //       const brokerName = transaction.broker?.name || 'N/A';
-// //       const branchName = transaction.branch?.name || 'N/A';
-// //       const branchAddress = transaction.branch?.address || '';
-// //       const branchPhone = transaction.branch?.phone || '';
-// //       const branchEmail = transaction.branch?.email || '';
-      
-// //       const qrText = `GANDHI MOTORS PVT LTD
-// // Broker: ${brokerName}
-// // Branch: ${branchName}
-// // Receipt No: ${transaction.referenceNumber || transaction._id}
-// // Amount: ₹${transaction.amount || 0}
-// // Payment Mode: ${transaction.modeOfPayment || 'Cash'}
-// // Date: ${receivedDate}`;
-
-// //       let qrCodeImage = '';
-// //       try {
-// //         qrCodeImage = await QRCode.toDataURL(qrText, {
-// //           width: 150,
-// //           margin: 2,
-// //           color: {
-// //             dark: '#000000',
-// //             light: '#FFFFFF'
-// //           },
-// //           errorCorrectionLevel: 'H'
-// //         });
-// //       } catch (error) {
-// //         console.error('Error generating QR code:', error);
-// //         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
-// //           <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150">
-// //             <rect width="150" height="150" fill="white"/>
-// //             <rect x="10" y="10" width="130" height="130" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
-// //             <text x="75" y="70" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">QR CODE</text>
-// //             <text x="75" y="90" text-anchor="middle" font-family="Arial" font-size="8" fill="#666">Receipt: ${transaction.referenceNumber || ''}</text>
-// //           </svg>
-// //         `);
-// //       }
-
-// //       const receiptHTML = generateReceiptHTML(transaction, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail);
-
-// //       const printWindow = window.open('', '_blank');
-// //       printWindow.document.write(receiptHTML);
-// //       printWindow.document.close();
-      
-// //       printWindow.onload = function() {
-// //         printWindow.focus();
-// //         printWindow.print();
-// //       };
-      
-// //     } catch (err) {
-// //       console.error('Error fetching transaction details:', err);
-// //       console.error('Error response:', err.response?.data);
-// //       showError('Failed to load receipt. Please try again.');
-// //     }
-// //   };
-
-// //   // ============ GENERATE RECEIPT HTML ============
-// //   // ============ GENERATE RECEIPT HTML ============
-// // const generateReceiptHTML = (transaction, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail) => {
-// //   const receiptNumber = transaction.referenceNumber || transaction._id || 'N/A';
-// //   const amount = transaction.amount || 0;
-// //   const paymentMode = transaction.modeOfPayment || 'Cash';
-// //   const remark = transaction.remark || '';
-// //   const referenceNumber = transaction.referenceNumber || '';
-// //   const approvalStatus = transaction.approvalStatus || 'Pending';
-// //   const cashLocation = transaction.cashLocation?.name || '';
-// //   const bankName = transaction.bank?.name || '';
-// //   const subPaymentMode = transaction.subPaymentMode?.payment_mode || '';
-  
-// //   const amountInWords = numberToWordsSimple(amount);
-
-// //   return `<!DOCTYPE html>
-// // <html>
-// // <head>
-// //   <title>Broker Payment Receipt - ${receiptNumber}</title>
-// //   <style>
-// //     body {
-// //       font-family: "Courier New", Courier, monospace;
-// //       margin: 0;
-// //       padding: 10mm;
-// //       font-size: 15px;
-// //       color: #333;
-// //     }
-// //     .page {
-// //       width: 210mm;
-// //       margin: 0 auto;
-// //     }
-// //     .receipt-copy {
-// //       height: auto;
-// //       min-height: 130mm;
-// //       page-break-inside: avoid;
-// //     }
-// //     .header-container {
-// //       display: flex;
-// //       justify-content: space-between;
-// //       margin-bottom: 2mm;
-// //       align-items: flex-start;
-// //     }
-// //     .header-left {
-// //       width: 60%;
-// //     }
-// //     .header-right {
-// //       width: 40%;
-// //       text-align: right;
-// //       display: flex;
-// //       flex-direction: column;
-// //       align-items: flex-end;
-// //     }
-// //     .logo-qr-container {
-// //       display: flex;
-// //       align-items: center;
-// //       gap: 10px;
-// //       justify-content: flex-end;
-// //       margin-bottom: 5px;
-// //       width: 100%;
-// //     }
-// //     .logo {
-// //       height: 51px;
-// //     }
-// //     .qr-code-small {
-// //       width: 81px;
-// //       height: 81px;
-// //       border: 1px solid #ccc;
-// //     }
-// //     .dealer-info {
-// //       text-align: left;
-// //       font-size: 13px;
-// //       line-height: 1.2;
-// //     }
-// //     .dealer-name {
-// //       font-size: 17px;
-// //       font-weight: bold;
-// //       margin: 0 0 3px 0;
-// //     }
-// //     .broker-info-container {
-// //       display: flex;
-// //       font-size: 14px;
-// //       margin: 10px 0;
-// //     }
-// //     .broker-info-left {
-// //       width: 50%;
-// //     }
-// //     .broker-info-right {
-// //       width: 50%;
-// //     }
-// //     .info-row {
-// //       margin: 2mm 0;
-// //       line-height: 1.2;
-// //     }
-// //     /* Style for values in info rows */
-// //     .info-row .value {
-// //       font-weight: 700;
-// //     }
-// //     .divider {
-// //       border-top: 2px solid #AAAAAA;
-// //       margin: 3mm 0;
-// //     }
-// //     .receipt-info {
-// //       background-color: #f8f9fa;
-// //       border: 1px solid #dee2e6;
-// //       border-radius: 4px;
-// //       padding: 9px;
-// //       margin: 11px 0;
-// //       font-size: 14px;
-// //     }
-// //     .receipt-info .value {
-// //       font-weight: 700;
-// //     }
-// //     .payment-info-box {
-// //       margin: 11px 0;
-// //     }
-// //     .signature-box {
-// //       margin-top: 16mm;
-// //       font-size: 11pt;
-// //     }
-// //     .signature-line {
-// //       border-top: 1px dashed #000;
-// //       width: 41mm;
-// //       display: inline-block;
-// //       margin: 0 5mm;
-// //     }
-// //     .cutting-line {
-// //       border-top: 2px dashed #333;
-// //       margin: 16mm 0 11mm 0;
-// //       text-align: center;
-// //       position: relative;
-// //     }
-// //     .cutting-line::before {
-// //       content: "✂ Cut Here ✂";
-// //       position: absolute;
-// //       top: -11px;
-// //       left: 50%;
-// //       transform: translateX(-50%);
-// //       background: white;
-// //       padding: 0 11px;
-// //       font-size: 13px;
-// //       color: #666;
-// //     }
-// //     .note {
-// //       padding: 2px;
-// //       margin: 3px;
-// //       font-size: 12px;
-// //     }
-// //     .note .value {
-// //       font-weight: 700;
-// //     }
-// //     .amount-in-words {
-// //       font-style: italic;
-// //       margin-top: 9px;
-// //       padding: 6px;
-// //       font-size: 13px;
-// //       border-top: 1px dashed #ccc;
-// //     }
-// //     .amount-in-words .value {
-// //       font-weight: 700;
-// //       font-style: normal;
-// //     }
-// //     .status-badge {
-// //       display: inline-block;
-// //       padding: 4px 9px;
-// //       border-radius: 12px;
-// //       font-size: 12px;
-// //       font-weight: bold;
-// //       background-color: ${approvalStatus === 'Approved' ? '#d4edda' : approvalStatus === 'Rejected' ? '#f8d7da' : '#fff3cd'};
-// //       color: ${approvalStatus === 'Approved' ? '#155724' : approvalStatus === 'Rejected' ? '#721c24' : '#856404'};
-// //       border: 1px solid ${approvalStatus === 'Approved' ? '#c3e6cb' : approvalStatus === 'Rejected' ? '#f5c6cb' : '#ffeeba'};
-// //     }
-// //     .footer-note {
-// //       font-size: 10px;
-// //       color: #777;
-// //       text-align: center;
-// //       margin-top: 5mm;
-// //     }
-// //     .payment-details {
-// //       margin-top: 10px;
-// //       border-collapse: collapse;
-// //       width: 100%;
-// //     }
-// //     .payment-details td {
-// //       padding: 4px;
-// //       border: none;
-// //     }
-// //     /* 2-column grid for payment info */
-// //     .payment-grid-2col {
-// //       display: grid;
-// //       grid-template-columns: 1fr 1fr;
-// //       gap: 4px 15px;
-// //       padding: 4px;
-// //       font-size: 14px;
-// //     }
-// //     .payment-grid-item {
-// //       padding: 2px 0;
-// //       line-height: 1.3;
-// //     }
-// //     .payment-grid-item strong {
-// //       font-weight: 600;
-// //       margin-right: 5px;
-// //       min-width: 110px;
-// //       display: inline-block;
-// //     }
-// //     .payment-grid-item .value {
-// //       font-weight: 700;
-// //     }
-// //     @page {
-// //       size: A4;
-// //       margin: 10mm;
-// //     }
-// //     @media print {
-// //       body {
-// //         padding: 0;
-// //       }
-// //       .receipt-copy {
-// //         page-break-inside: avoid;
-// //       }
-// //     }
-// //   </style>
-// // </head>
-// // <body>
-// //   <div class="page">
-// //     <!-- FIRST COPY -->
-// //     <div class="receipt-copy">
-// //       <div class="header-container">
-// //         <div class="header-left">
-// //           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
-// //           <div class="dealer-info">
-// //             Authorized Main Dealer: TVS Motor Company Ltd.<br>
-// //             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-// //             Upnagar, Nashik Road, Nashik - 422101<br>
-// //             Phone: 7498903672
-// //           </div>
-// //         </div>
-// //         <div class="header-right">
-// //           <div class="logo-qr-container">
-// //             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
-// //             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
-// //           </div>
-// //           <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
-// //           <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-// //         </div>
-// //       </div>
-      
-// //       <div class="divider"></div>
-
-// //       <div class="receipt-info">
-// //         <div><strong>BROKER PAYMENT RECEIPT</strong></div>
-// //         <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
-// //       </div>
-
-// //       <div class="broker-info-container">
-// //         <div class="broker-info-left">
-// //           <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
-// //           <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
-// //           <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
-// //           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
-// //           ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
-// //         </div>
-// //         <div class="broker-info-right">
-// //           <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
-// //           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
-// //           <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
-// //           <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
-// //         </div>
-// //       </div>
-
-// //       <div class="payment-info-box">
-// //         <div class="receipt-info" style="padding: 5px;">
-// //           <!-- Payment Information Grid - 2 columns (2 rows) with existing fields only -->
-// //           <div class="payment-grid-2col">
-// //             <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
-           
-// //           </div>
-// //         </div>
-        
-// //         <div class="amount-in-words">
-// //           <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
-// //         </div>
-// //       </div>
-
-// //       <div class="note">
-// //         <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
-// //       </div>
-      
-// //       <div class="divider"></div>
-
-// //       <div class="signature-box">
-// //         <div style="display: flex; justify-content: space-between;">
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Broker's Signature</div>
-// //           </div>
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Authorised Signatory</div>
-// //           </div>
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Accountant</div>
-// //           </div>
-// //         </div>
-// //       </div>
-      
-// //       <div class="footer-note">
-// //         This is a computer generated receipt - valid without signature
-// //       </div>
-// //     </div>
-
-// //     <!-- CUTTING LINE -->
-// //     <div class="cutting-line"></div>
-
-// //     <!-- SECOND COPY (DUPLICATE) -->
-// //     <div class="receipt-copy">
-// //       <div class="header-container">
-// //         <div class="header-left">
-// //           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
-// //           <div class="dealer-info">
-// //             Authorized Main Dealer: TVS Motor Company Ltd.<br>
-// //             Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-// //             Upnagar, Nashik Road, Nashik - 422101<br>
-// //             Phone: 7498903672
-// //           </div>
-// //         </div>
-// //         <div class="header-right">
-// //           <div class="logo-qr-container">
-// //             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
-// //             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
-// //           </div>
-// //           <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
-// //           <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-// //         </div>
-// //       </div>
-      
-// //       <div class="divider"></div>
-
-// //       <div class="receipt-info">
-// //         <div><strong>BROKER PAYMENT RECEIPT (DUPLICATE)</strong></div>
-// //         <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
-// //       </div>
-
-// //       <div class="broker-info-container">
-// //         <div class="broker-info-left">
-// //           <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
-// //           <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
-// //           <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
-// //           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
-// //           ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
-// //         </div>
-// //         <div class="broker-info-right">
-// //           <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
-// //           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
-// //           <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
-// //           <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
-// //         </div>
-// //       </div>
-
-// //       <div class="payment-info-box">
-// //         <div class="receipt-info" style="padding: 5px;">
-// //           <!-- Payment Information Grid - 2 columns (2 rows) with existing fields only -->
-// //           <div class="payment-grid-2col">
-// //             <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
-            
-// //         </div>
-        
-// //         <div class="amount-in-words">
-// //           <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
-// //         </div>
-// //       </div>
-
-// //       <div class="note">
-// //         <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
-// //       </div>
-      
-// //       <div class="divider"></div>
-
-// //       <div class="signature-box">
-// //         <div style="display: flex; justify-content: space-between;">
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Broker's Signature</div>
-// //           </div>
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Authorised Signatory</div>
-// //           </div>
-// //           <div style="text-align:center; width: 30%;">
-// //             <div class="signature-line"></div>
-// //             <div>Accountant</div>
-// //           </div>
-// //         </div>
-// //       </div>
-      
-// //       <div class="footer-note">
-// //         This is a computer generated receipt - valid without signature
-// //       </div>
-// //     </div>
-// //   </div>
-// // </body>
-// // </html>`;
-// // };
-
-// //   // ============ SIMPLE NUMBER TO WORDS FUNCTION ============
-// //   const numberToWordsSimple = (num) => {
-// //     if (num === 0) return 'Zero';
-    
-// //     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-// //                   'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-// //                   'Seventeen', 'Eighteen', 'Nineteen'];
-// //     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-    
-// //     const numToWords = (n) => {
-// //       if (n < 20) return ones[n];
-// //       if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
-// //       if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '');
-// //       if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '');
-// //       if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
-// //       return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
-// //     };
-    
-// //     return numToWords(Math.floor(num)) + (num % 1 ? ' point ' + num.toString().split('.')[1] : '');
-// //   };
-
-// //   const handleBranchFilter = async () => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     if (selectedBranch) {
-// //       await fetchData(selectedBranch);
-// //     } else {
-// //       await fetchData();
-// //     }
-// //     setShowFilterModal(false);
-// //   };
-
-// //   const clearFilter = async () => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     setSelectedBranch('');
-// //     await fetchData();
-// //     setShowFilterModal(false);
-// //   };
-
-// //   const groupDataByBroker = (brokersData, isFilteredMode = false) => {
-// //     const brokerMap = {};
-
-// //     brokersData.forEach((item) => {
-// //       const brokerId = item.broker._id;
-
-// //       if (!brokerMap[brokerId]) {
-// //         brokerMap[brokerId] = {
-// //           broker: item.broker,
-// //           branches: [],
-// //           totalBookings: 0,
-// //           totalExchangeAmount: 0,
-// //           totalCredit: 0,
-// //           totalDebit: 0,
-// //           onAccount: 0,
-// //           currentBalance: 0,
-// //           outstandingAmount: 0
-// //         };
-// //       }
-
-// //       if (isFilteredMode) {
-// //         brokerMap[brokerId].branches = [
-// //           {
-// //             name: item.branch.name,
-// //             branchId: item.branch._id,
-// //             bookings: item.bookings.total,
-// //             exchangeAmount: item.financials.totalExchangeAmount,
-// //             credit: item.financials.ledger.totalCredit,
-// //             debit: item.financials.ledger.totalDebit,
-// //             onAccount: item.financials.ledger.onAccount,
-// //             currentBalance: item.financials.ledger.currentBalance,
-// //             outstandingAmount: item.financials.ledger.outstandingAmount
-// //           }
-// //         ];
-
-// //         brokerMap[brokerId].totalBookings = item.bookings.total;
-// //         brokerMap[brokerId].totalExchangeAmount = item.financials.totalExchangeAmount;
-// //         brokerMap[brokerId].totalCredit = item.financials.ledger.totalCredit;
-// //         brokerMap[brokerId].totalDebit = item.financials.ledger.totalDebit;
-// //         brokerMap[brokerId].onAccount = item.financials.ledger.onAccount;
-// //         brokerMap[brokerId].currentBalance = item.financials.ledger.currentBalance;
-// //         brokerMap[brokerId].outstandingAmount = item.financials.ledger.outstandingAmount;
-// //       } else {
-// //         brokerMap[brokerId].branches.push({
-// //           name: item.branch.name,
-// //           branchId: item.branch._id,
-// //           bookings: item.bookings.total,
-// //           exchangeAmount: item.financials.totalExchangeAmount,
-// //           credit: item.financials.ledger.totalCredit,
-// //           debit: item.financials.ledger.totalDebit,
-// //           onAccount: item.financials.ledger.onAccount,
-// //           currentBalance: item.financials.ledger.currentBalance,
-// //           outstandingAmount: item.financials.ledger.outstandingAmount
-// //         });
-
-// //         brokerMap[brokerId].totalBookings += item.bookings.total;
-// //         brokerMap[brokerId].totalExchangeAmount += item.financials.totalExchangeAmount;
-// //         brokerMap[brokerId].totalCredit += item.financials.ledger.totalCredit;
-// //         brokerMap[brokerId].totalDebit += item.financials.ledger.totalDebit;
-// //         brokerMap[brokerId].onAccount += item.financials.ledger.onAccount;
-// //         brokerMap[brokerId].currentBalance += item.financials.ledger.currentBalance;
-// //         brokerMap[brokerId].outstandingAmount += item.financials.ledger.outstandingAmount;
-// //       }
-// //     });
-
-// //     return Object.values(brokerMap);
-// //   };
-
-// //   const toggleBrokerExpansion = (brokerId) => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     if (!isFiltered) {
-// //       setExpandedBrokers((prev) => ({
-// //         ...prev,
-// //         [brokerId]: !prev[brokerId]
-// //       }));
-// //     }
-// //   };
-
-// //   const handleClick = (event, id, brokerData = null, branchId = null) => {
-// //     if (!canViewExchangeLedger && !canCreateExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     setAnchorEl(event.currentTarget);
-// //     setMenuId(id);
-// //     if (brokerData) {
-// //       setSelectedledger({ ...brokerData, branchId });
-// //     }
-// //   };
-
-// //   const handleClose = () => {
-// //     setAnchorEl(null);
-// //     setMenuId(null);
-// //   };
-
-// //   const handleAddClick = (brokerData, branchId = null) => {
-// //     if (!canCreateExchangeLedger) {
-// //       showError('You do not have permission to add payments');
-// //       return;
-// //     }
-    
-// //     setSelectedledger({ ...brokerData, branchId });
-// //     setShowModal(true);
-// //     handleClose();
-// //   };
-
-// //   const handleViewLedger = async (brokerData, branchId = null) => {
-// //     if (!canViewExchangeLedger) {
-// //       showError('You do not have permission to view ledgers');
-// //       return;
-// //     }
-    
-// //     try {
-// //       let url = `/broker-ledger/statement/${brokerData.broker?._id}`;
-// //       if (branchId) {
-// //         url += `?branchId=${branchId}`;
-// //       }
-
-// //       const res = await axiosInstance.get(url);
-// //       const ledgerData = res.data.data;
-// //       const ledgerUrl = `${config.baseURL}/brokerData.html?ledgerId=${brokerData._id}`;
-// //       let totalCredit = 0;
-// //       let totalDebit = 0;
-// //       const totalOnAccount = ledgerData.summary?.totalOnAccount ?? ledgerData.onAccountBalance ?? 0;
-
-// //       ledgerData.transactions?.forEach((entry) => {
-// //         if (entry.type === 'CREDIT') {
-// //           totalCredit += entry.amount;
-// //         } else if (entry.type === 'DEBIT') {
-// //           totalDebit += entry.amount;
-// //         }
-// //       });
-// //       const finalBalance = totalDebit - totalCredit;
-// //       const availableOnAccount2 = totalOnAccount - totalCredit;
-
-// //       const win = window.open('', '_blank');
-// //       win.document.write(`
-// //           <!DOCTYPE html>
-// //           <html>
-// //             <head>
-// //               <title>Customer Ledger</title>
-// //               <style>
-// //                 @page {
-// //                   size: A4;
-// //                   margin: 15mm 10mm;
-// //                 }
-// //                 body {
-// //                   font-family: Arial;
-// //                   width: 100%;
-// //                   margin: 0;
-// //                   padding: 0;
-// //                   font-size: 14px;
-// //                   line-height: 1.3;
-// //                   font-family: Courier New;
-// //                 }
-// //                 .container {
-// //                   width: 190mm;
-// //                   margin: 0 auto;
-// //                   padding: 5mm;
-// //                 }
-// //                 .header-container {
-// //                   display: flex;
-// //                   justify-content:space-between;
-// //                   margin-bottom: 3mm;
-// //                 }
-// //                 .header-text{
-// //                   font-size:20px;
-// //                   font-weight:bold;
-// //                 }
-// //                 .logo {
-// //                   width: 30mm;
-// //                   height: auto;
-// //                   margin-right: 5mm;
-// //                 }
-// //                 .header {
-// //                   text-align: left;
-// //                 }
-// //                 .divider {
-// //                   border-top: 2px solid #AAAAAA;
-// //                   margin: 3mm 0;
-// //                 }
-// //                 .header h2 {
-// //                   margin: 2mm 0;
-// //                   font-size: 12pt;
-// //                   font-weight: bold;
-// //                 }
-// //                 .header div {
-// //                   font-size: 14px;
-// //                 }
-// //                 .customer-info {
-// //                   display: grid;
-// //                   grid-template-columns: repeat(2, 1fr);
-// //                   gap: 2mm;
-// //                   margin-bottom: 5mm;
-// //                   font-size: 14px;
-// //                 }
-// //                 .customer-info div {
-// //                   display: flex;
-// //                 }
-// //                 .customer-info strong {
-// //                   min-width: 30mm;
-// //                   display: inline-block;
-// //                 }
-// //                 table {
-// //                   width: 100%;
-// //                   border-collapse: collapse;
-// //                   margin-bottom: 5mm;
-// //                   font-size: 14px;
-// //                   page-break-inside: avoid;
-// //                 }
-// //                 th, td {
-// //                   border: 1px solid #000;
-// //                   padding: 2mm;
-// //                   text-align: left;
-// //                 }
-// //                 th {
-// //                   background-color: #f0f0f0;
-// //                   font-weight: bold;
-// //                 }
-// //                 .footer {
-// //                   margin-top: 10mm;
-// //                   display: flex;
-// //                   justify-content: space-between;
-// //                   align-items: flex-end;
-// //                   font-size: 14px;
-// //                 }
-// //                 .footer-left {
-// //                   text-align: left;
-// //                 }
-// //                 .footer-right {
-// //                   text-align: right;
-// //                 }
-// //                 .qr-code {
-// //                   width: 35mm;
-// //                   height: 35mm;
-// //                 }
-// //                 .text-right {
-// //                   text-align: right;
-// //                 }
-// //                 .text-left {
-// //                   text-align: left;
-// //                 }
-// //                 .text-center {
-// //                   text-align: center;
-// //                 }
-// //                 @media print {
-// //                   body {
-// //                     width: 190mm;
-// //                     height: 277mm;
-// //                   }
-// //                   .no-print {
-// //                     display: none;
-// //                   }
-// //                 }
-// //               </style>
-// //             </head>
-// //             <body>
-// //               <div class="container">
-// //                 <div class="header-container">
-// //                   <img src="${tvsLogo}" class="logo" alt="TVS Logo">
-// //                   <div class="header-text"> GANDHI TVS</div>
-// //                 </div>
-// //                 <div class="header">
-// //                   <div>
-// //                     Authorised Main Dealer: TVS Motor Company Ltd.<br>
-// //                     Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-// //                     Upnagar, Nashik Road, Nashik - 422101<br>
-// //                     Phone: 7498903672
-// //                   </div>
-// //                 </div>
-// //                 <div class="divider"></div>
-// //                 <div class="customer-info">
-// //                   <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || 'N/A'}</div>
-// //                   <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
-// //                 </div>
-
-// //                 <table>
-// //                   <thead>
-// //                     <tr>
-// //                       <th width="15%">Date</th>
-// //                       <th width="35%">Description</th>
-// //                       <th width="15%">Receipt/VC No</th>
-// //                       <th width="10%" class="text-right">Credit (₹)</th>
-// //                       <th width="10%" class="text-right">Debit (₹)</th>
-// //                       <th width="15%" class="text-right">Balance (₹)</th>
-// //                     </tr>
-// //                   </thead>
-// //                   <tbody>
-// //                     ${ledgerData.transactions
-// //   ?.map(
-// //     (entry) => {
-// //       let exchangeVehicleNumber = '';
-// //       let exchangeChassisNumber = '';
-// //       let exchangePrice = '';
-// //       let exchangeStatus = '';
-// //       let bookingNumber = entry.booking?.bookingNumber || '';
-      
-// //       if (entry.exchangeVehicle && entry.exchangeVehicle.VehicleNumber) {
-// //         exchangeVehicleNumber = entry.exchangeVehicle.VehicleNumber || '';
-// //         exchangeChassisNumber = entry.exchangeVehicle.ChassisNumber || '';
-// //         exchangePrice = entry.exchangeVehicle.PriceFormatted || '';
-// //         exchangeStatus = entry.exchangeVehicle.Status || '';
-// //       } else if (entry.exchangeDisplay && entry.exchangeDisplay.VehicleNumber) {
-// //         exchangeVehicleNumber = entry.exchangeDisplay.VehicleNumber || '';
-// //         exchangeChassisNumber = entry.exchangeDisplay.ChassisNumber || '';
-// //         exchangePrice = entry.exchangeDisplay.Price || '';
-// //         exchangeStatus = entry.exchangeDisplay.Status || '';
-// //       } else if (entry.booking?.exchange?.display) {
-// //         const exchangeDisplay = entry.booking.exchange.display;
-// //         exchangeVehicleNumber = exchangeDisplay.vehicleNumber || '';
-// //         exchangeChassisNumber = exchangeDisplay.chassisNumber || '';
-// //         exchangePrice = exchangeDisplay.price ? `₹${exchangeDisplay.price.toLocaleString('en-IN')}` : '';
-// //         exchangeStatus = exchangeDisplay.status || '';
-// //       } else if (entry.booking?.exchange?.details) {
-// //         const exchangeDetails = entry.booking.exchange.details;
-// //         exchangeVehicleNumber = exchangeDetails.vehicleNumber || '';
-// //         exchangeChassisNumber = exchangeDetails.chassisNumber || '';
-// //         exchangePrice = exchangeDetails.price ? `₹${exchangeDetails.price.toLocaleString('en-IN')}` : '';
-// //         exchangeStatus = exchangeDetails.status || '';
-// //       }
-      
-// //       return `
-// //       <tr>
-// //         <td>${new Date(entry.date).toLocaleDateString() || 'N/A'}</td>
-// //         <td>
-// //           Booking No: ${bookingNumber || '-'}<br>
-// //           Customer: ${entry.booking?.customer?.name || '-'}<br>
-       
-// //           ${entry.mode || ''}
-// //           ${exchangeVehicleNumber ? `<br>Exchange Vehicle: ${exchangeVehicleNumber}` : ''}
-// //           ${exchangeChassisNumber ? `<br>Exchange Chassis: ${exchangeChassisNumber}` : ''}
-// //         </td>
-// //         <td>${entry.receiptNumber || ''}</td>
-// //         <td class="text-right">${entry.type === 'CREDIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
-// //         <td class="text-right">${entry.type === 'DEBIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
-// //         <td class="text-right"></td>
-// //       </tr>
-// //     `;
-// //     }
-// //   )
-// //   .join('')}
-// //                       <tr>
-// //                       <td colspan="3" class="text-left"><strong>Total OnAccount</strong></td>
-// //                       <td class="text-right"></td>
-// //                       <td class="text-right"></td>
-// //                       <td class="text-right"><strong>${availableOnAccount2.toLocaleString('en-IN')}</strong></td>
-// //                     </tr>
-// //                     <tr>
-// //                       <td colspan="3" class="text-left"><strong>Total</strong></td>
-// //                       <td class="text-right"><strong>${totalCredit.toLocaleString('en-IN')}</strong></td>
-// //                       <td class="text-right"><strong>${totalDebit.toLocaleString('en-IN')}</strong></td>
-// //                       <td class="text-right"><strong>${finalBalance.toLocaleString('en-IN')}</strong></td>
-// //                     </tr>
-
-// //                   </tbody>
-// //                 </table>
-
-// //                 <div class="footer">
-// //                   <div class="footer-left">
-// //                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}"
-// //                          class="qr-code"
-// //                          alt="QR Code" />
-// //                   </div>
-// //                   <div class="footer-right">
-// //                     <p>For, Gandhi TVS</p>
-// //                     <p>Authorised Signatory</p>
-// //                   </div>
-// //                 </div>
-// //               </div>
-
-// //               <script>
-// //                 window.onload = function() {
-// //                   setTimeout(() => {
-// //                     window.print();
-// //                   }, 300);
-// //                 };
-// //               </script>
-// //             </body>
-// //           </html>
-// //         `);
-// //     } catch (err) {
-// //       console.error('Error fetching ledger:', err);
-// //       const message = showError(err);
-// //       if (message) {
-// //         setError(message);
-// //       }
-// //     }
-// //     handleClose();
-// //   };
-
-// //   const handleSearch = (value) => {
-// //     if (!canViewExchangeLedger) {
-// //       return;
-// //     }
-    
-// //     setSearchTerm(value);
-// //     handleFilter(value, ['broker.name']);
-// //   };
-
-// //   const handlePaymentSaved = (message) => {
-// //     setSuccessMessage(message);
-// //     setTimeout(() => setSuccessMessage(''), 3000);
-// //     fetchData();
-// //   };
-
-// //   const handleOpenExportModal = () => {
-// //     if (!canCreateExchangeLedger) {
-// //       showError('You do not have permission to export reports');
-// //       return;
-// //     }
-    
-// //     setShowExportModal(true);
-// //     setExportError('');
-// //     if (isFiltered && selectedBranch) {
-// //       setExportBranchId(selectedBranch);
-// //     }
-// //   };
-
-// //   const handleCloseExportModal = () => {
-// //     setShowExportModal(false);
-// //     setExportStartDate(null);
-// //     setExportEndDate(null);
-// //     setExportBranchId('');
-// //     setExportError('');
-// //     setExportLoading(false);
-// //   };
-
-// //   const handleExcelExport = async () => {
-// //     if (!canCreateExchangeLedger) {
-// //       showError('You do not have permission to export reports');
-// //       return;
-// //     }
-    
-// //     setExportError('');
-    
-// //     if (!exportBranchId) {
-// //       setExportError('Please select a branch');
-// //       return;
-// //     }
-
-// //     if (!exportStartDate || !exportEndDate) {
-// //       setExportError('Please select both start and end dates');
-// //       return;
-// //     }
-
-// //     if (exportStartDate > exportEndDate) {
-// //       setExportError('Start date cannot be after end date');
-// //       return;
-// //     }
-
-// //     try {
-// //       setExportLoading(true);
-      
-// //       const formattedStartDate = formatDateForAPI(exportStartDate);
-// //       const formattedEndDate = formatDateForAPI(exportEndDate);
-
-// //       const params = new URLSearchParams({
-// //         branchId: exportBranchId,
-// //         startDate: formattedStartDate,
-// //         endDate: formattedEndDate
-// //       });
-
-// //       const response = await axiosInstance.get(
-// //         `/reports/brokers?${params.toString()}`,
-// //         { responseType: 'blob' }
-// //       );
-
-// //       const contentType = response.headers['content-type'];
-      
-// //       if (contentType && contentType.includes('application/json')) {
-// //         const text = await new Promise((resolve, reject) => {
-// //           const reader = new FileReader();
-// //           reader.onload = () => resolve(reader.result);
-// //           reader.onerror = reject;
-// //           reader.readAsText(response.data);
-// //         });
-        
-// //         const errorData = JSON.parse(text);
-        
-// //         if (!errorData.success && errorData.message) {
-// //           setExportError(errorData.message);
-// //           Swal.fire({
-// //             icon: 'error',
-// //             title: 'Export Failed',
-// //             text: errorData.message,
-// //           });
-// //           return;
-// //         }
-// //       }
-
-// //       const blob = new Blob([response.data], { 
-// //         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-// //       });
-      
-// //       const url = window.URL.createObjectURL(blob);
-// //       const link = document.createElement('a');
-// //       link.href = url;
-      
-// //       const branchName = branches.find(b => b._id === exportBranchId)?.name || 'Branch';
-// //       const startDateStr = formatDateDDMMYYYY(exportStartDate);
-// //       const endDateStr = formatDateDDMMYYYY(exportEndDate);
-// //       const fileName = `Brokers_Report_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
-// //       link.setAttribute('download', fileName);
-      
-// //       document.body.appendChild(link);
-// //       link.click();
-// //       link.remove();
-      
-// //       window.URL.revokeObjectURL(url);
-      
-// //       Swal.fire({
-// //         toast: true,
-// //         position: 'top-end',
-// //         icon: 'success',
-// //         title: 'Excel exported successfully!',
-// //         showConfirmButton: false,
-// //         timer: 3000,
-// //         timerProgressBar: true
-// //       });
-
-// //       handleCloseExportModal();
-      
-// //     } catch (error) {
-// //       console.error('Error exporting report:', error);
-      
-// //       if (error.response && error.response.data instanceof Blob) {
-// //         try {
-// //           const text = await new Promise((resolve, reject) => {
-// //             const reader = new FileReader();
-// //             reader.onload = () => resolve(reader.result);
-// //             reader.onerror = reject;
-// //             reader.readAsText(error.response.data);
-// //           });
-          
-// //           const errorData = JSON.parse(text);
-          
-// //           if (errorData.message) {
-// //             setExportError(errorData.message);
-// //             Swal.fire({
-// //               icon: 'error',
-// //               title: 'Export Failed',
-// //               text: errorData.message,
-// //             });
-// //           }
-// //         } catch (parseError) {
-// //           console.error('Error parsing error response:', parseError);
-// //           setExportError('Failed to export report');
-// //           Swal.fire({
-// //             icon: 'error',
-// //             title: 'Export Failed',
-// //             text: 'Failed to export report',
-// //           });
-// //         }
-// //       } else if (error.response?.data?.message) {
-// //         setExportError(error.response.data.message);
-// //         Swal.fire({
-// //           icon: 'error',
-// //           title: 'Export Failed',
-// //           text: error.response.data.message,
-// //         });
-// //       } else if (error.message) {
-// //         setExportError(error.message);
-// //         Swal.fire({
-// //           icon: 'error',
-// //           title: 'Export Failed',
-// //           text: error.message,
-// //         });
-// //       } else {
-// //         setExportError('Failed to export report');
-// //         Swal.fire({
-// //           icon: 'error',
-// //           title: 'Export Failed',
-// //           text: 'Failed to export report',
-// //         });
-// //       }
-      
-// //     } finally {
-// //       setExportLoading(false);
-// //     }
-// //   };
-
-// //   if (!canViewExchangeLedger) {
-// //     return (
-// //       <div className="alert alert-danger m-3" role="alert">
-// //         You do not have permission to view Exchange Ledger.
-// //       </div>
-// //     );
-// //   }
-
-// //   if (loading) {
-// //     return (
-// //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
-// //         <CSpinner color="primary" />
-// //       </div>
-// //     );
-// //   }
-
-// //   if (error) {
-// //     return (
-// //       <div className="alert alert-danger" role="alert">
-// //         {error}
-// //       </div>
-// //     );
-// //   }
-
-// //   const totalColumns = isFiltered ? 12 : 13;
-// //   const actionColumnIndex = showActionColumn ? 1 : 0;
-
-// //   return (
-// //     <div>
-// //       <div className='title'>Exchange Ledger {isFiltered && `- ${selectedBranchName}`}</div>
-      
-// //       {successMessage && (
-// //         <CAlert color="success" className="mb-3">
-// //           {successMessage}
-// //         </CAlert>
-// //       )}
-    
-// //       <CCard className='table-container mt-4'>
-// //         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-// //           <div>
-// //             <CButton 
-// //               size="sm" 
-// //               className="action-btn me-1"
-// //               onClick={() => setShowFilterModal(true)}
-// //               disabled={!canViewExchangeLedger}
-// //             >
-// //               <CIcon icon={cilSearch} className='me-1' />
-// //               Search
-// //             </CButton>
-// //             {isFiltered && (
-// //               <CButton 
-// //                 size="sm" 
-// //                 className="action-btn me-1"
-// //                 onClick={clearFilter}
-// //                 disabled={!canViewExchangeLedger}
-// //               >
-// //                 <CIcon icon={cilZoomOut} className='me-1' />
-// //                 Clear Filter
-// //               </CButton>
-// //             )}
-            
-// //             {canCreateExchangeLedger && (
-// //               <CButton 
-// //                 size="sm" 
-// //                 className="action-btn me-1"
-// //                 onClick={handleOpenExportModal}
-// //                 title="Export Excel Report"
-// //               >
-// //                 <FontAwesomeIcon icon={faFileExcel} className='me-1' />
-// //                 Export Report
-// //               </CButton>
-// //             )}
-// //           </div>
-// //         </CCardHeader>
-        
-// //         <CCardBody>
-// //           <div className="d-flex justify-content-between mb-3">
-// //             <div></div>
-// //             <div className='d-flex'>
-// //               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
-// //               <CFormInput
-// //                 type="text"
-// //                 className="d-inline-block square-search"
-// //                 value={searchTerm}
-// //                 onChange={(e) => handleSearch(e.target.value)}
-// //                 disabled={!canViewExchangeLedger}
-// //               />
-// //             </div>
-// //           </div>
-          
-// //           <div className="responsive-table-wrapper">
-// //             <CTable striped bordered hover className='responsive-table'>
-// //               <CTableHead>
-// //                 <CTableRow>
-// //                   {!isFiltered && <CTableHeaderCell></CTableHeaderCell>}
-// //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
-// //                   <CTableHeaderCell>Exchange Broker Name</CTableHeaderCell>
-// //                   <CTableHeaderCell>Mobile</CTableHeaderCell>
-// //                   {!isFiltered && <CTableHeaderCell>Branch</CTableHeaderCell>}
-// //                   <CTableHeaderCell>Total Bookings</CTableHeaderCell>
-// //                   <CTableHeaderCell>Total Exchange Amount</CTableHeaderCell>
-// //                   <CTableHeaderCell>Total Received</CTableHeaderCell>
-// //                   <CTableHeaderCell>Total Payable</CTableHeaderCell>
-// //                   <CTableHeaderCell>Opening Balance</CTableHeaderCell>
-// //                   <CTableHeaderCell>Current Balance</CTableHeaderCell>
-// //                   <CTableHeaderCell>Outstanding Amount</CTableHeaderCell>
-// //                   <CTableHeaderCell>Receipts</CTableHeaderCell>
-// //                   {showActionColumn && <CTableHeaderCell>Actions</CTableHeaderCell>}
-// //                 </CTableRow>
-// //               </CTableHead>
-// //               <CTableBody>
-// //                 {currentRecords.length === 0 ? (
-// //                   <CTableRow>
-// //                     <CTableDataCell colSpan={totalColumns + actionColumnIndex} className="text-center">
-// //                       No ledger details available
-// //                     </CTableDataCell>
-// //                   </CTableRow>
-// //                 ) : (
-// //                   currentRecords.map((brokerData, index) => {
-// //                     const brokerId = brokerData.broker._id;
-// //                     const hasTransactions = transactionsFetched[brokerId] && transactionsData[brokerId]?.length > 0;
-// //                     const isLoading = loadingTransactions[brokerId];
-// //                     const transactions = transactionsData[brokerId] || [];
-                    
-// //                     const sortedTransactions = [...transactions].sort((a, b) => {
-// //                       const dateA = new Date(a.date || a.createdAt || 0);
-// //                       const dateB = new Date(b.date || b.createdAt || 0);
-// //                       return dateB - dateA;
-// //                     });
-                    
-// //                     return (
-// //                       <>
-// //                         <CTableRow key={brokerData.broker._id} className="broker-summary-row">
-// //                           {!isFiltered && (
-// //                             <CTableDataCell>
-// //                               <CButton
-// //                                 color="link"
-// //                                 size="sm"
-// //                                 onClick={() => toggleBrokerExpansion(brokerData.broker._id)}
-// //                                 disabled={!canViewExchangeLedger}
-// //                               >
-// //                                 {expandedBrokers[brokerData.broker._id] ? '▼' : '►'}
-// //                               </CButton>
-// //                             </CTableDataCell>
-// //                           )}
-// //                           <CTableDataCell>{index + 1}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.broker.name || 'N/A'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.broker.mobile || 'N/A'}</CTableDataCell>
-// //                           {!isFiltered && <CTableDataCell>All Branches</CTableDataCell>}
-// //                           <CTableDataCell>{brokerData.totalBookings || 0}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.totalExchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.totalCredit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.totalDebit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                           <CTableDataCell>{brokerData.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-                          
-// //                           {/* Receipts Column - Only show for filtered view or expanded branches */}
-// //                           <CTableDataCell>
-// //                             {isFiltered ? (
-// //                               // When filtered by branch, we can show receipts
-// //                               isLoading ? (
-// //                                 <CSpinner size="sm" color="info" />
-// //                               ) : sortedTransactions.length > 0 ? (
-// //                                 <CDropdown>
-// //                                   <CDropdownToggle size="sm" color="info" variant="outline">
-// //                                     {sortedTransactions.length} Receipt{sortedTransactions.length > 1 ? 's' : ''}
-// //                                   </CDropdownToggle>
-// //                                   <CDropdownMenu>
-// //                                     {sortedTransactions.map((transaction, txIndex) => {
-// //                                       const transactionId = transaction._id;
-// //                                       const transactionNumber = transaction.referenceNumber || 'N/A';
-// //                                       const transactionAmount = transaction.amount || 0;
-// //                                       const transactionDate = transaction.dateFormatted || 
-// //                                                             new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
-                                      
-// //                                       return (
-// //                                         <CDropdownItem 
-// //                                           key={transactionId || txIndex} 
-// //                                           onClick={() => printBrokerReceipt(transactionId)}
-// //                                         >
-// //                                           <div className="d-flex align-items-center">
-// //                                             <CIcon icon={cilPrint} className="me-2" />
-// //                                             <div>
-// //                                               <div><strong>Receipt #{txIndex + 1}</strong></div>
-// //                                               <small>
-// //                                                 ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
-// //                                               </small>
-// //                                             </div>
-// //                                           </div>
-// //                                         </CDropdownItem>
-// //                                       );
-// //                                     })}
-// //                                   </CDropdownMenu>
-// //                                 </CDropdown>
-// //                               ) : transactionsFetched[brokerId] ? (
-// //                                 <span className="text-muted">No receipts</span>
-// //                               ) : (
-// //                                 brokerData.branches && brokerData.branches.length > 0 ? (
-// //                                   <CButton
-// //                                     size="sm"
-// //                                     color="light"
-// //                                     onClick={() => fetchTransactionsForBroker(brokerId, brokerData.branches[0].branchId)}
-// //                                     disabled={isLoading}
-// //                                   >
-// //                                     <CIcon icon={cilCloudDownload} className="me-1" />
-// //                                     Load Receipts
-// //                                   </CButton>
-// //                                 ) : (
-// //                                   <span className="text-muted">No branch data</span>
-// //                                 )
-// //                               )
-// //                             ) : (
-// //                               // When showing all branches, show message to expand
-// //                               <span className="text-muted small">Expand to view receipts</span>
-// //                             )}
-// //                           </CTableDataCell>
-                          
-// //                           {showActionColumn && (
-// //                             <CTableDataCell>
-// //                               <CButton
-// //                                 size="sm"
-// //                                 className='option-button btn-sm'
-// //                                 onClick={(event) => handleClick(event, brokerData.broker._id, brokerData)}
-// //                                 disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
-// //                               >
-// //                                 <CIcon icon={cilSettings} />
-// //                                 Options
-// //                               </CButton>
-// //                               <Menu
-// //                                 id={`action-menu-${brokerData.broker._id}`}
-// //                                 anchorEl={anchorEl}
-// //                                 open={menuId === brokerData.broker._id}
-// //                                 onClose={handleClose}
-// //                               >
-// //                                 {canCreateExchangeLedger && (
-// //                                   <MenuItem onClick={() => handleAddClick(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
-// //                                     <CIcon icon={cilPlus} className="me-2" />
-// //                                     Add Payment
-// //                                   </MenuItem>
-// //                                 )}
-// //                                 {canViewExchangeLedger && (
-// //                                   <MenuItem
-// //                                     onClick={() => handleViewLedger(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}
-// //                                   >
-// //                                     View Ledger
-// //                                   </MenuItem>
-// //                                 )}
-// //                               </Menu>
-// //                             </CTableDataCell>
-// //                           )}
-// //                         </CTableRow>
-                        
-// //                         {!isFiltered &&
-// //                           expandedBrokers[brokerData.broker._id] &&
-// //                           brokerData.branches.map((branch, branchIndex) => {
-// //                             const branchKey = `${brokerId}-${branch.branchId}`;
-// //                             const hasBranchTransactions = transactionsFetched[branchKey] && transactionsData[branchKey]?.length > 0;
-// //                             const isBranchLoading = loadingTransactions[branchKey];
-// //                             const branchTransactions = transactionsData[branchKey] || [];
-                            
-// //                             const sortedBranchTransactions = [...branchTransactions].sort((a, b) => {
-// //                               const dateA = new Date(a.date || a.createdAt || 0);
-// //                               const dateB = new Date(b.date || b.createdAt || 0);
-// //                               return dateB - dateA;
-// //                             });
-                            
-// //                             return (
-// //                               <CTableRow key={`${brokerData.broker._id}-${branch.branchId}`} className="branch-detail-row">
-// //                                 <CTableDataCell></CTableDataCell>
-// //                                 <CTableDataCell></CTableDataCell>
-// //                                 <CTableDataCell></CTableDataCell>
-// //                                 <CTableDataCell></CTableDataCell>
-// //                                 <CTableDataCell>{branch.name || 'N/A'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.bookings || 0}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.exchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-// //                                 <CTableDataCell>{branch.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-                                
-// //                                 {/* Receipts Column for Branch */}
-// //                                 <CTableDataCell>
-// //                                   {isBranchLoading ? (
-// //                                     <CSpinner size="sm" color="info" />
-// //                                   ) : sortedBranchTransactions.length > 0 ? (
-// //                                     <CDropdown>
-// //                                       <CDropdownToggle size="sm" color="info" variant="outline">
-// //                                         {sortedBranchTransactions.length} Receipt{sortedBranchTransactions.length > 1 ? 's' : ''}
-// //                                       </CDropdownToggle>
-// //                                       <CDropdownMenu>
-// //                                         {sortedBranchTransactions.map((transaction, txIndex) => {
-// //                                           const transactionId = transaction._id;
-// //                                           const transactionNumber = transaction.referenceNumber || 'N/A';
-// //                                           const transactionAmount = transaction.amount || 0;
-// //                                           const transactionDate = transaction.dateFormatted || 
-// //                                                                 new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
-                                          
-// //                                           return (
-// //                                             <CDropdownItem 
-// //                                               key={transactionId || txIndex} 
-// //                                               onClick={() => printBrokerReceipt(transactionId)}
-// //                                             >
-// //                                               <div className="d-flex align-items-center">
-// //                                                 <CIcon icon={cilPrint} className="me-2" />
-// //                                                 <div>
-// //                                                   <div><strong>Receipt #{txIndex + 1}</strong></div>
-// //                                                   <small>
-// //                                                     ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
-// //                                                   </small>
-// //                                                 </div>
-// //                                               </div>
-// //                                             </CDropdownItem>
-// //                                           );
-// //                                         })}
-// //                                       </CDropdownMenu>
-// //                                     </CDropdown>
-// //                                   ) : transactionsFetched[branchKey] ? (
-// //                                     <span className="text-muted">No receipts</span>
-// //                                   ) : (
-// //                                     <CButton
-// //                                       size="sm"
-// //                                       color="light"
-// //                                       onClick={() => fetchTransactionsForBroker(brokerId, branch.branchId)}
-// //                                       disabled={isBranchLoading}
-// //                                     >
-// //                                       <CIcon icon={cilCloudDownload} className="me-1" />
-// //                                       Load Receipts
-// //                                     </CButton>
-// //                                   )}
-// //                                 </CTableDataCell>
-                                
-// //                                 {showActionColumn && (
-// //                                   <CTableDataCell>
-// //                                     <CButton
-// //                                       size="sm"
-// //                                       className='option-button btn-sm'
-// //                                       onClick={(event) =>
-// //                                         handleClick(event, `${brokerData.broker._id}-${branch.branchId}`, brokerData, branch.branchId)
-// //                                       }
-// //                                       disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
-// //                                     >
-// //                                       <CIcon icon={cilSettings} />
-// //                                       Options
-// //                                     </CButton>
-// //                                     <Menu
-// //                                       id={`action-menu-${brokerData.broker._id}-${branch.branchId}`}
-// //                                       anchorEl={anchorEl}
-// //                                       open={menuId === `${brokerData.broker._id}-${branch.branchId}`}
-// //                                       onClose={handleClose}
-// //                                     >
-// //                                       {canCreateExchangeLedger && (
-// //                                         <MenuItem onClick={() => handleAddClick(brokerData, branch.branchId)}>
-// //                                           <CIcon icon={cilPlus} className="me-2" />
-// //                                           Add Payment
-// //                                         </MenuItem>
-// //                                       )}
-// //                                       {canViewExchangeLedger && (
-// //                                         <MenuItem onClick={() => handleViewLedger(brokerData, branch.branchId)}>
-// //                                           View Ledger
-// //                                         </MenuItem>
-// //                                       )}
-// //                                     </Menu>
-// //                                   </CTableDataCell>
-// //                                 )}
-// //                               </CTableRow>
-// //                             );
-// //                           })}
-// //                       </>
-// //                     );
-// //                   })
-// //                 )}
-// //               </CTableBody>
-// //             </CTable>
-// //           </div>
-// //         </CCardBody>
-// //       </CCard>
-
-// //       <CModal alignment="center" visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
-// //         <CModalHeader>
-// //           <CModalTitle>Search</CModalTitle>
-// //         </CModalHeader>
-// //         <CModalBody>
-// //           <div className="mb-3">
-// //             <CFormLabel>Select Branch</CFormLabel>
-// //             <CFormSelect 
-// //               value={selectedBranch} 
-// //               onChange={(e) => setSelectedBranch(e.target.value)}
-// //               disabled={!canViewExchangeLedger}
-// //             >
-// //               <option value="ALL">All Branches</option>
-             
-// //               {branches.map((branch) => (
-// //                 <option key={branch._id} value={branch._id}>
-// //                   {branch.name || 'N/A'}
-// //                 </option>
-// //               ))}
-// //             </CFormSelect>
-// //           </div>
-// //         </CModalBody>
-// //         <CModalFooter>
-// //           <CButton 
-// //             color="primary" 
-// //             onClick={handleBranchFilter}
-// //             disabled={!canViewExchangeLedger}
-// //           >
-// //             Search
-// //           </CButton>
-// //         </CModalFooter>
-// //       </CModal>
-      
-// //       {/* Export Report Modal */}
-// //       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal} size="lg">
-// //         <CModalHeader>
-// //           <CModalTitle>
-// //             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
-// //             Export Brokers Report
-// //           </CModalTitle>
-// //         </CModalHeader>
-// //         <CModalBody>
-// //           {exportError && (
-// //             <CAlert color="warning" className="mb-3">
-// //               {exportError}
-// //             </CAlert>
-// //           )}
-          
-// //           <LocalizationProvider 
-// //             dateAdapter={AdapterDateFns} 
-// //             adapterLocale={enIN}
-// //           >
-// //             <div className="mb-3">
-// //               <CFormLabel>Select Branch</CFormLabel>
-// //               <CFormSelect 
-// //                 value={exportBranchId} 
-// //                 onChange={(e) => {
-// //                   setExportBranchId(e.target.value);
-// //                   setExportError('');
-// //                 }}
-// //                 disabled={!canCreateExchangeLedger}
-// //               >
-// //                 <option value="">-- Select Branch --</option>
-// //                 <option value="ALL">All Branches</option>
-// //                 {branches.map((branch) => (
-// //                   <option key={branch._id} value={branch._id}>
-// //                     {branch.name || 'N/A'}
-// //                   </option>
-// //                 ))}
-// //               </CFormSelect>
-// //             </div>
-            
-// //             <div className="mb-3">
-// //               <DatePicker
-// //                 label="Start Date"
-// //                 value={exportStartDate}
-// //                 onChange={(newValue) => {
-// //                   setExportStartDate(newValue);
-// //                   setExportError('');
-// //                 }}
-// //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-// //                 inputFormat="dd/MM/yyyy"
-// //                 mask="__/__/____"
-// //                 views={['day', 'month', 'year']}
-// //                 disabled={!canCreateExchangeLedger}
-// //               />
-// //             </div>
-// //             <div className="mb-3">
-// //               <DatePicker
-// //                 label="End Date"
-// //                 value={exportEndDate}
-// //                 onChange={(newValue) => {
-// //                   setExportEndDate(newValue);
-// //                   setExportError('');
-// //                 }}
-// //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-// //                 inputFormat="dd/MM/yyyy"
-// //                 mask="__/__/____"
-// //                 minDate={exportStartDate}
-// //                 views={['day', 'month', 'year']}
-// //                 disabled={!canCreateExchangeLedger}
-// //               />
-// //             </div>
-// //           </LocalizationProvider>
-// //         </CModalBody>
-// //         <CModalFooter>
-// //           <CButton color="secondary" onClick={handleCloseExportModal}>
-// //             Cancel
-// //           </CButton>
-// //           <CButton 
-// //             className="submit-button"
-// //             onClick={handleExcelExport}
-// //             disabled={!exportStartDate || !exportEndDate || !exportBranchId || !canCreateExchangeLedger || exportLoading}
-// //           >
-// //             {exportLoading ? (
-// //               <>
-// //                 <CSpinner size="sm" className="me-2" />
-// //                 Exporting...
-// //               </>
-// //             ) : 'Export Excel'}
-// //           </CButton>
-// //         </CModalFooter>
-// //       </CModal>
-      
-// //       <ExchangeLedgerModel 
-// //         show={showModal} 
-// //         onClose={() => setShowModal(false)} 
-// //         brokerData={selectedledger} 
-// //         refreshData={fetchData}
-// //         onPaymentSaved={handlePaymentSaved}
-// //         canCreateExchangeLedger={canCreateExchangeLedger}
-// //         onPaymentSuccess={(receiptId) => {
-// //           if (receiptId) {
-// //             setTimeout(() => {
-// //               printBrokerReceipt(receiptId);
-// //             }, 500);
-// //           }
-// //         }}
-// //       />
-// //     </div>
-// //   );
-// // };
-
-// // export default ExchangeLedger;
-
-
-
-
-
-// import '../../css/table.css';
-// import {
-//   React,
-//   useState,
-//   useEffect,
-//   Menu,
-//   MenuItem,
-//   useTableFilter,
-//   usePagination,
-//   axiosInstance,
-//   showError
-// } from '../../utils/tableImports';
-// import tvsLogo from '../../assets/images/logo.png';
-// import '../../css/invoice.css';
-// import config from '../../config';
-// import ExchangeLedgerModel from './ExchangeLedgerModel';
-// import {
-//   CCard,
-//   CCardBody,
-//   CCardHeader,
-//   CFormInput,
-//   CFormLabel,
-//   CTable,
-//   CTableBody,
-//   CTableHead,
-//   CTableHeaderCell,
-//   CTableRow,
-//   CTableDataCell,
-//   CSpinner,
-//   CModal,
-//   CModalHeader,
-//   CModalTitle,
-//   CModalBody,
-//   CModalFooter,
-//   CButton,
-//   CFormSelect,
-//   CAlert,
-//   CDropdown,
-//   CDropdownToggle,
-//   CDropdownMenu,
-//   CDropdownItem
-// } from '@coreui/react';
-// import CIcon from '@coreui/icons-react';
-// import { cilPlus, cilSettings, cilSearch, cilZoomOut, cilPrint, cilCloudDownload } from '@coreui/icons';
-// import { useAuth } from '../../context/AuthContext';
-// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
-// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-// import TextField from '@mui/material/TextField';
-// import Swal from 'sweetalert2';
-// import QRCode from 'qrcode';
-
-// // Import date-fns locale for Indian date format
-// import { enIN } from 'date-fns/locale';
-
-// // Import permission utilities
-// import { 
-//   MODULES, 
-//   PAGES,
-//   canViewPage,
-//   canCreateInPage,
-//   canUpdateInPage,
-//   canDeleteInPage 
-// } from '../../utils/modulePermissions';
-// import { useCallback } from 'react';
-
-// const ExchangeLedger = () => {
-//   const [anchorEl, setAnchorEl] = useState(null);
-//   const [menuId, setMenuId] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-//   const [searchTerm, setSearchTerm] = useState('');
-//   const [showModal, setShowModal] = useState(false);
-//   const [selectedledger, setSelectedledger] = useState(null);
-//   const [groupedData, setGroupedData] = useState([]);
-//   const [expandedBrokers, setExpandedBrokers] = useState({});
-//   const [showFilterModal, setShowFilterModal] = useState(false);
-//   const [branches, setBranches] = useState([]);
-//   const [selectedBranch, setSelectedBranch] = useState('');
-//   const [isFiltered, setIsFiltered] = useState(false);
-//   const [selectedBranchName, setSelectedBranchName] = useState('');
-//   const [successMessage, setSuccessMessage] = useState('');
-  
-//   // ============ RECEIPTS FETCHING STATES ============
-//   const [transactionsData, setTransactionsData] = useState({});
-//   const [loadingTransactions, setLoadingTransactions] = useState({});
-//   const [transactionsFetched, setTransactionsFetched] = useState({});
-  
-//   // Export modal state
-//   const [showExportModal, setShowExportModal] = useState(false);
-//   const [exportStartDate, setExportStartDate] = useState(null);
-//   const [exportEndDate, setExportEndDate] = useState(null);
-//   const [exportBranchId, setExportBranchId] = useState('');
-//   const [exportError, setExportError] = useState('');
-//   const [exportLoading, setExportLoading] = useState(false);
-
-//   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
-//   const { currentRecords, PaginationOptions } = usePagination(filteredData);
-//   const { permissions } = useAuth();
-
-//   // Page-level permission checks for Exchange Ledger under ACCOUNT module
-//   const canViewExchangeLedger = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
-//   const canCreateExchangeLedger = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
-//   const canUpdateExchangeLedger = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
-//   const canDeleteExchangeLedger = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
-  
-//   const showActionColumn = canCreateExchangeLedger || canViewExchangeLedger;
-
-//   // Format date to DD-MM-YYYY for display
-//   const formatDateDDMMYYYY = (date) => {
-//     if (!date) return '';
-//     const day = String(date.getDate()).padStart(2, '0');
-//     const month = String(date.getMonth() + 1).padStart(2, '0');
-//     const year = date.getFullYear();
-//     return `${day}-${month}-${year}`;
-//   };
-
-//   // Format date to YYYY-MM-DD for API
-//   const formatDateForAPI = (date) => {
-//     if (!date) return '';
-//     const year = date.getFullYear();
-//     const month = String(date.getMonth() + 1).padStart(2, '0');
-//     const day = String(date.getDate()).padStart(2, '0');
-//     return `${year}-${month}-${day}`;
-//   };
-
-//   useEffect(() => {
-//     if (!canViewExchangeLedger) {
-//       return;
-//     }
-    
-//     fetchData();
-//     fetchBranches();
-//   }, [canViewExchangeLedger]);
-
-//   useEffect(() => {
-//     if (data.length > 0) {
-//       const grouped = groupDataByBroker(data, isFiltered);
-//       setGroupedData(grouped);
-//       setFilteredData(grouped);
-      
-//       // Initialize transactions data structure
-//       const initialTransactionsMap = {};
-//       grouped.forEach(brokerData => {
-//         const key = brokerData.broker._id;
-//         initialTransactionsMap[key] = [];
-        
-//         // Also initialize for branches if needed
-//         if (!isFiltered && brokerData.branches) {
-//           brokerData.branches.forEach(branch => {
-//             const branchKey = `${brokerData.broker._id}-${branch.branchId}`;
-//             initialTransactionsMap[branchKey] = [];
-//           });
-//         }
-//       });
-//       setTransactionsData(initialTransactionsMap);
-//     }
-//   }, [data, isFiltered]);
-
-//   const fetchBranches = async () => {
-//     if (!canViewExchangeLedger) {
-//       return;
-//     }
-    
-//     try {
-//       const response = await axiosInstance.get('/branches');
-//       setBranches(response.data.data);
-//     } catch (error) {
-//       const message = showError(error);
-//       if (message) {
-//         setError(message);
-//       }
-//     }
-//   };
-
-//   const fetchData = async (branchId = null) => {
-//     if (!canViewExchangeLedger) {
-//       return;
-//     }
-    
-//     try {
-//       setLoading(true);
-//       let url = '/broker-ledger/summary/detailed';
-//       if (branchId) {
-//         url = `/broker-ledger/summary/branch/${branchId}`;
-//       }
-
-//       const response = await axiosInstance.get(url);
-
-//       if (branchId) {
-//         const branchName = branches.find((b) => b._id === branchId)?.name || 'Selected Branch';
-//         setSelectedBranchName(branchName);
-
-//         const branchData = response.data.data.brokers.map((broker) => ({
-//           broker: broker.broker,
-//           branch: {
-//             _id: response.data.data.branch,
-//             name: branchName
-//           },
-//           bookings: {
-//             total: broker.totalBookings,
-//             details: []
-//           },
-//           financials: {
-//             totalExchangeAmount: broker.totalExchangeAmount,
-//             ledger: {
-//               currentBalance: broker.ledger.currentBalance,
-//               onAccount: broker.ledger.onAccount,
-//               totalCredit: broker.ledger.totalCredit || 0,
-//               totalDebit: broker.ledger.totalDebit || 0,
-//               outstandingAmount: broker.ledger.outstandingAmount || 0,
-//               transactions: broker.ledger.transactions || 0
-//             },
-//             summary: {
-//               totalReceived: broker.summary?.totalReceived || 0,
-//               totalPayable: broker.summary?.totalPayable || 0,
-//               netBalance: broker.ledger.currentBalance
-//             }
-//           },
-//           recentTransactions: [],
-//           association: {
-//             isActive: true
-//           }
-//         }));
-
-//         setData(branchData);
-//         setIsFiltered(true);
-//       } else {
-//         setData(response.data.data.brokers);
-//         setIsFiltered(false);
-//         setSelectedBranchName('');
-//       }
-//     } catch (error) {
-//       const message = showError(error);
-//       if (message) {
-//         setError(message);
-//       }
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // ============ FETCH TRANSACTIONS FOR BROKER (REQUIRES BOTH IDs) ============
-//   const fetchTransactionsForBroker = useCallback(async (brokerId, branchId) => {
-//     // Both IDs are required - don't proceed if either is missing
-//     if (!brokerId || !branchId) {
-//       console.log('Cannot fetch transactions: Both brokerId and branchId are required');
-//       return;
-//     }
-    
-//     const key = `${brokerId}-${branchId}`;
-    
-//     if (transactionsFetched[key] || loadingTransactions[key]) {
-//       return;
-//     }
-
-//     try {
-//       setLoadingTransactions(prev => ({ ...prev, [key]: true }));
-      
-//       const response = await axiosInstance.get(`/broker-ledger/branch-transactions/${brokerId}/${branchId}`);
-      
-//       const transactions = response.data.data.transactions || [];
-      
-//       setTransactionsData(prev => ({
-//         ...prev,
-//         [key]: transactions
-//       }));
-      
-//       setTransactionsFetched(prev => ({
-//         ...prev,
-//         [key]: true
-//       }));
-//     } catch (error) {
-//       console.error(`Error fetching transactions for broker ${brokerId} and branch ${branchId}:`, error);
-//       setTransactionsData(prev => ({
-//         ...prev,
-//         [key]: []
-//       }));
-//       setTransactionsFetched(prev => ({
-//         ...prev,
-//         [key]: true
-//       }));
-//     } finally {
-//       setLoadingTransactions(prev => ({ ...prev, [key]: false }));
-//     }
-//   }, [transactionsFetched, loadingTransactions]);
-
-//   // ============ PRINT RECEIPT FUNCTION - USING BRANCH TRANSACTIONS API ============
-//   const printBrokerReceipt = async (transactionId, brokerId, branchId) => {
-//     try {
-//       console.log('Fetching transactions for broker:', brokerId, 'branch:', branchId);
-      
-//       // Fetch all transactions for this broker and branch
-//       const response = await axiosInstance.get(`/broker-ledger/branch-transactions/${brokerId}/${branchId}`);
-//       console.log('Transactions response:', response.data);
-      
-//       const transactionData = response.data.data;
-      
-//       // Find the specific transaction by ID
-//       const transaction = transactionData.transactions?.find(t => t._id === transactionId);
-      
-//       if (!transaction) {
-//         showError('Transaction not found');
-//         return;
-//       }
-      
-//       console.log('Found transaction:', transaction);
-      
-//       // Get the amount from the transaction object
-//       const amount = transaction.amount || 0;
-//       console.log('Amount being used:', amount);
-      
-//       const receivedDate = transaction.dateFormatted || 
-//                           new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
-      
-//       const currentDate = new Date().toLocaleDateString('en-GB');
-      
-//       const brokerName = transactionData.broker?.name || 'N/A';
-//       const branchName = transactionData.branch?.name || 'N/A';
-//       const branchAddress = transactionData.branch?.address || '';
-//       const branchPhone = transactionData.branch?.phone || '';
-//       const branchEmail = transactionData.branch?.email || '';
-      
-//       const qrText = `GANDHI MOTORS PVT LTD
-// Broker: ${brokerName}
-// Branch: ${branchName}
-// Receipt No: ${transaction.referenceNumber || transaction._id}
-// Amount: ₹${amount}
-// Payment Mode: ${transaction.modeOfPayment || 'Cash'}
-// Date: ${receivedDate}`;
-
-//       let qrCodeImage = '';
-//       try {
-//         qrCodeImage = await QRCode.toDataURL(qrText, {
-//           width: 150,
-//           margin: 2,
-//           color: {
-//             dark: '#000000',
-//             light: '#FFFFFF'
-//           },
-//           errorCorrectionLevel: 'H'
-//         });
-//       } catch (error) {
-//         console.error('Error generating QR code:', error);
-//         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`
-//           <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150">
-//             <rect width="150" height="150" fill="white"/>
-//             <rect x="10" y="10" width="130" height="130" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/>
-//             <text x="75" y="70" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">QR CODE</text>
-//             <text x="75" y="90" text-anchor="middle" font-family="Arial" font-size="8" fill="#666">Receipt: ${transaction.referenceNumber || ''}</text>
-//           </svg>
-//         `);
-//       }
-
-//       // Pass the transaction object and the transactionData
-//       const receiptHTML = generateReceiptHTML(transaction, transactionData, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail);
-
-//       const printWindow = window.open('', '_blank');
-//       printWindow.document.write(receiptHTML);
-//       printWindow.document.close();
-      
-//       printWindow.onload = function() {
-//         printWindow.focus();
-//         printWindow.print();
-//       };
-      
-//     } catch (err) {
-//       console.error('Error fetching transaction details:', err);
-//       console.error('Error response:', err.response?.data);
-//       showError('Failed to load receipt. Please try again.');
-//     }
-//   };
-
-//   // ============ GENERATE RECEIPT HTML ============
-//   const generateReceiptHTML = (transaction, transactionData, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail) => {
-//     const receiptNumber = transaction.referenceNumber || transaction._id || 'N/A';
-//     const amount = transaction.amount || 0;
-//     const paymentMode = transaction.modeOfPayment || 'Cash';
-//     const remark = transaction.remark || '';
-//     const referenceNumber = transaction.referenceNumber || '';
-//     const approvalStatus = transaction.approvalStatus || 'Pending';
-//     const cashLocation = transaction.cashLocation?.name || '';
-//     const bankName = transaction.bank?.name || '';
-//     const subPaymentMode = transaction.subPaymentMode?.payment_mode || '';
-    
-//     const amountInWords = numberToWordsSimple(amount);
-
-//     return `<!DOCTYPE html>
-//   <html>
-//   <head>
-//     <title>Broker Payment Receipt - ${receiptNumber}</title>
-//     <style>
-//       body {
-//         font-family: "Courier New", Courier, monospace;
-//         margin: 0;
-//         padding: 10mm;
-//         font-size: 15px;
-//         color: #333;
-//       }
-//       .page {
-//         width: 210mm;
-//         margin: 0 auto;
-//       }
-//       .receipt-copy {
-//         height: auto;
-//         min-height: 130mm;
-//         page-break-inside: avoid;
-//       }
-//       .header-container {
-//         display: flex;
-//         justify-content: space-between;
-//         margin-bottom: 2mm;
-//         align-items: flex-start;
-//       }
-//       .header-left {
-//         width: 60%;
-//       }
-//       .header-right {
-//         width: 40%;
-//         text-align: right;
-//         display: flex;
-//         flex-direction: column;
-//         align-items: flex-end;
-//       }
-//       .logo-qr-container {
-//         display: flex;
-//         align-items: center;
-//         gap: 10px;
-//         justify-content: flex-end;
-//         margin-bottom: 5px;
-//         width: 100%;
-//       }
-//       .logo {
-//         height: 51px;
-//       }
-//       .qr-code-small {
-//         width: 81px;
-//         height: 81px;
-//         border: 1px solid #ccc;
-//       }
-//       .dealer-info {
-//         text-align: left;
-//         font-size: 13px;
-//         line-height: 1.2;
-//       }
-//       .dealer-name {
-//         font-size: 17px;
-//         font-weight: bold;
-//         margin: 0 0 3px 0;
-//       }
-//       .broker-info-container {
-//         display: flex;
-//         font-size: 14px;
-//         margin: 10px 0;
-//       }
-//       .broker-info-left {
-//         width: 50%;
-//       }
-//       .broker-info-right {
-//         width: 50%;
-//       }
-//       .info-row {
-//         margin: 2mm 0;
-//         line-height: 1.2;
-//       }
-//       /* Style for values in info rows */
-//       .info-row .value {
-//         font-weight: 700;
-//       }
-//       .divider {
-//         border-top: 2px solid #AAAAAA;
-//         margin: 3mm 0;
-//       }
-//       .receipt-info {
-//         background-color: #f8f9fa;
-//         border: 1px solid #dee2e6;
-//         border-radius: 4px;
-//         padding: 9px;
-//         margin: 11px 0;
-//         font-size: 14px;
-//       }
-//       .receipt-info .value {
-//         font-weight: 700;
-//       }
-//       .payment-info-box {
-//         margin: 11px 0;
-//       }
-//       .signature-box {
-//         margin-top: 16mm;
-//         font-size: 11pt;
-//       }
-//       .signature-line {
-//         border-top: 1px dashed #000;
-//         width: 41mm;
-//         display: inline-block;
-//         margin: 0 5mm;
-//       }
-//       .cutting-line {
-//         border-top: 2px dashed #333;
-//         margin: 16mm 0 11mm 0;
-//         text-align: center;
-//         position: relative;
-//       }
-//       .cutting-line::before {
-//         content: "✂ Cut Here ✂";
-//         position: absolute;
-//         top: -11px;
-//         left: 50%;
-//         transform: translateX(-50%);
-//         background: white;
-//         padding: 0 11px;
-//         font-size: 13px;
-//         color: #666;
-//       }
-//       .note {
-//         padding: 2px;
-//         margin: 3px;
-//         font-size: 12px;
-//       }
-//       .note .value {
-//         font-weight: 700;
-//       }
-//       .amount-in-words {
-//         font-style: italic;
-//         margin-top: 9px;
-//         padding: 6px;
-//         font-size: 13px;
-//         border-top: 1px dashed #ccc;
-//       }
-//       .amount-in-words .value {
-//         font-weight: 700;
-//         font-style: normal;
-//       }
-//       .status-badge {
-//         display: inline-block;
-//         padding: 4px 9px;
-//         border-radius: 12px;
-//         font-size: 12px;
-//         font-weight: bold;
-//         background-color: ${approvalStatus === 'Approved' ? '#d4edda' : approvalStatus === 'Rejected' ? '#f8d7da' : '#fff3cd'};
-//         color: ${approvalStatus === 'Approved' ? '#155724' : approvalStatus === 'Rejected' ? '#721c24' : '#856404'};
-//         border: 1px solid ${approvalStatus === 'Approved' ? '#c3e6cb' : approvalStatus === 'Rejected' ? '#f5c6cb' : '#ffeeba'};
-//       }
-//       .footer-note {
-//         font-size: 10px;
-//         color: #777;
-//         text-align: center;
-//         margin-top: 5mm;
-//       }
-//       .payment-details {
-//         margin-top: 10px;
-//         border-collapse: collapse;
-//         width: 100%;
-//       }
-//       .payment-details td {
-//         padding: 4px;
-//         border: none;
-//       }
-//       /* 2-column grid for payment info */
-//       .payment-grid-2col {
-//         display: grid;
-//         grid-template-columns: 1fr 1fr;
-//         gap: 4px 15px;
-//         padding: 4px;
-//         font-size: 14px;
-//       }
-//       .payment-grid-item {
-//         padding: 2px 0;
-//         line-height: 1.3;
-//       }
-//       .payment-grid-item strong {
-//         font-weight: 600;
-//         margin-right: 5px;
-//         min-width: 110px;
-//         display: inline-block;
-//       }
-//       .payment-grid-item .value {
-//         font-weight: 700;
-//       }
-//       @page {
-//         size: A4;
-//         margin: 10mm;
-//       }
-//       @media print {
-//         body {
-//           padding: 0;
-//         }
-//         .receipt-copy {
-//           page-break-inside: avoid;
-//         }
-//       }
-//     </style>
-//   </head>
-//   <body>
-//     <div class="page">
-//       <!-- FIRST COPY -->
-//       <div class="receipt-copy">
-//         <div class="header-container">
-//           <div class="header-left">
-//             <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
-//             <div class="dealer-info">
-//               Authorized Main Dealer: TVS Motor Company Ltd.<br>
-//               Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-//               Upnagar, Nashik Road, Nashik - 422101<br>
-//               Phone: 7498903672
-//             </div>
-//           </div>
-//           <div class="header-right">
-//             <div class="logo-qr-container">
-//               <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
-//               ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
-//             </div>
-//             <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
-//             <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-//           </div>
-//         </div>
-        
-//         <div class="divider"></div>
-  
-//         <div class="receipt-info">
-//           <div><strong>BROKER PAYMENT RECEIPT</strong></div>
-//           <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
-//         </div>
-  
-//         <div class="broker-info-container">
-//           <div class="broker-info-left">
-//             <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
-//             <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
-//             <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
-//             ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
-//             ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
-//           </div>
-//           <div class="broker-info-right">
-//             <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
-//             ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
-//             <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
-//             <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
-//           </div>
-//         </div>
-  
-//         <div class="payment-info-box">
-//           <div class="receipt-info" style="padding: 5px;">
-//             <!-- Payment Information Grid - 2 columns (2 rows) with existing fields only -->
-//             <div class="payment-grid-2col">
-//               <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
-             
-//             </div>
-//           </div>
-          
-//           <div class="amount-in-words">
-//             <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
-//           </div>
-//         </div>
-  
-//         <div class="note">
-//           <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
-//         </div>
-        
-//         <div class="divider"></div>
-  
-//         <div class="signature-box">
-//           <div style="display: flex; justify-content: space-between;">
-//             <div style="text-align:center; width: 30%;">
-//               <div class="signature-line"></div>
-//               <div>Broker's Signature</div>
-//             </div>
-//             <div style="text-align:center; width: 30%;">
-//               <div class="signature-line"></div>
-//               <div>Authorised Signatory</div>
-//             </div>
-//             <div style="text-align:center; width: 30%;">
-//               <div class="signature-line"></div>
-//               <div>Accountant</div>
-//             </div>
-//           </div>
-//         </div>
-        
-//         <div class="footer-note">
-//           This is a computer generated receipt - valid without signature
-//         </div>
-//       </div>
-  
-//       <!-- CUTTING LINE -->
-//       <div class="cutting-line"></div>
-  
-//       <!-- SECOND COPY (DUPLICATE) -->
-//       <div class="receipt-copy">
-//         <div class="header-container">
-//           <div class="header-left">
-//             <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
-//             <div class="dealer-info">
-//               Authorized Main Dealer: TVS Motor Company Ltd.<br>
-//               Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-//               Upnagar, Nashik Road, Nashik - 422101<br>
-//               Phone: 7498903672
-//             </div>
-//           </div>
-//           <div class="header-right">
-//             <div class="logo-qr-container">
-//               <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
-//               ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
-//             </div>
-//             <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
-//             <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-//           </div>
-//         </div>
-        
-//         <div class="divider"></div>
-  
-//         <div class="receipt-info">
-//           <div><strong>BROKER PAYMENT RECEIPT (DUPLICATE)</strong></div>
-//           <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
-//         </div>
-  
-//         <div class="broker-info-container">
-//           <div class="broker-info-left">
-//             <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
-//             <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
-//             <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
-//             ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
-//             ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
-//           </div>
-//           <div class="broker-info-right">
-//             <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
-//             ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
-//             <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
-//             <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
-//           </div>
-//         </div>
-  
-//         <div class="payment-info-box">
-//           <div class="receipt-info" style="padding: 5px;">
-//             <!-- Payment Information Grid - 2 columns (2 rows) with existing fields only -->
-//             <div class="payment-grid-2col">
-//               <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
+// //         <div class="payment-info-box">
+// //           <div class="receipt-info" style="padding: 5px;">
+// //             <!-- Payment Information Grid - 2 columns (2 rows) with existing fields only -->
+// //             <div class="payment-grid-2col">
+// //               <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
               
-//           </div>
+// //           </div>
           
-//           <div class="amount-in-words">
-//             <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
-//           </div>
-//         </div>
+// //           <div class="amount-in-words">
+// //             <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
+// //           </div>
+// //         </div>
   
-//         <div class="note">
-//           <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
-//         </div>
+// //         <div class="note">
+// //           <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
+// //         </div>
         
-//         <div class="divider"></div>
+// //         <div class="divider"></div>
   
-//         <div class="signature-box">
-//           <div style="display: flex; justify-content: space-between;">
-//             <div style="text-align:center; width: 30%;">
-//               <div class="signature-line"></div>
-//               <div>Broker's Signature</div>
-//             </div>
-//             <div style="text-align:center; width: 30%;">
-//               <div class="signature-line"></div>
-//               <div>Authorised Signatory</div>
-//             </div>
-//             <div style="text-align:center; width: 30%;">
-//               <div class="signature-line"></div>
-//               <div>Accountant</div>
-//             </div>
-//           </div>
-//         </div>
+// //         <div class="signature-box">
+// //           <div style="display: flex; justify-content: space-between;">
+// //             <div style="text-align:center; width: 30%;">
+// //               <div class="signature-line"></div>
+// //               <div>Broker's Signature</div>
+// //             </div>
+// //             <div style="text-align:center; width: 30%;">
+// //               <div class="signature-line"></div>
+// //               <div>Authorised Signatory</div>
+// //             </div>
+// //             <div style="text-align:center; width: 30%;">
+// //               <div class="signature-line"></div>
+// //               <div>Accountant</div>
+// //             </div>
+// //           </div>
+// //         </div>
         
-//         <div class="footer-note">
-//           This is a computer generated receipt - valid without signature
-//         </div>
-//       </div>
-//     </div>
-//   </body>
-//   </html>`;
-//   };
+// //         <div class="footer-note">
+// //           This is a computer generated receipt - valid without signature
+// //         </div>
+// //       </div>
+// //     </div>
+// //   </body>
+// //   </html>`;
+// //   };
 
-//   // ============ SIMPLE NUMBER TO WORDS FUNCTION ============
-//   const numberToWordsSimple = (num) => {
-//     if (num === 0) return 'Zero';
+// //   // ============ SIMPLE NUMBER TO WORDS FUNCTION ============
+// //   const numberToWordsSimple = (num) => {
+// //     if (num === 0) return 'Zero';
     
-//     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
-//                   'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
-//                   'Seventeen', 'Eighteen', 'Nineteen'];
-//     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+// //     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine',
+// //                   'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen',
+// //                   'Seventeen', 'Eighteen', 'Nineteen'];
+// //     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
     
-//     const numToWords = (n) => {
-//       if (n < 20) return ones[n];
-//       if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
-//       if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '');
-//       if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '');
-//       if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
-//       return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
-//     };
+// //     const numToWords = (n) => {
+// //       if (n < 20) return ones[n];
+// //       if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+// //       if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '');
+// //       if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '');
+// //       if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
+// //       return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
+// //     };
     
-//     return numToWords(Math.floor(num)) + (num % 1 ? ' point ' + num.toString().split('.')[1] : '');
-//   };
+// //     return numToWords(Math.floor(num)) + (num % 1 ? ' point ' + num.toString().split('.')[1] : '');
+// //   };
 
-//   const handleBranchFilter = async () => {
-//     if (!canViewExchangeLedger) {
-//       return;
-//     }
+// //   const handleBranchFilter = async () => {
+// //     if (!canViewExchangeLedger) {
+// //       return;
+// //     }
     
-//     if (selectedBranch) {
-//       await fetchData(selectedBranch);
-//     } else {
-//       await fetchData();
-//     }
-//     setShowFilterModal(false);
-//   };
+// //     if (selectedBranch) {
+// //       await fetchData(selectedBranch);
+// //     } else {
+// //       await fetchData();
+// //     }
+// //     setShowFilterModal(false);
+// //   };
 
-//   const clearFilter = async () => {
-//     if (!canViewExchangeLedger) {
-//       return;
-//     }
+// //   const clearFilter = async () => {
+// //     if (!canViewExchangeLedger) {
+// //       return;
+// //     }
     
-//     setSelectedBranch('');
-//     await fetchData();
-//     setShowFilterModal(false);
-//   };
+// //     setSelectedBranch('');
+// //     await fetchData();
+// //     setShowFilterModal(false);
+// //   };
 
-//   const groupDataByBroker = (brokersData, isFilteredMode = false) => {
-//     const brokerMap = {};
+// //   const groupDataByBroker = (brokersData, isFilteredMode = false) => {
+// //     const brokerMap = {};
 
-//     brokersData.forEach((item) => {
-//       const brokerId = item.broker._id;
+// //     brokersData.forEach((item) => {
+// //       const brokerId = item.broker._id;
 
-//       if (!brokerMap[brokerId]) {
-//         brokerMap[brokerId] = {
-//           broker: item.broker,
-//           branches: [],
-//           totalBookings: 0,
-//           totalExchangeAmount: 0,
-//           totalCredit: 0,
-//           totalDebit: 0,
-//           onAccount: 0,
-//           currentBalance: 0,
-//           outstandingAmount: 0
-//         };
-//       }
+// //       if (!brokerMap[brokerId]) {
+// //         brokerMap[brokerId] = {
+// //           broker: item.broker,
+// //           branches: [],
+// //           totalBookings: 0,
+// //           totalExchangeAmount: 0,
+// //           totalCredit: 0,
+// //           totalDebit: 0,
+// //           onAccount: 0,
+// //           currentBalance: 0,
+// //           outstandingAmount: 0
+// //         };
+// //       }
 
-//       if (isFilteredMode) {
-//         brokerMap[brokerId].branches = [
-//           {
-//             name: item.branch.name,
-//             branchId: item.branch._id,
-//             bookings: item.bookings.total,
-//             exchangeAmount: item.financials.totalExchangeAmount,
-//             credit: item.financials.ledger.totalCredit,
-//             debit: item.financials.ledger.totalDebit,
-//             onAccount: item.financials.ledger.onAccount,
-//             currentBalance: item.financials.ledger.currentBalance,
-//             outstandingAmount: item.financials.ledger.outstandingAmount
-//           }
-//         ];
+// //       if (isFilteredMode) {
+// //         brokerMap[brokerId].branches = [
+// //           {
+// //             name: item.branch.name,
+// //             branchId: item.branch._id,
+// //             bookings: item.bookings.total,
+// //             exchangeAmount: item.financials.totalExchangeAmount,
+// //             credit: item.financials.ledger.totalCredit,
+// //             debit: item.financials.ledger.totalDebit,
+// //             onAccount: item.financials.ledger.onAccount,
+// //             currentBalance: item.financials.ledger.currentBalance,
+// //             outstandingAmount: item.financials.ledger.outstandingAmount
+// //           }
+// //         ];
 
-//         brokerMap[brokerId].totalBookings = item.bookings.total;
-//         brokerMap[brokerId].totalExchangeAmount = item.financials.totalExchangeAmount;
-//         brokerMap[brokerId].totalCredit = item.financials.ledger.totalCredit;
-//         brokerMap[brokerId].totalDebit = item.financials.ledger.totalDebit;
-//         brokerMap[brokerId].onAccount = item.financials.ledger.onAccount;
-//         brokerMap[brokerId].currentBalance = item.financials.ledger.currentBalance;
-//         brokerMap[brokerId].outstandingAmount = item.financials.ledger.outstandingAmount;
-//       } else {
-//         brokerMap[brokerId].branches.push({
-//           name: item.branch.name,
-//           branchId: item.branch._id,
-//           bookings: item.bookings.total,
-//           exchangeAmount: item.financials.totalExchangeAmount,
-//           credit: item.financials.ledger.totalCredit,
-//           debit: item.financials.ledger.totalDebit,
-//           onAccount: item.financials.ledger.onAccount,
-//           currentBalance: item.financials.ledger.currentBalance,
-//           outstandingAmount: item.financials.ledger.outstandingAmount
-//         });
+// //         brokerMap[brokerId].totalBookings = item.bookings.total;
+// //         brokerMap[brokerId].totalExchangeAmount = item.financials.totalExchangeAmount;
+// //         brokerMap[brokerId].totalCredit = item.financials.ledger.totalCredit;
+// //         brokerMap[brokerId].totalDebit = item.financials.ledger.totalDebit;
+// //         brokerMap[brokerId].onAccount = item.financials.ledger.onAccount;
+// //         brokerMap[brokerId].currentBalance = item.financials.ledger.currentBalance;
+// //         brokerMap[brokerId].outstandingAmount = item.financials.ledger.outstandingAmount;
+// //       } else {
+// //         brokerMap[brokerId].branches.push({
+// //           name: item.branch.name,
+// //           branchId: item.branch._id,
+// //           bookings: item.bookings.total,
+// //           exchangeAmount: item.financials.totalExchangeAmount,
+// //           credit: item.financials.ledger.totalCredit,
+// //           debit: item.financials.ledger.totalDebit,
+// //           onAccount: item.financials.ledger.onAccount,
+// //           currentBalance: item.financials.ledger.currentBalance,
+// //           outstandingAmount: item.financials.ledger.outstandingAmount
+// //         });
 
-//         brokerMap[brokerId].totalBookings += item.bookings.total;
-//         brokerMap[brokerId].totalExchangeAmount += item.financials.totalExchangeAmount;
-//         brokerMap[brokerId].totalCredit += item.financials.ledger.totalCredit;
-//         brokerMap[brokerId].totalDebit += item.financials.ledger.totalDebit;
-//         brokerMap[brokerId].onAccount += item.financials.ledger.onAccount;
-//         brokerMap[brokerId].currentBalance += item.financials.ledger.currentBalance;
-//         brokerMap[brokerId].outstandingAmount += item.financials.ledger.outstandingAmount;
-//       }
-//     });
+// //         brokerMap[brokerId].totalBookings += item.bookings.total;
+// //         brokerMap[brokerId].totalExchangeAmount += item.financials.totalExchangeAmount;
+// //         brokerMap[brokerId].totalCredit += item.financials.ledger.totalCredit;
+// //         brokerMap[brokerId].totalDebit += item.financials.ledger.totalDebit;
+// //         brokerMap[brokerId].onAccount += item.financials.ledger.onAccount;
+// //         brokerMap[brokerId].currentBalance += item.financials.ledger.currentBalance;
+// //         brokerMap[brokerId].outstandingAmount += item.financials.ledger.outstandingAmount;
+// //       }
+// //     });
 
-//     return Object.values(brokerMap);
-//   };
+// //     return Object.values(brokerMap);
+// //   };
 
-//   const toggleBrokerExpansion = (brokerId) => {
-//     if (!canViewExchangeLedger) {
-//       return;
-//     }
+// //   const toggleBrokerExpansion = (brokerId) => {
+// //     if (!canViewExchangeLedger) {
+// //       return;
+// //     }
     
-//     if (!isFiltered) {
-//       setExpandedBrokers((prev) => ({
-//         ...prev,
-//         [brokerId]: !prev[brokerId]
-//       }));
-//     }
-//   };
+// //     if (!isFiltered) {
+// //       setExpandedBrokers((prev) => ({
+// //         ...prev,
+// //         [brokerId]: !prev[brokerId]
+// //       }));
+// //     }
+// //   };
 
-//   const handleClick = (event, id, brokerData = null, branchId = null) => {
-//     if (!canViewExchangeLedger && !canCreateExchangeLedger) {
-//       return;
-//     }
+// //   const handleClick = (event, id, brokerData = null, branchId = null) => {
+// //     if (!canViewExchangeLedger && !canCreateExchangeLedger) {
+// //       return;
+// //     }
     
-//     setAnchorEl(event.currentTarget);
-//     setMenuId(id);
-//     if (brokerData) {
-//       setSelectedledger({ ...brokerData, branchId });
-//     }
-//   };
+// //     setAnchorEl(event.currentTarget);
+// //     setMenuId(id);
+// //     if (brokerData) {
+// //       setSelectedledger({ ...brokerData, branchId });
+// //     }
+// //   };
 
-//   const handleClose = () => {
-//     setAnchorEl(null);
-//     setMenuId(null);
-//   };
+// //   const handleClose = () => {
+// //     setAnchorEl(null);
+// //     setMenuId(null);
+// //   };
 
-//   const handleAddClick = (brokerData, branchId = null) => {
-//     if (!canCreateExchangeLedger) {
-//       showError('You do not have permission to add payments');
-//       return;
-//     }
+// //   const handleAddClick = (brokerData, branchId = null) => {
+// //     if (!canCreateExchangeLedger) {
+// //       showError('You do not have permission to add payments');
+// //       return;
+// //     }
     
-//     setSelectedledger({ ...brokerData, branchId });
-//     setShowModal(true);
-//     handleClose();
-//   };
+// //     setSelectedledger({ ...brokerData, branchId });
+// //     setShowModal(true);
+// //     handleClose();
+// //   };
 
-//   const handleViewLedger = async (brokerData, branchId = null) => {
-//     if (!canViewExchangeLedger) {
-//       showError('You do not have permission to view ledgers');
-//       return;
-//     }
+// //   const handleViewLedger = async (brokerData, branchId = null) => {
+// //     if (!canViewExchangeLedger) {
+// //       showError('You do not have permission to view ledgers');
+// //       return;
+// //     }
     
-//     try {
-//       let url = `/broker-ledger/statement/${brokerData.broker?._id}`;
-//       if (branchId) {
-//         url += `?branchId=${branchId}`;
-//       }
+// //     try {
+// //       let url = `/broker-ledger/statement/${brokerData.broker?._id}`;
+// //       if (branchId) {
+// //         url += `?branchId=${branchId}`;
+// //       }
 
-//       const res = await axiosInstance.get(url);
-//       const ledgerData = res.data.data;
-//       const ledgerUrl = `${config.baseURL}/brokerData.html?ledgerId=${brokerData._id}`;
-//       let totalCredit = 0;
-//       let totalDebit = 0;
-//       const totalOnAccount = ledgerData.summary?.totalOnAccount ?? ledgerData.onAccountBalance ?? 0;
+// //       const res = await axiosInstance.get(url);
+// //       const ledgerData = res.data.data;
+// //       const ledgerUrl = `${config.baseURL}/brokerData.html?ledgerId=${brokerData._id}`;
+// //       let totalCredit = 0;
+// //       let totalDebit = 0;
+// //       const totalOnAccount = ledgerData.summary?.totalOnAccount ?? ledgerData.onAccountBalance ?? 0;
 
-//       ledgerData.transactions?.forEach((entry) => {
-//         if (entry.type === 'CREDIT') {
-//           totalCredit += entry.amount;
-//         } else if (entry.type === 'DEBIT') {
-//           totalDebit += entry.amount;
-//         }
-//       });
-//       const finalBalance = totalDebit - totalCredit;
-//       const availableOnAccount2 = totalOnAccount - totalCredit;
+// //       ledgerData.transactions?.forEach((entry) => {
+// //         if (entry.type === 'CREDIT') {
+// //           totalCredit += entry.amount;
+// //         } else if (entry.type === 'DEBIT') {
+// //           totalDebit += entry.amount;
+// //         }
+// //       });
+// //       const finalBalance = totalDebit - totalCredit;
+// //       const availableOnAccount2 = totalOnAccount - totalCredit;
 
-//       const win = window.open('', '_blank');
-//       win.document.write(`
-//           <!DOCTYPE html>
-//           <html>
-//             <head>
-//               <title>Customer Ledger</title>
-//               <style>
-//                 @page {
-//                   size: A4;
-//                   margin: 15mm 10mm;
-//                 }
-//                 body {
-//                   font-family: Arial;
-//                   width: 100%;
-//                   margin: 0;
-//                   padding: 0;
-//                   font-size: 14px;
-//                   line-height: 1.3;
-//                   font-family: Courier New;
-//                 }
-//                 .container {
-//                   width: 190mm;
-//                   margin: 0 auto;
-//                   padding: 5mm;
-//                 }
-//                 .header-container {
-//                   display: flex;
-//                   justify-content:space-between;
-//                   margin-bottom: 3mm;
-//                 }
-//                 .header-text{
-//                   font-size:20px;
-//                   font-weight:bold;
-//                 }
-//                 .logo {
-//                   width: 30mm;
-//                   height: auto;
-//                   margin-right: 5mm;
-//                 }
-//                 .header {
-//                   text-align: left;
-//                 }
-//                 .divider {
-//                   border-top: 2px solid #AAAAAA;
-//                   margin: 3mm 0;
-//                 }
-//                 .header h2 {
-//                   margin: 2mm 0;
-//                   font-size: 12pt;
-//                   font-weight: bold;
-//                 }
-//                 .header div {
-//                   font-size: 14px;
-//                 }
-//                 .customer-info {
-//                   display: grid;
-//                   grid-template-columns: repeat(2, 1fr);
-//                   gap: 2mm;
-//                   margin-bottom: 5mm;
-//                   font-size: 14px;
-//                 }
-//                 .customer-info div {
-//                   display: flex;
-//                 }
-//                 .customer-info strong {
-//                   min-width: 30mm;
-//                   display: inline-block;
-//                 }
-//                 table {
-//                   width: 100%;
-//                   border-collapse: collapse;
-//                   margin-bottom: 5mm;
-//                   font-size: 14px;
-//                   page-break-inside: avoid;
-//                 }
-//                 th, td {
-//                   border: 1px solid #000;
-//                   padding: 2mm;
-//                   text-align: left;
-//                 }
-//                 th {
-//                   background-color: #f0f0f0;
-//                   font-weight: bold;
-//                 }
-//                 .footer {
-//                   margin-top: 10mm;
-//                   display: flex;
-//                   justify-content: space-between;
-//                   align-items: flex-end;
-//                   font-size: 14px;
-//                 }
-//                 .footer-left {
-//                   text-align: left;
-//                 }
-//                 .footer-right {
-//                   text-align: right;
-//                 }
-//                 .qr-code {
-//                   width: 35mm;
-//                   height: 35mm;
-//                 }
-//                 .text-right {
-//                   text-align: right;
-//                 }
-//                 .text-left {
-//                   text-align: left;
-//                 }
-//                 .text-center {
-//                   text-align: center;
-//                 }
-//                 @media print {
-//                   body {
-//                     width: 190mm;
-//                     height: 277mm;
-//                   }
-//                   .no-print {
-//                     display: none;
-//                   }
-//                 }
-//               </style>
-//             </head>
-//             <body>
-//               <div class="container">
-//                 <div class="header-container">
-//                   <img src="${tvsLogo}" class="logo" alt="TVS Logo">
-//                   <div class="header-text"> GANDHI TVS</div>
-//                 </div>
-//                 <div class="header">
-//                   <div>
-//                     Authorised Main Dealer: TVS Motor Company Ltd.<br>
-//                     Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-//                     Upnagar, Nashik Road, Nashik - 422101<br>
-//                     Phone: 7498903672
-//                   </div>
-//                 </div>
-//                 <div class="divider"></div>
-//                 <div class="customer-info">
-//                   <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || 'N/A'}</div>
-//                   <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
-//                 </div>
+// //       const win = window.open('', '_blank');
+// //       win.document.write(`
+// //           <!DOCTYPE html>
+// //           <html>
+// //             <head>
+// //               <title>Customer Ledger</title>
+// //               <style>
+// //                 @page {
+// //                   size: A4;
+// //                   margin: 15mm 10mm;
+// //                 }
+// //                 body {
+// //                   font-family: Arial;
+// //                   width: 100%;
+// //                   margin: 0;
+// //                   padding: 0;
+// //                   font-size: 14px;
+// //                   line-height: 1.3;
+// //                   font-family: Courier New;
+// //                 }
+// //                 .container {
+// //                   width: 190mm;
+// //                   margin: 0 auto;
+// //                   padding: 5mm;
+// //                 }
+// //                 .header-container {
+// //                   display: flex;
+// //                   justify-content:space-between;
+// //                   margin-bottom: 3mm;
+// //                 }
+// //                 .header-text{
+// //                   font-size:20px;
+// //                   font-weight:bold;
+// //                 }
+// //                 .logo {
+// //                   width: 30mm;
+// //                   height: auto;
+// //                   margin-right: 5mm;
+// //                 }
+// //                 .header {
+// //                   text-align: left;
+// //                 }
+// //                 .divider {
+// //                   border-top: 2px solid #AAAAAA;
+// //                   margin: 3mm 0;
+// //                 }
+// //                 .header h2 {
+// //                   margin: 2mm 0;
+// //                   font-size: 12pt;
+// //                   font-weight: bold;
+// //                 }
+// //                 .header div {
+// //                   font-size: 14px;
+// //                 }
+// //                 .customer-info {
+// //                   display: grid;
+// //                   grid-template-columns: repeat(2, 1fr);
+// //                   gap: 2mm;
+// //                   margin-bottom: 5mm;
+// //                   font-size: 14px;
+// //                 }
+// //                 .customer-info div {
+// //                   display: flex;
+// //                 }
+// //                 .customer-info strong {
+// //                   min-width: 30mm;
+// //                   display: inline-block;
+// //                 }
+// //                 table {
+// //                   width: 100%;
+// //                   border-collapse: collapse;
+// //                   margin-bottom: 5mm;
+// //                   font-size: 14px;
+// //                   page-break-inside: avoid;
+// //                 }
+// //                 th, td {
+// //                   border: 1px solid #000;
+// //                   padding: 2mm;
+// //                   text-align: left;
+// //                 }
+// //                 th {
+// //                   background-color: #f0f0f0;
+// //                   font-weight: bold;
+// //                 }
+// //                 .footer {
+// //                   margin-top: 10mm;
+// //                   display: flex;
+// //                   justify-content: space-between;
+// //                   align-items: flex-end;
+// //                   font-size: 14px;
+// //                 }
+// //                 .footer-left {
+// //                   text-align: left;
+// //                 }
+// //                 .footer-right {
+// //                   text-align: right;
+// //                 }
+// //                 .qr-code {
+// //                   width: 35mm;
+// //                   height: 35mm;
+// //                 }
+// //                 .text-right {
+// //                   text-align: right;
+// //                 }
+// //                 .text-left {
+// //                   text-align: left;
+// //                 }
+// //                 .text-center {
+// //                   text-align: center;
+// //                 }
+// //                 @media print {
+// //                   body {
+// //                     width: 190mm;
+// //                     height: 277mm;
+// //                   }
+// //                   .no-print {
+// //                     display: none;
+// //                   }
+// //                 }
+// //               </style>
+// //             </head>
+// //             <body>
+// //               <div class="container">
+// //                 <div class="header-container">
+// //                   <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+// //                   <div class="header-text"> GANDHI TVS</div>
+// //                 </div>
+// //                 <div class="header">
+// //                   <div>
+// //                     Authorised Main Dealer: TVS Motor Company Ltd.<br>
+// //                     Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+// //                     Upnagar, Nashik Road, Nashik - 422101<br>
+// //                     Phone: 7498903672
+// //                   </div>
+// //                 </div>
+// //                 <div class="divider"></div>
+// //                 <div class="customer-info">
+// //                   <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || 'N/A'}</div>
+// //                   <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+// //                 </div>
 
-//                 <table>
-//                   <thead>
-//                     <tr>
-//                       <th width="15%">Date</th>
-//                       <th width="35%">Description</th>
-//                       <th width="15%">Receipt/VC No</th>
-//                       <th width="10%" class="text-right">Credit (₹)</th>
-//                       <th width="10%" class="text-right">Debit (₹)</th>
-//                       <th width="15%" class="text-right">Balance (₹)</th>
-//                     </tr>
-//                   </thead>
-//                   <tbody>
-//                     ${ledgerData.transactions
-//   ?.map(
-//     (entry) => {
-//       let exchangeVehicleNumber = '';
-//       let exchangeChassisNumber = '';
-//       let exchangePrice = '';
-//       let exchangeStatus = '';
-//       let bookingNumber = entry.booking?.bookingNumber || '';
+// //                 <table>
+// //                   <thead>
+// //                     <tr>
+// //                       <th width="15%">Date</th>
+// //                       <th width="35%">Description</th>
+// //                       <th width="15%">Receipt/VC No</th>
+// //                       <th width="10%" class="text-right">Credit (₹)</th>
+// //                       <th width="10%" class="text-right">Debit (₹)</th>
+// //                       <th width="15%" class="text-right">Balance (₹)</th>
+// //                     </tr>
+// //                   </thead>
+// //                   <tbody>
+// //                     ${ledgerData.transactions
+// //   ?.map(
+// //     (entry) => {
+// //       let exchangeVehicleNumber = '';
+// //       let exchangeChassisNumber = '';
+// //       let exchangePrice = '';
+// //       let exchangeStatus = '';
+// //       let bookingNumber = entry.booking?.bookingNumber || '';
       
-//       if (entry.exchangeVehicle && entry.exchangeVehicle.VehicleNumber) {
-//         exchangeVehicleNumber = entry.exchangeVehicle.VehicleNumber || '';
-//         exchangeChassisNumber = entry.exchangeVehicle.ChassisNumber || '';
-//         exchangePrice = entry.exchangeVehicle.PriceFormatted || '';
-//         exchangeStatus = entry.exchangeVehicle.Status || '';
-//       } else if (entry.exchangeDisplay && entry.exchangeDisplay.VehicleNumber) {
-//         exchangeVehicleNumber = entry.exchangeDisplay.VehicleNumber || '';
-//         exchangeChassisNumber = entry.exchangeDisplay.ChassisNumber || '';
-//         exchangePrice = entry.exchangeDisplay.Price || '';
-//         exchangeStatus = entry.exchangeDisplay.Status || '';
-//       } else if (entry.booking?.exchange?.display) {
-//         const exchangeDisplay = entry.booking.exchange.display;
-//         exchangeVehicleNumber = exchangeDisplay.vehicleNumber || '';
-//         exchangeChassisNumber = exchangeDisplay.chassisNumber || '';
-//         exchangePrice = exchangeDisplay.price ? `₹${exchangeDisplay.price.toLocaleString('en-IN')}` : '';
-//         exchangeStatus = exchangeDisplay.status || '';
-//       } else if (entry.booking?.exchange?.details) {
-//         const exchangeDetails = entry.booking.exchange.details;
-//         exchangeVehicleNumber = exchangeDetails.vehicleNumber || '';
-//         exchangeChassisNumber = exchangeDetails.chassisNumber || '';
-//         exchangePrice = exchangeDetails.price ? `₹${exchangeDetails.price.toLocaleString('en-IN')}` : '';
-//         exchangeStatus = exchangeDetails.status || '';
-//       }
+// //       if (entry.exchangeVehicle && entry.exchangeVehicle.VehicleNumber) {
+// //         exchangeVehicleNumber = entry.exchangeVehicle.VehicleNumber || '';
+// //         exchangeChassisNumber = entry.exchangeVehicle.ChassisNumber || '';
+// //         exchangePrice = entry.exchangeVehicle.PriceFormatted || '';
+// //         exchangeStatus = entry.exchangeVehicle.Status || '';
+// //       } else if (entry.exchangeDisplay && entry.exchangeDisplay.VehicleNumber) {
+// //         exchangeVehicleNumber = entry.exchangeDisplay.VehicleNumber || '';
+// //         exchangeChassisNumber = entry.exchangeDisplay.ChassisNumber || '';
+// //         exchangePrice = entry.exchangeDisplay.Price || '';
+// //         exchangeStatus = entry.exchangeDisplay.Status || '';
+// //       } else if (entry.booking?.exchange?.display) {
+// //         const exchangeDisplay = entry.booking.exchange.display;
+// //         exchangeVehicleNumber = exchangeDisplay.vehicleNumber || '';
+// //         exchangeChassisNumber = exchangeDisplay.chassisNumber || '';
+// //         exchangePrice = exchangeDisplay.price ? `₹${exchangeDisplay.price.toLocaleString('en-IN')}` : '';
+// //         exchangeStatus = exchangeDisplay.status || '';
+// //       } else if (entry.booking?.exchange?.details) {
+// //         const exchangeDetails = entry.booking.exchange.details;
+// //         exchangeVehicleNumber = exchangeDetails.vehicleNumber || '';
+// //         exchangeChassisNumber = exchangeDetails.chassisNumber || '';
+// //         exchangePrice = exchangeDetails.price ? `₹${exchangeDetails.price.toLocaleString('en-IN')}` : '';
+// //         exchangeStatus = exchangeDetails.status || '';
+// //       }
       
-//       return `
-//       <tr>
-//         <td>${new Date(entry.date).toLocaleDateString() || 'N/A'}</td>
-//         <td>
-//           Booking No: ${bookingNumber || '-'}<br>
-//           Customer: ${entry.booking?.customer?.name || '-'}<br>
+// //       return `
+// //       <tr>
+// //         <td>${new Date(entry.date).toLocaleDateString() || 'N/A'}</td>
+// //         <td>
+// //           Booking No: ${bookingNumber || '-'}<br>
+// //           Customer: ${entry.booking?.customer?.name || '-'}<br>
        
-//           ${entry.mode || ''}
-//           ${exchangeVehicleNumber ? `<br>Exchange Vehicle: ${exchangeVehicleNumber}` : ''}
-//           ${exchangeChassisNumber ? `<br>Exchange Chassis: ${exchangeChassisNumber}` : ''}
-//         </td>
-//         <td>${entry.receiptNumber || ''}</td>
-//         <td class="text-right">${entry.type === 'CREDIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
-//         <td class="text-right">${entry.type === 'DEBIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
-//         <td class="text-right"></td>
-//       </tr>
-//     `;
-//     }
-//   )
-//   .join('')}
-//                       <tr>
-//                       <td colspan="3" class="text-left"><strong>Total OnAccount</strong></td>
-//                       <td class="text-right"></td>
-//                       <td class="text-right"></td>
-//                       <td class="text-right"><strong>${availableOnAccount2.toLocaleString('en-IN')}</strong></td>
-//                     </tr>
-//                     <tr>
-//                       <td colspan="3" class="text-left"><strong>Total</strong></td>
-//                       <td class="text-right"><strong>${totalCredit.toLocaleString('en-IN')}</strong></td>
-//                       <td class="text-right"><strong>${totalDebit.toLocaleString('en-IN')}</strong></td>
-//                       <td class="text-right"><strong>${finalBalance.toLocaleString('en-IN')}</strong></td>
-//                     </tr>
+// //           ${entry.mode || ''}
+// //           ${exchangeVehicleNumber ? `<br>Exchange Vehicle: ${exchangeVehicleNumber}` : ''}
+// //           ${exchangeChassisNumber ? `<br>Exchange Chassis: ${exchangeChassisNumber}` : ''}
+// //         </td>
+// //         <td>${entry.receiptNumber || ''}</td>
+// //         <td class="text-right">${entry.type === 'CREDIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
+// //         <td class="text-right">${entry.type === 'DEBIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td>
+// //         <td class="text-right"></td>
+// //       </tr>
+// //     `;
+// //     }
+// //   )
+// //   .join('')}
+// //                       <tr>
+// //                       <td colspan="3" class="text-left"><strong>Total OnAccount</strong></td>
+// //                       <td class="text-right"></td>
+// //                       <td class="text-right"></td>
+// //                       <td class="text-right"><strong>${availableOnAccount2.toLocaleString('en-IN')}</strong></td>
+// //                     </tr>
+// //                     <tr>
+// //                       <td colspan="3" class="text-left"><strong>Total</strong></td>
+// //                       <td class="text-right"><strong>${totalCredit.toLocaleString('en-IN')}</strong></td>
+// //                       <td class="text-right"><strong>${totalDebit.toLocaleString('en-IN')}</strong></td>
+// //                       <td class="text-right"><strong>${finalBalance.toLocaleString('en-IN')}</strong></td>
+// //                     </tr>
 
-//                   </tbody>
-//                 </table>
+// //                   </tbody>
+// //                 </table>
 
-//                 <div class="footer">
-//                   <div class="footer-left">
-//                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}"
-//                          class="qr-code"
-//                          alt="QR Code" />
-//                   </div>
-//                   <div class="footer-right">
-//                     <p>For, Gandhi TVS</p>
-//                     <p>Authorised Signatory</p>
-//                   </div>
-//                 </div>
-//               </div>
+// //                 <div class="footer">
+// //                   <div class="footer-left">
+// //                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}"
+// //                          class="qr-code"
+// //                          alt="QR Code" />
+// //                   </div>
+// //                   <div class="footer-right">
+// //                     <p>For, Gandhi TVS</p>
+// //                     <p>Authorised Signatory</p>
+// //                   </div>
+// //                 </div>
+// //               </div>
 
-//               <script>
-//                 window.onload = function() {
-//                   setTimeout(() => {
-//                     window.print();
-//                   }, 300);
-//                 };
-//               </script>
-//             </body>
-//           </html>
-//         `);
-//     } catch (err) {
-//       console.error('Error fetching ledger:', err);
-//       const message = showError(err);
-//       if (message) {
-//         setError(message);
-//       }
-//     }
-//     handleClose();
-//   };
+// //               <script>
+// //                 window.onload = function() {
+// //                   setTimeout(() => {
+// //                     window.print();
+// //                   }, 300);
+// //                 };
+// //               </script>
+// //             </body>
+// //           </html>
+// //         `);
+// //     } catch (err) {
+// //       console.error('Error fetching ledger:', err);
+// //       const message = showError(err);
+// //       if (message) {
+// //         setError(message);
+// //       }
+// //     }
+// //     handleClose();
+// //   };
 
-//   const handleSearch = (value) => {
-//     if (!canViewExchangeLedger) {
-//       return;
-//     }
+// //   const handleSearch = (value) => {
+// //     if (!canViewExchangeLedger) {
+// //       return;
+// //     }
     
-//     setSearchTerm(value);
-//     handleFilter(value, ['broker.name']);
-//   };
+// //     setSearchTerm(value);
+// //     handleFilter(value, ['broker.name']);
+// //   };
 
-//   const handlePaymentSaved = (message) => {
-//     setSuccessMessage(message);
-//     setTimeout(() => setSuccessMessage(''), 3000);
-//     fetchData();
-//   };
+// //   const handlePaymentSaved = (message) => {
+// //     setSuccessMessage(message);
+// //     setTimeout(() => setSuccessMessage(''), 3000);
+// //     fetchData();
+// //   };
 
-//   const handleOpenExportModal = () => {
-//     if (!canCreateExchangeLedger) {
-//       showError('You do not have permission to export reports');
-//       return;
-//     }
+// //   const handleOpenExportModal = () => {
+// //     if (!canCreateExchangeLedger) {
+// //       showError('You do not have permission to export reports');
+// //       return;
+// //     }
     
-//     setShowExportModal(true);
-//     setExportError('');
-//     if (isFiltered && selectedBranch) {
-//       setExportBranchId(selectedBranch);
-//     }
-//   };
+// //     setShowExportModal(true);
+// //     setExportError('');
+// //     if (isFiltered && selectedBranch) {
+// //       setExportBranchId(selectedBranch);
+// //     }
+// //   };
 
-//   const handleCloseExportModal = () => {
-//     setShowExportModal(false);
-//     setExportStartDate(null);
-//     setExportEndDate(null);
-//     setExportBranchId('');
-//     setExportError('');
-//     setExportLoading(false);
-//   };
+// //   const handleCloseExportModal = () => {
+// //     setShowExportModal(false);
+// //     setExportStartDate(null);
+// //     setExportEndDate(null);
+// //     setExportBranchId('');
+// //     setExportError('');
+// //     setExportLoading(false);
+// //   };
 
-//   const handleExcelExport = async () => {
-//     if (!canCreateExchangeLedger) {
-//       showError('You do not have permission to export reports');
-//       return;
-//     }
+// //   const handleExcelExport = async () => {
+// //     if (!canCreateExchangeLedger) {
+// //       showError('You do not have permission to export reports');
+// //       return;
+// //     }
     
-//     setExportError('');
+// //     setExportError('');
     
-//     if (!exportBranchId) {
-//       setExportError('Please select a branch');
-//       return;
-//     }
+// //     if (!exportBranchId) {
+// //       setExportError('Please select a branch');
+// //       return;
+// //     }
 
-//     if (!exportStartDate || !exportEndDate) {
-//       setExportError('Please select both start and end dates');
-//       return;
-//     }
+// //     if (!exportStartDate || !exportEndDate) {
+// //       setExportError('Please select both start and end dates');
+// //       return;
+// //     }
 
-//     if (exportStartDate > exportEndDate) {
-//       setExportError('Start date cannot be after end date');
-//       return;
-//     }
+// //     if (exportStartDate > exportEndDate) {
+// //       setExportError('Start date cannot be after end date');
+// //       return;
+// //     }
 
-//     try {
-//       setExportLoading(true);
+// //     try {
+// //       setExportLoading(true);
       
-//       const formattedStartDate = formatDateForAPI(exportStartDate);
-//       const formattedEndDate = formatDateForAPI(exportEndDate);
+// //       const formattedStartDate = formatDateForAPI(exportStartDate);
+// //       const formattedEndDate = formatDateForAPI(exportEndDate);
 
-//       const params = new URLSearchParams({
-//         branchId: exportBranchId,
-//         startDate: formattedStartDate,
-//         endDate: formattedEndDate
-//       });
+// //       const params = new URLSearchParams({
+// //         branchId: exportBranchId,
+// //         startDate: formattedStartDate,
+// //         endDate: formattedEndDate
+// //       });
 
-//       const response = await axiosInstance.get(
-//         `/reports/brokers?${params.toString()}`,
-//         { responseType: 'blob' }
-//       );
+// //       const response = await axiosInstance.get(
+// //         `/reports/brokers?${params.toString()}`,
+// //         { responseType: 'blob' }
+// //       );
 
-//       const contentType = response.headers['content-type'];
+// //       const contentType = response.headers['content-type'];
       
-//       if (contentType && contentType.includes('application/json')) {
-//         const text = await new Promise((resolve, reject) => {
-//           const reader = new FileReader();
-//           reader.onload = () => resolve(reader.result);
-//           reader.onerror = reject;
-//           reader.readAsText(response.data);
-//         });
+// //       if (contentType && contentType.includes('application/json')) {
+// //         const text = await new Promise((resolve, reject) => {
+// //           const reader = new FileReader();
+// //           reader.onload = () => resolve(reader.result);
+// //           reader.onerror = reject;
+// //           reader.readAsText(response.data);
+// //         });
         
-//         const errorData = JSON.parse(text);
+// //         const errorData = JSON.parse(text);
         
-//         if (!errorData.success && errorData.message) {
-//           setExportError(errorData.message);
-//           Swal.fire({
-//             icon: 'error',
-//             title: 'Export Failed',
-//             text: errorData.message,
-//           });
-//           return;
-//         }
-//       }
+// //         if (!errorData.success && errorData.message) {
+// //           setExportError(errorData.message);
+// //           Swal.fire({
+// //             icon: 'error',
+// //             title: 'Export Failed',
+// //             text: errorData.message,
+// //           });
+// //           return;
+// //         }
+// //       }
 
-//       const blob = new Blob([response.data], { 
-//         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-//       });
+// //       const blob = new Blob([response.data], { 
+// //         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+// //       });
       
-//       const url = window.URL.createObjectURL(blob);
-//       const link = document.createElement('a');
-//       link.href = url;
+// //       const url = window.URL.createObjectURL(blob);
+// //       const link = document.createElement('a');
+// //       link.href = url;
       
-//       const branchName = branches.find(b => b._id === exportBranchId)?.name || 'Branch';
-//       const startDateStr = formatDateDDMMYYYY(exportStartDate);
-//       const endDateStr = formatDateDDMMYYYY(exportEndDate);
-//       const fileName = `Brokers_Report_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
-//       link.setAttribute('download', fileName);
+// //       const branchName = branches.find(b => b._id === exportBranchId)?.name || 'Branch';
+// //       const startDateStr = formatDateDDMMYYYY(exportStartDate);
+// //       const endDateStr = formatDateDDMMYYYY(exportEndDate);
+// //       const fileName = `Brokers_Report_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+// //       link.setAttribute('download', fileName);
       
-//       document.body.appendChild(link);
-//       link.click();
-//       link.remove();
+// //       document.body.appendChild(link);
+// //       link.click();
+// //       link.remove();
       
-//       window.URL.revokeObjectURL(url);
+// //       window.URL.revokeObjectURL(url);
       
-//       Swal.fire({
-//         toast: true,
-//         position: 'top-end',
-//         icon: 'success',
-//         title: 'Excel exported successfully!',
-//         showConfirmButton: false,
-//         timer: 3000,
-//         timerProgressBar: true
-//       });
+// //       Swal.fire({
+// //         toast: true,
+// //         position: 'top-end',
+// //         icon: 'success',
+// //         title: 'Excel exported successfully!',
+// //         showConfirmButton: false,
+// //         timer: 3000,
+// //         timerProgressBar: true
+// //       });
 
-//       handleCloseExportModal();
+// //       handleCloseExportModal();
       
-//     } catch (error) {
-//       console.error('Error exporting report:', error);
+// //     } catch (error) {
+// //       console.error('Error exporting report:', error);
       
-//       if (error.response && error.response.data instanceof Blob) {
-//         try {
-//           const text = await new Promise((resolve, reject) => {
-//             const reader = new FileReader();
-//             reader.onload = () => resolve(reader.result);
-//             reader.onerror = reject;
-//             reader.readAsText(error.response.data);
-//           });
+// //       if (error.response && error.response.data instanceof Blob) {
+// //         try {
+// //           const text = await new Promise((resolve, reject) => {
+// //             const reader = new FileReader();
+// //             reader.onload = () => resolve(reader.result);
+// //             reader.onerror = reject;
+// //             reader.readAsText(error.response.data);
+// //           });
           
-//           const errorData = JSON.parse(text);
+// //           const errorData = JSON.parse(text);
           
-//           if (errorData.message) {
-//             setExportError(errorData.message);
-//             Swal.fire({
-//               icon: 'error',
-//               title: 'Export Failed',
-//               text: errorData.message,
-//             });
-//           }
-//         } catch (parseError) {
-//           console.error('Error parsing error response:', parseError);
-//           setExportError('Failed to export report');
-//           Swal.fire({
-//             icon: 'error',
-//             title: 'Export Failed',
-//             text: 'Failed to export report',
-//           });
-//         }
-//       } else if (error.response?.data?.message) {
-//         setExportError(error.response.data.message);
-//         Swal.fire({
-//           icon: 'error',
-//           title: 'Export Failed',
-//           text: error.response.data.message,
-//         });
-//       } else if (error.message) {
-//         setExportError(error.message);
-//         Swal.fire({
-//           icon: 'error',
-//           title: 'Export Failed',
-//           text: error.message,
-//         });
-//       } else {
-//         setExportError('Failed to export report');
-//         Swal.fire({
-//           icon: 'error',
-//           title: 'Export Failed',
-//           text: 'Failed to export report',
-//         });
-//       }
+// //           if (errorData.message) {
+// //             setExportError(errorData.message);
+// //             Swal.fire({
+// //               icon: 'error',
+// //               title: 'Export Failed',
+// //               text: errorData.message,
+// //             });
+// //           }
+// //         } catch (parseError) {
+// //           console.error('Error parsing error response:', parseError);
+// //           setExportError('Failed to export report');
+// //           Swal.fire({
+// //             icon: 'error',
+// //             title: 'Export Failed',
+// //             text: 'Failed to export report',
+// //           });
+// //         }
+// //       } else if (error.response?.data?.message) {
+// //         setExportError(error.response.data.message);
+// //         Swal.fire({
+// //           icon: 'error',
+// //           title: 'Export Failed',
+// //           text: error.response.data.message,
+// //         });
+// //       } else if (error.message) {
+// //         setExportError(error.message);
+// //         Swal.fire({
+// //           icon: 'error',
+// //           title: 'Export Failed',
+// //           text: error.message,
+// //         });
+// //       } else {
+// //         setExportError('Failed to export report');
+// //         Swal.fire({
+// //           icon: 'error',
+// //           title: 'Export Failed',
+// //           text: 'Failed to export report',
+// //         });
+// //       }
       
-//     } finally {
-//       setExportLoading(false);
-//     }
-//   };
+// //     } finally {
+// //       setExportLoading(false);
+// //     }
+// //   };
 
-//   if (!canViewExchangeLedger) {
-//     return (
-//       <div className="alert alert-danger m-3" role="alert">
-//         You do not have permission to view Exchange Ledger.
-//       </div>
-//     );
-//   }
+// //   if (!canViewExchangeLedger) {
+// //     return (
+// //       <div className="alert alert-danger m-3" role="alert">
+// //         You do not have permission to view Exchange Ledger.
+// //       </div>
+// //     );
+// //   }
 
-//   if (loading) {
-//     return (
-//       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
-//         <CSpinner color="primary" />
-//       </div>
-//     );
-//   }
+// //   if (loading) {
+// //     return (
+// //       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+// //         <CSpinner color="primary" />
+// //       </div>
+// //     );
+// //   }
 
-//   if (error) {
-//     return (
-//       <div className="alert alert-danger" role="alert">
-//         {error}
-//       </div>
-//     );
-//   }
+// //   if (error) {
+// //     return (
+// //       <div className="alert alert-danger" role="alert">
+// //         {error}
+// //       </div>
+// //     );
+// //   }
 
-//   const totalColumns = isFiltered ? 12 : 13;
-//   const actionColumnIndex = showActionColumn ? 1 : 0;
+// //   const totalColumns = isFiltered ? 12 : 13;
+// //   const actionColumnIndex = showActionColumn ? 1 : 0;
 
-//   return (
-//     <div>
-//       <div className='title'>Exchange Ledger {isFiltered && `- ${selectedBranchName}`}</div>
+// //   return (
+// //     <div>
+// //       <div className='title'>Exchange Ledger {isFiltered && `- ${selectedBranchName}`}</div>
       
-//       {successMessage && (
-//         <CAlert color="success" className="mb-3">
-//           {successMessage}
-//         </CAlert>
-//       )}
+// //       {successMessage && (
+// //         <CAlert color="success" className="mb-3">
+// //           {successMessage}
+// //         </CAlert>
+// //       )}
     
-//       <CCard className='table-container mt-4'>
-//         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-//           <div>
-//             <CButton 
-//               size="sm" 
-//               className="action-btn me-1"
-//               onClick={() => setShowFilterModal(true)}
-//               disabled={!canViewExchangeLedger}
-//             >
-//               <CIcon icon={cilSearch} className='me-1' />
-//               Search
-//             </CButton>
-//             {isFiltered && (
-//               <CButton 
-//                 size="sm" 
-//                 className="action-btn me-1"
-//                 onClick={clearFilter}
-//                 disabled={!canViewExchangeLedger}
-//               >
-//                 <CIcon icon={cilZoomOut} className='me-1' />
-//                 Clear Filter
-//               </CButton>
-//             )}
+// //       <CCard className='table-container mt-4'>
+// //         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
+// //           <div>
+// //             <CButton 
+// //               size="sm" 
+// //               className="action-btn me-1"
+// //               onClick={() => setShowFilterModal(true)}
+// //               disabled={!canViewExchangeLedger}
+// //             >
+// //               <CIcon icon={cilSearch} className='me-1' />
+// //               Search
+// //             </CButton>
+// //             {isFiltered && (
+// //               <CButton 
+// //                 size="sm" 
+// //                 className="action-btn me-1"
+// //                 onClick={clearFilter}
+// //                 disabled={!canViewExchangeLedger}
+// //               >
+// //                 <CIcon icon={cilZoomOut} className='me-1' />
+// //                 Clear Filter
+// //               </CButton>
+// //             )}
             
-//             {canCreateExchangeLedger && (
-//               <CButton 
-//                 size="sm" 
-//                 className="action-btn me-1"
-//                 onClick={handleOpenExportModal}
-//                 title="Export Excel Report"
-//               >
-//                 <FontAwesomeIcon icon={faFileExcel} className='me-1' />
-//                 Export Report
-//               </CButton>
-//             )}
-//           </div>
-//         </CCardHeader>
+// //             {canCreateExchangeLedger && (
+// //               <CButton 
+// //                 size="sm" 
+// //                 className="action-btn me-1"
+// //                 onClick={handleOpenExportModal}
+// //                 title="Export Excel Report"
+// //               >
+// //                 <FontAwesomeIcon icon={faFileExcel} className='me-1' />
+// //                 Export Report
+// //               </CButton>
+// //             )}
+// //           </div>
+// //         </CCardHeader>
         
-//         <CCardBody>
-//           <div className="d-flex justify-content-between mb-3">
-//             <div></div>
-//             <div className='d-flex'>
-//               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
-//               <CFormInput
-//                 type="text"
-//                 className="d-inline-block square-search"
-//                 value={searchTerm}
-//                 onChange={(e) => handleSearch(e.target.value)}
-//                 disabled={!canViewExchangeLedger}
-//               />
-//             </div>
-//           </div>
+// //         <CCardBody>
+// //           <div className="d-flex justify-content-between mb-3">
+// //             <div></div>
+// //             <div className='d-flex'>
+// //               <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+// //               <CFormInput
+// //                 type="text"
+// //                 className="d-inline-block square-search"
+// //                 value={searchTerm}
+// //                 onChange={(e) => handleSearch(e.target.value)}
+// //                 disabled={!canViewExchangeLedger}
+// //               />
+// //             </div>
+// //           </div>
           
-//           <div className="responsive-table-wrapper">
-//             <CTable striped bordered hover className='responsive-table'>
-//               <CTableHead>
-//                 <CTableRow>
-//                   {!isFiltered && <CTableHeaderCell></CTableHeaderCell>}
-//                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
-//                   <CTableHeaderCell>Exchange Broker Name</CTableHeaderCell>
-//                   <CTableHeaderCell>Mobile</CTableHeaderCell>
-//                   {!isFiltered && <CTableHeaderCell>Branch</CTableHeaderCell>}
-//                   <CTableHeaderCell>Total Bookings</CTableHeaderCell>
-//                   <CTableHeaderCell>Total Exchange Amount</CTableHeaderCell>
-//                   <CTableHeaderCell>Total Received</CTableHeaderCell>
-//                   <CTableHeaderCell>Total Payable</CTableHeaderCell>
-//                   <CTableHeaderCell>Opening Balance</CTableHeaderCell>
-//                   <CTableHeaderCell>Current Balance</CTableHeaderCell>
-//                   <CTableHeaderCell>Outstanding Amount</CTableHeaderCell>
-//                   <CTableHeaderCell>Receipts</CTableHeaderCell>
-//                   {showActionColumn && <CTableHeaderCell>Actions</CTableHeaderCell>}
-//                 </CTableRow>
-//               </CTableHead>
-//               <CTableBody>
-//                 {currentRecords.length === 0 ? (
-//                   <CTableRow>
-//                     <CTableDataCell colSpan={totalColumns + actionColumnIndex} className="text-center">
-//                       No ledger details available
-//                     </CTableDataCell>
-//                   </CTableRow>
-//                 ) : (
-//                   currentRecords.map((brokerData, index) => {
-//                     const brokerId = brokerData.broker._id;
-//                     const hasTransactions = transactionsFetched[brokerId] && transactionsData[brokerId]?.length > 0;
-//                     const isLoading = loadingTransactions[brokerId];
-//                     const transactions = transactionsData[brokerId] || [];
+// //           <div className="responsive-table-wrapper">
+// //             <CTable striped bordered hover className='responsive-table'>
+// //               <CTableHead>
+// //                 <CTableRow>
+// //                   {!isFiltered && <CTableHeaderCell></CTableHeaderCell>}
+// //                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+// //                   <CTableHeaderCell>Exchange Broker Name</CTableHeaderCell>
+// //                   <CTableHeaderCell>Mobile</CTableHeaderCell>
+// //                   {!isFiltered && <CTableHeaderCell>Branch</CTableHeaderCell>}
+// //                   <CTableHeaderCell>Total Bookings</CTableHeaderCell>
+// //                   <CTableHeaderCell>Total Exchange Amount</CTableHeaderCell>
+// //                   <CTableHeaderCell>Total Received</CTableHeaderCell>
+// //                   <CTableHeaderCell>Total Payable</CTableHeaderCell>
+// //                   <CTableHeaderCell>Opening Balance</CTableHeaderCell>
+// //                   <CTableHeaderCell>Current Balance</CTableHeaderCell>
+// //                   <CTableHeaderCell>Outstanding Amount</CTableHeaderCell>
+// //                   <CTableHeaderCell>Receipts</CTableHeaderCell>
+// //                   {showActionColumn && <CTableHeaderCell>Actions</CTableHeaderCell>}
+// //                 </CTableRow>
+// //               </CTableHead>
+// //               <CTableBody>
+// //                 {currentRecords.length === 0 ? (
+// //                   <CTableRow>
+// //                     <CTableDataCell colSpan={totalColumns + actionColumnIndex} className="text-center">
+// //                       No ledger details available
+// //                     </CTableDataCell>
+// //                   </CTableRow>
+// //                 ) : (
+// //                   currentRecords.map((brokerData, index) => {
+// //                     const brokerId = brokerData.broker._id;
+// //                     const hasTransactions = transactionsFetched[brokerId] && transactionsData[brokerId]?.length > 0;
+// //                     const isLoading = loadingTransactions[brokerId];
+// //                     const transactions = transactionsData[brokerId] || [];
                     
-//                // Sort transactions in DESCENDING order (newest first)
-// const sortedTransactions = [...transactions].sort((a, b) => {
-//   const dateA = new Date(a.date || a.createdAt || 0);
-//   const dateB = new Date(b.date || b.createdAt || 0);
-//   return dateB - dateA; // DESCENDING order (newest first)
-// });
+// //                // Sort transactions in DESCENDING order (newest first)
+// // const sortedTransactions = [...transactions].sort((a, b) => {
+// //   const dateA = new Date(a.date || a.createdAt || 0);
+// //   const dateB = new Date(b.date || b.createdAt || 0);
+// //   return dateB - dateA; // DESCENDING order (newest first)
+// // });
 
-// // In the dropdown mapping:
-// {sortedTransactions.map((transaction, txIndex) => {
-//   const transactionId = transaction._id;
-//   const transactionNumber = transaction.referenceNumber || 'N/A';
-//   const transactionAmount = transaction.amount || 0;
-//   const transactionDate = transaction.dateFormatted || 
-//                         new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+// // // In the dropdown mapping:
+// // {sortedTransactions.map((transaction, txIndex) => {
+// //   const transactionId = transaction._id;
+// //   const transactionNumber = transaction.referenceNumber || 'N/A';
+// //   const transactionAmount = transaction.amount || 0;
+// //   const transactionDate = transaction.dateFormatted || 
+// //                         new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
   
-//   // Log to verify the order
-//   console.log(`Receipt #${txIndex + 1}:`, {
-//     id: transactionId,
-//     date: transaction.date,
-//     formattedDate: transactionDate,
-//     amount: transactionAmount
-//   });
+// //   // Log to verify the order
+// //   console.log(`Receipt #${txIndex + 1}:`, {
+// //     id: transactionId,
+// //     date: transaction.date,
+// //     formattedDate: transactionDate,
+// //     amount: transactionAmount
+// //   });
   
-//   return (
-//     <CDropdownItem 
-//       key={transactionId || txIndex} 
-//       onClick={() => printBrokerReceipt(transactionId, brokerId, brokerData.branches[0]?.branchId)}
-//     >
-//       <div className="d-flex align-items-center">
-//         <CIcon icon={cilPrint} className="me-2" />
-//         <div>
-//           <div><strong>Receipt #{txIndex + 1}</strong></div>
-//           <small>
-//             ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
-//           </small>
-//         </div>
-//       </div>
-//     </CDropdownItem>
-//   );
-// })}
+// //   return (
+// //     <CDropdownItem 
+// //       key={transactionId || txIndex} 
+// //       onClick={() => printBrokerReceipt(transactionId, brokerId, brokerData.branches[0]?.branchId)}
+// //     >
+// //       <div className="d-flex align-items-center">
+// //         <CIcon icon={cilPrint} className="me-2" />
+// //         <div>
+// //           <div><strong>Receipt #{txIndex + 1}</strong></div>
+// //           <small>
+// //             ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
+// //           </small>
+// //         </div>
+// //       </div>
+// //     </CDropdownItem>
+// //   );
+// // })}
                     
-//                     return (
-//                       <React.Fragment key={brokerData.broker._id}>
-//                         <CTableRow className="broker-summary-row">
-//                           {!isFiltered && (
-//                             <CTableDataCell>
-//                               <CButton
-//                                 color="link"
-//                                 size="sm"
-//                                 onClick={() => toggleBrokerExpansion(brokerData.broker._id)}
-//                                 disabled={!canViewExchangeLedger}
-//                               >
-//                                 {expandedBrokers[brokerData.broker._id] ? '▼' : '►'}
-//                               </CButton>
-//                             </CTableDataCell>
-//                           )}
-//                           <CTableDataCell>{index + 1}</CTableDataCell>
-//                           <CTableDataCell>{brokerData.broker.name || 'N/A'}</CTableDataCell>
-//                           <CTableDataCell>{brokerData.broker.mobile || 'N/A'}</CTableDataCell>
-//                           {!isFiltered && <CTableDataCell>All Branches</CTableDataCell>}
-//                           <CTableDataCell>{brokerData.totalBookings || 0}</CTableDataCell>
-//                           <CTableDataCell>{brokerData.totalExchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                           <CTableDataCell>{brokerData.totalCredit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                           <CTableDataCell>{brokerData.totalDebit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                           <CTableDataCell>{brokerData.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                           <CTableDataCell>{brokerData.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                           <CTableDataCell>{brokerData.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                     return (
+// //                       <React.Fragment key={brokerData.broker._id}>
+// //                         <CTableRow className="broker-summary-row">
+// //                           {!isFiltered && (
+// //                             <CTableDataCell>
+// //                               <CButton
+// //                                 color="link"
+// //                                 size="sm"
+// //                                 onClick={() => toggleBrokerExpansion(brokerData.broker._id)}
+// //                                 disabled={!canViewExchangeLedger}
+// //                               >
+// //                                 {expandedBrokers[brokerData.broker._id] ? '▼' : '►'}
+// //                               </CButton>
+// //                             </CTableDataCell>
+// //                           )}
+// //                           <CTableDataCell>{index + 1}</CTableDataCell>
+// //                           <CTableDataCell>{brokerData.broker.name || 'N/A'}</CTableDataCell>
+// //                           <CTableDataCell>{brokerData.broker.mobile || 'N/A'}</CTableDataCell>
+// //                           {!isFiltered && <CTableDataCell>All Branches</CTableDataCell>}
+// //                           <CTableDataCell>{brokerData.totalBookings || 0}</CTableDataCell>
+// //                           <CTableDataCell>{brokerData.totalExchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                           <CTableDataCell>{brokerData.totalCredit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                           <CTableDataCell>{brokerData.totalDebit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                           <CTableDataCell>{brokerData.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                           <CTableDataCell>{brokerData.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                           <CTableDataCell>{brokerData.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                           
-//                           {/* Receipts Column - Only show for filtered view or expanded branches */}
-//                           <CTableDataCell>
-//                             {isFiltered ? (
-//                               // When filtered by branch, we can show receipts
-//                               isLoading ? (
-//                                 <CSpinner size="sm" color="info" />
-//                               ) : sortedTransactions.length > 0 ? (
-//                                 <CDropdown>
-//                                   <CDropdownToggle size="sm" color="info" variant="outline">
-//                                     {sortedTransactions.length} Receipt{sortedTransactions.length > 1 ? 's' : ''}
-//                                   </CDropdownToggle>
-//                                   <CDropdownMenu>
-//                                     {sortedTransactions.map((transaction, txIndex) => {
-//                                       const transactionId = transaction._id;
-//                                       const transactionNumber = transaction.referenceNumber || 'N/A';
-//                                       const transactionAmount = transaction.amount || 0;
-//                                       const transactionDate = transaction.dateFormatted || 
-//                                                             new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+// //                           {/* Receipts Column - Only show for filtered view or expanded branches */}
+// //                           <CTableDataCell>
+// //                             {isFiltered ? (
+// //                               // When filtered by branch, we can show receipts
+// //                               isLoading ? (
+// //                                 <CSpinner size="sm" color="info" />
+// //                               ) : sortedTransactions.length > 0 ? (
+// //                                 <CDropdown>
+// //                                   <CDropdownToggle size="sm" color="info" variant="outline">
+// //                                     {sortedTransactions.length} Receipt{sortedTransactions.length > 1 ? 's' : ''}
+// //                                   </CDropdownToggle>
+// //                                   <CDropdownMenu>
+// //                                     {sortedTransactions.map((transaction, txIndex) => {
+// //                                       const transactionId = transaction._id;
+// //                                       const transactionNumber = transaction.referenceNumber || 'N/A';
+// //                                       const transactionAmount = transaction.amount || 0;
+// //                                       const transactionDate = transaction.dateFormatted || 
+// //                                                             new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
                                       
-//                                       return (
-//                                         <CDropdownItem 
-//                                           key={transactionId || txIndex} 
-//                                           onClick={() => printBrokerReceipt(transactionId, brokerId, brokerData.branches[0]?.branchId)}
-//                                         >
-//                                           <div className="d-flex align-items-center">
-//                                             <CIcon icon={cilPrint} className="me-2" />
-//                                             <div>
-//                                               <div><strong>Receipt #{txIndex + 1}</strong></div>
-//                                               <small>
-//                                                 ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
-//                                               </small>
-//                                             </div>
-//                                           </div>
-//                                         </CDropdownItem>
-//                                       );
-//                                     })}
-//                                   </CDropdownMenu>
-//                                 </CDropdown>
-//                               ) : transactionsFetched[brokerId] ? (
-//                                 <span className="text-muted">No receipts</span>
-//                               ) : (
-//                                 brokerData.branches && brokerData.branches.length > 0 ? (
-//                                   <CButton
-//                                     size="sm"
-//                                     color="light"
-//                                     onClick={() => fetchTransactionsForBroker(brokerId, brokerData.branches[0].branchId)}
-//                                     disabled={isLoading}
-//                                   >
-//                                     <CIcon icon={cilCloudDownload} className="me-1" />
-//                                     Load Receipts
-//                                   </CButton>
-//                                 ) : (
-//                                   <span className="text-muted">No branch data</span>
-//                                 )
-//                               )
-//                             ) : (
-//                               // When showing all branches, show message to expand
-//                               <span className="text-muted small">Expand to view receipts</span>
-//                             )}
-//                           </CTableDataCell>
+// //                                       return (
+// //                                         <CDropdownItem 
+// //                                           key={transactionId || txIndex} 
+// //                                           onClick={() => printBrokerReceipt(transactionId, brokerId, brokerData.branches[0]?.branchId)}
+// //                                         >
+// //                                           <div className="d-flex align-items-center">
+// //                                             <CIcon icon={cilPrint} className="me-2" />
+// //                                             <div>
+// //                                               <div><strong>Receipt #{txIndex + 1}</strong></div>
+// //                                               <small>
+// //                                                 ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
+// //                                               </small>
+// //                                             </div>
+// //                                           </div>
+// //                                         </CDropdownItem>
+// //                                       );
+// //                                     })}
+// //                                   </CDropdownMenu>
+// //                                 </CDropdown>
+// //                               ) : transactionsFetched[brokerId] ? (
+// //                                 <span className="text-muted">No receipts</span>
+// //                               ) : (
+// //                                 brokerData.branches && brokerData.branches.length > 0 ? (
+// //                                   <CButton
+// //                                     size="sm"
+// //                                     color="light"
+// //                                     onClick={() => fetchTransactionsForBroker(brokerId, brokerData.branches[0].branchId)}
+// //                                     disabled={isLoading}
+// //                                   >
+// //                                     <CIcon icon={cilCloudDownload} className="me-1" />
+// //                                     Load Receipts
+// //                                   </CButton>
+// //                                 ) : (
+// //                                   <span className="text-muted">No branch data</span>
+// //                                 )
+// //                               )
+// //                             ) : (
+// //                               // When showing all branches, show message to expand
+// //                               <span className="text-muted small">Expand to view receipts</span>
+// //                             )}
+// //                           </CTableDataCell>
                           
-//                           {showActionColumn && (
-//                             <CTableDataCell>
-//                               <CButton
-//                                 size="sm"
-//                                 className='option-button btn-sm'
-//                                 onClick={(event) => handleClick(event, brokerData.broker._id, brokerData)}
-//                                 disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
-//                               >
-//                                 <CIcon icon={cilSettings} />
-//                                 Options
-//                               </CButton>
-//                               <Menu
-//                                 id={`action-menu-${brokerData.broker._id}`}
-//                                 anchorEl={anchorEl}
-//                                 open={menuId === brokerData.broker._id}
-//                                 onClose={handleClose}
-//                               >
-//                                 {canCreateExchangeLedger && (
-//                                   <MenuItem onClick={() => handleAddClick(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
-//                                     <CIcon icon={cilPlus} className="me-2" />
-//                                     Add Payment
-//                                   </MenuItem>
-//                                 )}
-//                                 {canViewExchangeLedger && (
-//                                   <MenuItem
-//                                     onClick={() => handleViewLedger(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}
-//                                   >
-//                                     View Ledger
-//                                   </MenuItem>
-//                                 )}
-//                               </Menu>
-//                             </CTableDataCell>
-//                           )}
-//                         </CTableRow>
+// //                           {showActionColumn && (
+// //                             <CTableDataCell>
+// //                               <CButton
+// //                                 size="sm"
+// //                                 className='option-button btn-sm'
+// //                                 onClick={(event) => handleClick(event, brokerData.broker._id, brokerData)}
+// //                                 disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
+// //                               >
+// //                                 <CIcon icon={cilSettings} />
+// //                                 Options
+// //                               </CButton>
+// //                               <Menu
+// //                                 id={`action-menu-${brokerData.broker._id}`}
+// //                                 anchorEl={anchorEl}
+// //                                 open={menuId === brokerData.broker._id}
+// //                                 onClose={handleClose}
+// //                               >
+// //                                 {canCreateExchangeLedger && (
+// //                                   <MenuItem onClick={() => handleAddClick(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
+// //                                     <CIcon icon={cilPlus} className="me-2" />
+// //                                     Add Payment
+// //                                   </MenuItem>
+// //                                 )}
+// //                                 {canViewExchangeLedger && (
+// //                                   <MenuItem
+// //                                     onClick={() => handleViewLedger(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}
+// //                                   >
+// //                                     View Ledger
+// //                                   </MenuItem>
+// //                                 )}
+// //                               </Menu>
+// //                             </CTableDataCell>
+// //                           )}
+// //                         </CTableRow>
                         
-//                         {!isFiltered &&
-//                           expandedBrokers[brokerData.broker._id] &&
-//                           brokerData.branches.map((branch, branchIndex) => {
-//                             const branchKey = `${brokerId}-${branch.branchId}`;
-//                             const hasBranchTransactions = transactionsFetched[branchKey] && transactionsData[branchKey]?.length > 0;
-//                             const isBranchLoading = loadingTransactions[branchKey];
-//                             const branchTransactions = transactionsData[branchKey] || [];
+// //                         {!isFiltered &&
+// //                           expandedBrokers[brokerData.broker._id] &&
+// //                           brokerData.branches.map((branch, branchIndex) => {
+// //                             const branchKey = `${brokerId}-${branch.branchId}`;
+// //                             const hasBranchTransactions = transactionsFetched[branchKey] && transactionsData[branchKey]?.length > 0;
+// //                             const isBranchLoading = loadingTransactions[branchKey];
+// //                             const branchTransactions = transactionsData[branchKey] || [];
                             
-//                          // Sort branch transactions in DESCENDING order (newest first)
-// const sortedBranchTransactions = [...branchTransactions].sort((a, b) => {
-//   const dateA = new Date(a.date || a.createdAt || 0);
-//   const dateB = new Date(b.date || b.createdAt || 0);
-//   return dateB - dateA; // DESCENDING order (newest first)
-// });
+// //                          // Sort branch transactions in DESCENDING order (newest first)
+// // const sortedBranchTransactions = [...branchTransactions].sort((a, b) => {
+// //   const dateA = new Date(a.date || a.createdAt || 0);
+// //   const dateB = new Date(b.date || b.createdAt || 0);
+// //   return dateB - dateA; // DESCENDING order (newest first)
+// // });
 
-// // In the branch dropdown mapping:
-// {sortedBranchTransactions.map((transaction, txIndex) => {
-//   const transactionId = transaction._id;
-//   const transactionNumber = transaction.referenceNumber || 'N/A';
-//   const transactionAmount = transaction.amount || 0;
-//   const transactionDate = transaction.dateFormatted || 
-//                         new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+// // // In the branch dropdown mapping:
+// // {sortedBranchTransactions.map((transaction, txIndex) => {
+// //   const transactionId = transaction._id;
+// //   const transactionNumber = transaction.referenceNumber || 'N/A';
+// //   const transactionAmount = transaction.amount || 0;
+// //   const transactionDate = transaction.dateFormatted || 
+// //                         new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
   
-//   // Log to verify the order
-//   console.log(`Branch Receipt #${txIndex + 1}:`, {
-//     id: transactionId,
-//     date: transaction.date,
-//     formattedDate: transactionDate,
-//     amount: transactionAmount
-//   });
+// //   // Log to verify the order
+// //   console.log(`Branch Receipt #${txIndex + 1}:`, {
+// //     id: transactionId,
+// //     date: transaction.date,
+// //     formattedDate: transactionDate,
+// //     amount: transactionAmount
+// //   });
   
-//   return (
-//     <CDropdownItem 
-//       key={transactionId || txIndex} 
-//       onClick={() => printBrokerReceipt(transactionId, brokerId, branch.branchId)}
-//     >
-//       <div className="d-flex align-items-center">
-//         <CIcon icon={cilPrint} className="me-2" />
-//         <div>
-//           <div><strong>Receipt #{txIndex + 1}</strong></div>
-//           <small>
-//             ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
-//           </small>
-//         </div>
-//       </div>
-//     </CDropdownItem>
-//   );
-// })}
+// //   return (
+// //     <CDropdownItem 
+// //       key={transactionId || txIndex} 
+// //       onClick={() => printBrokerReceipt(transactionId, brokerId, branch.branchId)}
+// //     >
+// //       <div className="d-flex align-items-center">
+// //         <CIcon icon={cilPrint} className="me-2" />
+// //         <div>
+// //           <div><strong>Receipt #{txIndex + 1}</strong></div>
+// //           <small>
+// //             ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
+// //           </small>
+// //         </div>
+// //       </div>
+// //     </CDropdownItem>
+// //   );
+// // })}
                             
-//                             return (
-//                               <CTableRow key={`${brokerData.broker._id}-${branch.branchId}`} className="branch-detail-row">
-//                                 <CTableDataCell></CTableDataCell>
-//                                 <CTableDataCell></CTableDataCell>
-//                                 <CTableDataCell></CTableDataCell>
-//                                 <CTableDataCell></CTableDataCell>
-//                                 <CTableDataCell>{branch.name || 'N/A'}</CTableDataCell>
-//                                 <CTableDataCell>{branch.bookings || 0}</CTableDataCell>
-//                                 <CTableDataCell>{branch.exchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                                 <CTableDataCell>{branch.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                                 <CTableDataCell>{branch.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                                 <CTableDataCell>{branch.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                                 <CTableDataCell>{branch.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
-//                                 <CTableDataCell>{branch.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                             return (
+// //                               <CTableRow key={`${brokerData.broker._id}-${branch.branchId}`} className="branch-detail-row">
+// //                                 <CTableDataCell></CTableDataCell>
+// //                                 <CTableDataCell></CTableDataCell>
+// //                                 <CTableDataCell></CTableDataCell>
+// //                                 <CTableDataCell></CTableDataCell>
+// //                                 <CTableDataCell>{branch.name || 'N/A'}</CTableDataCell>
+// //                                 <CTableDataCell>{branch.bookings || 0}</CTableDataCell>
+// //                                 <CTableDataCell>{branch.exchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                                 <CTableDataCell>{branch.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                                 <CTableDataCell>{branch.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                                 <CTableDataCell>{branch.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                                 <CTableDataCell>{branch.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+// //                                 <CTableDataCell>{branch.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
                                 
-//                                 {/* Receipts Column for Branch */}
-//                                 <CTableDataCell>
-//                                   {isBranchLoading ? (
-//                                     <CSpinner size="sm" color="info" />
-//                                   ) : sortedBranchTransactions.length > 0 ? (
-//                                     <CDropdown>
-//                                       <CDropdownToggle size="sm" color="info" variant="outline">
-//                                         {sortedBranchTransactions.length} Receipt{sortedBranchTransactions.length > 1 ? 's' : ''}
-//                                       </CDropdownToggle>
-//                                       <CDropdownMenu>
-//                                         {sortedBranchTransactions.map((transaction, txIndex) => {
-//                                           const transactionId = transaction._id;
-//                                           const transactionNumber = transaction.referenceNumber || 'N/A';
-//                                           const transactionAmount = transaction.amount || 0;
-//                                           const transactionDate = transaction.dateFormatted || 
-//                                                                 new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+// //                                 {/* Receipts Column for Branch */}
+// //                                 <CTableDataCell>
+// //                                   {isBranchLoading ? (
+// //                                     <CSpinner size="sm" color="info" />
+// //                                   ) : sortedBranchTransactions.length > 0 ? (
+// //                                     <CDropdown>
+// //                                       <CDropdownToggle size="sm" color="info" variant="outline">
+// //                                         {sortedBranchTransactions.length} Receipt{sortedBranchTransactions.length > 1 ? 's' : ''}
+// //                                       </CDropdownToggle>
+// //                                       <CDropdownMenu>
+// //                                         {sortedBranchTransactions.map((transaction, txIndex) => {
+// //                                           const transactionId = transaction._id;
+// //                                           const transactionNumber = transaction.referenceNumber || 'N/A';
+// //                                           const transactionAmount = transaction.amount || 0;
+// //                                           const transactionDate = transaction.dateFormatted || 
+// //                                                                 new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
                                           
-//                                           return (
-//                                             <CDropdownItem 
-//                                               key={transactionId || txIndex} 
-//                                               onClick={() => printBrokerReceipt(transactionId, brokerId, branch.branchId)}
-//                                             >
-//                                               <div className="d-flex align-items-center">
-//                                                 <CIcon icon={cilPrint} className="me-2" />
-//                                                 <div>
-//                                                   <div><strong>Receipt #{txIndex + 1}</strong></div>
-//                                                   <small>
-//                                                     ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
-//                                                   </small>
-//                                                 </div>
-//                                               </div>
-//                                             </CDropdownItem>
-//                                           );
-//                                         })}
-//                                       </CDropdownMenu>
-//                                     </CDropdown>
-//                                   ) : transactionsFetched[branchKey] ? (
-//                                     <span className="text-muted">No receipts</span>
-//                                   ) : (
-//                                     <CButton
-//                                       size="sm"
-//                                       color="light"
-//                                       onClick={() => fetchTransactionsForBroker(brokerId, branch.branchId)}
-//                                       disabled={isBranchLoading}
-//                                     >
-//                                       <CIcon icon={cilCloudDownload} className="me-1" />
-//                                       Load Receipts
-//                                     </CButton>
-//                                   )}
-//                                 </CTableDataCell>
+// //                                           return (
+// //                                             <CDropdownItem 
+// //                                               key={transactionId || txIndex} 
+// //                                               onClick={() => printBrokerReceipt(transactionId, brokerId, branch.branchId)}
+// //                                             >
+// //                                               <div className="d-flex align-items-center">
+// //                                                 <CIcon icon={cilPrint} className="me-2" />
+// //                                                 <div>
+// //                                                   <div><strong>Receipt #{txIndex + 1}</strong></div>
+// //                                                   <small>
+// //                                                     ₹{transactionAmount.toLocaleString('en-IN')} - {transactionNumber} - {transactionDate}
+// //                                                   </small>
+// //                                                 </div>
+// //                                               </div>
+// //                                             </CDropdownItem>
+// //                                           );
+// //                                         })}
+// //                                       </CDropdownMenu>
+// //                                     </CDropdown>
+// //                                   ) : transactionsFetched[branchKey] ? (
+// //                                     <span className="text-muted">No receipts</span>
+// //                                   ) : (
+// //                                     <CButton
+// //                                       size="sm"
+// //                                       color="light"
+// //                                       onClick={() => fetchTransactionsForBroker(brokerId, branch.branchId)}
+// //                                       disabled={isBranchLoading}
+// //                                     >
+// //                                       <CIcon icon={cilCloudDownload} className="me-1" />
+// //                                       Load Receipts
+// //                                     </CButton>
+// //                                   )}
+// //                                 </CTableDataCell>
                                 
-//                                 {showActionColumn && (
-//                                   <CTableDataCell>
-//                                     <CButton
-//                                       size="sm"
-//                                       className='option-button btn-sm'
-//                                       onClick={(event) =>
-//                                         handleClick(event, `${brokerData.broker._id}-${branch.branchId}`, brokerData, branch.branchId)
-//                                       }
-//                                       disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
-//                                     >
-//                                       <CIcon icon={cilSettings} />
-//                                       Options
-//                                     </CButton>
-//                                     <Menu
-//                                       id={`action-menu-${brokerData.broker._id}-${branch.branchId}`}
-//                                       anchorEl={anchorEl}
-//                                       open={menuId === `${brokerData.broker._id}-${branch.branchId}`}
-//                                       onClose={handleClose}
-//                                     >
-//                                       {canCreateExchangeLedger && (
-//                                         <MenuItem onClick={() => handleAddClick(brokerData, branch.branchId)}>
-//                                           <CIcon icon={cilPlus} className="me-2" />
-//                                           Add Payment
-//                                         </MenuItem>
-//                                       )}
-//                                       {canViewExchangeLedger && (
-//                                         <MenuItem onClick={() => handleViewLedger(brokerData, branch.branchId)}>
-//                                           View Ledger
-//                                         </MenuItem>
-//                                       )}
-//                                     </Menu>
-//                                   </CTableDataCell>
-//                                 )}
-//                               </CTableRow>
-//                             );
-//                           })}
-//                       </React.Fragment>
-//                     );
-//                   })
-//                 )}
-//               </CTableBody>
-//             </CTable>
-//           </div>
-//         </CCardBody>
-//       </CCard>
+// //                                 {showActionColumn && (
+// //                                   <CTableDataCell>
+// //                                     <CButton
+// //                                       size="sm"
+// //                                       className='option-button btn-sm'
+// //                                       onClick={(event) =>
+// //                                         handleClick(event, `${brokerData.broker._id}-${branch.branchId}`, brokerData, branch.branchId)
+// //                                       }
+// //                                       disabled={!canCreateExchangeLedger && !canViewExchangeLedger}
+// //                                     >
+// //                                       <CIcon icon={cilSettings} />
+// //                                       Options
+// //                                     </CButton>
+// //                                     <Menu
+// //                                       id={`action-menu-${brokerData.broker._id}-${branch.branchId}`}
+// //                                       anchorEl={anchorEl}
+// //                                       open={menuId === `${brokerData.broker._id}-${branch.branchId}`}
+// //                                       onClose={handleClose}
+// //                                     >
+// //                                       {canCreateExchangeLedger && (
+// //                                         <MenuItem onClick={() => handleAddClick(brokerData, branch.branchId)}>
+// //                                           <CIcon icon={cilPlus} className="me-2" />
+// //                                           Add Payment
+// //                                         </MenuItem>
+// //                                       )}
+// //                                       {canViewExchangeLedger && (
+// //                                         <MenuItem onClick={() => handleViewLedger(brokerData, branch.branchId)}>
+// //                                           View Ledger
+// //                                         </MenuItem>
+// //                                       )}
+// //                                     </Menu>
+// //                                   </CTableDataCell>
+// //                                 )}
+// //                               </CTableRow>
+// //                             );
+// //                           })}
+// //                       </React.Fragment>
+// //                     );
+// //                   })
+// //                 )}
+// //               </CTableBody>
+// //             </CTable>
+// //           </div>
+// //         </CCardBody>
+// //       </CCard>
 
-//       <CModal alignment="center" visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
-//         <CModalHeader>
-//           <CModalTitle>Search</CModalTitle>
-//         </CModalHeader>
-//         <CModalBody>
-//           <div className="mb-3">
-//             <CFormLabel>Select Branch</CFormLabel>
-//             <CFormSelect 
-//               value={selectedBranch} 
-//               onChange={(e) => setSelectedBranch(e.target.value)}
-//               disabled={!canViewExchangeLedger}
-//             >
-//               <option value="ALL">All Branches</option>
+// //       <CModal alignment="center" visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
+// //         <CModalHeader>
+// //           <CModalTitle>Search</CModalTitle>
+// //         </CModalHeader>
+// //         <CModalBody>
+// //           <div className="mb-3">
+// //             <CFormLabel>Select Branch</CFormLabel>
+// //             <CFormSelect 
+// //               value={selectedBranch} 
+// //               onChange={(e) => setSelectedBranch(e.target.value)}
+// //               disabled={!canViewExchangeLedger}
+// //             >
+// //               <option value="ALL">All Branches</option>
              
-//               {branches.map((branch) => (
-//                 <option key={branch._id} value={branch._id}>
-//                   {branch.name || 'N/A'}
-//                 </option>
-//               ))}
-//             </CFormSelect>
-//           </div>
-//         </CModalBody>
-//         <CModalFooter>
-//           <CButton 
-//             color="primary" 
-//             onClick={handleBranchFilter}
-//             disabled={!canViewExchangeLedger}
-//           >
-//             Search
-//           </CButton>
-//         </CModalFooter>
-//       </CModal>
+// //               {branches.map((branch) => (
+// //                 <option key={branch._id} value={branch._id}>
+// //                   {branch.name || 'N/A'}
+// //                 </option>
+// //               ))}
+// //             </CFormSelect>
+// //           </div>
+// //         </CModalBody>
+// //         <CModalFooter>
+// //           <CButton 
+// //             color="primary" 
+// //             onClick={handleBranchFilter}
+// //             disabled={!canViewExchangeLedger}
+// //           >
+// //             Search
+// //           </CButton>
+// //         </CModalFooter>
+// //       </CModal>
       
-//       {/* Export Report Modal */}
-//       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal} size="lg">
-//         <CModalHeader>
-//           <CModalTitle>
-//             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
-//             Export Brokers Report
-//           </CModalTitle>
-//         </CModalHeader>
-//         <CModalBody>
-//           {exportError && (
-//             <CAlert color="warning" className="mb-3">
-//               {exportError}
-//             </CAlert>
-//           )}
+// //       {/* Export Report Modal */}
+// //       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal} size="lg">
+// //         <CModalHeader>
+// //           <CModalTitle>
+// //             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
+// //             Export Brokers Report
+// //           </CModalTitle>
+// //         </CModalHeader>
+// //         <CModalBody>
+// //           {exportError && (
+// //             <CAlert color="warning" className="mb-3">
+// //               {exportError}
+// //             </CAlert>
+// //           )}
           
-//           <LocalizationProvider 
-//             dateAdapter={AdapterDateFns} 
-//             adapterLocale={enIN}
-//           >
-//             <div className="mb-3">
-//               <CFormLabel>Select Branch</CFormLabel>
-//               <CFormSelect 
-//                 value={exportBranchId} 
-//                 onChange={(e) => {
-//                   setExportBranchId(e.target.value);
-//                   setExportError('');
-//                 }}
-//                 disabled={!canCreateExchangeLedger}
-//               >
-//                 <option value="">-- Select Branch --</option>
-//                 <option value="ALL">All Branches</option>
-//                 {branches.map((branch) => (
-//                   <option key={branch._id} value={branch._id}>
-//                     {branch.name || 'N/A'}
-//                   </option>
-//                 ))}
-//               </CFormSelect>
-//             </div>
+// //           <LocalizationProvider 
+// //             dateAdapter={AdapterDateFns} 
+// //             adapterLocale={enIN}
+// //           >
+// //             <div className="mb-3">
+// //               <CFormLabel>Select Branch</CFormLabel>
+// //               <CFormSelect 
+// //                 value={exportBranchId} 
+// //                 onChange={(e) => {
+// //                   setExportBranchId(e.target.value);
+// //                   setExportError('');
+// //                 }}
+// //                 disabled={!canCreateExchangeLedger}
+// //               >
+// //                 <option value="">-- Select Branch --</option>
+// //                 <option value="ALL">All Branches</option>
+// //                 {branches.map((branch) => (
+// //                   <option key={branch._id} value={branch._id}>
+// //                     {branch.name || 'N/A'}
+// //                   </option>
+// //                 ))}
+// //               </CFormSelect>
+// //             </div>
             
-//             <div className="mb-3">
-//               <DatePicker
-//                 label="Start Date"
-//                 value={exportStartDate}
-//                 onChange={(newValue) => {
-//                   setExportStartDate(newValue);
-//                   setExportError('');
-//                 }}
-//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-//                 inputFormat="dd/MM/yyyy"
-//                 mask="__/__/____"
-//                 views={['day', 'month', 'year']}
-//                 disabled={!canCreateExchangeLedger}
-//               />
-//             </div>
-//             <div className="mb-3">
-//               <DatePicker
-//                 label="End Date"
-//                 value={exportEndDate}
-//                 onChange={(newValue) => {
-//                   setExportEndDate(newValue);
-//                   setExportError('');
-//                 }}
-//                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
-//                 inputFormat="dd/MM/yyyy"
-//                 mask="__/__/____"
-//                 minDate={exportStartDate}
-//                 views={['day', 'month', 'year']}
-//                 disabled={!canCreateExchangeLedger}
-//               />
-//             </div>
-//           </LocalizationProvider>
-//         </CModalBody>
-//         <CModalFooter>
-//           <CButton color="secondary" onClick={handleCloseExportModal}>
-//             Cancel
-//           </CButton>
-//           <CButton 
-//             className="submit-button"
-//             onClick={handleExcelExport}
-//             disabled={!exportStartDate || !exportEndDate || !exportBranchId || !canCreateExchangeLedger || exportLoading}
-//           >
-//             {exportLoading ? (
-//               <>
-//                 <CSpinner size="sm" className="me-2" />
-//                 Exporting...
-//               </>
-//             ) : 'Export Excel'}
-//           </CButton>
-//         </CModalFooter>
-//       </CModal>
+// //             <div className="mb-3">
+// //               <DatePicker
+// //                 label="Start Date"
+// //                 value={exportStartDate}
+// //                 onChange={(newValue) => {
+// //                   setExportStartDate(newValue);
+// //                   setExportError('');
+// //                 }}
+// //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+// //                 inputFormat="dd/MM/yyyy"
+// //                 mask="__/__/____"
+// //                 views={['day', 'month', 'year']}
+// //                 disabled={!canCreateExchangeLedger}
+// //               />
+// //             </div>
+// //             <div className="mb-3">
+// //               <DatePicker
+// //                 label="End Date"
+// //                 value={exportEndDate}
+// //                 onChange={(newValue) => {
+// //                   setExportEndDate(newValue);
+// //                   setExportError('');
+// //                 }}
+// //                 renderInput={(params) => <TextField {...params} fullWidth size="small" />}
+// //                 inputFormat="dd/MM/yyyy"
+// //                 mask="__/__/____"
+// //                 minDate={exportStartDate}
+// //                 views={['day', 'month', 'year']}
+// //                 disabled={!canCreateExchangeLedger}
+// //               />
+// //             </div>
+// //           </LocalizationProvider>
+// //         </CModalBody>
+// //         <CModalFooter>
+// //           <CButton color="secondary" onClick={handleCloseExportModal}>
+// //             Cancel
+// //           </CButton>
+// //           <CButton 
+// //             className="submit-button"
+// //             onClick={handleExcelExport}
+// //             disabled={!exportStartDate || !exportEndDate || !exportBranchId || !canCreateExchangeLedger || exportLoading}
+// //           >
+// //             {exportLoading ? (
+// //               <>
+// //                 <CSpinner size="sm" className="me-2" />
+// //                 Exporting...
+// //               </>
+// //             ) : 'Export Excel'}
+// //           </CButton>
+// //         </CModalFooter>
+// //       </CModal>
       
-//       <ExchangeLedgerModel 
-//         show={showModal} 
-//         onClose={() => setShowModal(false)} 
-//         brokerData={selectedledger} 
-//         refreshData={fetchData}
-//         onPaymentSaved={handlePaymentSaved}
-//         canCreateExchangeLedger={canCreateExchangeLedger}
-//         onPaymentSuccess={(receiptId, brokerId, branchId) => {
-//           if (receiptId && brokerId && branchId) {
-//             setTimeout(() => {
-//               printBrokerReceipt(receiptId, brokerId, branchId);
-//             }, 500);
-//           }
-//         }}
-//       />
-//     </div>
-//   );
-// };
+// //       <ExchangeLedgerModel 
+// //         show={showModal} 
+// //         onClose={() => setShowModal(false)} 
+// //         brokerData={selectedledger} 
+// //         refreshData={fetchData}
+// //         onPaymentSaved={handlePaymentSaved}
+// //         canCreateExchangeLedger={canCreateExchangeLedger}
+// //         onPaymentSuccess={(receiptId, brokerId, branchId) => {
+// //           if (receiptId && brokerId && branchId) {
+// //             setTimeout(() => {
+// //               printBrokerReceipt(receiptId, brokerId, branchId);
+// //             }, 500);
+// //           }
+// //         }}
+// //       />
+// //     </div>
+// //   );
+// // };
 
-// export default ExchangeLedger;
+// // export default ExchangeLedger;
 
 
 
@@ -8016,3 +8016,2092 @@ Date: ${receivedDate}`;
 };
 
 export default ExchangeLedger;
+
+
+
+
+
+
+// import '../../css/table.css';
+// import {
+//   React,
+//   useState,
+//   useEffect,
+//   Menu,
+//   MenuItem,
+//   useTableFilter,
+//   usePagination,
+//   axiosInstance,
+//   showError,
+//   showSuccess
+// } from '../../utils/tableImports';
+// import tvsLogo from '../../assets/images/logo.png';
+// import '../../css/invoice.css';
+// import config from '../../config';
+// import ExchangeLedgerModel from './ExchangeLedgerModel';
+// import {
+//   CCard,
+//   CCardBody,
+//   CCardHeader,
+//   CFormInput,
+//   CFormLabel,
+//   CTable,
+//   CTableBody,
+//   CTableHead,
+//   CTableHeaderCell,
+//   CTableRow,
+//   CTableDataCell,
+//   CSpinner,
+//   CModal,
+//   CModalHeader,
+//   CModalTitle,
+//   CModalBody,
+//   CModalFooter,
+//   CButton,
+//   CFormSelect,
+//   CAlert,
+//   CDropdown,
+//   CDropdownToggle,
+//   CDropdownMenu,
+//   CDropdownItem,
+//   CPagination,
+//   CPaginationItem,
+//   CNav,
+//   CNavItem,
+//   CNavLink,
+//   CTabContent,
+//   CTabPane,
+//   CRow,
+//   CCol,
+//   CForm
+// } from '@coreui/react';
+// import CIcon from '@coreui/icons-react';
+// import { 
+//   cilPlus, cilSettings, cilSearch, cilZoomOut, cilPrint, 
+//   cilCloudDownload, cilChevronLeft, cilChevronRight, cilFile,
+//   cilCash
+// } from '@coreui/icons';
+// import { useAuth } from '../../context/AuthContext';
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// import TextField from '@mui/material/TextField';
+// import Swal from 'sweetalert2';
+// import QRCode from 'qrcode';
+
+// // Import date-fns locale for Indian date format
+// import { enIN } from 'date-fns/locale';
+
+// // Import permission utilities
+// import { 
+//   MODULES, 
+//   PAGES,
+//   canViewPage,
+//   canCreateInPage,
+//   canUpdateInPage,
+//   canDeleteInPage 
+// } from '../../utils/modulePermissions';
+// import { useCallback } from 'react';
+
+// // Pagination constants
+// const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+// const DEFAULT_LIMIT = 10;
+
+// // Tab constants
+// const TAB = {
+//   BROKER_LEDGER: 0,
+//   BROKER_PAYMENT: 1
+// };
+
+// const ExchangeLedger = () => {
+//   const [anchorEl, setAnchorEl] = useState(null);
+//   const [menuId, setMenuId] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const [showModal, setShowModal] = useState(false);
+//   const [selectedledger, setSelectedledger] = useState(null);
+//   const [groupedData, setGroupedData] = useState([]);
+//   const [expandedBrokers, setExpandedBrokers] = useState({});
+//   const [showFilterModal, setShowFilterModal] = useState(false);
+//   const [branches, setBranches] = useState([]);
+//   const [selectedBranch, setSelectedBranch] = useState('');
+//   const [isFiltered, setIsFiltered] = useState(false);
+//   const [selectedBranchName, setSelectedBranchName] = useState('');
+//   const [successMessage, setSuccessMessage] = useState('');
+//   const [activeTab, setActiveTab] = useState(TAB.BROKER_LEDGER);
+  
+//   // Broker Payment Tab States
+//   const [brokers, setBrokers] = useState([]);
+//   const [selectedBroker, setSelectedBroker] = useState('');
+//   const [brokerBranches, setBrokerBranches] = useState([]);
+//   const [selectedBrokerBranch, setSelectedBrokerBranch] = useState('');
+//   const [exchangeBookings, setExchangeBookings] = useState([]);
+//   const [receipts, setReceipts] = useState([]);
+//   const [selectedReceipt, setSelectedReceipt] = useState('');
+//   const [selectedReceiptData, setSelectedReceiptData] = useState(null);
+//   const [bookingsLoading, setBookingsLoading] = useState(false);
+//   const [receiptsLoading, setReceiptsLoading] = useState(false);
+//   const [selectedBrokerName, setSelectedBrokerName] = useState('');
+//   const [onAccountBalance, setOnAccountBalance] = useState(0);
+//   const [onAccountTotal, setOnAccountTotal] = useState(0);
+  
+//   // Payment Allocation Modal States
+//   const [allocationModalVisible, setAllocationModalVisible] = useState(false);
+//   const [selectedBookingForAllocation, setSelectedBookingForAllocation] = useState(null);
+//   const [allocationAmount, setAllocationAmount] = useState('');
+//   const [allocationLoading, setAllocationLoading] = useState(false);
+//   const [allocationError, setAllocationError] = useState('');
+  
+//   // Add ref for mount status
+//   const isMounted = React.useRef(true);
+  
+//   // Debounce timer for search
+//   const searchTimer = React.useRef(null);
+  
+//   // Pagination states
+//   const [pagination, setPagination] = useState({
+//     docs: [],
+//     total: 0,
+//     pages: 1,
+//     currentPage: 1,
+//     limit: DEFAULT_LIMIT,
+//     loading: false,
+//     search: '',
+//     totalRecords: 0,
+//     hasNext: false,
+//     hasPrev: false
+//   });
+
+//   // ============ RECEIPTS FETCHING STATES ============
+//   const [transactionsData, setTransactionsData] = useState({});
+//   const [loadingTransactions, setLoadingTransactions] = useState({});
+//   const [transactionsFetched, setTransactionsFetched] = useState({});
+  
+//   // Export modal state
+//   const [showExportModal, setShowExportModal] = useState(false);
+//   const [exportStartDate, setExportStartDate] = useState(null);
+//   const [exportEndDate, setExportEndDate] = useState(null);
+//   const [exportBranchId, setExportBranchId] = useState('');
+//   const [exportError, setExportError] = useState('');
+//   const [exportLoading, setExportLoading] = useState(false);
+
+//   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
+//   const { permissions } = useAuth();
+
+//   // Page-level permission checks
+//   const canViewExchangeLedger = canViewPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+//   const canCreateExchangeLedger = canCreateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+//   const canUpdateExchangeLedger = canUpdateInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+//   const canDeleteExchangeLedger = canDeleteInPage(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.EXCHANGE_LEDGER);
+  
+//   const showActionColumn = canCreateExchangeLedger || canViewExchangeLedger;
+
+//   // Format date to DD-MM-YYYY for display
+//   const formatDateDDMMYYYY = (date) => {
+//     if (!date) return '';
+//     const d = new Date(date);
+//     const day = String(d.getDate()).padStart(2, '0');
+//     const month = String(d.getMonth() + 1).padStart(2, '0');
+//     const year = d.getFullYear();
+//     return `${day}-${month}-${year}`;
+//   };
+
+//   // Format date to YYYY-MM-DD for API
+//   const formatDateForAPI = (date) => {
+//     if (!date) return '';
+//     const year = date.getFullYear();
+//     const month = String(date.getMonth() + 1).padStart(2, '0');
+//     const day = String(date.getDate()).padStart(2, '0');
+//     return `${year}-${month}-${day}`;
+//   };
+
+//   useEffect(() => {
+//     isMounted.current = true;
+    
+//     if (!canViewExchangeLedger) {
+//       return;
+//     }
+    
+//     fetchData(1, DEFAULT_LIMIT, '');
+//     fetchBranches();
+//     fetchBrokersList();
+    
+//     return () => {
+//       isMounted.current = false;
+//       if (searchTimer.current) {
+//         clearTimeout(searchTimer.current);
+//       }
+//     };
+//   }, [canViewExchangeLedger]);
+
+//   useEffect(() => {
+//     if (pagination.docs.length > 0) {
+//       const grouped = groupDataByBroker(pagination.docs, isFiltered);
+//       setGroupedData(grouped);
+//       setFilteredData(grouped);
+      
+//       const initialTransactionsMap = {};
+//       grouped.forEach(brokerData => {
+//         const key = brokerData.broker._id;
+//         initialTransactionsMap[key] = [];
+        
+//         if (!isFiltered && brokerData.branches) {
+//           brokerData.branches.forEach(branch => {
+//             const branchKey = `${brokerData.broker._id}-${branch.branchId}`;
+//             initialTransactionsMap[branchKey] = [];
+//           });
+//         }
+//       });
+//       setTransactionsData(initialTransactionsMap);
+//     }
+//   }, [pagination.docs, isFiltered]);
+
+//   const fetchBranches = async () => {
+//     if (!canViewExchangeLedger) return;
+//     try {
+//       const response = await axiosInstance.get('/branches');
+//       setBranches(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) setError(message);
+//     }
+//   };
+
+//   const fetchBrokersList = async () => {
+//     try {
+//       const response = await axiosInstance.get('/brokers');
+//       setBrokers(response.data.data || []);
+//     } catch (error) {
+//       console.error('Error fetching brokers:', error);
+//     }
+//   };
+
+//   const fetchData = async (page = pagination.currentPage, limit = pagination.limit, search = pagination.search, branchId = null) => {
+//     if (!canViewExchangeLedger || !isMounted.current) return;
+    
+//     try {
+//       setPagination(prev => ({ ...prev, loading: true }));
+//       setError(null);
+      
+//       let url = '/broker-ledger/summary/detailed';
+//       const params = new URLSearchParams();
+//       params.append('page', page);
+//       params.append('limit', limit);
+      
+//       if (search && search.trim()) {
+//         params.append('search', search.trim());
+//       }
+      
+//       if (branchId) {
+//         url = `/broker-ledger/summary/branch/${branchId}`;
+//         url += `?${params.toString()}`;
+//       } else {
+//         url += `?${params.toString()}`;
+//       }
+
+//       const response = await axiosInstance.get(url);
+
+//       if (!isMounted.current) return;
+
+//       if (response.data.success) {
+//         const responseData = response.data.data;
+//         const brokersData = responseData.brokers || [];
+//         const paginationInfo = responseData.pagination || {
+//           current: page,
+//           total: 1,
+//           count: brokersData.length,
+//           totalRecords: brokersData.length,
+//           hasNext: false,
+//           hasPrev: false
+//         };
+
+//         if (branchId) {
+//           const branchName = branches.find((b) => b._id === branchId)?.name || 'Selected Branch';
+//           setSelectedBranchName(branchName);
+
+//           const branchData = brokersData.map((broker) => ({
+//             broker: broker.broker,
+//             branch: {
+//               _id: responseData.branch,
+//               name: branchName
+//             },
+//             bookings: {
+//               total: broker.bookings?.total || 0,
+//               details: broker.bookings?.details || []
+//             },
+//             financials: {
+//               totalExchangeAmount: broker.financials?.totalExchangeAmount || 0,
+//               ledger: {
+//                 currentBalance: broker.financials?.ledger?.currentBalance || 0,
+//                 onAccount: broker.financials?.ledger?.onAccount || 0,
+//                 totalCredit: broker.financials?.ledger?.totalCredit || 0,
+//                 totalDebit: broker.financials?.ledger?.totalDebit || 0,
+//                 outstandingAmount: broker.financials?.ledger?.outstandingAmount || 0,
+//                 transactions: broker.financials?.ledger?.transactions || 0
+//               },
+//               summary: {
+//                 totalReceived: broker.financials?.summary?.totalReceived || 0,
+//                 totalPayable: broker.financials?.summary?.totalPayable || 0,
+//                 netBalance: broker.financials?.ledger?.currentBalance || 0
+//               }
+//             },
+//             recentTransactions: broker.recentTransactions || [],
+//             association: {
+//               isActive: broker.association?.isActive || true
+//             }
+//           }));
+
+//           setPagination({
+//             docs: branchData,
+//             total: paginationInfo.totalRecords || branchData.length,
+//             pages: paginationInfo.total || 1,
+//             currentPage: paginationInfo.current || page,
+//             limit: limit,
+//             loading: false,
+//             search: search,
+//             totalRecords: paginationInfo.totalRecords || branchData.length,
+//             hasNext: paginationInfo.hasNext || false,
+//             hasPrev: paginationInfo.hasPrev || false
+//           });
+
+//           setData(branchData);
+//           setIsFiltered(true);
+//         } else {
+//           setPagination({
+//             docs: brokersData,
+//             total: paginationInfo.totalRecords || brokersData.length,
+//             pages: paginationInfo.total || 1,
+//             currentPage: paginationInfo.current || page,
+//             limit: limit,
+//             loading: false,
+//             search: search,
+//             totalRecords: paginationInfo.totalRecords || brokersData.length,
+//             hasNext: paginationInfo.hasNext || false,
+//             hasPrev: paginationInfo.hasPrev || false
+//           });
+
+//           setData(brokersData);
+//           setIsFiltered(false);
+//           setSelectedBranchName('');
+//         }
+//       } else {
+//         throw new Error('Failed to fetch exchange ledger data');
+//       }
+//     } catch (error) {
+//       if (!isMounted.current) return;
+//       const message = showError(error);
+//       if (message) setError(message);
+//       setPagination(prev => ({ ...prev, loading: false, docs: [], total: 0, totalRecords: 0 }));
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // Fetch branches for selected broker from the groupedData (first tab data)
+//   const fetchBrokerBranches = useCallback((brokerId) => {
+//     // Find broker data in groupedData from first tab
+//     const brokerData = groupedData.find(b => b.broker._id === brokerId);
+//     if (brokerData && brokerData.branches) {
+//       setBrokerBranches(brokerData.branches);
+//       return brokerData.branches;
+//     }
+//     return [];
+//   }, [groupedData]);
+
+// // Fetch exchange bookings for selected broker (with optional branch filter)
+// const fetchExchangeBookings = async (brokerId, branchId = null) => {
+//   if (!brokerId) return;
+  
+//   try {
+//     setBookingsLoading(true);
+//     setExchangeBookings([]);
+    
+//     // Build URL with branch filter if provided
+//     let url = `/broker-ledger/exchange-bookings?brokerId=${brokerId}`;
+//     if (branchId) {
+//       url += `&branchId=${branchId}`;
+//     }
+    
+//     const response = await axiosInstance.get(url);
+    
+//     console.log('Exchange bookings response:', response.data);
+    
+//     if (response.data.success) {
+//       const bookingsData = response.data.data || [];
+      
+//       // Transform the data to match the expected format in the table
+//       const transformedBookings = bookingsData.map(booking => ({
+//         _id: booking._id,
+//         bookingNumber: booking.bookingNumber,
+//         customer: {
+//           name: booking.customerName || 'N/A',
+//           mobile: booking.customerMobile || 'N/A'
+//         },
+//         vehicle: {
+//           model: booking.vehicleModel || 'N/A',
+//           color: booking.vehicleColor || 'N/A'
+//         },
+//         exchange: {
+//           price: booking.exchangeVehicle?.price || 0,
+//           vehicleNumber: booking.exchangeVehicle?.number || 'N/A',
+//           status: booking.exchangeVehicle?.status || 'N/A'
+//         },
+//         payment: {
+//           exchangeAmount: booking.payment?.exchangeAmount || 0,
+//           commission: booking.payment?.commission || 0,
+//           totalRequired: booking.payment?.totalRequired || 0,
+//           paidAmount: booking.payment?.paidAmount || 0,
+//           remainingAmount: booking.payment?.remainingAmount || 0,
+//           paymentStatus: booking.payment?.paymentStatus || 'PENDING',
+//           paymentPercentage: booking.payment?.paymentPercentage || 0
+//         },
+//         status: booking.bookingStatus || 'N/A',
+//         createdAt: booking.createdAt
+//       }));
+      
+//       setExchangeBookings(transformedBookings);
+      
+//       // Store summary data if needed
+//       if (response.data.summary) {
+//         // Optional: Store summary for display
+//         // setExchangeSummary(response.data.summary);
+//       }
+//     } else {
+//       throw new Error('Failed to fetch exchange bookings');
+//     }
+//   } catch (error) {
+//     console.error('Error fetching exchange bookings:', error);
+//     const message = showError(error);
+//     if (message) setError(message);
+//     setExchangeBookings([]);
+//   } finally {
+//     setBookingsLoading(false);
+//   }
+// };
+
+//   // Fetch on-account receipts for selected broker and branch
+//   const fetchOnAccountReceipts = async (brokerId, branchId) => {
+//   if (!brokerId || !branchId) return;
+  
+//   try {
+//     setReceiptsLoading(true);
+//     setReceipts([]);
+//     setSelectedReceipt('');
+//     setSelectedReceiptData(null);
+//     setOnAccountBalance(0);
+//     setOnAccountTotal(0);
+    
+//     const response = await axiosInstance.get(`/broker-ledger/on-account/${brokerId}/${branchId}`);
+    
+//     console.log('On-account receipts response:', response.data);
+    
+//     if (response.data.success) {
+//       const data = response.data.data;
+//       setOnAccountBalance(data.onAccountBalance || 0);
+//       setOnAccountTotal(data.onAccount || 0);
+      
+//       // Process receipts/references - USE THE REMAINING FIELD DIRECTLY FROM API
+//       const references = data.references || [];
+//       const processedReceipts = references.map(ref => ({
+//         _id: ref._id,
+//         referenceNumber: ref.referenceNumber,
+//         amount: ref.amount,
+//         allocated: ref.allocated || 0,
+//         remaining: ref.remaining, // DIRECTLY USE THE REMAINING FROM API
+//         modeOfPayment: ref.modeOfPayment,
+//         remark: ref.remark,
+//         date: ref.date,
+//         isOnAccount: ref.isOnAccount
+//       }));
+      
+//       // Filter out receipts with remaining amount <= 0
+//       const availableReceipts = processedReceipts.filter(receipt => receipt.remaining > 0);
+      
+//       setReceipts(availableReceipts);
+//     } else {
+//       throw new Error('Failed to fetch on-account receipts');
+//     }
+//   } catch (error) {
+//     console.error('Error fetching on-account receipts:', error);
+//     const message = showError(error);
+//     if (message) setError(message);
+//     setReceipts([]);
+//   } finally {
+//     setReceiptsLoading(false);
+//   }
+// };
+
+//   // Allocate payment to booking
+//  // Allocate payment to booking
+// const handleAllocatePayment = async () => {
+//   if (!selectedBookingForAllocation) return;
+//   if (!selectedReceipt) {
+//     setAllocationError('Please select a receipt first');
+//     return;
+//   }
+  
+//   const amount = parseFloat(allocationAmount);
+//   if (isNaN(amount) || amount <= 0) {
+//     setAllocationError('Please enter a valid amount');
+//     return;
+//   }
+  
+//   // Check if amount exceeds receipt remaining balance
+//   const selectedReceiptObj = receipts.find(r => r._id === selectedReceipt);
+//   if (selectedReceiptObj && amount > selectedReceiptObj.remaining) {
+//     setAllocationError(`Amount cannot exceed receipt remaining balance of ₹${selectedReceiptObj.remaining.toLocaleString('en-IN')}`);
+//     return;
+//   }
+  
+//   // REMOVED: Booking balance validation check
+  
+//   setAllocationLoading(true);
+//   setAllocationError('');
+  
+//   try {
+//     const payload = {
+//       amount: amount,
+//       transactionIds: [selectedReceipt]
+//     };
+    
+//     const url = `/broker-ledger/allocate-to-booking/${selectedBroker}/${selectedBrokerBranch}/${selectedBookingForAllocation._id}`;
+    
+//     console.log('Allocation payload:', payload);
+//     console.log('URL:', url);
+    
+//     const response = await axiosInstance.post(url, payload);
+    
+//     if (response.data.success) {
+//       showSuccess(`Successfully allocated ₹${amount.toLocaleString('en-IN')} to booking ${selectedBookingForAllocation.bookingNumber}`);
+      
+//       // Close modal and reset
+//       setAllocationModalVisible(false);
+//       setSelectedBookingForAllocation(null);
+//       setAllocationAmount('');
+      
+//       // Refresh data
+//       fetchExchangeBookings(selectedBroker);
+//       fetchOnAccountReceipts(selectedBroker, selectedBrokerBranch);
+//     } else {
+//       throw new Error(response.data.message || 'Failed to allocate payment');
+//     }
+//   } catch (error) {
+//     console.error('Error allocating payment:', error);
+//     const errorMessage = error.response?.data?.message || error.message || 'Failed to allocate payment';
+//     setAllocationError(errorMessage);
+//     showError(errorMessage);
+//   } finally {
+//     setAllocationLoading(false);
+//   }
+// };
+
+//  const handleBrokerChange = (e) => {
+//   const brokerId = e.target.value;
+//   setSelectedBroker(brokerId);
+  
+//   const broker = brokers.find(b => b._id === brokerId);
+//   setSelectedBrokerName(broker?.name || '');
+  
+//   // Reset branch and receipts when broker changes
+//   setSelectedBrokerBranch('');
+//   setBrokerBranches([]);
+//   setReceipts([]);
+//   setSelectedReceipt('');
+//   setSelectedReceiptData(null);
+//   setExchangeBookings([]);
+//   setOnAccountBalance(0);
+//   setOnAccountTotal(0);
+  
+//   if (brokerId) {
+//     // Fetch branches from first tab data
+//     const branches = fetchBrokerBranches(brokerId);
+    
+//     // Fetch ALL bookings for this broker (no branch filter)
+//     fetchExchangeBookings(brokerId, null);
+//   }
+// };
+
+//   const handleBranchChange = (e) => {
+//   const branchId = e.target.value;
+//   setSelectedBrokerBranch(branchId);
+//   setSelectedReceipt('');
+//   setSelectedReceiptData(null);
+//   setReceipts([]);
+  
+//   if (selectedBroker) {
+//     // Fetch bookings filtered by the selected branch
+//     fetchExchangeBookings(selectedBroker, branchId);
+    
+//     // Fetch on-account receipts for the selected broker and branch
+//     if (branchId) {
+//       fetchOnAccountReceipts(selectedBroker, branchId);
+//     }
+//   }
+// };
+
+//   const handleReceiptChange = (e) => {
+//   const receiptId = e.target.value;
+//   setSelectedReceipt(receiptId);
+//   const receipt = receipts.find(r => r._id === receiptId);
+//   setSelectedReceiptData(receipt);
+// };
+
+//   const openAllocationModal = (booking) => {
+//     if (!selectedReceipt) {
+//       showError('Please select a receipt first');
+//       return;
+//     }
+    
+//     setSelectedBookingForAllocation(booking);
+//     setAllocationAmount('');
+//     setAllocationError('');
+//     setAllocationModalVisible(true);
+//   };
+
+//   const handlePageChange = (newPage) => {
+//     if (newPage < 1 || newPage > pagination.pages) return;
+//     fetchData(newPage, pagination.limit, pagination.search, isFiltered ? selectedBranch : null);
+//     window.scrollTo({ top: 0, behavior: 'smooth' });
+//   };
+
+//   const handleLimitChange = (newLimit) => {
+//     const limit = parseInt(newLimit, 10);
+//     fetchData(1, limit, pagination.search, isFiltered ? selectedBranch : null);
+//   };
+
+//   const handleSearch = (value) => {
+//     if (!canViewExchangeLedger) return;
+    
+//     setSearchTerm(value);
+//     setError(null);
+    
+//     if (searchTimer.current) clearTimeout(searchTimer.current);
+    
+//     searchTimer.current = setTimeout(() => {
+//       if (isMounted.current) {
+//         if (!value.trim()) {
+//           fetchData(1, pagination.limit, '', isFiltered ? selectedBranch : null);
+//         } else {
+//           fetchData(1, pagination.limit, value, isFiltered ? selectedBranch : null);
+//         }
+//       }
+//     }, 400);
+//   };
+
+//   const renderPagination = () => {
+//     const { currentPage, pages, totalRecords, limit, loading } = pagination;
+//     if (!totalRecords || pages <= 1) return null;
+
+//     const start = (currentPage - 1) * limit + 1;
+//     const end = Math.min(currentPage * limit, totalRecords);
+
+//     let startPage = Math.max(1, currentPage - 2);
+//     let endPage = Math.min(pages, currentPage + 2);
+//     if (currentPage <= 3) endPage = Math.min(5, pages);
+//     if (currentPage >= pages - 2) startPage = Math.max(1, pages - 4);
+
+//     const pageNums = [];
+//     for (let i = startPage; i <= endPage; i++) pageNums.push(i);
+
+//     return (
+//       <div className="mt-3 border-top pt-3">
+//         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+//           <div className="d-flex align-items-center gap-2">
+//             <CFormLabel className="mb-0 text-muted" style={{ fontSize: '13px' }}>Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={limit}
+//               onChange={e => handleLimitChange(e.target.value)}
+//               style={{ width: '80px', height: '32px', fontSize: '13px' }}
+//               size="sm"
+//               disabled={loading}
+//             >
+//               {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+//             </CFormSelect>
+//           </div>
+//           <span className="text-muted" style={{ fontSize: '13px' }}>
+//             {loading ? 'Loading…' : `Showing ${start}–${end} of ${totalRecords} entries`}
+//           </span>
+//         </div>
+//         {pages > 1 && (
+//           <CPagination align="center" size="sm">
+//             <CPaginationItem onClick={() => handlePageChange(1)} disabled={currentPage === 1 || loading}>«</CPaginationItem>
+//             <CPaginationItem onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1 || loading}>
+//               <CIcon icon={cilChevronLeft} />
+//             </CPaginationItem>
+//             {startPage > 1 && (
+//               <>
+//                 <CPaginationItem onClick={() => handlePageChange(1)} disabled={loading}>1</CPaginationItem>
+//                 {startPage > 2 && <CPaginationItem disabled>…</CPaginationItem>}
+//               </>
+//             )}
+//             {pageNums.map(p => (
+//               <CPaginationItem key={p} active={p === currentPage} onClick={() => handlePageChange(p)} disabled={loading}>
+//                 {p}
+//               </CPaginationItem>
+//             ))}
+//             {endPage < pages && (
+//               <>
+//                 {endPage < pages - 1 && <CPaginationItem disabled>…</CPaginationItem>}
+//                 <CPaginationItem onClick={() => handlePageChange(pages)} disabled={loading}>{pages}</CPaginationItem>
+//               </>
+//             )}
+//             <CPaginationItem onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === pages || loading}>
+//               <CIcon icon={cilChevronRight} />
+//             </CPaginationItem>
+//             <CPaginationItem onClick={() => handlePageChange(pages)} disabled={currentPage === pages || loading}>»</CPaginationItem>
+//           </CPagination>
+//         )}
+//       </div>
+//     );
+//   };
+
+//   const fetchTransactionsForBroker = useCallback(async (brokerId, branchId) => {
+//     if (!brokerId || !branchId) return;
+    
+//     const key = `${brokerId}-${branchId}`;
+    
+//     if (transactionsFetched[key] || loadingTransactions[key]) return;
+
+//     try {
+//       setLoadingTransactions(prev => ({ ...prev, [key]: true }));
+//       const response = await axiosInstance.get(`/broker-ledger/branch-transactions/${brokerId}/${branchId}`);
+//       const transactions = response.data.data.transactions || [];
+      
+//       setTransactionsData(prev => ({ ...prev, [key]: transactions }));
+//       setTransactionsFetched(prev => ({ ...prev, [key]: true }));
+//     } catch (error) {
+//       console.error(`Error fetching transactions:`, error);
+//       setTransactionsData(prev => ({ ...prev, [key]: [] }));
+//       setTransactionsFetched(prev => ({ ...prev, [key]: true }));
+//     } finally {
+//       setLoadingTransactions(prev => ({ ...prev, [key]: false }));
+//     }
+//   }, [transactionsFetched, loadingTransactions]);
+
+//   const printBrokerReceipt = async (transactionId, brokerId, branchId) => {
+//     try {
+//       const response = await axiosInstance.get(`/broker-ledger/branch-transactions/${brokerId}/${branchId}`);
+//       const transactionData = response.data.data;
+//       const transaction = transactionData.transactions?.find(t => t._id === transactionId);
+      
+//       if (!transaction) {
+//         showError('Transaction not found');
+//         return;
+//       }
+      
+//       const amount = transaction.amount || 0;
+//       const receivedDate = transaction.dateFormatted || new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+//       const currentDate = new Date().toLocaleDateString('en-GB');
+//       const brokerName = transactionData.broker?.name || 'N/A';
+//       const branchName = transactionData.branch?.name || 'N/A';
+//       const branchAddress = transactionData.branch?.address || '';
+//       const branchPhone = transactionData.branch?.phone || '';
+//       const branchEmail = transactionData.branch?.email || '';
+      
+//       const qrText = `GANDHI MOTORS PVT LTD\nBroker: ${brokerName}\nBranch: ${branchName}\nReceipt No: ${transaction.referenceNumber || transaction._id}\nAmount: ₹${amount}\nPayment Mode: ${transaction.modeOfPayment || 'Cash'}\nDate: ${receivedDate}`;
+
+//       let qrCodeImage = '';
+//       try {
+//         qrCodeImage = await QRCode.toDataURL(qrText, {
+//           width: 150,
+//           margin: 2,
+//           color: { dark: '#000000', light: '#FFFFFF' },
+//           errorCorrectionLevel: 'H'
+//         });
+//       } catch (error) {
+//         console.error('Error generating QR code:', error);
+//         qrCodeImage = 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150"><rect width="150" height="150" fill="white"/><rect x="10" y="10" width="130" height="130" fill="#f0f0f0" stroke="#ccc" stroke-width="2"/><text x="75" y="70" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">QR CODE</text><text x="75" y="90" text-anchor="middle" font-family="Arial" font-size="8" fill="#666">Receipt: ${transaction.referenceNumber || ''}</text></svg>`);
+//       }
+
+//       const receiptHTML = generateReceiptHTML(transaction, transactionData, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail);
+//       const printWindow = window.open('', '_blank');
+//       printWindow.document.write(receiptHTML);
+//       printWindow.document.close();
+//       printWindow.onload = function() { printWindow.focus(); printWindow.print(); };
+//     } catch (err) {
+//       console.error('Error fetching transaction details:', err);
+//       showError('Failed to load receipt. Please try again.');
+//     }
+//   };
+
+//   const generateReceiptHTML = (transaction, transactionData, qrCodeImage, receivedDate, currentDate, brokerName, branchName, branchAddress, branchPhone, branchEmail) => {
+//     const receiptNumber = transaction.referenceNumber || transaction._id || 'N/A';
+//     const amount = transaction.amount || 0;
+//     const paymentMode = transaction.modeOfPayment || 'Cash';
+//     const referenceNumber = transaction.referenceNumber || '';
+//     const approvalStatus = transaction.approvalStatus || 'Pending';
+//     const cashLocation = transaction.cashLocation?.name || '';
+//     const bankName = transaction.bank?.name || '';
+//     const subPaymentMode = transaction.subPaymentMode?.payment_mode || '';
+//     const amountInWords = numberToWordsSimple(amount);
+
+//     return `<!DOCTYPE html>
+// <html>
+// <head>
+//   <title>Broker Payment Receipt - ${receiptNumber}</title>
+//   <style>
+//     body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #333; }
+//     .page { width: 210mm; margin: 0 auto; }
+//     .receipt-copy { height: auto; min-height: 130mm; page-break-inside: avoid; }
+//     .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; }
+//     .header-left { width: 60%; }
+//     .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+//     .logo-qr-container { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-bottom: 5px; width: 100%; }
+//     .logo { height: 51px; }
+//     .qr-code-small { width: 81px; height: 81px; border: 1px solid #ccc; }
+//     .dealer-info { text-align: left; font-size: 13px; line-height: 1.2; }
+//     .dealer-name { font-size: 17px; font-weight: bold; margin: 0 0 3px 0; }
+//     .broker-info-container { display: flex; font-size: 14px; margin: 10px 0; }
+//     .broker-info-left { width: 50%; }
+//     .broker-info-right { width: 50%; }
+//     .info-row { margin: 2mm 0; line-height: 1.2; }
+//     .info-row .value { font-weight: 700; }
+//     .divider { border-top: 2px solid #AAAAAA; margin: 3mm 0; }
+//     .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 9px; margin: 11px 0; font-size: 14px; }
+//     .receipt-info .value { font-weight: 700; }
+//     .payment-info-box { margin: 11px 0; }
+//     .signature-box { margin-top: 16mm; font-size: 11pt; }
+//     .signature-line { border-top: 1px dashed #000; width: 41mm; display: inline-block; margin: 0 5mm; }
+//     .cutting-line { border-top: 2px dashed #333; margin: 16mm 0 11mm 0; text-align: center; position: relative; }
+//     .cutting-line::before { content: "✂ Cut Here ✂"; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: white; padding: 0 11px; font-size: 13px; color: #666; }
+//     .note { padding: 2px; margin: 3px; font-size: 12px; }
+//     .note .value { font-weight: 700; }
+//     .amount-in-words { font-style: italic; margin-top: 9px; padding: 6px; font-size: 13px; border-top: 1px dashed #ccc; }
+//     .amount-in-words .value { font-weight: 700; font-style: normal; }
+//     .status-badge { display: inline-block; padding: 4px 9px; border-radius: 12px; font-size: 12px; font-weight: bold; background-color: ${approvalStatus === 'Approved' ? '#d4edda' : approvalStatus === 'Rejected' ? '#f8d7da' : '#fff3cd'}; color: ${approvalStatus === 'Approved' ? '#155724' : approvalStatus === 'Rejected' ? '#721c24' : '#856404'}; border: 1px solid ${approvalStatus === 'Approved' ? '#c3e6cb' : approvalStatus === 'Rejected' ? '#f5c6cb' : '#ffeeba'}; }
+//     .footer-note { font-size: 10px; color: #777; text-align: center; margin-top: 5mm; }
+//     .payment-details { margin-top: 10px; border-collapse: collapse; width: 100%; }
+//     .payment-details td { padding: 4px; border: none; }
+//     .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 15px; padding: 4px; font-size: 14px; }
+//     .payment-grid-item { padding: 2px 0; line-height: 1.3; }
+//     .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 110px; display: inline-block; }
+//     .payment-grid-item .value { font-weight: 700; }
+//     @page { size: A4; margin: 10mm; }
+//     @media print { body { padding: 0; } .receipt-copy { page-break-inside: avoid; } }
+//   </style>
+// </head>
+// <body>
+//   <div class="page">
+//     <div class="receipt-copy">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
+//           <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik - 422101<br>Phone: 7498903672</div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
+//             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+//           </div>
+//           <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
+//           <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+//       <div class="receipt-info">
+//         <div><strong>BROKER PAYMENT RECEIPT</strong></div>
+//         <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
+//       </div>
+//       <div class="broker-info-container">
+//         <div class="broker-info-left">
+//           <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
+//           <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
+//           <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
+//           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
+//           ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
+//         </div>
+//         <div class="broker-info-right">
+//           <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
+//           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
+//           <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
+//           <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
+//         </div>
+//       </div>
+//       <div class="payment-info-box">
+//         <div class="receipt-info" style="padding: 5px;">
+//           <div class="payment-grid-2col">
+//             <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
+//           </div>
+//         </div>
+//         <div class="amount-in-words">
+//           <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
+//         </div>
+//       </div>
+//       <div class="note">
+//         <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
+//       </div>
+//       <div class="divider"></div>
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between;">
+//           <div style="text-align:center; width: 30%;"><div class="signature-line"></div><div>Broker's Signature</div></div>
+//           <div style="text-align:center; width: 30%;"><div class="signature-line"></div><div>Authorised Signatory</div></div>
+//           <div style="text-align:center; width: 30%;"><div class="signature-line"></div><div>Accountant</div></div>
+//         </div>
+//       </div>
+//       <div class="footer-note">This is a computer generated receipt - valid without signature</div>
+//     </div>
+//     <div class="cutting-line"></div>
+//     <div class="receipt-copy">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <div class="dealer-name">GANDHI MOTORS PVT LTD</div>
+//           <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik - 422101<br>Phone: 7498903672</div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="${tvsLogo}" class="logo" alt="TVS Logo" onerror="this.style.display='none'">
+//             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+//           </div>
+//           <div style="margin-top: 4px; font-size: 12px;">Date: ${currentDate}</div>
+//           <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+//       <div class="receipt-info">
+//         <div><strong>BROKER PAYMENT RECEIPT (DUPLICATE)</strong></div>
+//         <div><strong>Receipt Date:</strong> <span class="value">${receivedDate}</span></div>
+//       </div>
+//       <div class="broker-info-container">
+//         <div class="broker-info-left">
+//           <div class="info-row"><strong>Broker Name:</strong> <span class="value">${brokerName}</span></div>
+//           <div class="info-row"><strong>Branch:</strong> <span class="value">${branchName}</span></div>
+//           <div class="info-row"><strong>Payment Mode:</strong> <span class="value">${paymentMode}</span></div>
+//           ${cashLocation ? `<div class="info-row"><strong>Cash Location:</strong> <span class="value">${cashLocation}</span></div>` : ''}
+//           ${bankName ? `<div class="info-row"><strong>Bank:</strong> <span class="value">${bankName}</span></div>` : ''}
+//         </div>
+//         <div class="broker-info-right">
+//           <div class="info-row"><strong>Reference No:</strong> <span class="value">${referenceNumber}</span></div>
+//           ${subPaymentMode ? `<div class="info-row"><strong>Sub Mode:</strong> <span class="value">${subPaymentMode}</span></div>` : ''}
+//           <div class="info-row"><strong>Branch Address:</strong> <span class="value">${branchAddress}</span></div>
+//           <div class="info-row"><strong>Branch Phone:</strong> <span class="value">${branchPhone}</span></div>
+//         </div>
+//       </div>
+//       <div class="payment-info-box">
+//         <div class="receipt-info" style="padding: 5px;">
+//           <div class="payment-grid-2col">
+//             <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${amount.toLocaleString('en-IN')}</span></div>
+//           </div>
+//         </div>
+//         <div class="amount-in-words">
+//           <strong>Amount in words:</strong> <span class="value">${amountInWords} Only</span>
+//         </div>
+//       </div>
+//       <div class="note">
+//         <strong>Notes:</strong> <span class="value">This is a system generated receipt for Broker On-Account payment.</span>
+//       </div>
+//       <div class="divider"></div>
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between;">
+//           <div style="text-align:center; width: 30%;"><div class="signature-line"></div><div>Broker's Signature</div></div>
+//           <div style="text-align:center; width: 30%;"><div class="signature-line"></div><div>Authorised Signatory</div></div>
+//           <div style="text-align:center; width: 30%;"><div class="signature-line"></div><div>Accountant</div></div>
+//         </div>
+//       </div>
+//       <div class="footer-note">This is a computer generated receipt - valid without signature</div>
+//     </div>
+//   </div>
+// </body>
+// </html>`;
+//   };
+
+//   const numberToWordsSimple = (num) => {
+//     if (num === 0) return 'Zero';
+//     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+//     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+//     const numToWords = (n) => {
+//       if (n < 20) return ones[n];
+//       if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? ' ' + ones[n % 10] : '');
+//       if (n < 1000) return ones[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + numToWords(n % 100) : '');
+//       if (n < 100000) return numToWords(Math.floor(n / 1000)) + ' Thousand' + (n % 1000 ? ' ' + numToWords(n % 1000) : '');
+//       if (n < 10000000) return numToWords(Math.floor(n / 100000)) + ' Lakh' + (n % 100000 ? ' ' + numToWords(n % 100000) : '');
+//       return numToWords(Math.floor(n / 10000000)) + ' Crore' + (n % 10000000 ? ' ' + numToWords(n % 10000000) : '');
+//     };
+//     return numToWords(Math.floor(num)) + (num % 1 ? ' point ' + num.toString().split('.')[1] : '');
+//   };
+
+//   const handleBranchFilter = async () => {
+//     if (!canViewExchangeLedger) return;
+//     if (selectedBranch) {
+//       await fetchData(1, pagination.limit, pagination.search, selectedBranch);
+//     } else {
+//       await fetchData(1, pagination.limit, pagination.search);
+//     }
+//     setShowFilterModal(false);
+//   };
+
+//   const clearFilter = async () => {
+//     if (!canViewExchangeLedger) return;
+//     setSelectedBranch('');
+//     setSearchTerm('');
+//     await fetchData(1, pagination.limit, '');
+//     setShowFilterModal(false);
+//   };
+
+//   const groupDataByBroker = (brokersData, isFilteredMode = false) => {
+//     const brokerMap = {};
+
+//     brokersData.forEach((item) => {
+//       const brokerId = item.broker._id;
+
+//       if (!brokerMap[brokerId]) {
+//         brokerMap[brokerId] = {
+//           broker: item.broker,
+//           branches: [],
+//           totalBookings: 0,
+//           totalExchangeAmount: 0,
+//           totalCredit: 0,
+//           totalDebit: 0,
+//           onAccount: 0,
+//           currentBalance: 0,
+//           outstandingAmount: 0
+//         };
+//       }
+
+//       if (isFilteredMode) {
+//         brokerMap[brokerId].branches = [{
+//           name: item.branch.name,
+//           branchId: item.branch._id,
+//           bookings: item.bookings.total,
+//           exchangeAmount: item.financials.totalExchangeAmount,
+//           credit: item.financials.ledger.totalCredit,
+//           debit: item.financials.ledger.totalDebit,
+//           onAccount: item.financials.ledger.onAccount,
+//           currentBalance: item.financials.ledger.currentBalance,
+//           outstandingAmount: item.financials.ledger.outstandingAmount
+//         }];
+
+//         brokerMap[brokerId].totalBookings = item.bookings.total;
+//         brokerMap[brokerId].totalExchangeAmount = item.financials.totalExchangeAmount;
+//         brokerMap[brokerId].totalCredit = item.financials.ledger.totalCredit;
+//         brokerMap[brokerId].totalDebit = item.financials.ledger.totalDebit;
+//         brokerMap[brokerId].onAccount = item.financials.ledger.onAccount;
+//         brokerMap[brokerId].currentBalance = item.financials.ledger.currentBalance;
+//         brokerMap[brokerId].outstandingAmount = item.financials.ledger.outstandingAmount;
+//       } else {
+//         brokerMap[brokerId].branches.push({
+//           name: item.branch.name,
+//           branchId: item.branch._id,
+//           bookings: item.bookings.total,
+//           exchangeAmount: item.financials.totalExchangeAmount,
+//           credit: item.financials.ledger.totalCredit,
+//           debit: item.financials.ledger.totalDebit,
+//           onAccount: item.financials.ledger.onAccount,
+//           currentBalance: item.financials.ledger.currentBalance,
+//           outstandingAmount: item.financials.ledger.outstandingAmount
+//         });
+
+//         brokerMap[brokerId].totalBookings += item.bookings.total;
+//         brokerMap[brokerId].totalExchangeAmount += item.financials.totalExchangeAmount;
+//         brokerMap[brokerId].totalCredit += item.financials.ledger.totalCredit;
+//         brokerMap[brokerId].totalDebit += item.financials.ledger.totalDebit;
+//         brokerMap[brokerId].onAccount += item.financials.ledger.onAccount;
+//         brokerMap[brokerId].currentBalance += item.financials.ledger.currentBalance;
+//         brokerMap[brokerId].outstandingAmount += item.financials.ledger.outstandingAmount;
+//       }
+//     });
+
+//     return Object.values(brokerMap);
+//   };
+
+//   const toggleBrokerExpansion = (brokerId) => {
+//     if (!canViewExchangeLedger) return;
+//     if (!isFiltered) {
+//       setExpandedBrokers((prev) => ({ ...prev, [brokerId]: !prev[brokerId] }));
+//     }
+//   };
+
+//   const handleClick = (event, id, brokerData = null, branchId = null) => {
+//     if (!canViewExchangeLedger && !canCreateExchangeLedger) return;
+//     setAnchorEl(event.currentTarget);
+//     setMenuId(id);
+//     if (brokerData) {
+//       setSelectedledger({ ...brokerData, branchId });
+//     }
+//   };
+
+//   const handleClose = () => {
+//     setAnchorEl(null);
+//     setMenuId(null);
+//   };
+
+//   const handleAddClick = (brokerData, branchId = null) => {
+//     if (!canCreateExchangeLedger) {
+//       showError('You do not have permission to add payments');
+//       return;
+//     }
+//     setSelectedledger({ ...brokerData, branchId });
+//     setShowModal(true);
+//     handleClose();
+//   };
+
+//   const handleViewLedger = async (brokerData, branchId = null) => {
+//     if (!canViewExchangeLedger) {
+//       showError('You do not have permission to view ledgers');
+//       return;
+//     }
+    
+//     try {
+//       let url = `/broker-ledger/statement/${brokerData.broker?._id}`;
+//       if (branchId) {
+//         url += `?branchId=${branchId}`;
+//       }
+
+//       const res = await axiosInstance.get(url);
+//       const ledgerData = res.data.data;
+//       const ledgerUrl = `${config.baseURL}/brokerData.html?ledgerId=${brokerData._id}`;
+//       let totalCredit = 0;
+//       let totalDebit = 0;
+//       const totalOnAccount = ledgerData.summary?.totalOnAccount ?? ledgerData.onAccountBalance ?? 0;
+
+//       ledgerData.transactions?.forEach((entry) => {
+//         if (entry.type === 'CREDIT') {
+//           totalCredit += entry.amount;
+//         } else if (entry.type === 'DEBIT') {
+//           totalDebit += entry.amount;
+//         }
+//       });
+//       const finalBalance = totalDebit - totalCredit;
+//       const availableOnAccount2 = totalOnAccount - totalCredit;
+
+//       const win = window.open('', '_blank');
+//       win.document.write(`
+//         <!DOCTYPE html>
+//         <html>
+//           <head>
+//             <title>Broker Ledger</title>
+//             <style>
+//               @page { size: A4; margin: 15mm 10mm; }
+//               body { font-family: Arial; width: 100%; margin: 0; padding: 0; font-size: 14px; line-height: 1.3; font-family: Courier New; }
+//               .container { width: 190mm; margin: 0 auto; padding: 5mm; }
+//               .header-container { display: flex; justify-content: space-between; margin-bottom: 3mm; }
+//               .header-text { font-size: 20px; font-weight: bold; }
+//               .logo { width: 30mm; height: auto; margin-right: 5mm; }
+//               .header { text-align: left; }
+//               .divider { border-top: 2px solid #AAAAAA; margin: 3mm 0; }
+//               .header h2 { margin: 2mm 0; font-size: 12pt; font-weight: bold; }
+//               .header div { font-size: 14px; }
+//               .customer-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm; margin-bottom: 5mm; font-size: 14px; }
+//               .customer-info div { display: flex; }
+//               .customer-info strong { min-width: 30mm; display: inline-block; }
+//               table { width: 100%; border-collapse: collapse; margin-bottom: 5mm; font-size: 14px; page-break-inside: avoid; }
+//               th, td { border: 1px solid #000; padding: 2mm; text-align: left; }
+//               th { background-color: #f0f0f0; font-weight: bold; }
+//               .footer { margin-top: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 14px; }
+//               .footer-left { text-align: left; }
+//               .footer-right { text-align: right; }
+//               .qr-code { width: 35mm; height: 35mm; }
+//               .text-right { text-align: right; }
+//               .text-left { text-align: left; }
+//               .text-center { text-align: center; }
+//               @media print { body { width: 190mm; height: 277mm; } .no-print { display: none; } }
+//             </style>
+//           </head>
+//           <body>
+//             <div class="container">
+//               <div class="header-container">
+//                 <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+//                 <div class="header-text"> GANDHI TVS</div>
+//               </div>
+//               <div class="header">
+//                 <div>Authorised Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik - 422101<br>Phone: 7498903672</div>
+//               </div>
+//               <div class="divider"></div>
+//               <div class="customer-info">
+//                 <div><strong>Broker Name:</strong> ${ledgerData.broker?.name || 'N/A'}</div>
+//                 <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+//               </div>
+//                 <table>
+//                   <thead>
+//                     <tr><th width="15%">Date</th><th width="35%">Description</th><th width="15%">Receipt/VC No</th><th width="10%" class="text-right">Credit (₹)</th><th width="10%" class="text-right">Debit (₹)</th><th width="15%" class="text-right">Balance (₹)</th></tr>
+//                   </thead>
+//                   <tbody>
+//                     ${ledgerData.transactions?.map((entry) => {
+//                       let exchangeVehicleNumber = '';
+//                       let bookingNumber = entry.booking?.bookingNumber || '';
+//                       if (entry.exchangeVehicle && entry.exchangeVehicle.VehicleNumber) {
+//                         exchangeVehicleNumber = entry.exchangeVehicle.VehicleNumber || '';
+//                       } else if (entry.exchangeDisplay && entry.exchangeDisplay.VehicleNumber) {
+//                         exchangeVehicleNumber = entry.exchangeDisplay.VehicleNumber || '';
+//                       } else if (entry.booking?.exchange?.display) {
+//                         exchangeVehicleNumber = entry.booking.exchange.display.vehicleNumber || '';
+//                       } else if (entry.booking?.exchange?.details) {
+//                         exchangeVehicleNumber = entry.booking.exchange.details.vehicleNumber || '';
+//                       }
+//                       return `<tr><td>${new Date(entry.date).toLocaleDateString() || 'N/A'}</td><td>Booking No: ${bookingNumber || '-'}<br>${entry.mode || ''}${exchangeVehicleNumber ? `<br>Exchange Vehicle: ${exchangeVehicleNumber}` : ''}</td><td>${entry.receiptNumber || ''}</td><td class="text-right">${entry.type === 'CREDIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td><td class="text-right">${entry.type === 'DEBIT' ? entry.amount.toLocaleString('en-IN') : '-'}</td><td class="text-right"></td></tr>`;
+//                     }).join('')}
+//                     <tr><td colspan="3" class="text-left"><strong>Total OnAccount</strong></td><td class="text-right"></td><td class="text-right"></td><td class="text-right"><strong>${availableOnAccount2.toLocaleString('en-IN')}</strong></td></tr>
+//                     <tr><td colspan="3" class="text-left"><strong>Total</strong></td><td class="text-right"><strong>${totalCredit.toLocaleString('en-IN')}</strong></td><td class="text-right"><strong>${totalDebit.toLocaleString('en-IN')}</strong></td><td class="text-right"><strong>${finalBalance.toLocaleString('en-IN')}</strong></td></tr>
+//                   </tbody>
+//                 </table>
+//               <div class="footer">
+//                 <div class="footer-left"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" class="qr-code" alt="QR Code" /></div>
+//                 <div class="footer-right"><p>For, Gandhi TVS</p><p>Authorised Signatory</p></div>
+//               </div>
+//             </div>
+//             <script>window.onload = function() { setTimeout(() => { window.print(); }, 300); };</script>
+//           </body>
+//         </html>
+//       `);
+//     } catch (err) {
+//       console.error('Error fetching ledger:', err);
+//       const message = showError(err);
+//       if (message) setError(message);
+//     }
+//     handleClose();
+//   };
+
+//   const handlePaymentSaved = (message) => {
+//     setSuccessMessage(message);
+//     setTimeout(() => setSuccessMessage(''), 3000);
+//     fetchData(pagination.currentPage, pagination.limit, pagination.search, isFiltered ? selectedBranch : null);
+//   };
+
+//   const handleOpenExportModal = () => {
+//     if (!canCreateExchangeLedger) {
+//       showError('You do not have permission to export reports');
+//       return;
+//     }
+//     setShowExportModal(true);
+//     setExportError('');
+//     if (isFiltered && selectedBranch) {
+//       setExportBranchId(selectedBranch);
+//     }
+//   };
+
+//   const handleCloseExportModal = () => {
+//     setShowExportModal(false);
+//     setExportStartDate(null);
+//     setExportEndDate(null);
+//     setExportBranchId('');
+//     setExportError('');
+//     setExportLoading(false);
+//   };
+
+//   const handleExcelExport = async () => {
+//     if (!canCreateExchangeLedger) {
+//       showError('You do not have permission to export reports');
+//       return;
+//     }
+    
+//     setExportError('');
+    
+//     if (!exportBranchId) {
+//       setExportError('Please select a branch');
+//       return;
+//     }
+
+//     if (!exportStartDate || !exportEndDate) {
+//       setExportError('Please select both start and end dates');
+//       return;
+//     }
+
+//     if (exportStartDate > exportEndDate) {
+//       setExportError('Start date cannot be after end date');
+//       return;
+//     }
+
+//     try {
+//       setExportLoading(true);
+//       const formattedStartDate = formatDateForAPI(exportStartDate);
+//       const formattedEndDate = formatDateForAPI(exportEndDate);
+
+//       const params = new URLSearchParams({
+//         branchId: exportBranchId,
+//         startDate: formattedStartDate,
+//         endDate: formattedEndDate
+//       });
+
+//       const response = await axiosInstance.get(`/reports/brokers?${params.toString()}`, { responseType: 'blob' });
+
+//       const contentType = response.headers['content-type'];
+//       if (contentType && contentType.includes('application/json')) {
+//         const text = await new Promise((resolve, reject) => {
+//           const reader = new FileReader();
+//           reader.onload = () => resolve(reader.result);
+//           reader.onerror = reject;
+//           reader.readAsText(response.data);
+//         });
+//         const errorData = JSON.parse(text);
+//         if (!errorData.success && errorData.message) {
+//           setExportError(errorData.message);
+//           Swal.fire({ icon: 'error', title: 'Export Failed', text: errorData.message });
+//           return;
+//         }
+//       }
+
+//       const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+//       const url = window.URL.createObjectURL(blob);
+//       const link = document.createElement('a');
+//       link.href = url;
+//       const branchName = branches.find(b => b._id === exportBranchId)?.name || 'Branch';
+//       const startDateStr = formatDateDDMMYYYY(exportStartDate);
+//       const endDateStr = formatDateDDMMYYYY(exportEndDate);
+//       const fileName = `Brokers_Report_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
+//       link.setAttribute('download', fileName);
+//       document.body.appendChild(link);
+//       link.click();
+//       link.remove();
+//       window.URL.revokeObjectURL(url);
+//       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Excel exported successfully!', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+//       handleCloseExportModal();
+//     } catch (error) {
+//       console.error('Error exporting report:', error);
+//       if (error.response && error.response.data instanceof Blob) {
+//         try {
+//           const text = await new Promise((resolve, reject) => {
+//             const reader = new FileReader();
+//             reader.onload = () => resolve(reader.result);
+//             reader.onerror = reject;
+//             reader.readAsText(error.response.data);
+//           });
+//           const errorData = JSON.parse(text);
+//           if (errorData.message) {
+//             setExportError(errorData.message);
+//             Swal.fire({ icon: 'error', title: 'Export Failed', text: errorData.message });
+//           }
+//         } catch (parseError) {
+//           setExportError('Failed to export report');
+//           Swal.fire({ icon: 'error', title: 'Export Failed', text: 'Failed to export report' });
+//         }
+//       } else if (error.response?.data?.message) {
+//         setExportError(error.response.data.message);
+//         Swal.fire({ icon: 'error', title: 'Export Failed', text: error.response.data.message });
+//       } else if (error.message) {
+//         setExportError(error.message);
+//         Swal.fire({ icon: 'error', title: 'Export Failed', text: error.message });
+//       } else {
+//         setExportError('Failed to export report');
+//         Swal.fire({ icon: 'error', title: 'Export Failed', text: 'Failed to export report' });
+//       }
+//     } finally {
+//       setExportLoading(false);
+//     }
+//   };
+
+//   // Render Broker Payment Tab
+//   // Render Broker Payment Tab
+// const renderBrokerPaymentTab = () => {
+//   const displayBookings = exchangeBookings;
+//   const totalBookings = displayBookings.length;
+
+//   return (
+//     <div>
+//       <CRow className="mb-4">
+//         <CCol md={6}>
+//           <CFormLabel>Select Broker</CFormLabel>
+//           <CFormSelect
+//             value={selectedBroker}
+//             onChange={handleBrokerChange}
+//           >
+//             <option value="">-- Select Broker --</option>
+//             {brokers.map((broker) => (
+//               <option key={broker._id} value={broker._id}>
+//                 {broker.name} {broker.mobile ? `- ${broker.mobile}` : ''}
+//               </option>
+//             ))}
+//           </CFormSelect>
+//         </CCol>
+//         <CCol md={6}>
+//           <CFormLabel>Select Branch</CFormLabel>
+//           <CFormSelect
+//             value={selectedBrokerBranch}
+//             onChange={handleBranchChange}
+//             disabled={!selectedBroker || brokerBranches.length === 0}
+//           >
+//             <option value="">-- Select Branch --</option>
+//             {brokerBranches.map((branch) => (
+//               <option key={branch.branchId} value={branch.branchId}>
+//                 {branch.name}
+//               </option>
+//             ))}
+//           </CFormSelect>
+//           {selectedBroker && brokerBranches.length === 0 && (
+//             <small className="text-muted">No branches found for this broker</small>
+//           )}
+//         </CCol>
+//       </CRow>
+
+//       {/* On-Account Summary */}
+//       {selectedBrokerBranch && (
+//         <CCard className="mb-4">
+//           <CCardHeader>
+//             <h6>On-Account Summary - {selectedBrokerName}</h6>
+//           </CCardHeader>
+//           <CCardBody>
+//             <CRow>
+//               <CCol md={6}>
+//                 <strong>Total On-Account:</strong> ₹{onAccountTotal.toLocaleString('en-IN')}
+//               </CCol>
+//               <CCol md={6}>
+//                 <strong>Available Balance:</strong> ₹{onAccountBalance.toLocaleString('en-IN')}
+//               </CCol>
+//             </CRow>
+//           </CCardBody>
+//         </CCard>
+//       )}
+
+//       {/* Receipts Section */}
+//       {selectedBrokerBranch && receipts.length > 0 && (
+//         <CCard className="mb-4">
+//           <CCardHeader>
+//             <h6>On-Account Receipts</h6>
+//           </CCardHeader>
+//           <CCardBody>
+//             <CFormLabel>Select Receipt</CFormLabel>
+//             <CFormSelect
+//               value={selectedReceipt}
+//               onChange={handleReceiptChange}
+//             >
+//               <option value="">-- Select Receipt --</option>
+//               {receipts.map((receipt) => (
+//                 <option key={receipt._id} value={receipt._id}>
+//                   {receipt.referenceNumber} - ₹{receipt.remaining.toLocaleString('en-IN')} available
+//                 </option>
+//               ))}
+//             </CFormSelect>
+//             {selectedReceiptData && (
+//               <div className="mt-2">
+//                 <div className="small text-success">
+//                   <strong>Selected Receipt Details:</strong><br />
+//                   Reference: {selectedReceiptData.referenceNumber}<br />
+//                   Original Amount: ₹{selectedReceiptData.amount.toLocaleString('en-IN')}<br />
+//                   Allocated: ₹{selectedReceiptData.allocated.toLocaleString('en-IN')}<br />
+//                   <strong>Available: ₹{selectedReceiptData.remaining.toLocaleString('en-IN')}</strong><br />
+//                   Payment Mode: {selectedReceiptData.modeOfPayment}<br />
+//                   Date: {formatDateDDMMYYYY(selectedReceiptData.date)}<br />
+//                   Remark: {selectedReceiptData.remark || '-'}
+//                 </div>
+//               </div>
+//             )}
+//           </CCardBody>
+//         </CCard>
+//       )}
+
+//       {selectedBrokerBranch && receipts.length === 0 && !receiptsLoading && (
+//         <CAlert color="info" className="mb-4">
+//           No on-account receipts found for this broker and branch.
+//         </CAlert>
+//       )}
+
+//       {receiptsLoading && (
+//         <div className="text-center py-4">
+//           <CSpinner color="primary" />
+//           <p>Loading receipts...</p>
+//         </div>
+//       )}
+
+//       {/* Exchange Bookings Table */}
+//       {bookingsLoading ? (
+//         <div className="d-flex justify-content-center align-items-center" style={{ height: '200px' }}>
+//           <CSpinner color="primary" />
+//         </div>
+//       ) : selectedBroker && displayBookings.length === 0 ? (
+//         <CAlert color="info">No exchange bookings found for this broker.</CAlert>
+//       ) : selectedBroker ? (
+//         <>
+//           <div className="mb-3 text-muted">
+//             Total Exchange Bookings: {totalBookings}
+//           </div>
+//           <div className="responsive-table-wrapper">
+//             <CTable striped bordered hover className="responsive-table">
+//               <CTableHead>
+//                 <CTableRow>
+//                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
+//                   <CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                   <CTableHeaderCell>Customer Name</CTableHeaderCell>
+//                   <CTableHeaderCell>Mobile</CTableHeaderCell>
+//                   <CTableHeaderCell>Vehicle Model</CTableHeaderCell>
+//                   <CTableHeaderCell>Color</CTableHeaderCell>
+//                   <CTableHeaderCell>Exchange Vehicle No</CTableHeaderCell>
+//                   <CTableHeaderCell>Exchange Price</CTableHeaderCell>
+//                   <CTableHeaderCell>Commission</CTableHeaderCell>
+//                   <CTableHeaderCell>Total Required</CTableHeaderCell>
+//                   <CTableHeaderCell>Paid Amount</CTableHeaderCell>
+//                   <CTableHeaderCell>Remaining Amount</CTableHeaderCell>
+//                   <CTableHeaderCell>Payment Status</CTableHeaderCell>
+//                   <CTableHeaderCell>Exchange Status</CTableHeaderCell>
+//                   <CTableHeaderCell>Booking Status</CTableHeaderCell>
+//                   <CTableHeaderCell>Booking Date</CTableHeaderCell>
+//                   <CTableHeaderCell>Action</CTableHeaderCell>
+//                 </CTableRow>
+//               </CTableHead>
+//               <CTableBody>
+//                 {displayBookings.map((booking, index) => {
+//                   const exchangePrice = booking.payment?.exchangeAmount || 0;
+//                   const commission = booking.payment?.commission || 0;
+//                   const totalRequired = booking.payment?.totalRequired || 0;
+//                   const paidAmount = booking.payment?.paidAmount || 0;
+//                   const remainingAmount = booking.payment?.remainingAmount || 0;
+//                   const paymentStatus = booking.payment?.paymentStatus || 'PENDING';
+//                   const isPaid = paymentStatus === 'PAID';
+                  
+//                   // Get status badge color
+//                   const getStatusBadgeClass = (status) => {
+//                     if (!status) return '';
+//                     const lowerStatus = status.toLowerCase();
+//                     if (lowerStatus === 'paid') return 'status-badge success';
+//                     if (lowerStatus === 'partial') return 'status-badge warning';
+//                     if (lowerStatus === 'pending') return 'status-badge pending';
+//                     if (lowerStatus === 'completed') return 'status-badge success';
+//                     if (lowerStatus === 'allocated') return 'status-badge info';
+//                     if (lowerStatus === 'approved') return 'status-badge success';
+//                     if (lowerStatus === 'pending_approval') return 'status-badge warning';
+//                     return '';
+//                   };
+                  
+//                   return (
+//                     <CTableRow key={booking._id}>
+//                       <CTableDataCell>{index + 1}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customer?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customer?.mobile || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.vehicle?.model || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.vehicle?.color || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.exchange?.vehicleNumber || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>₹{exchangePrice.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                       <CTableDataCell>₹{commission.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                       <CTableDataCell>₹{totalRequired.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                       <CTableDataCell>₹{paidAmount.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         <strong>₹{remainingAmount.toLocaleString('en-IN') || '0'}</strong>
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <span className={`status-badge ${paymentStatus.toLowerCase()}`}>
+//                           {paymentStatus}
+//                         </span>
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <span className={`status-badge ${(booking.exchange?.status || '').toLowerCase()}`}>
+//                           {booking.exchange?.status || 'N/A'}
+//                         </span>
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <span className={`status-badge ${getStatusBadgeClass(booking.status)}`}>
+//                           {booking.status || 'N/A'}
+//                         </span>
+//                       </CTableDataCell>
+//                       <CTableDataCell>{formatDateDDMMYYYY(booking.createdAt)}</CTableDataCell>
+//                       <CTableDataCell>
+//                         <CButton
+//                           size="sm"
+//                           color="primary"
+//                           onClick={() => openAllocationModal(booking)}
+//                           disabled={!selectedReceipt || remainingAmount <= 0 || isPaid}
+//                           title={
+//                             !selectedReceipt 
+//                               ? 'Please select a receipt first' 
+//                               : isPaid
+//                               ? 'Payment already completed for this booking'
+//                               : remainingAmount <= 0 
+//                               ? 'Booking balance is zero' 
+//                               : 'Allocate payment to this booking'
+//                           }
+//                         >
+//                           <CIcon icon={cilCash} className="me-1" />
+//                           {isPaid ? 'Paid' : 'Add Payment'}
+//                         </CButton>
+//                       </CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })}
+//               </CTableBody>
+//             </CTable>
+//           </div>
+//         </>
+//       ) : null}
+//     </div>
+//   );
+// };
+
+//   // Render Broker Ledger Tab (existing functionality)
+//   const renderBrokerLedgerTab = () => {
+//     const totalColumns = isFiltered ? 12 : 13;
+//     const actionColumnIndex = showActionColumn ? 1 : 0;
+
+//     if (loading && pagination.docs.length === 0 && !pagination.search) {
+//       return (
+//         <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
+//           <CSpinner color="primary" />
+//         </div>
+//       );
+//     }
+
+//     if (error) {
+//       return <div className="alert alert-danger" role="alert">{error}</div>;
+//     }
+
+//     return (
+//       <>
+//         <div className="d-flex justify-content-between mb-3">
+//           <div></div>
+//           <div className='d-flex'>
+//             <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//             <CFormInput
+//               type="text"
+//               className="d-inline-block square-search"
+//               value={searchTerm}
+//               onChange={(e) => handleSearch(e.target.value)}
+//               disabled={!canViewExchangeLedger}
+//               style={{ maxWidth: '350px', height: '30px', borderRadius: '0' }}
+//               placeholder="Search by broker name..."
+//             />
+//           </div>
+//         </div>
+        
+//         {pagination.loading && pagination.docs.length > 0 && (
+//           <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}>
+//             <CSpinner size="sm" color="primary" className="me-2" /> Searching records…
+//           </div>
+//         )}
+        
+//         <div className="responsive-table-wrapper" style={{ opacity: pagination.loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 {!isFiltered && <CTableHeaderCell></CTableHeaderCell>}
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell>Exchange Broker Name</CTableHeaderCell>
+//                 <CTableHeaderCell>Mobile</CTableHeaderCell>
+//                 {!isFiltered && <CTableHeaderCell>Branch</CTableHeaderCell>}
+//                 <CTableHeaderCell>Total Bookings</CTableHeaderCell>
+//                 <CTableHeaderCell>Total Exchange Amount</CTableHeaderCell>
+//                 <CTableHeaderCell>Total Received</CTableHeaderCell>
+//                 <CTableHeaderCell>Total Payable</CTableHeaderCell>
+//                 <CTableHeaderCell>Opening Balance</CTableHeaderCell>
+//                 <CTableHeaderCell>Current Balance</CTableHeaderCell>
+//                 <CTableHeaderCell>Outstanding Amount</CTableHeaderCell>
+//                 <CTableHeaderCell>Receipts</CTableHeaderCell>
+//                 {showActionColumn && <CTableHeaderCell>Actions</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {groupedData.length === 0 && !pagination.loading ? (
+//                 <CTableRow>
+//                   <CTableDataCell colSpan={totalColumns + actionColumnIndex} className="text-center">
+//                     {pagination.search ? `No matching ledger details found for "${pagination.search}"` : 'No ledger details available'}
+//                   </CTableDataCell>
+//                 </CTableRow>
+//               ) : (
+//                 groupedData.map((brokerData, index) => {
+//                   const brokerId = brokerData.broker._id;
+//                   const hasTransactions = transactionsFetched[brokerId] && transactionsData[brokerId]?.length > 0;
+//                   const isLoading = loadingTransactions[brokerId];
+//                   const transactions = transactionsData[brokerId] || [];
+//                   const sortedTransactions = [...transactions].sort((a, b) => {
+//                     const dateA = new Date(a.date || a.createdAt || 0);
+//                     const dateB = new Date(b.date || b.createdAt || 0);
+//                     return dateB - dateA;
+//                   });
+//                   const globalIndex = (pagination.currentPage - 1) * pagination.limit + index + 1;
+                  
+//                   return (
+//                     <React.Fragment key={brokerData.broker._id}>
+//                       <CTableRow className="broker-summary-row">
+//                         {!isFiltered && (
+//                           <CTableDataCell>
+//                             <CButton
+//                               color="link"
+//                               size="sm"
+//                               onClick={() => toggleBrokerExpansion(brokerData.broker._id)}
+//                               disabled={!canViewExchangeLedger}
+//                             >
+//                               {expandedBrokers[brokerData.broker._id] ? '▼' : '►'}
+//                             </CButton>
+//                           </CTableDataCell>
+//                         )}
+//                         <CTableDataCell>{globalIndex}</CTableDataCell>
+//                         <CTableDataCell>{brokerData.broker.name || 'N/A'}</CTableDataCell>
+//                         <CTableDataCell>{brokerData.broker.mobile || 'N/A'}</CTableDataCell>
+//                         {!isFiltered && <CTableDataCell>All Branches</CTableDataCell>}
+//                         <CTableDataCell>{brokerData.totalBookings || 0}</CTableDataCell>
+//                         <CTableDataCell>{brokerData.totalExchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                         <CTableDataCell>{brokerData.totalCredit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                         <CTableDataCell>{brokerData.totalDebit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                         <CTableDataCell>{brokerData.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                         <CTableDataCell>{brokerData.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                         <CTableDataCell>{brokerData.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+                        
+//                         <CTableDataCell>
+//                           {isFiltered ? (
+//                             isLoading ? (
+//                               <CSpinner size="sm" color="info" />
+//                             ) : sortedTransactions.length > 0 ? (
+//                               <CDropdown>
+//                                 <CDropdownToggle size="sm" color="info" variant="outline">
+//                                   {sortedTransactions.length} Receipt{sortedTransactions.length > 1 ? 's' : ''}
+//                                 </CDropdownToggle>
+//                                 <CDropdownMenu>
+//                                   {sortedTransactions.map((transaction, txIndex) => {
+//                                     const transactionId = transaction._id;
+//                                     const transactionAmount = transaction.amount || 0;
+//                                     const transactionDate = transaction.dateFormatted || new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+//                                     return (
+//                                       <CDropdownItem key={transactionId || txIndex} onClick={() => printBrokerReceipt(transactionId, brokerId, brokerData.branches[0]?.branchId)}>
+//                                         <div className="d-flex align-items-center">
+//                                           <CIcon icon={cilPrint} className="me-2" />
+//                                           <div>
+//                                             <div><strong>Receipt #{txIndex + 1}</strong></div>
+//                                             <small>₹{transactionAmount.toLocaleString('en-IN')} - {transactionDate}</small>
+//                                           </div>
+//                                         </div>
+//                                       </CDropdownItem>
+//                                     );
+//                                   })}
+//                                 </CDropdownMenu>
+//                               </CDropdown>
+//                             ) : transactionsFetched[brokerId] ? (
+//                               <span className="text-muted">No receipts</span>
+//                             ) : brokerData.branches && brokerData.branches.length > 0 ? (
+//                               <CButton size="sm" color="light" onClick={() => fetchTransactionsForBroker(brokerId, brokerData.branches[0].branchId)} disabled={isLoading}>
+//                                 <CIcon icon={cilCloudDownload} className="me-1" /> Load Receipts
+//                               </CButton>
+//                             ) : <span className="text-muted">No branch data</span>
+//                           ) : <span className="text-muted small">Expand to view receipts</span>}
+//                         </CTableDataCell>
+                        
+//                         {showActionColumn && (
+//                           <CTableDataCell>
+//                             <CButton size="sm" className='option-button btn-sm' onClick={(event) => handleClick(event, brokerData.broker._id, brokerData)} disabled={!canCreateExchangeLedger && !canViewExchangeLedger}>
+//                               <CIcon icon={cilSettings} /> Options
+//                             </CButton>
+//                             <Menu id={`action-menu-${brokerData.broker._id}`} anchorEl={anchorEl} open={menuId === brokerData.broker._id} onClose={handleClose}>
+//                               {canCreateExchangeLedger && (
+//                                 <MenuItem onClick={() => handleAddClick(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
+//                                   <CIcon icon={cilPlus} className="me-2" /> Add Payment
+//                                 </MenuItem>
+//                               )}
+//                               {canViewExchangeLedger && (
+//                                 <MenuItem onClick={() => handleViewLedger(brokerData, isFiltered ? brokerData.branches[0]?.branchId : null)}>
+//                                   View Ledger
+//                                 </MenuItem>
+//                               )}
+//                             </Menu>
+//                           </CTableDataCell>
+//                         )}
+//                       </CTableRow>
+                      
+//                       {!isFiltered && expandedBrokers[brokerData.broker._id] && brokerData.branches.map((branch, branchIndex) => {
+//                         const branchKey = `${brokerId}-${branch.branchId}`;
+//                         const hasBranchTransactions = transactionsFetched[branchKey] && transactionsData[branchKey]?.length > 0;
+//                         const isBranchLoading = loadingTransactions[branchKey];
+//                         const branchTransactions = transactionsData[branchKey] || [];
+//                         const sortedBranchTransactions = [...branchTransactions].sort((a, b) => {
+//                           const dateA = new Date(a.date || a.createdAt || 0);
+//                           const dateB = new Date(b.date || b.createdAt || 0);
+//                           return dateB - dateA;
+//                         });
+                        
+//                         return (
+//                           <CTableRow key={`${brokerData.broker._id}-${branch.branchId}`} className="branch-detail-row">
+//                             <CTableDataCell></CTableDataCell>
+//                             <CTableDataCell></CTableDataCell>
+//                             <CTableDataCell></CTableDataCell>
+//                             <CTableDataCell></CTableDataCell>
+//                             <CTableDataCell>{branch.name || 'N/A'}</CTableDataCell>
+//                             <CTableDataCell>{branch.bookings || 0}</CTableDataCell>
+//                             <CTableDataCell>{branch.exchangeAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                             <CTableDataCell>{branch.credit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                             <CTableDataCell>{branch.debit?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                             <CTableDataCell>{branch.onAccount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                             <CTableDataCell>{branch.currentBalance?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                             <CTableDataCell>{branch.outstandingAmount?.toLocaleString('en-IN') || '0'}</CTableDataCell>
+//                             <CTableDataCell>
+//                               {isBranchLoading ? (
+//                                 <CSpinner size="sm" color="info" />
+//                               ) : sortedBranchTransactions.length > 0 ? (
+//                                 <CDropdown>
+//                                   <CDropdownToggle size="sm" color="info" variant="outline">
+//                                     {sortedBranchTransactions.length} Receipt{sortedBranchTransactions.length > 1 ? 's' : ''}
+//                                   </CDropdownToggle>
+//                                   <CDropdownMenu>
+//                                     {sortedBranchTransactions.map((transaction, txIndex) => {
+//                                       const transactionId = transaction._id;
+//                                       const transactionAmount = transaction.amount || 0;
+//                                       const transactionDate = transaction.dateFormatted || new Date(transaction.date || transaction.createdAt).toLocaleDateString('en-GB');
+//                                       return (
+//                                         <CDropdownItem key={transactionId || txIndex} onClick={() => printBrokerReceipt(transactionId, brokerId, branch.branchId)}>
+//                                           <div className="d-flex align-items-center">
+//                                             <CIcon icon={cilPrint} className="me-2" />
+//                                             <div>
+//                                               <div><strong>Receipt #{txIndex + 1}</strong></div>
+//                                               <small>₹{transactionAmount.toLocaleString('en-IN')} - {transactionDate}</small>
+//                                             </div>
+//                                           </div>
+//                                         </CDropdownItem>
+//                                       );
+//                                     })}
+//                                   </CDropdownMenu>
+//                                 </CDropdown>
+//                               ) : transactionsFetched[branchKey] ? (
+//                                 <span className="text-muted">No receipts</span>
+//                               ) : (
+//                                 <CButton size="sm" color="light" onClick={() => fetchTransactionsForBroker(brokerId, branch.branchId)} disabled={isBranchLoading}>
+//                                   <CIcon icon={cilCloudDownload} className="me-1" /> Load Receipts
+//                                 </CButton>
+//                               )}
+//                             </CTableDataCell>
+//                             {showActionColumn && (
+//                               <CTableDataCell>
+//                                 <CButton size="sm" className='option-button btn-sm' onClick={(event) => handleClick(event, `${brokerData.broker._id}-${branch.branchId}`, brokerData, branch.branchId)} disabled={!canCreateExchangeLedger && !canViewExchangeLedger}>
+//                                   <CIcon icon={cilSettings} /> Options
+//                                 </CButton>
+//                                 <Menu id={`action-menu-${brokerData.broker._id}-${branch.branchId}`} anchorEl={anchorEl} open={menuId === `${brokerData.broker._id}-${branch.branchId}`} onClose={handleClose}>
+//                                   {canCreateExchangeLedger && (
+//                                     <MenuItem onClick={() => handleAddClick(brokerData, branch.branchId)}>
+//                                       <CIcon icon={cilPlus} className="me-2" /> Add Payment
+//                                     </MenuItem>
+//                                   )}
+//                                   {canViewExchangeLedger && (
+//                                     <MenuItem onClick={() => handleViewLedger(brokerData, branch.branchId)}>
+//                                       View Ledger
+//                                     </MenuItem>
+//                                   )}
+//                                 </Menu>
+//                               </CTableDataCell>
+//                             )}
+//                           </CTableRow>
+//                         );
+//                       })}
+//                     </React.Fragment>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination()}
+//       </>
+//     );
+//   };
+
+//   if (!canViewExchangeLedger) {
+//     return <div className="alert alert-danger m-3" role="alert">You do not have permission to view Exchange Ledger.</div>;
+//   }
+
+//   return (
+//     <div>
+//       <div className='title'>Exchange Ledger {isFiltered && `- ${selectedBranchName}`}</div>
+      
+//       {successMessage && (
+//         <CAlert color="success" className="mb-3">
+//           {successMessage}
+//         </CAlert>
+//       )}
+    
+//       <CCard className='table-container mt-4'>
+//         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
+//           <div>
+//             {activeTab === TAB.BROKER_LEDGER && (
+//               <>
+//                 <CButton size="sm" className="action-btn me-1" onClick={() => setShowFilterModal(true)} disabled={!canViewExchangeLedger}>
+//                   <CIcon icon={cilSearch} className='me-1' /> Search
+//                 </CButton>
+//                 {isFiltered && (
+//                   <CButton size="sm" className="action-btn me-1" onClick={clearFilter} disabled={!canViewExchangeLedger}>
+//                     <CIcon icon={cilZoomOut} className='me-1' /> Clear Filter
+//                   </CButton>
+//                 )}
+//                 {canCreateExchangeLedger && (
+//                   <CButton size="sm" className="action-btn me-1" onClick={handleOpenExportModal} title="Export Excel Report">
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' /> Export Report
+//                   </CButton>
+//                 )}
+//               </>
+//             )}
+//           </div>
+//           <div className="text-muted">
+//             Total Records: {activeTab === TAB.BROKER_LEDGER ? pagination.totalRecords || 0 : exchangeBookings.length}
+//           </div>
+//         </CCardHeader>
+        
+//         <CCardBody>
+//           {/* Tabs Navigation */}
+//           <CNav variant="tabs" className="mb-4 border-bottom">
+//             <CNavItem>
+//               <CNavLink
+//                 active={activeTab === TAB.BROKER_LEDGER}
+//                 onClick={() => setActiveTab(TAB.BROKER_LEDGER)}
+//                 style={{ cursor: 'pointer', borderTop: activeTab === TAB.BROKER_LEDGER ? '4px solid #2759a2' : '3px solid transparent', borderBottom: 'none', color: 'black' }}
+//               >
+//                 Broker Ledger
+//               </CNavLink>
+//             </CNavItem>
+//             <CNavItem>
+//               <CNavLink
+//                 active={activeTab === TAB.BROKER_PAYMENT}
+//                 onClick={() => setActiveTab(TAB.BROKER_PAYMENT)}
+//                 style={{ cursor: 'pointer', borderTop: activeTab === TAB.BROKER_PAYMENT ? '4px solid #2759a2' : '3px solid transparent', borderBottom: 'none', color: 'black' }}
+//               >
+//                 Broker Payment
+//               </CNavLink>
+//             </CNavItem>
+//           </CNav>
+
+//           {/* Tab Content */}
+//           <CTabContent>
+//             <CTabPane visible={activeTab === TAB.BROKER_LEDGER}>
+//               {renderBrokerLedgerTab()}
+//             </CTabPane>
+//             <CTabPane visible={activeTab === TAB.BROKER_PAYMENT}>
+//               {renderBrokerPaymentTab()}
+//             </CTabPane>
+//           </CTabContent>
+//         </CCardBody>
+//       </CCard>
+
+//       {/* Filter Modal */}
+//       <CModal alignment="center" visible={showFilterModal} onClose={() => setShowFilterModal(false)}>
+//         <CModalHeader><CModalTitle>Search</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           <div className="mb-3">
+//             <CFormLabel>Select Branch</CFormLabel>
+//             <CFormSelect value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} disabled={!canViewExchangeLedger}>
+//               <option value="ALL">All Branches</option>
+//               {branches.map((branch) => (
+//                 <option key={branch._id} value={branch._id}>{branch.name || 'N/A'}</option>
+//               ))}
+//             </CFormSelect>
+//           </div>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="primary" onClick={handleBranchFilter} disabled={!canViewExchangeLedger}>Search</CButton>
+//         </CModalFooter>
+//       </CModal>
+      
+//       {/* Export Report Modal */}
+//       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal} size="lg">
+//         <CModalHeader><CModalTitle><FontAwesomeIcon icon={faCalendarAlt} className="me-2" /> Export Brokers Report</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {exportError && <CAlert color="warning" className="mb-3">{exportError}</CAlert>}
+//           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enIN}>
+//             <div className="mb-3">
+//               <CFormLabel>Select Branch</CFormLabel>
+//               <CFormSelect value={exportBranchId} onChange={(e) => { setExportBranchId(e.target.value); setExportError(''); }} disabled={!canCreateExchangeLedger}>
+//                 <option value="">-- Select Branch --</option>
+//                 <option value="ALL">All Branches</option>
+//                 {branches.map((branch) => (
+//                   <option key={branch._id} value={branch._id}>{branch.name || 'N/A'}</option>
+//                 ))}
+//               </CFormSelect>
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker label="Start Date" value={exportStartDate} onChange={(newValue) => { setExportStartDate(newValue); setExportError(''); }} renderInput={(params) => <TextField {...params} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" views={['day', 'month', 'year']} disabled={!canCreateExchangeLedger} />
+//             </div>
+//             <div className="mb-3">
+//               <DatePicker label="End Date" value={exportEndDate} onChange={(newValue) => { setExportEndDate(newValue); setExportError(''); }} renderInput={(params) => <TextField {...params} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={exportStartDate} views={['day', 'month', 'year']} disabled={!canCreateExchangeLedger} />
+//             </div>
+//           </LocalizationProvider>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseExportModal}>Cancel</CButton>
+//           <CButton className="submit-button" onClick={handleExcelExport} disabled={!exportStartDate || !exportEndDate || !exportBranchId || !canCreateExchangeLedger || exportLoading}>
+//             {exportLoading ? <><CSpinner size="sm" className="me-2" /> Exporting...</> : 'Export Excel'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+      
+//       {/* Payment Allocation Modal */}
+//     {/* Payment Allocation Modal */}
+// <CModal visible={allocationModalVisible} onClose={() => setAllocationModalVisible(false)}>
+//   <CModalHeader onClose={() => setAllocationModalVisible(false)}>
+//     <CModalTitle>Allocate Payment to Booking</CModalTitle>
+//   </CModalHeader>
+//   <CModalBody>
+//     <CForm>
+//       {allocationError && (
+//         <CAlert color="danger" className="mb-3" dismissible onClose={() => setAllocationError('')}>
+//           {allocationError}
+//         </CAlert>
+//       )}
+      
+//       <div className="mb-3">
+//         <CFormLabel>Booking Number</CFormLabel>
+//         <CFormInput 
+//           type="text" 
+//           value={selectedBookingForAllocation?.bookingNumber || ''} 
+//           disabled 
+//           readOnly 
+//         />
+//       </div>
+      
+//       <div className="mb-3">
+//         <CFormLabel>Customer Name</CFormLabel>
+//         <CFormInput 
+//           type="text" 
+//           value={selectedBookingForAllocation?.customer?.name || ''} 
+//           disabled 
+//           readOnly 
+//         />
+//       </div>
+      
+//       <div className="mb-3">
+//         <CFormLabel>Selected Receipt</CFormLabel>
+//         <div className="border rounded p-2 bg-light">
+//           <div><strong>Reference:</strong> {selectedReceiptData?.referenceNumber || 'N/A'}</div>
+//           <div><strong>Available Amount:</strong> ₹{selectedReceiptData?.remaining?.toLocaleString('en-IN') || '0'}</div>
+//           <div><strong>Payment Mode:</strong> {selectedReceiptData?.modeOfPayment || 'N/A'}</div>
+//           <div><strong>Date:</strong> {selectedReceiptData ? formatDateDDMMYYYY(selectedReceiptData.date) : 'N/A'}</div>
+//         </div>
+//       </div>
+      
+//       <div className="mb-3">
+//         <CFormLabel htmlFor="allocationAmount">Amount to Allocate (₹)</CFormLabel>
+//         <CFormInput
+//           type="number"
+//           id="allocationAmount"
+//           value={allocationAmount}
+//           onChange={(e) => setAllocationAmount(e.target.value)}
+//           placeholder="Enter amount"
+//           required
+//           min="0.01"
+//           step="0.01"
+//         />
+//         <small className="text-muted">
+//           Max allowed: ₹{selectedReceiptData?.remaining?.toLocaleString('en-IN') || '0'}
+//         </small>
+//       </div>
+//     </CForm>
+//   </CModalBody>
+//   <CModalFooter>
+//     <CButton color="secondary" onClick={() => setAllocationModalVisible(false)} disabled={allocationLoading}>
+//       Cancel
+//     </CButton>
+//     <CButton 
+//       color="primary" 
+//       onClick={handleAllocatePayment} 
+//       disabled={allocationLoading || !allocationAmount || parseFloat(allocationAmount) <= 0}
+//     >
+//       {allocationLoading ? (
+//         <>
+//           <CSpinner component="span" size="sm" aria-hidden="true" className="me-2" />
+//           Allocating...
+//         </>
+//       ) : (
+//         'Allocate Payment'
+//       )}
+//     </CButton>
+//   </CModalFooter>
+// </CModal>
+      
+//       {/* Payment Modal */}
+//       <ExchangeLedgerModel 
+//         show={showModal} 
+//         onClose={() => setShowModal(false)} 
+//         brokerData={selectedledger} 
+//         refreshData={() => fetchData(pagination.currentPage, pagination.limit, pagination.search, isFiltered ? selectedBranch : null)}
+//         onPaymentSaved={handlePaymentSaved}
+//         canCreateExchangeLedger={canCreateExchangeLedger}
+//         onPaymentSuccess={(receiptId, brokerId, branchId) => {
+//           if (receiptId && brokerId && branchId) {
+//             setTimeout(() => printBrokerReceipt(receiptId, brokerId, branchId), 500);
+//           }
+//         }}
+//       />
+//     </div>
+//   );
+// };
+
+// export default ExchangeLedger;

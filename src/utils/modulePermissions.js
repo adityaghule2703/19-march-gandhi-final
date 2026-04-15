@@ -4447,7 +4447,8 @@ export const PAGES = {
     HSRP_ORDERING: 'HSRP Ordering',
     HSRP_INSTALLATION: 'HSRP Installation',
     RC_CONFIRMATION: 'RC Confirmation',
-    REPORT: 'Report'
+    REPORT: 'Report',
+    RTO_INVOICE: 'RTO Invoice'
   },
   
   // Fund Management module pages
@@ -4769,6 +4770,7 @@ export const getPageFromRoute = (routePath) => {
     '/rto/hsrp-installation': PAGES.RTO.HSRP_INSTALLATION,
     '/rto/rc-confirmation': PAGES.RTO.RC_CONFIRMATION,
     '/rto/rto-report': PAGES.RTO.REPORT,
+    '/rto/rto-invoice': PAGES.RTO.RTO_INVOICE,
     
     // Fund Management
     '/cash-voucher': PAGES.FUND_MANAGEMENT.CASH_VOUCHER,
@@ -4920,6 +4922,7 @@ export const getModuleFromRoute = (routePath) => {
     '/rto/hsrp-installation': MODULES.RTO,
     '/rto/rc-confirmation': MODULES.RTO,
     '/rto/rto-report': MODULES.RTO,
+    '/rto/rto-invoice': MODULES.RTO,
     
     // Fund Management
     '/cash-voucher': MODULES.FUND_MANAGEMENT,

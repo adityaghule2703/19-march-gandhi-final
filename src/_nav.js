@@ -3916,6 +3916,8 @@ const getNav = (userPermissions = []) => {
     });
   }
 
+  
+
   // DUMMY Invoice - Added under Sales module
   if (canViewPage(userPermissions, MODULES.SALES, PAGES.SALES.DUMMY_INVOICE)) {
     salesItems.push({
@@ -4138,6 +4140,14 @@ const getNav = (userPermissions = []) => {
       to: '/rto-dashboard',
     });
   }
+
+  if (canViewPage(userPermissions, MODULES.RTO, PAGES.RTO.RTO_INVOICE)) {
+  rtoItems.push({
+    component: CNavItem,
+    name: 'RTO Invoice',
+    to: '/rto-invoice',
+  });
+}
   
   if (canViewPage(userPermissions, MODULES.RTO, PAGES.RTO.APPLICATION)) {
     rtoItems.push({

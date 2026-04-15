@@ -1,4 +1,5 @@
 import React from 'react';
+
 const NewBooking = React.lazy(() => import('../views/sales/booking/NewBooking'))
 const SelfInsurance = React.lazy(() => import('../views/sales/booking/SelfInsurance'))
 const BookingList = React.lazy(() => import('../views/sales/booking/BookingList'))
@@ -23,6 +24,7 @@ export const salesRoutes = [
   
     { path:'/delivery-challan', name:'Delivery Challan', element:DeliveryChallan},
     { path:'/invoice', name:'GST Invoice', element:Invoice},
+    
      { path:'/dummy-invoice', name:'Proforma Invoice', element:DummyInvoice},
     { path:'/helmet-invoice', name:'Helmet Invoice', element:HelmetInvoice},
     { path:'/deal-form', name:'Deal Form', element:DealForm},

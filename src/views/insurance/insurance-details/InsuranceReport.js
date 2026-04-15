@@ -2178,7 +2178,7 @@
 
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   CBadge, 
   CNav, 
@@ -2209,7 +2209,7 @@ import {
   CPagination,
   CPaginationItem
 } from '@coreui/react';
-import { axiosInstance, getDefaultSearchFields, showError, useTableFilter } from '../../../utils/tableImports';
+import { axiosInstance, showError } from '../../../utils/tableImports';
 import '../../../css/invoice.css';
 import '../../../css/table.css';
 import AddInsurance from './AddInsurance';
@@ -2230,8 +2230,29 @@ import {
   ACTIONS
 } from '../../../utils/modulePermissions';
 
+// Tab constants
+const TAB = {
+  PENDING_INSURANCE: 0,
+  COMPLETE_INSURANCE: 1,
+  UPDATE_LATER: 2
+};
+
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
+const DEFAULT_LIMIT = 100;
+
+// Each tab gets its own fully independent state slice
+const emptyTab = () => ({
+  docs: [],
+  total: 0,
+  pages: 0,
+  currentPage: 1,
+  limit: DEFAULT_LIMIT,
+  loading: false,
+  search: '',
+});
+
 function InsuranceReport() {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(TAB.PENDING_INSURANCE);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showViewBookingModal, setShowViewBookingModal] = useState(false);
@@ -2239,22 +2260,30 @@ function InsuranceReport() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedBookingForView, setSelectedBookingForView] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   
-  // Export modal states - removed date states
+  // Per-tab independent state
+  const [tabData, setTabData] = useState(() => ({
+    [TAB.PENDING_INSURANCE]: emptyTab(),
+    [TAB.COMPLETE_INSURANCE]: emptyTab(),
+    [TAB.UPDATE_LATER]: emptyTab()
+  }));
+  
+  // LOCAL search state (display only — input is UNCONTROLLED)
+  const [localSearch, setLocalSearch] = useState('');
+  
+  // Export modal states
   const [showExportModal, setShowExportModal] = useState(false);
   const [branches, setBranches] = useState([]);
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [exportError, setExportError] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
-
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage] = useState(100);
-  const [totalPages, setTotalPages] = useState(1);
-  const [displayedPages, setDisplayedPages] = useState([]);
+  
+  // Refs for debouncing
+  const searchTimer = useRef(null);
+  const searchInputRef = useRef(null);
+  const activeTabRef = useRef(activeTab);
+  
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   const { permissions = [], user } = useAuth();
   const hasAllBranchAccess = user?.branchAccess === "ALL";
@@ -2292,7 +2321,6 @@ function InsuranceReport() {
     TABS.INSURANCE_DETAILS.UPDATE_LATER
   );
   
-  // Check if user can view at least one tab
   const canViewAnyTab = canViewPendingInsuranceTab || canViewCompleteInsuranceTab || canViewUpdateLaterTab;
   
   // Tab-level CREATE permission for PENDING INSURANCE tab (for Add button)
@@ -2313,204 +2341,380 @@ function InsuranceReport() {
     TABS.INSURANCE_DETAILS.UPDATE_LATER
   );
 
-  const {
-    data: pendingData,
-    setData: setPendingData,
-    filteredData: filteredPendings,
-    setFilteredData: setFilteredPendings,
-    handleFilter: handlePendingFilter
-  } = useTableFilter([]);
-  const {
-    data: laterData,
-    setData: setLaterData,
-    filteredData: filteredLater,
-    setFilteredData: setFilteredLater,
-    handleFilter: handleLaterFilter
-  } = useTableFilter([]);
-  const {
-    data: approvedData,
-    setData: setApprovedData,
-    filteredData: filteredApproved,
-    setFilteredData: setFilteredApproved,
-    handleFilter: handleApprovedFilter
-  } = useTableFilter([]);
+  // Helper: update a single tab's slice
+  const setTab = useCallback((tabIndex, updates) =>
+    setTabData(prev => ({ ...prev, [tabIndex]: { ...prev[tabIndex], ...updates } })),
+  []);
 
-  // Adjust activeTab based on tab-level permissions
-  useEffect(() => {
-    if (!canViewAnyTab) {
-      return;
-    }
+  // Fetch functions with server-side pagination and search
+// Update the fetch functions to handle your exact API response structure
+const fetchCompleteInsurance = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+  if (!canViewCompleteInsuranceTab) return;
+  setTab(tabIndex, { loading: true });
+  try {
+    const params = { page, limit };
+    if (search) params.search = search;
+    const response = await axiosInstance.get(`/insurance/status/COMPLETED`, { params });
     
-    // If current active tab is hidden due to permissions, find first visible tab
-    const visibleTabs = [];
-    if (canViewPendingInsuranceTab) visibleTabs.push(0);
-    if (canViewCompleteInsuranceTab) visibleTabs.push(1);
-    if (canViewUpdateLaterTab) visibleTabs.push(2);
+    // Handle your API response structure
+    let docs = [];
+    let total = 0;
+    let pages = 1;
     
-    if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
-      setActiveTab(visibleTabs[0]);
-    }
-  }, [canViewAnyTab, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, canViewUpdateLaterTab, activeTab]);
-
-  useEffect(() => {
-    fetchBranches();
-  }, []);
-
-  // Recalculate pagination when filtered data changes or tab changes
-  useEffect(() => {
-    const getFilteredData = () => {
-      switch(activeTab) {
-        case 0: return filteredPendings;
-        case 1: return filteredApproved;
-        case 2: return filteredLater;
-        default: return [];
+    if (response.data) {
+      // Your API returns: { success, count, totalCount, data, pagination }
+      docs = response.data.data || [];
+      total = response.data.totalCount || response.data.count || docs.length;
+      
+      // Get pagination info from your API
+      if (response.data.pagination) {
+        pages = response.data.pagination.totalPages || 1;
+        total = response.data.pagination.total || docs.length;
+      } else {
+        pages = Math.ceil(total / limit);
       }
-    };
+    }
     
-    calculatePagination(getFilteredData());
-    setCurrentPage(1); // Reset to first page when tab changes
-  }, [filteredPendings, filteredApproved, filteredLater, activeTab]);
+    console.log(`Complete Insurance Tab - Page: ${page}, Total: ${total}, Pages: ${pages}, Docs Length: ${docs.length}`);
+    
+    setTab(tabIndex, {
+      docs,
+      total,
+      pages,
+      currentPage: page,
+      limit,
+      loading: false,
+      search
+    });
+  } catch (error) {
+    console.error('Error fetching complete insurance:', error);
+    showError(error);
+    setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
+  }
+}, [canViewCompleteInsuranceTab, setTab]);
 
-  const fetchBranches = async () => {
+// Similarly for fetchPendingInsurance
+const fetchPendingInsurance = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+  if (!canViewPendingInsuranceTab) return;
+  setTab(tabIndex, { loading: true });
+  try {
+    const params = { page, limit };
+    if (search) params.search = search;
+    const response = await axiosInstance.get(`/bookings/insurance-status/AWAITING`, { params });
+    
+    let docs = [];
+    let total = 0;
+    let pages = 1;
+    
+    if (response.data) {
+      // Handle different possible response structures
+      if (response.data.data) {
+        if (response.data.data.docs) {
+          docs = response.data.data.docs;
+          total = response.data.data.totalDocs || response.data.data.total || docs.length;
+          pages = response.data.data.totalPages || Math.ceil(total / limit);
+        } else if (Array.isArray(response.data.data)) {
+          docs = response.data.data;
+          total = response.data.totalCount || response.data.count || docs.length;
+          if (response.data.pagination) {
+            pages = response.data.pagination.totalPages || 1;
+          } else {
+            pages = Math.ceil(total / limit);
+          }
+        } else {
+          docs = response.data.data;
+          total = docs.length;
+          pages = Math.ceil(total / limit);
+        }
+      } else if (Array.isArray(response.data)) {
+        docs = response.data;
+        total = docs.length;
+        pages = Math.ceil(total / limit);
+      } else {
+        docs = response.data?.docs || [];
+        total = response.data?.totalDocs || docs.length;
+        pages = response.data?.totalPages || Math.ceil(total / limit);
+      }
+    }
+    
+    console.log(`Pending Insurance Tab - Page: ${page}, Total: ${total}, Pages: ${pages}, Docs Length: ${docs.length}`);
+    
+    setTab(tabIndex, {
+      docs,
+      total,
+      pages,
+      currentPage: page,
+      limit,
+      loading: false,
+      search
+    });
+  } catch (error) {
+    console.error('Error fetching pending insurance:', error);
+    showError(error);
+    setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
+  }
+}, [canViewPendingInsuranceTab, setTab]);
+
+// For Update Later tab
+const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+  if (!canViewUpdateLaterTab) return;
+  setTab(tabIndex, { loading: true });
+  try {
+    const params = { page, limit };
+    if (search) params.search = search;
+    const response = await axiosInstance.get(`/insurance/status/LATER`, { params });
+    
+    let docs = [];
+    let total = 0;
+    let pages = 1;
+    
+    if (response.data) {
+      docs = response.data.data || [];
+      total = response.data.totalCount || response.data.count || docs.length;
+      
+      if (response.data.pagination) {
+        pages = response.data.pagination.totalPages || 1;
+        total = response.data.pagination.total || docs.length;
+      } else {
+        pages = Math.ceil(total / limit);
+      }
+    }
+    
+    console.log(`Update Later Tab - Page: ${page}, Total: ${total}, Pages: ${pages}, Docs Length: ${docs.length}`);
+    
+    setTab(tabIndex, {
+      docs,
+      total,
+      pages,
+      currentPage: page,
+      limit,
+      loading: false,
+      search
+    });
+  } catch (error) {
+    console.error('Error fetching update later:', error);
+    showError(error);
+    setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
+  }
+}, [canViewUpdateLaterTab, setTab]);
+
+  // Central dispatcher for fetching
+  const fetchTab = useCallback((tabIndex, page, limit, search) => {
+    setTabData(prev => {
+      const td = prev[tabIndex];
+      const p = page !== undefined ? page : td.currentPage;
+      const l = limit !== undefined ? limit : td.limit;
+      const s = search !== undefined ? search : td.search;
+      
+      switch (tabIndex) {
+        case TAB.PENDING_INSURANCE:
+          fetchPendingInsurance(tabIndex, p, l, s);
+          break;
+        case TAB.COMPLETE_INSURANCE:
+          fetchCompleteInsurance(tabIndex, p, l, s);
+          break;
+        case TAB.UPDATE_LATER:
+          fetchUpdateLater(tabIndex, p, l, s);
+          break;
+        default:
+          break;
+      }
+      return prev;
+    });
+  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater]);
+
+  // Fetch branches
+  const fetchBranches = useCallback(async () => {
     try {
       const response = await axiosInstance.get('/branches');
       setBranches(response.data.data);
     } catch (error) {
       console.error('Error fetching branches:', error);
     }
-  };
+  }, []);
 
-  const fetchData = async () => {
-    if (!canViewInsuranceDetails) {
-      setError('Permission denied');
-      setLoading(false);
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const response = await axiosInstance.get(`/bookings/insurance-status/AWAITING`);
-      // Remove pagination - assuming response.data.data.docs contains the array
-      setPendingData(response.data.data.docs || response.data.data || []);
-      setFilteredPendings(response.data.data.docs || response.data.data || []);
-    } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCompleteData = async () => {
-    if (!canViewInsuranceDetails) {
-      return;
-    }
-    
-    try {
-      const response = await axiosInstance.get(`/insurance/status/COMPLETED`);
-      setApprovedData(response.data.data || []);
-      setFilteredApproved(response.data.data || []);
-    } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }
-    }
-  };
-
-  const fetchLaterData = async () => {
-    if (!canViewInsuranceDetails) {
-      return;
-    }
-    
-    try {
-      const response = await axiosInstance.get(`/insurance/status/LATER`);
-      setLaterData(response.data.data || []);
-      setFilteredLater(response.data.data || []);
-    } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }
-    }
-  };
-
+  // Initial data load - fetch all tabs once on mount
   useEffect(() => {
     if (!canViewInsuranceDetails) {
       showError('You do not have permission to view Insurance Details');
       return;
     }
     
-    fetchData();
-    fetchCompleteData();
-    fetchLaterData();
-  }, [refreshKey, canViewInsuranceDetails]);
-
-  // Calculate pagination
-  const calculatePagination = (filteredData) => {
-    const total = filteredData.length;
-    const totalPages = Math.ceil(total / recordsPerPage);
-    setTotalPages(totalPages);
+    fetchBranches();
     
-    // Calculate displayed page numbers (max 5 pages shown)
-    const pages = [];
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, currentPage + 2);
-    
-    // Adjust if we're near the beginning
-    if (currentPage <= 3) {
-      endPage = Math.min(5, totalPages);
+    if (canViewPendingInsuranceTab) {
+      fetchPendingInsurance(TAB.PENDING_INSURANCE, 1, DEFAULT_LIMIT, '');
     }
-    
-    // Adjust if we're near the end
-    if (currentPage >= totalPages - 2) {
-      startPage = Math.max(1, totalPages - 4);
+    if (canViewCompleteInsuranceTab) {
+      fetchCompleteInsurance(TAB.COMPLETE_INSURANCE, 1, DEFAULT_LIMIT, '');
     }
-    
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
+    if (canViewUpdateLaterTab) {
+      fetchUpdateLater(TAB.UPDATE_LATER, 1, DEFAULT_LIMIT, '');
     }
+  }, [canViewInsuranceDetails, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, canViewUpdateLaterTab, fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater, fetchBranches]);
+
+  // Refresh on refreshKey change
+  useEffect(() => {
+    if (refreshKey > 0 && canViewInsuranceDetails) {
+      const currentTab = activeTab;
+      const tabState = tabData[currentTab];
+      fetchTab(currentTab, tabState.currentPage, tabState.limit, tabState.search);
+    }
+  }, [refreshKey, activeTab, tabData, fetchTab, canViewInsuranceDetails]);
+
+  // Adjust activeTab based on tab-level permissions
+  useEffect(() => {
+    if (!canViewAnyTab) return;
     
-    setDisplayedPages(pages);
-  };
+    const visibleTabs = [];
+    if (canViewPendingInsuranceTab) visibleTabs.push(TAB.PENDING_INSURANCE);
+    if (canViewCompleteInsuranceTab) visibleTabs.push(TAB.COMPLETE_INSURANCE);
+    if (canViewUpdateLaterTab) visibleTabs.push(TAB.UPDATE_LATER);
+    
+    if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+      setActiveTab(visibleTabs[0]);
+    }
+  }, [canViewAnyTab, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, canViewUpdateLaterTab, activeTab]);
 
-  // Get current records for the page
-  const getCurrentRecords = (filteredData) => {
-    const indexOfLastRecord = currentPage * recordsPerPage;
-    const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-    return filteredData.slice(indexOfFirstRecord, indexOfLastRecord);
-  };
-
-  // Handle page change
-  const handlePageChange = (pageNumber) => {
-    if (pageNumber < 1 || pageNumber > totalPages) return;
-    setCurrentPage(pageNumber);
-    // Scroll to top when page changes
+  // Pagination handlers
+  const handlePageChange = useCallback((tabIndex, newPage) => {
+    setTabData(prev => {
+      const td = prev[tabIndex];
+      if (newPage < 1 || newPage > td.pages) return prev;
+      
+      switch (tabIndex) {
+        case TAB.PENDING_INSURANCE:
+          fetchPendingInsurance(tabIndex, newPage, td.limit, td.search);
+          break;
+        case TAB.COMPLETE_INSURANCE:
+          fetchCompleteInsurance(tabIndex, newPage, td.limit, td.search);
+          break;
+        case TAB.UPDATE_LATER:
+          fetchUpdateLater(tabIndex, newPage, td.limit, td.search);
+          break;
+        default:
+          break;
+      }
+      return prev;
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater]);
+
+  const handleLimitChange = useCallback((tabIndex, newLimit) => {
+    const limit = parseInt(newLimit, 10);
+    setTabData(prev => {
+      const td = prev[tabIndex];
+      switch (tabIndex) {
+        case TAB.PENDING_INSURANCE:
+          fetchPendingInsurance(tabIndex, 1, limit, td.search);
+          break;
+        case TAB.COMPLETE_INSURANCE:
+          fetchCompleteInsurance(tabIndex, 1, limit, td.search);
+          break;
+        case TAB.UPDATE_LATER:
+          fetchUpdateLater(tabIndex, 1, limit, td.search);
+          break;
+        default:
+          break;
+      }
+      return prev;
+    });
+  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater]);
+
+  // Search handler with debounce
+  const handleSearch = useCallback((value) => {
+    setLocalSearch(value);
+    
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      const tab = activeTabRef.current;
+      const tabState = tabData[tab];
+      const limit = tabState?.limit || DEFAULT_LIMIT;
+      fetchTab(tab, 1, limit, value);
+    }, 400);
+  }, [tabData, fetchTab]);
+
+  // Tab change handler - always re-fetch fresh data with empty search
+  const handleTabChange = useCallback((tab) => {
+    clearTimeout(searchTimer.current);
+    setActiveTab(tab);
+    setLocalSearch('');
+    
+    if (searchInputRef.current) searchInputRef.current.value = '';
+    
+    setTabData(prev => ({
+      ...prev,
+      [tab]: { ...prev[tab], search: '' }
+    }));
+    
+    const limit = tabData[tab]?.limit || DEFAULT_LIMIT;
+    fetchTab(tab, 1, limit, '');
+  }, [tabData, fetchTab]);
+
+  // Refresh helper
+  const refreshTab = useCallback((tabIndex) => {
+    const td = tabData[tabIndex];
+    const limit = td?.limit || DEFAULT_LIMIT;
+    
+    setTabData(prev => ({ ...prev, [tabIndex]: { ...prev[tabIndex], search: '' } }));
+    
+    if (tabIndex === activeTab) {
+      setLocalSearch('');
+      if (searchInputRef.current) searchInputRef.current.value = '';
+    }
+    
+    fetchTab(tabIndex, 1, limit, '');
+  }, [activeTab, tabData, fetchTab]);
+
+  const handleRefresh = () => {
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleModalClose = () => {
+    setShowModal(false);
+    setSelectedInsurance(null);
+    setSelectedBooking(null);
+    refreshTab(activeTab);
+  };
+
+  // Export handlers
+  const handleOpenExportModal = () => {
+    if (activeTab === TAB.PENDING_INSURANCE && !canCreatePendingInsurance) {
+      showError('You do not have permission to export from this tab');
+      return;
+    }
+    if (activeTab === TAB.COMPLETE_INSURANCE && !canViewCompleteInsuranceTab) {
+      showError('You do not have permission to export from this tab');
+      return;
+    }
+    if (activeTab === TAB.UPDATE_LATER && !canCreateUpdateLater) {
+      showError('You do not have permission to export from this tab');
+      return;
+    }
+    setShowExportModal(true);
+    setExportError('');
+  };
+
+  const handleCloseExportModal = () => {
+    setShowExportModal(false);
+    setSelectedBranchId('');
+    setExportError('');
   };
 
   const handleExportToExcel = async () => {
-    // Check for add permission based on active tab
-    if (activeTab === 0 && !canCreatePendingInsurance) {
+    if (activeTab === TAB.PENDING_INSURANCE && !canCreatePendingInsurance) {
       showError('You do not have permission to export from this tab');
       return;
     }
-    
-    // Check for complete tab - anyone can export if they can view
-    if (activeTab === 1 && !canViewCompleteInsuranceTab) {
+    if (activeTab === TAB.COMPLETE_INSURANCE && !canViewCompleteInsuranceTab) {
       showError('You do not have permission to export from this tab');
       return;
     }
-    
-    // Check for update later tab - need create permission
-    if (activeTab === 2 && !canCreateUpdateLater) {
+    if (activeTab === TAB.UPDATE_LATER && !canCreateUpdateLater) {
       showError('You do not have permission to export from this tab');
       return;
     }
 
-    // Clear previous errors
     setExportError('');
     
     if (!selectedBranchId) {
@@ -2521,17 +2725,15 @@ function InsuranceReport() {
     try {
       setExportLoading(true);
       
-      // Determine API endpoint based on active tab
       let apiEndpoint = '';
-      if (activeTab === 0) {
-        apiEndpoint = '/reports/insurance/pending'; // Pending Insurance
-      } else if (activeTab === 1) {
-        apiEndpoint = '/reports/insurance/complete'; // Complete Insurance
-      } else if (activeTab === 2) {
-        apiEndpoint = '/reports/insurance/later'; // Update Later
+      if (activeTab === TAB.PENDING_INSURANCE) {
+        apiEndpoint = '/reports/insurance/pending';
+      } else if (activeTab === TAB.COMPLETE_INSURANCE) {
+        apiEndpoint = '/reports/insurance/complete';
+      } else if (activeTab === TAB.UPDATE_LATER) {
+        apiEndpoint = '/reports/insurance/later';
       }
 
-      // Build query parameters - removed startDate and endDate
       const params = new URLSearchParams({
         branchId: selectedBranchId,
         format: 'excel'
@@ -2542,11 +2744,9 @@ function InsuranceReport() {
         { responseType: 'blob' }
       );
 
-      // Check content type to see if it's an error
       const contentType = response.headers['content-type'];
       
       if (contentType && contentType.includes('application/json')) {
-        // It's a JSON error response, parse it
         const text = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
@@ -2556,14 +2756,12 @@ function InsuranceReport() {
         
         const errorData = JSON.parse(text);
         
-        // Show the exact error message from API
         if (!errorData.success && errorData.message) {
           setExportError(errorData.message);
           return;
         }
       }
 
-      // Handle Excel file download
       const blob = new Blob([response.data], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
@@ -2572,13 +2770,12 @@ function InsuranceReport() {
       const link = document.createElement('a');
       link.href = url;
       
-      // Generate filename
       const branchName = branches.find(b => b._id === selectedBranchId)?.name || 'Branch';
       
       let tabName = '';
-      if (activeTab === 0) tabName = 'Pending_Insurance';
-      else if (activeTab === 1) tabName = 'Complete_Insurance';
-      else if (activeTab === 2) tabName = 'Update_Later';
+      if (activeTab === TAB.PENDING_INSURANCE) tabName = 'Pending_Insurance';
+      else if (activeTab === TAB.COMPLETE_INSURANCE) tabName = 'Complete_Insurance';
+      else if (activeTab === TAB.UPDATE_LATER) tabName = 'Update_Later';
       
       const fileName = `${tabName}_${branchName}.xlsx`;
       link.setAttribute('download', fileName);
@@ -2589,14 +2786,12 @@ function InsuranceReport() {
       
       window.URL.revokeObjectURL(url);
       
-      // Show success message
       showError('Excel exported successfully!');
       handleCloseExportModal();
       
     } catch (error) {
       console.error('Error exporting report:', error);
       
-      // For blob errors, we need to read the blob
       if (error.response && error.response.data instanceof Blob) {
         try {
           const text = await new Promise((resolve, reject) => {
@@ -2608,7 +2803,6 @@ function InsuranceReport() {
           
           const errorData = JSON.parse(text);
           
-          // Show the exact error message from API
           if (errorData.message) {
             setExportError(errorData.message);
           }
@@ -2617,10 +2811,8 @@ function InsuranceReport() {
           setExportError('Failed to export report');
         }
       } else if (error.response?.data?.message) {
-        // Regular error with message in response
         setExportError(error.response.data.message);
       } else if (error.message) {
-        // Network or other errors
         setExportError(error.message);
       } else {
         setExportError('Failed to export report');
@@ -2636,7 +2828,6 @@ function InsuranceReport() {
       showError('You do not have permission to add insurance');
       return;
     }
-    
     setSelectedBooking(booking);
     setSelectedInsurance(null);
     setShowModal(true);
@@ -2665,7 +2856,6 @@ function InsuranceReport() {
       showError('You do not have permission to update insurance');
       return;
     }
-    
     try {
       const response = await axiosInstance.get(`/insurance/${item.id}`);
       setSelectedInsurance(response.data.data);
@@ -2679,65 +2869,79 @@ function InsuranceReport() {
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedInsurance(null);
-    setSelectedBooking(null);
-    handleRefresh();
-  };
-
-  const handleTabChange = (tab) => {
-    if (!canViewInsuranceDetails) {
-      return;
-    }
+  // Pagination renderer
+  const renderPagination = (tabIndex) => {
+    const { currentPage, pages, total, limit, loading } = tabData[tabIndex];
+    if (!total || pages <= 1) return null;
     
-    setActiveTab(tab);
-    setSearchTerm('');
-    setCurrentPage(1); // Reset to first page when tab changes
-  };
-
-  const handleOpenExportModal = () => {
-    // Check for add permission based on active tab
-    if (activeTab === 0 && !canCreatePendingInsurance) {
-      showError('You do not have permission to export from this tab');
-      return;
-    }
+    const start = (currentPage - 1) * limit + 1;
+    const end = Math.min(currentPage * limit, total);
     
-    // Check for complete tab - anyone can export if they can view
-    if (activeTab === 1 && !canViewCompleteInsuranceTab) {
-      showError('You do not have permission to export from this tab');
-      return;
-    }
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(pages, currentPage + 2);
+    if (currentPage <= 3) endPage = Math.min(5, pages);
+    if (currentPage >= pages - 2) startPage = Math.max(1, pages - 4);
     
-    // Check for update later tab - need create permission
-    if (activeTab === 2 && !canCreateUpdateLater) {
-      showError('You do not have permission to export from this tab');
-      return;
-    }
+    const pageNums = [];
+    for (let i = startPage; i <= endPage; i++) pageNums.push(i);
     
-    setShowExportModal(true);
-    setExportError('');
+    return (
+      <div className="mt-3 border-top pt-3">
+        <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+          <div className="d-flex align-items-center gap-2">
+            <CFormLabel className="mb-0 text-muted" style={{ fontSize: '13px' }}>Records per page:</CFormLabel>
+            <CFormSelect
+              value={limit}
+              onChange={e => handleLimitChange(tabIndex, e.target.value)}
+              style={{ width: '80px', height: '32px', fontSize: '13px' }}
+              size="sm"
+              disabled={loading}
+            >
+              {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+            </CFormSelect>
+          </div>
+          <span className="text-muted" style={{ fontSize: '13px' }}>
+            {loading ? 'Loading…' : `Showing ${start}–${end} of ${total} entries`}
+          </span>
+        </div>
+        {pages > 1 && (
+          <CPagination align="center" size="sm">
+            <CPaginationItem onClick={() => handlePageChange(tabIndex, 1)} disabled={currentPage === 1 || loading}>«</CPaginationItem>
+            <CPaginationItem onClick={() => handlePageChange(tabIndex, currentPage - 1)} disabled={currentPage === 1 || loading}>
+              <CIcon icon={cilChevronLeft} />
+            </CPaginationItem>
+            
+            {startPage > 1 && (
+              <>
+                <CPaginationItem onClick={() => handlePageChange(tabIndex, 1)} disabled={loading}>1</CPaginationItem>
+                {startPage > 2 && <CPaginationItem disabled>…</CPaginationItem>}
+              </>
+            )}
+            
+            {pageNums.map(p => (
+              <CPaginationItem key={p} active={p === currentPage} onClick={() => handlePageChange(tabIndex, p)} disabled={loading}>
+                {p}
+              </CPaginationItem>
+            ))}
+            
+            {endPage < pages && (
+              <>
+                {endPage < pages - 1 && <CPaginationItem disabled>…</CPaginationItem>}
+                <CPaginationItem onClick={() => handlePageChange(tabIndex, pages)} disabled={loading}>{pages}</CPaginationItem>
+              </>
+            )}
+            
+            <CPaginationItem onClick={() => handlePageChange(tabIndex, currentPage + 1)} disabled={currentPage === pages || loading}>
+              <CIcon icon={cilChevronRight} />
+            </CPaginationItem>
+            <CPaginationItem onClick={() => handlePageChange(tabIndex, pages)} disabled={currentPage === pages || loading}>»</CPaginationItem>
+          </CPagination>
+        )}
+      </div>
+    );
   };
 
-  const handleCloseExportModal = () => {
-    setShowExportModal(false);
-    setSelectedBranchId('');
-    setExportError('');
-  };
-
-  // Handle search with page reset
-  const handleSearchChange = (value) => {
-    setSearchTerm(value);
-    if (activeTab === 0) handlePendingFilter(value, getDefaultSearchFields('booking'));
-    else if (activeTab === 1) handleApprovedFilter(value, getDefaultSearchFields('insurance'));
-    else handleLaterFilter(value, getDefaultSearchFields('insurance'));
-    setCurrentPage(1); // Reset to first page when searching
-  };
-
+  // Table renderers
   const renderPendingTable = () => {
     if (!canViewPendingInsuranceTab) {
       return (
@@ -2748,14 +2952,18 @@ function InsuranceReport() {
         </div>
       );
     }
-
-    const currentRecords = getCurrentRecords(filteredPendings);
-    const startRecord = (currentPage - 1) * recordsPerPage + 1;
-    const endRecord = Math.min(currentPage * recordsPerPage, filteredPendings.length);
-
+    
+    const { docs: currentRecords, loading, currentPage, limit, search } = tabData[TAB.PENDING_INSURANCE];
+    const startRecord = (currentPage - 1) * limit + 1;
+    
     return (
       <>
-        <div className="responsive-table-wrapper">
+        {loading && (
+          <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}>
+            <CSpinner size="sm" color="primary" className="me-2" /> Loading records…
+          </div>
+        )}
+        <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
           <CTable striped bordered hover className='responsive-table'>
             <CTableHead>
               <CTableRow>
@@ -2771,20 +2979,20 @@ function InsuranceReport() {
               </CTableRow>
             </CTableHead>
             <CTableBody>
-              {currentRecords.length === 0 ? (
+              {currentRecords.length === 0 && !loading ? (
                 <CTableRow>
                   <CTableDataCell colSpan={canCreatePendingInsurance ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}>
-                    No data available
+                    {search ? `No results found for "${search}"` : 'No data available'}
                   </CTableDataCell>
                 </CTableRow>
               ) : (
                 currentRecords.map((booking, index) => (
-                  <CTableRow key={index}>
+                  <CTableRow key={booking._id || index}>
                     <CTableDataCell>{startRecord + index}</CTableDataCell>
                     <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
                     <CTableDataCell>{booking.modelDetails?.model_name || ''}</CTableDataCell>
                     <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                    <CTableDataCell>{booking.customerDetails.name}</CTableDataCell>
+                    <CTableDataCell>{booking.customerDetails?.name}</CTableDataCell>
                     <CTableDataCell>{booking.chassisNumber}</CTableDataCell>
                     <CTableDataCell>{booking.engineNumber || booking.vehicle?.engineNumber || ''}</CTableDataCell>
                     <CTableDataCell>
@@ -2822,9 +3030,7 @@ function InsuranceReport() {
             </CTableBody>
           </CTable>
         </div>
-
-        {/* Pagination for Pending Table */}
-        {filteredPendings.length > recordsPerPage && renderPagination(filteredPendings.length, startRecord, endRecord)}
+        {renderPagination(TAB.PENDING_INSURANCE)}
       </>
     );
   };
@@ -2839,14 +3045,18 @@ function InsuranceReport() {
         </div>
       );
     }
-
-    const currentRecords = getCurrentRecords(filteredApproved);
-    const startRecord = (currentPage - 1) * recordsPerPage + 1;
-    const endRecord = Math.min(currentPage * recordsPerPage, filteredApproved.length);
-
+    
+    const { docs: currentRecords, loading, currentPage, limit, search } = tabData[TAB.COMPLETE_INSURANCE];
+    const startRecord = (currentPage - 1) * limit + 1;
+    
     return (
       <>
-        <div className="responsive-table-wrapper">
+        {loading && (
+          <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}>
+            <CSpinner size="sm" color="primary" className="me-2" /> Loading records…
+          </div>
+        )}
+        <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
           <CTable striped bordered hover className='responsive-table'>
             <CTableHead>
               <CTableRow>
@@ -2863,15 +3073,15 @@ function InsuranceReport() {
               </CTableRow>
             </CTableHead>
             <CTableBody>
-              {currentRecords.length === 0 ? (
+              {currentRecords.length === 0 && !loading ? (
                 <CTableRow>
                   <CTableDataCell colSpan="10" style={{ color: 'red', textAlign: 'center' }}>
-                    No data available
+                    {search ? `No results found for "${search}"` : 'No data available'}
                   </CTableDataCell>
                 </CTableRow>
               ) : (
                 currentRecords.map((item, index) => (
-                  <CTableRow key={index}>
+                  <CTableRow key={item._id || index}>
                     <CTableDataCell>{startRecord + index}</CTableDataCell>
                     <CTableDataCell>{item.booking?.bookingNumber || ''}</CTableDataCell>
                     <CTableDataCell>{item.booking?.model?.model_name || ''}</CTableDataCell>
@@ -2901,9 +3111,7 @@ function InsuranceReport() {
             </CTableBody>
           </CTable>
         </div>
-
-        {/* Pagination for Completed Table */}
-        {filteredApproved.length > recordsPerPage && renderPagination(filteredApproved.length, startRecord, endRecord)}
+        {renderPagination(TAB.COMPLETE_INSURANCE)}
       </>
     );
   };
@@ -2918,14 +3126,18 @@ function InsuranceReport() {
         </div>
       );
     }
-
-    const currentRecords = getCurrentRecords(filteredLater);
-    const startRecord = (currentPage - 1) * recordsPerPage + 1;
-    const endRecord = Math.min(currentPage * recordsPerPage, filteredLater.length);
-
+    
+    const { docs: currentRecords, loading, currentPage, limit, search } = tabData[TAB.UPDATE_LATER];
+    const startRecord = (currentPage - 1) * limit + 1;
+    
     return (
       <>
-        <div className="responsive-table-wrapper">
+        {loading && (
+          <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}>
+            <CSpinner size="sm" color="primary" className="me-2" /> Loading records…
+          </div>
+        )}
+        <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
           <CTable striped bordered hover className='responsive-table'>
             <CTableHead>
               <CTableRow>
@@ -2941,15 +3153,15 @@ function InsuranceReport() {
               </CTableRow>
             </CTableHead>
             <CTableBody>
-              {currentRecords.length === 0 ? (
+              {currentRecords.length === 0 && !loading ? (
                 <CTableRow>
                   <CTableDataCell colSpan={canCreateUpdateLater ? "9" : "8"} style={{ color: 'red', textAlign: 'center' }}>
-                    No data available
+                    {search ? `No results found for "${search}"` : 'No data available'}
                   </CTableDataCell>
                 </CTableRow>
               ) : (
                 currentRecords.map((item, index) => (
-                  <CTableRow key={index}>
+                  <CTableRow key={item._id || index}>
                     <CTableDataCell>{startRecord + index}</CTableDataCell>
                     <CTableDataCell>{item.booking?.bookingNumber || ''}</CTableDataCell>
                     <CTableDataCell>{item.booking?.model?.model_name || ''}</CTableDataCell>
@@ -2980,81 +3192,10 @@ function InsuranceReport() {
             </CTableBody>
           </CTable>
         </div>
-
-        {/* Pagination for Later Table */}
-        {filteredLater.length > recordsPerPage && renderPagination(filteredLater.length, startRecord, endRecord)}
+        {renderPagination(TAB.UPDATE_LATER)}
       </>
     );
   };
-
-  // Reusable pagination component
-  const renderPagination = (totalRecords, startRecord, endRecord) => (
-    <div className="mt-4">
-      <CPagination align="center" aria-label="Page navigation example">
-        {/* Previous Button */}
-        <CPaginationItem 
-          aria-label="Previous" 
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className={currentPage === 1 ? 'disabled' : ''}
-        >
-          <CIcon icon={cilChevronLeft} />
-        </CPaginationItem>
-        
-        {/* First Page */}
-        {currentPage > 3 && totalPages > 5 && (
-          <>
-            <CPaginationItem 
-              onClick={() => handlePageChange(1)}
-              active={currentPage === 1}
-            >
-              1
-            </CPaginationItem>
-            {currentPage > 4 && <CPaginationItem disabled>...</CPaginationItem>}
-          </>
-        )}
-        
-        {/* Page Numbers */}
-        {displayedPages.map(page => (
-          <CPaginationItem 
-            key={page}
-            onClick={() => handlePageChange(page)}
-            active={currentPage === page}
-          >
-            {page}
-          </CPaginationItem>
-        ))}
-        
-        {/* Last Page */}
-        {currentPage < totalPages - 2 && totalPages > 5 && (
-          <>
-            {currentPage < totalPages - 3 && <CPaginationItem disabled>...</CPaginationItem>}
-            <CPaginationItem 
-              onClick={() => handlePageChange(totalPages)}
-              active={currentPage === totalPages}
-            >
-              {totalPages}
-            </CPaginationItem>
-          </>
-        )}
-        
-        {/* Next Button */}
-        <CPaginationItem 
-          aria-label="Next" 
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className={currentPage === totalPages ? 'disabled' : ''}
-        >
-          <CIcon icon={cilChevronRight} />
-        </CPaginationItem>
-      </CPagination>
-      
-      {/* Pagination Info */}
-      <div className="text-center text-muted mt-2">
-        Showing {startRecord} to {endRecord} of {totalRecords} entries
-      </div>
-    </div>
-  );
 
   if (!canViewInsuranceDetails) {
     return (
@@ -3064,18 +3205,15 @@ function InsuranceReport() {
     );
   }
 
-  if (loading) {
+  // Check if any tab is loading for initial loading state
+  const isAnyTabLoading = tabData[TAB.PENDING_INSURANCE].loading && 
+    tabData[TAB.COMPLETE_INSURANCE].loading && 
+    tabData[TAB.UPDATE_LATER].loading;
+
+  if (isAnyTabLoading && !tabData[activeTab].docs.length) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}>
         <CSpinner color="primary" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="alert alert-danger" role="alert">
-        {error}
       </div>
     );
   }
@@ -3087,7 +3225,6 @@ function InsuranceReport() {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {/* Export Excel Button - Moved to left end */}
             <CButton 
               size="sm" 
               className="action-btn me-1"
@@ -3101,18 +3238,17 @@ function InsuranceReport() {
         </CCardHeader>
         
         <CCardBody>
-          {/* Show tabs only if user has permission to view at least one */}
           {canViewAnyTab ? (
             <>
               <CNav variant="tabs" className="mb-3 border-bottom">
                 {canViewPendingInsuranceTab && (
                   <CNavItem>
                     <CNavLink
-                      active={activeTab === 0}
-                      onClick={() => handleTabChange(0)}
+                      active={activeTab === TAB.PENDING_INSURANCE}
+                      onClick={() => handleTabChange(TAB.PENDING_INSURANCE)}
                       style={{ 
                         cursor: 'pointer',
-                        borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+                        borderTop: activeTab === TAB.PENDING_INSURANCE ? '4px solid #2759a2' : '3px solid transparent',
                         color: 'black',
                         borderBottom: 'none'
                       }}
@@ -3127,11 +3263,11 @@ function InsuranceReport() {
                 {canViewCompleteInsuranceTab && (
                   <CNavItem>
                     <CNavLink
-                      active={activeTab === 1}
-                      onClick={() => handleTabChange(1)}
+                      active={activeTab === TAB.COMPLETE_INSURANCE}
+                      onClick={() => handleTabChange(TAB.COMPLETE_INSURANCE)}
                       style={{ 
                         cursor: 'pointer',
-                        borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+                        borderTop: activeTab === TAB.COMPLETE_INSURANCE ? '4px solid #2759a2' : '3px solid transparent',
                         borderBottom: 'none',
                         color: 'black'
                       }}
@@ -3143,11 +3279,11 @@ function InsuranceReport() {
                 {canViewUpdateLaterTab && (
                   <CNavItem>
                     <CNavLink
-                      active={activeTab === 2}
-                      onClick={() => handleTabChange(2)}
+                      active={activeTab === TAB.UPDATE_LATER}
+                      onClick={() => handleTabChange(TAB.UPDATE_LATER)}
                       style={{ 
                         cursor: 'pointer',
-                        borderTop: activeTab === 2 ? '4px solid #2759a2' : '3px solid transparent',
+                        borderTop: activeTab === TAB.UPDATE_LATER ? '4px solid #2759a2' : '3px solid transparent',
                         borderBottom: 'none',
                         color: 'black'
                       }}
@@ -3161,16 +3297,28 @@ function InsuranceReport() {
                 )}
               </CNav>
 
+              {/* Search bar - UNCONTROLLED input */}
               <div className="d-flex justify-content-between mb-3">
                 <div></div>
                 <div className='d-flex'>
                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
-                  <CFormInput
+                  <input
+                    ref={searchInputRef}
                     type="text"
-                    style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+                    defaultValue=""
+                    style={{
+                      maxWidth: '350px',
+                      height: '30px',
+                      borderRadius: '0',
+                      border: '1px solid #ced4da',
+                      padding: '0 8px',
+                      outline: 'none',
+                      fontSize: '14px'
+                    }}
                     className="d-inline-block square-search"
-                    value={searchTerm}
-                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    placeholder="Search..."
+                    autoComplete="off"
                     disabled={!canViewAnyTab}
                   />
                 </div>
@@ -3178,17 +3326,17 @@ function InsuranceReport() {
 
               <CTabContent>
                 {canViewPendingInsuranceTab && (
-                  <CTabPane visible={activeTab === 0}>
+                  <CTabPane visible={activeTab === TAB.PENDING_INSURANCE}>
                     {renderPendingTable()}
                   </CTabPane>
                 )}
                 {canViewCompleteInsuranceTab && (
-                  <CTabPane visible={activeTab === 1}>
+                  <CTabPane visible={activeTab === TAB.COMPLETE_INSURANCE}>
                     {renderCompletedTable()}
                   </CTabPane>
                 )}
                 {canViewUpdateLaterTab && (
-                  <CTabPane visible={activeTab === 2}>
+                  <CTabPane visible={activeTab === TAB.UPDATE_LATER}>
                     {renderLaterTable()}
                   </CTabPane>
                 )}
@@ -3228,7 +3376,7 @@ function InsuranceReport() {
         bookingData={selectedBookingForView}
       />
 
-      {/* Export Excel Modal - Updated with branch only */}
+      {/* Export Excel Modal */}
       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal}>
         <CModalHeader>
           <CModalTitle>
@@ -3237,7 +3385,6 @@ function InsuranceReport() {
           </CModalTitle>
         </CModalHeader>
         <CModalBody>
-          {/* Display export error */}
           {exportError && (
             <CAlert color="warning" className="mb-3">
               {exportError}

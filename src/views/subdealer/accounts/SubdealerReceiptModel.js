@@ -17,22 +17,23 @@ import {
 import '../../../css/receipt.css';
 import axiosInstance from 'src/axiosInstance';
 import { useNavigate } from 'react-router-dom';
+
 const SubdealerReceiptModal = ({ show, onClose, bookingData }) => {
   const [formData, setFormData] = useState({
     bookingId: bookingData?._id || '',
     totalAmount: bookingData?.discountedAmount || 0,
     balanceAmount: bookingData?.balanceAmount || bookingData?.discountedAmount || 0,
-    financeProviderId:'',
-    disbursementReference:'',
+    financeProviderId: '',
+    disbursementReference: '',
     amount: '',
-  
   });
 
-  const [financers, setFinancers] = useState([]);
+  const [selectedFinancer, setSelectedFinancer] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const navigate = useNavigate();
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -49,74 +50,78 @@ const SubdealerReceiptModal = ({ show, onClose, bookingData }) => {
     }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError(null);
-  setSuccess(null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
 
-  try {
-    let paymentData = {
-      bookingId: formData.bookingId,
-      financeProviderId: formData.financeProviderId,
-      disbursementReference: formData.disbursementReference,
-      amount: parseFloat(formData.amount)
-    };
+    try {
+      let paymentData = {
+        bookingId: formData.bookingId,
+        financeProviderId: formData.financeProviderId,
+        disbursementReference: formData.disbursementReference,
+        amount: parseFloat(formData.amount)
+      };
 
-    const response = await axiosInstance.post('/finance-disbursements', paymentData);
+      const response = await axiosInstance.post('/finance-disbursements', paymentData);
 
-    setSuccess('Payment successfully recorded!');
-    console.log('Payment response:', response.data);
+      setSuccess('Payment successfully recorded!');
+      console.log('Payment response:', response.data);
 
-    setFormData({
-      bookingId: bookingData?._id || '',
-      totalAmount: bookingData?.discountedAmount || 0,
-      balanceAmount: bookingData?.discountedAmount || 0,
-      financeProviderId: '',
-      disbursementReference: '',
-      amount: ''
-    });
-
-    setTimeout(() => {
-      onClose();
-    }, 2000);
-    navigate('/view-ledgers');
-  } catch (err) {
-  console.error('Payment error:', err);
-  const apiError = err.response?.data;
-  setError(
-    apiError?.error || apiError?.message || 'Failed to process payment. Please try again.'
-  );
-} finally {
-  setIsLoading(false);
-}
-}
-
-
-  useEffect(() => {
-    const fetchFinancer = async () => {
-      try {
-        const response = await axiosInstance.get('/financers/providers');
-        setFinancers(response.data.data);
-      } catch (error) {
-        console.error('Error fetching cash locations:', error);
-      }
-    };
-
-
-    if (show) {
-      fetchFinancer();
       setFormData({
         bookingId: bookingData?._id || '',
         totalAmount: bookingData?.discountedAmount || 0,
-        balanceAmount: bookingData?.balanceAmount || bookingData?.discountedAmount || 0,
-        modeOfPayment: '',
-        amount: '',
-        remark: '',
-        cashLocation: '',
-        bank: '',
-        gcAmount: ''
+        balanceAmount: bookingData?.discountedAmount || 0,
+        financeProviderId: '',
+        disbursementReference: '',
+        amount: ''
       });
+
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+      navigate('/view-ledgers');
+    } catch (err) {
+      console.error('Payment error:', err);
+      const apiError = err.response?.data;
+      setError(
+        apiError?.error || apiError?.message || 'Failed to process payment. Please try again.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (show && bookingData) {
+      // Extract the financer from the booking data
+      const financer = bookingData.payment?.financer;
+      
+      if (financer && financer._id && financer.name) {
+        setSelectedFinancer(financer);
+        // Auto-select the financer from the booking
+        setFormData(prev => ({
+          ...prev,
+          bookingId: bookingData._id || '',
+          totalAmount: bookingData.discountedAmount || 0,
+          balanceAmount: bookingData.balanceAmount || bookingData.discountedAmount || 0,
+          financeProviderId: financer._id // Auto-set the finance provider ID
+        }));
+      } else {
+        setSelectedFinancer(null);
+        setFormData(prev => ({
+          ...prev,
+          bookingId: bookingData._id || '',
+          totalAmount: bookingData.discountedAmount || 0,
+          balanceAmount: bookingData.balanceAmount || bookingData.discountedAmount || 0,
+          financeProviderId: ''
+        }));
+        if (!financer) {
+          setError('No financer information found for this booking');
+        }
+      }
+      
       setError(null);
       setSuccess(null);
     }
@@ -172,27 +177,34 @@ const handleSubmit = async (e) => {
             <CRow className="mb-3">
               <CCol md={6}>
                 <label className="form-label">Mode of Payment</label>
-                <CFormSelect name="modeOfPayment" value={formData.modeOfPayment} onChange={handleChange} disabled={isLoading}>
+                <CFormSelect 
+                  name="modeOfPayment" 
+                  value="Finance Disbursement" 
+                  disabled={true}
+                >
                   <option value="Finance Disbursement">Finance Disbursement</option>
-
                 </CFormSelect>
               </CCol>
-              <CCol>
-                 <label className="form-label">Finance Provider</label>
-            <CFormSelect name="financeProviderId" value={formData.financeProviderId} onChange={handleChange} required disabled={isLoading}>
-              <option value="">Select Financer</option>
-              {financers.map((financer) => (
-                <option key={financer.id} value={financer.id}>
-                  {financer.name}
-                </option>
-              ))}
-            </CFormSelect>
+              <CCol md={6}>
+                <label className="form-label">Finance Provider</label>
+                <CFormInput
+                  type="text"
+                  value={selectedFinancer?.name || 'No financer assigned'}
+                  readOnly
+                  className="bg-light"
+                  disabled={isLoading}
+                />
+                {/* Hidden input to store the financeProviderId */}
+                <input
+                  type="hidden"
+                  name="financeProviderId"
+                  value={formData.financeProviderId}
+                />
               </CCol>
-             
             </CRow>
 
             <CRow className="mb-3">
-               <CCol md={6}>
+              <CCol md={6}>
                 <label className="form-label">Amount (₹)</label>
                 <CFormInput
                   type="number"
@@ -201,18 +213,19 @@ const handleSubmit = async (e) => {
                   onChange={handleChange}
                   required
                   min="0"
+                  max={formData.balanceAmount}
                   step="0.01"
-                  disabled={isLoading}
+                  disabled={isLoading || !selectedFinancer}
                 />
               </CCol>
               <CCol md={6}>
                 <label className="form-label">Disbursement Reference</label>
                 <CFormInput
                   type="text"
-                   name="disbursementReference"
+                  name="disbursementReference"
                   value={formData.disbursementReference}
                   onChange={handleChange}
-                  placeholder="Enter any remarks..."
+                  placeholder="Enter disbursement reference number..."
                   disabled={isLoading}
                 />
               </CCol>
@@ -221,7 +234,12 @@ const handleSubmit = async (e) => {
         </CModalBody>
         <CModalFooter className="d-flex justify-content-between">
           <div>
-            <CButton color="primary" onClick={handleSubmit} className="me-2" disabled={isLoading}>
+            <CButton 
+              color="primary" 
+              onClick={handleSubmit} 
+              className="me-2" 
+              disabled={isLoading || !selectedFinancer || !formData.amount || parseFloat(formData.amount) <= 0}
+            >
               {isLoading ? 'Processing...' : 'Save Payment'}
             </CButton>
           </div>

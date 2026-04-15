@@ -2678,7 +2678,7 @@ const PeriodicReport = () => {
                           <option value="all">All Branch</option>
                         )}
                         {/* Option for Branch and Subdealer - ONLY IN SALES TAB */}
-                        <option value="both">Branch and Subdealer</option>
+                        <option value="both">All Territory</option>
                         {branches.map((branch) => (
                           <option key={branch.id} value={branch.id}>
                             {branch.name}

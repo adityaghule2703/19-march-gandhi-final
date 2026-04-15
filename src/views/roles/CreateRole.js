@@ -4206,7 +4206,8 @@ const sidebarStructure = {
         name: "RC Confirmation", 
         tabs: ["RTO PENDING RC CONFIRMATION", "COMPLETED RC"]
       },
-      { name: "Report", tabs: null }
+      { name: "Report", tabs: null },
+      { name: "RTO Invoice", tabs: null } 
     ],
     availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
   },
@@ -4599,7 +4600,13 @@ const permissionDescriptions = {
     },
     "Report": {
       "VIEW": "Export"
-    }
+    },
+    "RTO Invoice": {  // Add this section
+    "CREATE": "Generate and print RTO Invoice",
+    "VIEW": "View RTO Invoice page and search by chassis number",
+    "UPDATE": "Edit invoice details (if applicable)",
+    "DELETE": "Delete invoice records (if applicable)"
+  }
   },
   "Fund Management": {
     "Cash Voucher": {

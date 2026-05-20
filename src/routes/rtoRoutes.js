@@ -15,6 +15,7 @@ export const rtoRoutes = [
     { path:'/rto-invoice', name:'RTO Invoice', element:RtoInvoice},
     { path:'/rto/application', name:'RTO Application', element:Application},
     { path:'/rto/rto-paper', name:'RTO Paper', element:RTOPaper},
+   
     { path:'/rto/rto-tax', name:'RTO Tax', element:RTOTax},
     { path:'/rto/hsrp-ordering', name:'HSRP Ordering', element:HSRPOrdering},
     { path:'/rto/hsrp-installation', name:'HSRP Installation', element:HSRPInstallation},

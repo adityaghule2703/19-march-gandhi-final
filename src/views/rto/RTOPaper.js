@@ -1677,7 +1677,7 @@ function RTOPaper() {
                     {!rtoItem.kycStatus || rtoItem.kycStatus === 'NOT_UPLOADED' || rtoItem.kycStatus === 'REJECTED' ? (
                       canCreateInRtoPaperPendingTab ? (
                         <Link
-                          to={`/upload-kyc/${rtoItem.bookingId?.id}`}
+                          to={`/upload-kyc-rto/${rtoItem.bookingId?.id}`}
                           state={{
                             bookingId: rtoItem.bookingId?.id,
                             customerName: rtoItem.bookingId?.customerName,

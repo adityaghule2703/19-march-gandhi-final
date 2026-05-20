@@ -869,7 +869,7 @@ const BranchStockAuditList = () => {
                     <div className="card">
                       <div className="card-body text-center">
                         <img 
-                          src={`https://gmplmis.com/dealership-api${auditDetails.vehiclesPhotos[activePhotoIndex]?.imageUrl}`} 
+                          src={`http://192.168.1.8:3009${auditDetails.vehiclesPhotos[activePhotoIndex]?.imageUrl}`} 
                           alt={`Vehicle ${activePhotoIndex + 1}`}
                           className="img-fluid"
                           style={{ maxHeight: '400px' }}
@@ -921,7 +921,7 @@ const BranchStockAuditList = () => {
                         style={{ width: '100px', cursor: 'pointer' }}
                       >
                         <img 
-                          src={`https://gmplmis.com/dealership-api${photo?.thumbnailUrl || photo?.imageUrl}`} 
+                          src={`http://192.168.1.8:3009${photo?.thumbnailUrl || photo?.imageUrl}`} 
                           alt={`Thumb ${index + 1}`}
                           className="img-thumbnail"
                           style={{ width: '100%', height: '80px', objectFit: 'cover' }}

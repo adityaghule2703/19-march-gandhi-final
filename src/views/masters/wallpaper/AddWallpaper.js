@@ -21,7 +21,7 @@ function AddWallpaper() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { id } = useParams();
-  const baseURL = 'https://sgm.gmplmis.com/api-dealership';
+  const baseURL = 'https://gmplmis.com/dealership-api';
 
   useEffect(() => {
     if (id) {

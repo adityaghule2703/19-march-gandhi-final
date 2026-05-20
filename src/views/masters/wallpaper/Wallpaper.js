@@ -52,34 +52,34 @@ const Wallpaper = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
-  const baseURL = 'https://gmplmis.com/dealership-api';
+  const baseURL = 'https://gmplmis.com';
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
   const { permissions } = useAuth();
   
-  // Page-level permission checks for Documents page under Masters module
-  const hasDocumentsView = hasSafePagePermission(
+  // Page-level permission checks for Wallpaper page under Masters module
+  const hasWallpaperView = hasSafePagePermission(
     permissions, 
     MODULES.MASTERS, 
     PAGES.MASTERS.DOCUMENTS, 
     ACTIONS.VIEW
   );
   
-  const hasDocumentsCreate = hasSafePagePermission(
+  const hasWallpaperCreate = hasSafePagePermission(
     permissions, 
     MODULES.MASTERS, 
     PAGES.MASTERS.DOCUMENTS, 
     ACTIONS.CREATE
   );
   
-  const hasDocumentsUpdate = hasSafePagePermission(
+  const hasWallpaperUpdate = hasSafePagePermission(
     permissions, 
     MODULES.MASTERS, 
     PAGES.MASTERS.DOCUMENTS, 
     ACTIONS.UPDATE
   );
   
-  const hasDocumentsDelete = hasSafePagePermission(
+  const hasWallpaperDelete = hasSafePagePermission(
     permissions, 
     MODULES.MASTERS, 
     PAGES.MASTERS.DOCUMENTS, 
@@ -87,28 +87,30 @@ const Wallpaper = () => {
   );
 
   // Using convenience functions for cleaner code
-  const canViewDocuments = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
-  const canCreateDocuments = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
-  const canUpdateDocuments = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
-  const canDeleteDocuments = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  const canViewWallpapers = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  const canCreateWallpapers = canCreateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  const canUpdateWallpapers = canUpdateInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  const canDeleteWallpapers = canDeleteInPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
   
-  const showActionColumn = canUpdateDocuments || canDeleteDocuments;
+  const showActionColumn = canUpdateWallpapers || canDeleteWallpapers;
 
   useEffect(() => {
-    if (!canViewDocuments) {
+    if (!canViewWallpapers) {
       showError('You do not have permission to view Wallpapers');
       return;
     }
     
     fetchData();
-  }, [canViewDocuments]);
+  }, [canViewWallpapers]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get('/wallpaper');
-      setData(response.data.data.wallpapers);
-      setFilteredData(response.data.data.wallpapers);
+      const response = await axiosInstance.get('/wallpapers');
+      // Access the data array from response.data.data
+      const wallpapersData = response.data.data || [];
+      setData(wallpapersData);
+      setFilteredData(wallpapersData);
     } catch (error) {
       const message = showError(error);
       if (message) {
@@ -130,7 +132,7 @@ const Wallpaper = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!canDeleteDocuments) {
+    if (!canDeleteWallpapers) {
       showError('You do not have permission to delete wallpapers');
       return;
     }
@@ -138,7 +140,7 @@ const Wallpaper = () => {
     const result = await confirmDelete();
     if (result.isConfirmed) {
       try {
-        await axiosInstance.delete(`/wallpaper/${id}`);
+        await axiosInstance.delete(`/wallpapers/${id}`);
         fetchData();
         showSuccess('Wallpaper deleted successfully!');
       } catch (error) {
@@ -162,7 +164,7 @@ const Wallpaper = () => {
     });
   };
 
-  if (!canViewDocuments) {
+  if (!canViewWallpapers) {
     return (
       <div className="alert alert-danger m-3" role="alert">
         You do not have permission to view Wallpapers.
@@ -193,7 +195,7 @@ const Wallpaper = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            {canCreateDocuments && (
+            {canCreateWallpapers && (
               <Link to="/wallpaper/add-wallpaper">
                 <CButton size="sm" className="action-btn me-1">
                   <CIcon icon={cilPlus} className='icon'/> New Wallpaper
@@ -223,11 +225,10 @@ const Wallpaper = () => {
                 <CTableRow>
                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
                   <CTableHeaderCell>Image</CTableHeaderCell>
-                  <CTableHeaderCell>Title</CTableHeaderCell>
-                  <CTableHeaderCell>Description</CTableHeaderCell>
-                  <CTableHeaderCell>Display Order</CTableHeaderCell>
+                  <CTableHeaderCell>Screen Name</CTableHeaderCell>
+                  <CTableHeaderCell>Image Name</CTableHeaderCell>
                   <CTableHeaderCell>Status</CTableHeaderCell>
-                  <CTableHeaderCell>Created By</CTableHeaderCell>
+                  <CTableHeaderCell>Uploaded By</CTableHeaderCell>
                   <CTableHeaderCell>Created At</CTableHeaderCell>
                   {showActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
                 </CTableRow>
@@ -235,7 +236,7 @@ const Wallpaper = () => {
               <CTableBody>
                 {currentRecords.length === 0 ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={showActionColumn ? "9" : "8"} className="text-center">
+                    <CTableDataCell colSpan={showActionColumn ? "8" : "7"} className="text-center">
                       No wallpapers available
                     </CTableDataCell>
                   </CTableRow>
@@ -245,18 +246,17 @@ const Wallpaper = () => {
                       <CTableDataCell>{index + 1}</CTableDataCell>
                       <CTableDataCell>
                         <CImage 
-                          src={`${baseURL}${wallpaper.image}`} 
-                          alt={wallpaper.title}
+                          src={wallpaper.image_url} 
+                          alt={wallpaper.image_name || 'Wallpaper'}
                           style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                           rounded
                         />
                       </CTableDataCell>
-                      <CTableDataCell>{wallpaper.title}</CTableDataCell>
-                      <CTableDataCell>{wallpaper.description}</CTableDataCell>
-                      <CTableDataCell>{wallpaper.displayOrder}</CTableDataCell>
+                      <CTableDataCell>{wallpaper.screen_name}</CTableDataCell>
+                      <CTableDataCell>{wallpaper.image_name}</CTableDataCell>
                       <CTableDataCell>
-                        <CBadge color={wallpaper.isActive ? 'success' : 'secondary'}>
-                          {wallpaper.isActive ? (
+                        <CBadge color={wallpaper.is_active ? 'success' : 'secondary'}>
+                          {wallpaper.is_active ? (
                             <>
                               <CIcon icon={cilCheckCircle} className="me-1" />
                               Active
@@ -269,7 +269,7 @@ const Wallpaper = () => {
                           )}
                         </CBadge>
                       </CTableDataCell>
-                      <CTableDataCell>{wallpaper.createdBy?.name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{wallpaper.uploaded_by || 'N/A'}</CTableDataCell>
                       <CTableDataCell>{formatDate(wallpaper.createdAt)}</CTableDataCell>
                       {showActionColumn && (
                         <CTableDataCell>
@@ -287,7 +287,7 @@ const Wallpaper = () => {
                             open={menuId === wallpaper._id} 
                             onClose={handleClose}
                           >
-                            {canUpdateDocuments && (
+                            {canUpdateWallpapers && (
                               <Link className="Link" to={`/wallpaper/update-wallpaper/${wallpaper._id}`}>
                                 <MenuItem style={{ color: 'black' }}>
                                   <CIcon icon={cilPencil} className="me-2" />
@@ -295,7 +295,7 @@ const Wallpaper = () => {
                                 </MenuItem>
                               </Link>
                             )}
-                            {canDeleteDocuments && (
+                            {canDeleteWallpapers && (
                               <MenuItem onClick={() => handleDelete(wallpaper._id)}>
                                 <CIcon icon={cilTrash} className="me-2" />
                                 Delete

@@ -4328,10 +4328,10 @@ const sidebarStructure = {
         name: "Finance Payment", 
         tabs: ["PENDING PAYMENT", "COMPLETE PAYMENT"]
       },
-      { 
-        name: "Payment Verification", 
-        tabs: ["PAYMENT VERIFICATION", "VERIFIED LIST"]
-      },
+       { 
+      name: "Payment Verification", 
+      tabs: ["PAYMENT VERIFICATION", "VERIFIED LIST", "REJECTED LIST"] 
+    },
       { name: "Subdealer Commission", tabs: null },
       { name: "Payment Summary", tabs: null },
       { 
@@ -4905,11 +4905,11 @@ const permissionDescriptions = {
       "DELETE": "Delete"
     },
     "Payment Verification": {
-      "CREATE": "Verify",
-      "VIEW": "View",
-      "UPDATE": "Edit",
-      "DELETE": "Delete"
-    },
+    "CREATE": "Verify, Reject",  
+    "VIEW": "View",
+    "UPDATE": "Edit",
+    "DELETE": "Delete"
+  },
     "Subdealer Commission": {
       "CREATE": "Save, Cancel",
       "VIEW": "View commission records",

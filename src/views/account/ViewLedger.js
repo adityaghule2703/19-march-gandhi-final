@@ -326,274 +326,301 @@ const ViewLedgers = () => {
   };
 
   const handleViewLedger = async (booking) => {
-    if (!canViewLedgers) {
-      showError('You do not have permission to view ledgers');
-      return;
-    }
+  if (!canViewLedgers) {
+    showError('You do not have permission to view ledgers');
+    return;
+  }
+  
+  try {
+    const res = await axiosInstance.get(`/ledger/report/${booking._id}`);
+    const ledgerData = res.data.data;
+    const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${booking._id}`;
+
+    // Get branch details dynamically from API response
+    const branchDetails = ledgerData.branchDetails || {};
+    const branchAddress = branchDetails.address || 'N/A';
+    const branchCity = branchDetails.city || '';
+    const branchState = branchDetails.state || '';
+    const branchPincode = branchDetails.pincode || '';
+    const branchPhone = branchDetails.phone || '';
+    const branchEmail = branchDetails.email || '';
+    const branchGST = branchDetails.gst_number || '';
     
-    try {
-      const res = await axiosInstance.get(`/ledger/report/${booking._id}`);
-      const ledgerData = res.data.data;
-      const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${booking._id}`;
+    // Format complete branch address
+    const fullBranchAddress = [
+      branchAddress,
+      branchCity,
+      branchState,
+      branchPincode
+    ].filter(part => part && part !== 'N/A').join(', ');
+    
+    const branchContact = branchPhone ? `Phone: ${branchPhone}` : '';
+    const branchEmailInfo = branchEmail ? `Email: ${branchEmail}` : '';
+    const branchGSTInfo = branchGST ? `GST: ${branchGST}` : '';
 
-      // First filter approved entries
-      let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
+    // First filter approved entries
+    let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
 
-      // Filter entries based on chassis allocation status
-      let filteredEntries = approvedEntries;
-      if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
-        // Show all entries where debit field exists (debit entries)
-        filteredEntries = approvedEntries.filter((entry) => 
-          entry.debit !== undefined && entry.debit !== null
-        );
-      }
+    // Filter entries based on chassis allocation status
+    let filteredEntries = approvedEntries;
+    if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
+      // Show all entries where debit field exists (debit entries)
+      filteredEntries = approvedEntries.filter((entry) => 
+        entry.debit !== undefined && entry.debit !== null
+      );
+    }
 
-      // Recalculate totals based on filtered entries
-      const totals = {
-        totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
-        totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
-        finalBalance: filteredEntries.reduce((sum, entry) => {
-          const credit = entry.credit || 0;
-          const debit = entry.debit || 0;
-          return sum + (debit - credit);
-        }, 0)
-      };
+    // Recalculate totals based on filtered entries
+    const totals = {
+      totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
+      totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
+      finalBalance: filteredEntries.reduce((sum, entry) => {
+        const credit = entry.credit || 0;
+        const debit = entry.debit || 0;
+        return sum + (debit - credit);
+      }, 0)
+    };
 
-      const win = window.open('', '_blank');
-      win.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Customer Ledger</title>
-            <style>
-              @page {
-                size: A4;
-                margin: 15mm 10mm;
-              }
+    // Get branch name for header
+    const branchName = branchDetails.name || 'GANDHI TVS';
+
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Customer Ledger</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 15mm 10mm;
+            }
+            body {
+              font-family: Arial;
+              width: 100%;
+              margin: 0;
+              padding: 0;
+              font-size: 14px;
+              line-height: 1.3;
+              font-family: Courier New;
+            }
+            .container {
+              width: 190mm;
+              margin: 0 auto;
+              padding: 5mm;
+            }
+            .header-container {
+              display: flex;
+              justify-content:space-between;
+              margin-bottom: 3mm;
+            }
+            .header-text{
+              font-size:20px;
+              font-weight:bold;
+            }
+            .logo {
+              width: 30mm;
+              height: auto;
+              margin-right: 5mm;
+            } 
+            .header {
+              text-align: left;
+            }
+            .divider {
+              border-top: 2px solid #AAAAAA;
+              margin: 3mm 0;
+            }
+            .header h2 {
+              margin: 2mm 0;
+              font-size: 12pt;
+              font-weight: bold;
+            }
+            .header div {
+              font-size: 14px;
+            }
+            .customer-info {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 2mm;
+              margin-bottom: 5mm;
+              font-size: 14px;
+            }
+            .customer-info div {
+              display: flex;
+            }
+            .customer-info strong {
+              min-width: 30mm;
+              display: inline-block;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 5mm;
+              font-size: 14px;
+              page-break-inside: avoid;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 2mm;
+              text-align: left;
+            }
+            th {
+              background-color: #f0f0f0;
+              font-weight: bold;
+            }
+            .footer {
+              margin-top: 10mm;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+              font-size: 14px;
+            }
+            .footer-left {
+              text-align: left;
+            }
+            .footer-right {
+              text-align: right;
+            }
+            .qr-code {
+              width: 35mm;
+              height: 35mm;
+            }
+            .text-right {
+              text-align: right;
+            }
+            .text-left {
+              text-align: left;
+            }
+            .text-center {
+              text-align: center;
+            }
+            .note {
+              font-style: italic;
+              color: #666;
+              margin-bottom: 5mm;
+              text-align: center;
+            }
+            @media print {
               body {
-                font-family: Arial;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                font-size: 14px;
-                line-height: 1.3;
-                font-family: Courier New;
-              }
-              .container {
                 width: 190mm;
-                margin: 0 auto;
-                padding: 5mm;
+                height: 277mm;
               }
-              .header-container {
-                display: flex;
-                justify-content:space-between;
-                margin-bottom: 3mm;
+              .no-print {
+                display: none;
               }
-              .header-text{
-                font-size:20px;
-                font-weight:bold;
-              }
-              .logo {
-                width: 30mm;
-                height: auto;
-                margin-right: 5mm;
-              } 
-              .header {
-                text-align: left;
-              }
-              .divider {
-                border-top: 2px solid #AAAAAA;
-                margin: 3mm 0;
-              }
-              .header h2 {
-                margin: 2mm 0;
-                font-size: 12pt;
-                font-weight: bold;
-              }
-              .header div {
-                font-size: 14px;
-              }
-              .customer-info {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 2mm;
-                margin-bottom: 5mm;
-                font-size: 14px;
-              }
-              .customer-info div {
-                display: flex;
-              }
-              .customer-info strong {
-                min-width: 30mm;
-                display: inline-block;
-              }
-              table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 5mm;
-                font-size: 14px;
-                page-break-inside: avoid;
-              }
-              th, td {
-                border: 1px solid #000;
-                padding: 2mm;
-                text-align: left;
-              }
-              th {
-                background-color: #f0f0f0;
-                font-weight: bold;
-              }
-              .footer {
-                margin-top: 10mm;
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-end;
-                font-size: 14px;
-              }
-              .footer-left {
-                text-align: left;
-              }
-              .footer-right {
-                text-align: right;
-              }
-              .qr-code {
-                width: 35mm;
-                height: 35mm;
-              }
-              .text-right {
-                text-align: right;
-              }
-              .text-left {
-                text-align: left;
-              }
-              .text-center {
-                text-align: center;
-              }
-              .note {
-                font-style: italic;
-                color: #666;
-                margin-bottom: 5mm;
-                text-align: center;
-              }
-              @media print {
-                body {
-                  width: 190mm;
-                  height: 277mm;
-                }
-                .no-print {
-                  display: none;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header-container">
-                <img src="${tvsLogo}" class="logo" alt="TVS Logo">
-                <div class="header-text"> GANDHI TVS</div>
-              </div>
-              <div class="header">
-                <div>
-                  Authorised Main Dealer: TVS Motor Company Ltd.<br>
-                  Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
-                  Upnagar, Nashik Road, Nashik - 422101<br>
-                  Phone: 7498903672
-                </div>
-              </div>
-              <div class="divider"></div>
-              <div class="customer-info">
-                <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
-                <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
-                <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
-                <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
-                <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? (ledgerData.vehicleDetails?.chassisNo || 'N/A') : '-'}</div>
-                <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || 'N/A'}</div>
-                <div><strong>Chassis Allocated:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? 'Yes' : 'No'}</div>
-                <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || 'N/A'}</div>
-                <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || 'N/A'}</div>
-              </div>
-              
-              <table>
-                <thead>
-                  <tr>
-                    <th width="15%">Date</th>
-                    <th width="35%">Description</th>
-                    <th width="15%">Receipt/VC No</th>
-                    <th width="10%" class="text-right">Credit (₹)</th>
-                    <th width="10%" class="text-right">Debit (₹)</th>
-                    <th width="15%" class="text-right">Balance (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${
-                    filteredEntries.length > 0
-                      ? filteredEntries
-                          .map(
-                            (entry) => `
-                              <tr>
-                                <td>${entry.date || 'N/A'}</td>
-                                <td>
-                                  ${entry.description || 'N/A'}
-                                  ${
-                                    entry.transactionReference 
-                                      ? `<br>Ref: ${entry.transactionReference}` 
-                                      : ''
-                                  }
-                                </td>
-                                <td>${entry.receiptNo || 'N/A'}</td>
-                                <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN') : '-'}</td>
-                                <td class="text-right">${entry.debit !== undefined ? entry.debit.toLocaleString('en-IN') : '-'}</td>
-                                <td class="text-right">${entry.balance ? entry.balance.toLocaleString('en-IN') : '-'}</td>
-                              </tr>
-                            `
-                          )
-                          .join('')
-                      : `<tr><td colspan="6" class="text-center">No approved entries found</td></tr>`
-                  }
-                  ${
-                    filteredEntries.length > 0
-                      ? `<tr>
-                          <td colspan="3" class="text-left"><strong>Total</strong></td>
-                          <td class="text-right"><strong>${totals.totalCredit.toLocaleString('en-IN')}</strong></td>
-                          <td class="text-right"><strong>${totals.totalDebit.toLocaleString('en-IN')}</strong></td>
-                          <td class="text-right"><strong>${totals.finalBalance.toLocaleString('en-IN')}</strong></td>
-                        </tr>`
-                      : ''
-                  }
-                </tbody>
-              </table>
-              
-              <div class="footer">
-                <div class="footer-left">
-                  <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" 
-                       class="qr-code" 
-                       alt="QR Code" />
-                </div>
-                <div class="footer-right">
-                  <p>For, Gandhi TVS</p>
-                  <p>Authorised Signatory</p>
-                </div>
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header-container">
+              <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+              <div class="header-text">${branchName}</div>
+            </div>
+            <div class="header">
+              <div>
+                Authorised Main Dealer: TVS Motor Company Ltd.<br>
+                Registered office: ${fullBranchAddress || 'N/A'}<br>
+                ${branchContact ? branchContact + '<br>' : ''}
+                ${branchEmailInfo ? branchEmailInfo + '<br>' : ''}
+                ${branchGSTInfo ? branchGSTInfo : ''}
               </div>
             </div>
+            <div class="divider"></div>
+            <div class="customer-info">
+              <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
+              <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+              <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
+              <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
+              <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? (ledgerData.vehicleDetails?.chassisNo || 'N/A') : '-'}</div>
+              <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || 'N/A'}</div>
+              <div><strong>Chassis Allocated:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? 'Yes' : 'No'}</div>
+              <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || 'N/A'}</div>
+              <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || 'N/A'}</div>
+            </div>
             
-            <script>
-              window.onload = function() {
-                setTimeout(() => {
-                  window.print();
-                }, 300);
-              };
-            </script>
-          </body>
-        </html>
-      `);
-    } catch (err) {
-      console.error('Error fetching ledger:', err);
-      const message = showError(err);
-      if (message) {
-        setError(message);
-      }
+            <table>
+              <thead>
+                <tr>
+                  <th width="15%">Date</th>
+                  <th width="35%">Description</th>
+                  <th width="15%">Receipt/VC No</th>
+                  <th width="10%" class="text-right">Credit (₹)</th>
+                  <th width="10%" class="text-right">Debit (₹)</th>
+                  <th width="15%" class="text-right">Balance (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${
+                  filteredEntries.length > 0
+                    ? filteredEntries
+                        .map(
+                          (entry) => `
+                            <tr>
+                              <td>${entry.date || 'N/A'}</td>
+                              <td>
+                                ${entry.description || 'N/A'}
+                                ${
+                                  entry.transactionReference 
+                                    ? `<br>Ref: ${entry.transactionReference}` 
+                                    : ''
+                                }
+                              </td>
+                              <td>${entry.receiptNo || 'N/A'}</td>
+                              <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN') : '-'}</td>
+                              <td class="text-right">${entry.debit !== undefined ? entry.debit.toLocaleString('en-IN') : '-'}</td>
+                              <td class="text-right">${entry.balance ? entry.balance.toLocaleString('en-IN') : '-'}</td>
+                            </tr>
+                          `
+                        )
+                        .join('')
+                    : `<tr><td colspan="6" class="text-center">No approved entries found</td></tr>`
+                }
+                ${
+                  filteredEntries.length > 0
+                    ? `<tr>
+                        <td colspan="3" class="text-left"><strong>Total</strong></td>
+                        <td class="text-right"><strong>${totals.totalCredit.toLocaleString('en-IN')}</strong></td>
+                        <td class="text-right"><strong>${totals.totalDebit.toLocaleString('en-IN')}</strong></td>
+                        <td class="text-right"><strong>${totals.finalBalance.toLocaleString('en-IN')}</strong></td>
+                      </tr>`
+                    : ''
+                }
+              </tbody>
+            </table>
+            
+            <div class="footer">
+              <div class="footer-left">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" 
+                     class="qr-code" 
+                     alt="QR Code" />
+              </div>
+              <div class="footer-right">
+                <p>For, ${branchName}</p>
+                <p>Authorised Signatory</p>
+              </div>
+            </div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              setTimeout(() => {
+                window.print();
+              }, 300);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  } catch (err) {
+    console.error('Error fetching ledger:', err);
+    const message = showError(err);
+    if (message) {
+      setError(message);
     }
-  };
+  }
+};
 
   if (!canViewLedgers) {
     return (

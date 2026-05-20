@@ -878,7 +878,7 @@ const fetchTab = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, s
     const canUploadKyc = () => [canUploadKycInPendingApprovals, canUploadKycInApprovedTab, false, canUploadKycInAllocatedTab, canUploadKycInRejectedDiscount][tabIndex] ?? false;
     const canUploadFin = () => [canUploadFinanceInPendingApprovals, canUploadFinanceInApprovedTab, false, canUploadFinanceInAllocatedTab, canUploadFinanceInRejectedDiscount][tabIndex] ?? false;
     const canEditThis  = () => tabIndex === 0 ? canEditInPendingApprovalsTab : tabIndex === 4 ? canEditInRejectedDiscountTab : false;
-    const getDocumentUrl = path => `https://gmplmis.com/dealership-api/api/v1/uploads${path}`;
+    const getDocumentUrl = path => `http://192.168.1.8:3009/api/v1/uploads${path}`;
 
     // ── Cancellation tabs ────────────────────────────────────────────────────
     if (tabIndex === TAB.CANCELLED || tabIndex === TAB.REJECTED_CANCELLED) {
@@ -1028,24 +1028,34 @@ const fetchTab = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, s
                       </CTableDataCell>
                     )}
 
-                    {tabIndex !== 2 && tabIndex !== 4 && (
-                      <CTableDataCell>
-                        {canUploadKyc() && booking.documentStatus?.kyc?.status === 'NOT_UPLOADED' ? (
-                          <Link to={`/upload-kyc/${bid}`} state={{ bookingId: bid, customerName: booking.customerDetails?.name, address: `${booking.customerDetails?.address||''}, ${booking.customerDetails?.taluka||''}, ${booking.customerDetails?.district||''}, ${booking.customerDetails?.pincode||''}` }}>
-                            <CButton size="sm" className="upload-kyc-btn icon-only"><CIcon icon={cilCloudUpload} /></CButton>
-                          </Link>
-                        ) : (
-                          <div className="d-flex align-items-center">
-                            <span className={`status-badge ${booking.documentStatus?.kyc?.status?.toLowerCase() || ''}`}>{booking.documentStatus?.kyc?.status || ''}</span>
-                            {canUploadKyc() && booking.documentStatus?.kyc?.status === 'REJECTED' && (
-                              <Link to={`/upload-kyc/${bid}`} state={{ bookingId: bid, customerName: booking.customerDetails?.name, address: `${booking.customerDetails?.address||''}, ${booking.customerDetails?.taluka||''}, ${booking.customerDetails?.district||''}, ${booking.customerDetails?.pincode||''}` }} className="ms-2">
-                                <button className="upload-kyc-btn icon-only"><CIcon icon={cilCloudUpload} /></button>
-                              </Link>
-                            )}
-                          </div>
-                        )}
-                      </CTableDataCell>
-                    )}
+                {tabIndex !== 2 && tabIndex !== 4 && (
+  <CTableDataCell>
+    {(booking.documentStatus?.kyc?.status === 'NOT_UPLOADED' || booking.documentStatus?.kyc?.status === 'INCOMPLETE') ? (
+      <Link to={`/upload-kyc/${bid}`} state={{ bookingId: bid, customerName: booking.customerDetails?.name, address: `${booking.customerDetails?.address||''}, ${booking.customerDetails?.taluka||''}, ${booking.customerDetails?.district||''}, ${booking.customerDetails?.pincode||''}` }}>
+        <CButton 
+          size="sm" 
+          className="upload-kyc-btn icon-only"
+          style={{
+            backgroundColor: booking.documentStatus?.kyc?.status === 'INCOMPLETE' ? '#FD7E14' : '#0d6efd',
+            borderColor: booking.documentStatus?.kyc?.status === 'INCOMPLETE' ? '#FD7E14' : '#0d6efd',
+            color: 'white'
+          }}
+        >
+          <CIcon icon={cilCloudUpload} />
+        </CButton>
+      </Link>
+    ) : (
+      <div className="d-flex align-items-center">
+        <span className={`status-badge ${booking.documentStatus?.kyc?.status?.toLowerCase() || ''}`}>{booking.documentStatus?.kyc?.status || ''}</span>
+        {booking.documentStatus?.kyc?.status === 'REJECTED' && (
+          <Link to={`/upload-kyc/${bid}`} state={{ bookingId: bid, customerName: booking.customerDetails?.name, address: `${booking.customerDetails?.address||''}, ${booking.customerDetails?.taluka||''}, ${booking.customerDetails?.district||''}, ${booking.customerDetails?.pincode||''}` }} className="ms-2">
+            <button className="upload-kyc-btn icon-only"><CIcon icon={cilCloudUpload} /></button>
+          </Link>
+        )}
+      </div>
+    )}
+  </CTableDataCell>
+)}
 
                     <CTableDataCell>
                       <span className="status-badge" style={{

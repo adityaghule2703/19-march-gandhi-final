@@ -2652,30 +2652,47 @@ const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_
   }, [tabData, fetchTab]);
 
   // Refresh helper
-  const refreshTab = useCallback((tabIndex) => {
-    const td = tabData[tabIndex];
-    const limit = td?.limit || DEFAULT_LIMIT;
-    
-    setTabData(prev => ({ ...prev, [tabIndex]: { ...prev[tabIndex], search: '' } }));
-    
-    if (tabIndex === activeTab) {
-      setLocalSearch('');
-      if (searchInputRef.current) searchInputRef.current.value = '';
-    }
-    
-    fetchTab(tabIndex, 1, limit, '');
-  }, [activeTab, tabData, fetchTab]);
+// Replace the refreshTab function
+const refreshTab = useCallback((tabIndex) => {
+  const td = tabData[tabIndex];
+  const limit = td?.limit || DEFAULT_LIMIT;
+  const search = td?.search || '';
+  
+  // Clear search input for the current tab if needed
+  if (tabIndex === activeTab) {
+    setLocalSearch('');
+    if (searchInputRef.current) searchInputRef.current.value = '';
+  }
+  
+  // Fetch fresh data
+  switch (tabIndex) {
+    case TAB.PENDING_INSURANCE:
+      fetchPendingInsurance(tabIndex, 1, limit, '');
+      break;
+    case TAB.COMPLETE_INSURANCE:
+      fetchCompleteInsurance(tabIndex, 1, limit, search);
+      break;
+    case TAB.UPDATE_LATER:
+      fetchUpdateLater(tabIndex, 1, limit, search);
+      break;
+    default:
+      break;
+  }
+}, [activeTab, tabData, fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater]);
 
-  const handleRefresh = () => {
-    setRefreshKey((prev) => prev + 1);
-  };
+// Simplify handleRefresh - remove the refreshKey dependency
+const handleRefresh = useCallback(() => {
+  refreshTab(activeTab);
+}, [activeTab, refreshTab]);
 
-  const handleModalClose = () => {
-    setShowModal(false);
-    setSelectedInsurance(null);
-    setSelectedBooking(null);
-    refreshTab(activeTab);
-  };
+// Update handleModalClose
+const handleModalClose = useCallback(() => {
+  setShowModal(false);
+  setSelectedInsurance(null);
+  setSelectedBooking(null);
+  // Refresh the current tab after modal closes
+  refreshTab(activeTab);
+}, [activeTab, refreshTab]);
 
   // Export handlers
   const handleOpenExportModal = () => {

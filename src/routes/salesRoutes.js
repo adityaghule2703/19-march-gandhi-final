@@ -1,5 +1,7 @@
 import React from 'react';
 
+
+
 const NewBooking = React.lazy(() => import('../views/sales/booking/NewBooking'))
 const SelfInsurance = React.lazy(() => import('../views/sales/booking/SelfInsurance'))
 const BookingList = React.lazy(() => import('../views/sales/booking/BookingList'))
@@ -11,7 +13,9 @@ const DealForm = React.lazy(() => import('../views/sales/DealForm'))
 const UploadDealForm = React.lazy(() => import('../views/sales/UploadDealForm'))
 const UploadFinance = React.lazy(() => import('../views/sales/UploadFinance'))
 const uploadKYC = React.lazy(() => import('../views/sales/UploadKYC'))
+const UploadKYCRto = React.lazy(() => import('../views/sales/UploadKYCRto'))
 const SalesReport = React.lazy(() => import('../views/sales-report/SalesReport'))
+const SalesDashboard = React.lazy(() => import('../views/sales-report/SalesDashboard'))
 const PeriodicReport = React.lazy(() => import('../views/sales-report/PeriodicReport'))
 export const salesRoutes = [
     { path:'/new-booking', name:'New Booking', element:NewBooking},
@@ -21,6 +25,7 @@ export const salesRoutes = [
     { path:'/update-booking/:id', name:'Edit Booking', element:NewBooking},
     { path:'/upload-finance/:id', name:'Upload Finance', element:UploadFinance},
     { path:'/upload-kyc/:id', name:'Upload KYC', element:uploadKYC},
+    { path:'/upload-kyc-rto/:id', name:'Upload KYC RTO', element:UploadKYCRto},
   
     { path:'/delivery-challan', name:'Delivery Challan', element:DeliveryChallan},
     { path:'/invoice', name:'GST Invoice', element:Invoice},
@@ -31,6 +36,7 @@ export const salesRoutes = [
     { path:'/upload-deal', name:'Upload Deal', element:UploadDealForm},
     
     { path:'/sales-report', name:'Sales Report', element:SalesReport},
+    { path:'/sales-dashboard', name:'Sales Dashboard', element:SalesDashboard},
     { path:'/periodic-report', name:'Periodic Report', element:PeriodicReport},
   
 ];

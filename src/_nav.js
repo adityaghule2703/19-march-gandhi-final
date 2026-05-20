@@ -3817,6 +3817,45 @@ const getNav = (userPermissions = []) => {
     });
   }
 
+  
+
+ // Stock Movement Group
+const stockMovementItems = []
+
+// Directly push items without permission checks
+stockMovementItems.push({
+  component: CNavItem,
+  name: 'Stock Movement List',
+  to: '/stock-movement',
+});
+
+// Add more pages as needed
+stockMovementItems.push({
+  component: CNavItem,
+  name: 'Stock Movement History',
+  to: '/stock-movement-history',
+});
+
+stockMovementItems.push({
+  component: CNavItem,
+  name: 'Stock Movement Requests',
+  to: '/stock-movement-requests',
+});
+
+
+
+// Add Stock Movement group (always show since you're pushing items)
+if (stockMovementItems.length > 0) {
+  _nav.push({
+    component: CNavGroup,
+    name: 'Stock Movement',
+    icon: <CIcon icon={cilInbox} customClassName="nav-icon" />,
+    items: stockMovementItems,
+  });
+}
+
+
+
   // Purchase Group
   const purchaseItems = []
   
@@ -3971,6 +4010,14 @@ const getNav = (userPermissions = []) => {
       to: '/sales-report',
     });
   }
+
+    if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
+    salesReportItems.push({
+      component: CNavItem,
+      name: 'Sales Dashboard',
+      to: '/sales-dashboard',
+    });
+  }
   
   if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.PERIODIC_REPORT)) {
     salesReportItems.push({
@@ -3989,6 +4036,8 @@ const getNav = (userPermissions = []) => {
       items: salesReportItems,
     });
   }
+
+
 
   // Quotation
   if (canViewPage(userPermissions, MODULES.QUOTATION, PAGES.QUOTATION.QUOTATION_LIST)) {
@@ -4374,13 +4423,13 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-  // if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS)) {
-  //   mastersItems.push({
-  //     component: CNavItem,
-  //     name: 'Wallpaper',
-  //     to: '/wallpaper/wallpaper',
-  //   })
-  // }
+  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS)) {
+    mastersItems.push({
+      component: CNavItem,
+      name: 'Wallpaper',
+      to: '/wallpaper/wallpaper',
+    })
+  }
   
   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.TERMS_CONDITIONS)) {
     mastersItems.push({

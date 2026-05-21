@@ -39,10 +39,24 @@ import {
   CTableDataCell,
   CSpinner,
   CBadge,
-  CImage
+  CImage,
+  CModal,
+  CModalHeader,
+  CModalBody,
+  CModalTitle,
+  CModalFooter
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilPlus, cilSettings, cilPencil, cilTrash, cilCheckCircle, cilXCircle } from '@coreui/icons';
+import { 
+  cilPlus, 
+  cilSettings, 
+  cilPencil, 
+  cilTrash, 
+  cilCheckCircle, 
+  cilXCircle, 
+  cilMediaPlay,
+  cilZoom
+} from '@coreui/icons';
 import { useAuth } from '../../../context/AuthContext';
 
 const Wallpaper = () => {
@@ -51,6 +65,8 @@ const Wallpaper = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
   const baseURL = 'https://gmplmis.com';
 
@@ -141,12 +157,30 @@ const Wallpaper = () => {
     if (result.isConfirmed) {
       try {
         await axiosInstance.delete(`/wallpapers/${id}`);
-        fetchData();
+        handleClose(); // Close menu before refreshing data
+        await fetchData();
         showSuccess('Wallpaper deleted successfully!');
       } catch (error) {
         console.log(error);
         showError();
       }
+    }
+  };
+
+  const handleActivate = async (id) => {
+    if (!canUpdateWallpapers) {
+      showError('You do not have permission to activate wallpapers');
+      return;
+    }
+    
+    try {
+      await axiosInstance.put(`/wallpapers/${id}/activate`);
+      handleClose(); // Close menu immediately
+      await fetchData(); // Refresh data
+      showSuccess('Wallpaper activated successfully!');
+    } catch (error) {
+      console.error('Error activating wallpaper:', error);
+      showError(error.response?.data?.message || 'Failed to activate wallpaper');
     }
   };
 
@@ -162,6 +196,21 @@ const Wallpaper = () => {
       month: '2-digit',
       year: 'numeric'
     });
+  };
+
+  // Get uploaded by name from the uploaded_by object
+  const getUploadedByName = (uploadedBy) => {
+    if (!uploadedBy) return 'N/A';
+    if (typeof uploadedBy === 'object' && uploadedBy.name) {
+      return uploadedBy.name;
+    }
+    return uploadedBy || 'N/A';
+  };
+
+  // Handle image click to open popup
+  const handleImageClick = (imageUrl, imageName) => {
+    setSelectedImage({ url: imageUrl, name: imageName });
+    setModalVisible(true);
   };
 
   if (!canViewWallpapers) {
@@ -245,12 +294,38 @@ const Wallpaper = () => {
                     <CTableRow key={wallpaper._id || index}>
                       <CTableDataCell>{index + 1}</CTableDataCell>
                       <CTableDataCell>
-                        <CImage 
-                          src={wallpaper.image_url} 
-                          alt={wallpaper.image_name || 'Wallpaper'}
-                          style={{ width: '60px', height: '60px', objectFit: 'cover' }}
-                          rounded
-                        />
+                        <div 
+                          style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
+                          onClick={() => handleImageClick(wallpaper.image_url, wallpaper.image_name)}
+                        >
+                          <CImage 
+                            src={wallpaper.image_url} 
+                            alt={wallpaper.image_name || 'Wallpaper'}
+                            style={{ width: '60px', height: '60px', objectFit: 'cover' }}
+                            rounded
+                          />
+                          <div 
+                            style={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              backgroundColor: 'rgba(0,0,0,0.6)',
+                              borderRadius: '50%',
+                              width: '24px',
+                              height: '24px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              opacity: 0,
+                              transition: 'opacity 0.3s',
+                              pointerEvents: 'none'
+                            }}
+                            className="zoom-icon"
+                          >
+                            <CIcon icon={cilZoom} style={{ color: 'white', width: '16px', height: '16px' }} />
+                          </div>
+                        </div>
                       </CTableDataCell>
                       <CTableDataCell>{wallpaper.screen_name}</CTableDataCell>
                       <CTableDataCell>{wallpaper.image_name}</CTableDataCell>
@@ -269,7 +344,7 @@ const Wallpaper = () => {
                           )}
                         </CBadge>
                       </CTableDataCell>
-                      <CTableDataCell>{wallpaper.uploaded_by || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{getUploadedByName(wallpaper.uploaded_by)}</CTableDataCell>
                       <CTableDataCell>{formatDate(wallpaper.createdAt)}</CTableDataCell>
                       {showActionColumn && (
                         <CTableDataCell>
@@ -289,11 +364,17 @@ const Wallpaper = () => {
                           >
                             {canUpdateWallpapers && (
                               <Link className="Link" to={`/wallpaper/update-wallpaper/${wallpaper._id}`}>
-                                <MenuItem style={{ color: 'black' }}>
+                                <MenuItem style={{ color: 'black' }} onClick={handleClose}>
                                   <CIcon icon={cilPencil} className="me-2" />
                                   Edit
                                 </MenuItem>
                               </Link>
+                            )}
+                            {canUpdateWallpapers && !wallpaper.is_active && (
+                              <MenuItem onClick={() => handleActivate(wallpaper._id)}>
+                                <CIcon icon={cilMediaPlay} className="me-2" />
+                                Activate
+                              </MenuItem>
                             )}
                             {canDeleteWallpapers && (
                               <MenuItem onClick={() => handleDelete(wallpaper._id)}>
@@ -312,6 +393,47 @@ const Wallpaper = () => {
           </div>
         </CCardBody>
       </CCard>
+
+      {/* Image Popup Modal */}
+      <CModal 
+        visible={modalVisible} 
+        onClose={() => setModalVisible(false)}
+        size="lg"
+        alignment="center"
+        backdrop="static"
+      >
+        <CModalHeader>
+          <CModalTitle>
+            {selectedImage?.name || 'Wallpaper Preview'}
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody className="text-center">
+          {selectedImage && (
+            <CImage 
+              src={selectedImage.url} 
+              alt={selectedImage.name}
+              style={{ 
+                maxWidth: '100%', 
+                maxHeight: '70vh', 
+                objectFit: 'contain' 
+              }}
+              fluid
+            />
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => setModalVisible(false)}>
+            Close
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* Add CSS for zoom icon hover effect */}
+      <style jsx>{`
+        div[style*="cursor: pointer"]:hover .zoom-icon {
+          opacity: 1 !important;
+        }
+      `}</style>
     </div>
   );
 };

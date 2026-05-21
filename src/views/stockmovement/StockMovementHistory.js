@@ -38,7 +38,10 @@ import {
   cilChevronRight,
   cilCheckCircle,
   cilWarning,
-  cilTransfer
+  cilTransfer,
+  cilCloudUpload,
+  cilPaperclip,
+  cilFile
 } from '@coreui/icons';
 import { showError, showSuccess } from '../../utils/sweetAlerts';
 import axiosInstance from '../../axiosInstance';
@@ -76,6 +79,11 @@ const StockMovementHistory = () => {
   // Detail modal state
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // Upload challan state
+  const [fileInputs, setFileInputs] = useState({});
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef({});
   
   // Database options
   const [databaseOptions, setDatabaseOptions] = useState([]);
@@ -133,6 +141,14 @@ const StockMovementHistory = () => {
       
       if (response.data.status === 'success') {
         setTransfers(response.data.data.transfers || []);
+        
+        // Initialize file inputs for each transfer
+        const inputs = {};
+        (response.data.data.transfers || []).forEach((transfer) => {
+          inputs[transfer._id] = null;
+        });
+        setFileInputs(inputs);
+        
         setPagination({
           page: response.data.data.pagination?.page || page,
           limit: response.data.data.pagination?.limit || limit,
@@ -215,6 +231,55 @@ const StockMovementHistory = () => {
     setShowDetailModal(true);
   };
 
+  // Upload challan handlers
+  const handleFileChange = (transferId, e) => {
+    setFileInputs((prev) => ({
+      ...prev,
+      [transferId]: e.target.files[0]
+    }));
+  };
+
+  const handleUploadClick = (transferId) => {
+    fileInputRef.current[transferId]?.click();
+  };
+
+  const handleUploadChallan = async (transferId) => {
+    if (!fileInputs[transferId]) {
+      showError('Please select a file first');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('challan', fileInputs[transferId]);
+
+      await axiosInstance.post(`/crossData/transfer-requests/${transferId}/challan`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      showSuccess('Challan uploaded successfully!');
+      
+      // Clear the file input for this transfer
+      setFileInputs((prev) => ({
+        ...prev,
+        [transferId]: null
+      }));
+      
+      // Refresh the data
+      fetchTransferHistory();
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     try {
@@ -232,6 +297,15 @@ const StockMovementHistory = () => {
     } else {
       return <CBadge color="success">Success</CBadge>;
     }
+  };
+
+  const getChallanStatusBadge = (challanStatus) => {
+    if (challanStatus === 'uploaded') {
+      return <CBadge color="success">Uploaded</CBadge>;
+    } else if (challanStatus === 'pending') {
+      return <CBadge color="warning">Pending</CBadge>;
+    }
+    return <CBadge color="secondary">Not Available</CBadge>;
   };
 
   const startRecord = (pagination.page - 1) * pagination.limit + 1;
@@ -257,40 +331,12 @@ const StockMovementHistory = () => {
   return (
     <div>
       <div className='title'>
-       
         Stock Movement History
       </div>
 
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-          {/* <div>
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-              onClick={() => setFilterModalOpen(true)}
-            >
-              <CIcon icon={cilFilter} className='icon' /> Filter
-            </CButton>
-            
-            {isFilterApplied && (
-              <CButton 
-                size="sm" 
-                className="action-btn me-1"
-                onClick={clearFilter}
-              >
-                <CIcon icon={cilReload} className='icon' /> Clear Filters
-              </CButton>
-            )}
-            
-            <CButton 
-              size="sm" 
-              className="action-btn me-1"
-              onClick={() => fetchTransferHistory()}
-              disabled={loading}
-            >
-              <CIcon icon={cilReload} className='icon' /> Refresh
-            </CButton>
-          </div> */}
+          {/* Header content if needed */}
         </CCardHeader>
         
         <CCardBody>
@@ -337,15 +383,16 @@ const StockMovementHistory = () => {
                   <CTableHeaderCell>Target</CTableHeaderCell>
                   <CTableHeaderCell>Vehicles</CTableHeaderCell>
                   <CTableHeaderCell>Status</CTableHeaderCell>
+                  <CTableHeaderCell>Challan Status</CTableHeaderCell>
                   <CTableHeaderCell>Transferred By</CTableHeaderCell>
                   <CTableHeaderCell>Transferred At</CTableHeaderCell>
-                  <CTableHeaderCell style={{ width: '80px' }}>Actions</CTableHeaderCell>
+                  <CTableHeaderCell style={{ width: '140px' }}>Actions</CTableHeaderCell>
                 </CTableRow>
               </CTableHead>
               <CTableBody>
                 {transfers.length === 0 && !loading ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={9} className="text-center">
+                    <CTableDataCell colSpan={10} className="text-center">
                       {searchTerm ? `No results found for "${searchTerm}"` : 'No transfer records available'}
                     </CTableDataCell>
                   </CTableRow>
@@ -397,21 +444,80 @@ const StockMovementHistory = () => {
                           {getStatusBadge(transfer.summary)}
                         </CTableDataCell>
                         <CTableDataCell>
+                          {getChallanStatusBadge(transfer.challanStatus)}
+                        </CTableDataCell>
+                        <CTableDataCell>
                           {transfer.transferredByUserName}
                         </CTableDataCell>
                         <CTableDataCell>
                           {formatDate(transfer.transferredAt)}
                         </CTableDataCell>
                         <CTableDataCell>
-                          <CButton
-                            color="info"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewDetails(transfer)}
-                            title="View Details"
-                          >
-                            <CIcon icon={cilInfo} />
-                          </CButton>
+                          <div className="d-flex gap-1 flex-wrap">
+                            <CButton
+                              color="info"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleViewDetails(transfer)}
+                              title="View Details"
+                            >
+                              <CIcon icon={cilInfo} />
+                            </CButton>
+                            
+                            {transfer.challanStatus === 'pending' ? (
+                              <>
+                                <CButton
+                                  color="primary"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleUploadClick(transfer._id)}
+                                  disabled={uploading}
+                                  title="Upload Challan"
+                                >
+                                  <CIcon icon={cilCloudUpload} />
+                                </CButton>
+                                
+                                {/* Hidden file input for challan upload */}
+                                <input
+                                  type="file"
+                                  ref={(el) => (fileInputRef.current[transfer._id] = el)}
+                                  onChange={(e) => handleFileChange(transfer._id, e)}
+                                  accept=".pdf,.jpg,.jpeg,.png"
+                                  style={{ display: 'none' }}
+                                />
+                                
+                                {/* Show file selection and upload button if file is selected */}
+                                {fileInputs[transfer._id] && (
+                                  <div className="mt-2 d-flex flex-column gap-1" style={{ position: 'absolute', zIndex: 10, background: 'white', padding: '8px', borderRadius: '4px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                                    <small className="text-muted">
+                                      <CIcon icon={cilPaperclip} className="me-1" />
+                                      {fileInputs[transfer._id].name}
+                                    </small>
+                                    <CButton
+                                      size="sm"
+                                      color="success"
+                                      onClick={() => handleUploadChallan(transfer._id)}
+                                      disabled={uploading}
+                                    >
+                                      {uploading ? 'Uploading...' : 'Confirm Upload'}
+                                    </CButton>
+                                  </div>
+                                )}
+                              </>
+                            ) : transfer.challanDocument ? (
+                              <CButton
+                                color="success"
+                                size="sm"
+                                variant="outline"
+                                href={`${axiosInstance.defaults.baseURL}/${transfer.challanDocument}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="View Challan"
+                              >
+                                <CIcon icon={cilFile} />
+                              </CButton>
+                            ) : null}
+                          </div>
                         </CTableDataCell>
                       </CTableRow>
                     );
@@ -597,6 +703,12 @@ const StockMovementHistory = () => {
                   </div>
                   <div className="col-md-6">
                     <div className="d-flex justify-content-between border-bottom py-2">
+                      <span className="text-muted">Request ID:</span>
+                      <span className="fw-mono">{selectedTransfer.requestId || '-'}</span>
+                    </div>
+                  </div>
+                  <div className="col-md-6">
+                    <div className="d-flex justify-content-between border-bottom py-2">
                       <span className="text-muted">Transferred By:</span>
                       <span>{selectedTransfer.transferredByUserName}</span>
                     </div>
@@ -615,6 +727,29 @@ const StockMovementHistory = () => {
                       </CBadge>
                     </div>
                   </div>
+                  <div className="col-md-6">
+                    <div className="d-flex justify-content-between border-bottom py-2">
+                      <span className="text-muted">Challan Status:</span>
+                      {getChallanStatusBadge(selectedTransfer.challanStatus)}
+                    </div>
+                  </div>
+                  {selectedTransfer.challanStatus === 'uploaded' && selectedTransfer.challanDocument && (
+                    <div className="col-md-12">
+                      <div className="d-flex justify-content-between border-bottom py-2">
+                        <span className="text-muted">Challan Document:</span>
+                        <CButton
+                          size="sm"
+                          color="info"
+                          href={`${axiosInstance.defaults.baseURL}/${selectedTransfer.challanDocument}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <CIcon icon={cilFile} className="me-1" />
+                          View Challan
+                        </CButton>
+                      </div>
+                    </div>
+                  )}
                   {selectedTransfer.notes && (
                     <div className="col-12">
                       <div className="d-flex justify-content-between border-bottom py-2">

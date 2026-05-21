@@ -31,7 +31,7 @@ import {
   CButtonGroup
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
-import { cilUser, cilSearch, cilTransfer, cilLocationPin, cilFile, cilCheck, cilX } from '@coreui/icons';
+import { cilUser, cilSearch, cilTransfer, cilLocationPin, cilFile, cilCheck, cilX, cilShieldAlt } from '@coreui/icons';
 import { useNavigate } from 'react-router-dom';
 import { showError, showSuccess } from '../../utils/sweetAlerts';
 import axiosInstance from '../../axiosInstance';
@@ -46,9 +46,7 @@ const StockMovement = () => {
     targetDatabase: '',
     targetLocationType: 'branch',
     targetLocationId: '',
-    notes: '',
-    transferAllVehicles: false,
-    validateUniqueness: true
+    notes: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -64,6 +62,20 @@ const StockMovement = () => {
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
   const [showChallanModal, setShowChallanModal] = useState(false);
   const [challanData, setChallanData] = useState(null);
+  
+  // OTP related states
+  const [otpUsers, setOtpUsers] = useState([]);
+  const [showOtpSection, setShowOtpSection] = useState(false);
+  const [selectedOtpUser, setSelectedOtpUser] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpData, setOtpData] = useState({
+    otp: '',
+    otpMethod: 'SMS'
+  });
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otpError, setOtpError] = useState('');
 
   const navigate = useNavigate();
   const { permissions = [] } = useAuth();
@@ -108,10 +120,18 @@ const StockMovement = () => {
   useEffect(() => {
     if (formData.sourceDatabase && formData.sourceLocationType && formData.sourceLocationId) {
       fetchVehicles();
+      fetchOtpUsersForLocation();
     } else {
       setVehicles([]);
       setFilteredVehicles([]);
       setSelectedVehicles([]);
+      setOtpUsers([]);
+      setShowOtpSection(false);
+      setSelectedOtpUser('');
+      setOtpSent(false);
+      setOtpVerified(false);
+      setOtpError('');
+      setOtpData({ otp: '', otpMethod: 'SMS' });
     }
   }, [formData.sourceDatabase, formData.sourceLocationType, formData.sourceLocationId]);
 
@@ -172,6 +192,164 @@ const StockMovement = () => {
     }
   };
 
+  const fetchOtpUsersForLocation = async () => {
+    try {
+      const { sourceDatabase, sourceLocationType, sourceLocationId } = formData;
+      
+      // Fetch users with OTP enabled for this location using the same API as stock transfer
+      const response = await axiosInstance.get('/users');
+      const allUsers = response.data.data || [];
+      
+      let filteredUsers = [];
+      
+      if (sourceLocationType === 'branch') {
+        filteredUsers = allUsers.filter(user => 
+          user.branch === sourceLocationId && 
+          user.isStockTransferOTP === true
+        );
+      } else if (sourceLocationType === 'subdealer') {
+        filteredUsers = allUsers.filter(user => 
+          user.subdealer === sourceLocationId && 
+          user.isStockTransferOTP === true
+        );
+      }
+      
+      setOtpUsers(filteredUsers);
+      
+      if (filteredUsers.length === 0) {
+        setShowOtpSection(false);
+        setOtpVerified(true); // Auto-verify if no OTP users
+      } else {
+        setShowOtpSection(true);
+        setOtpVerified(false);
+        setSelectedOtpUser(''); // Reset selected user
+        setOtpSent(false);
+        setOtpError('');
+      }
+    } catch (error) {
+      console.error('Error fetching OTP users:', error);
+      setOtpUsers([]);
+      setShowOtpSection(false);
+      setOtpVerified(true);
+    }
+  };
+
+  const getSelectedUserOtpMethod = () => {
+    const user = otpUsers.find(u => u._id === selectedOtpUser);
+    return user?.otpMethod || 'SMS';
+  };
+
+  const getSelectedUserName = () => {
+    const user = otpUsers.find(u => u._id === selectedOtpUser);
+    return user?.name || '';
+  };
+
+  const handleSendOtp = async () => {
+    if (!selectedOtpUser) {
+      showError('Please select a user to send OTP');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    setOtpError('');
+    
+    try {
+      // Using cross-database OTP endpoint
+      const response = await axiosInstance.post('/crossData/request-otp', {
+        userId: selectedOtpUser,
+        otpMethod: getSelectedUserOtpMethod()
+      });
+
+      if (response.data.status === 'success') {
+        showSuccess('OTP sent successfully!');
+        setOtpSent(true);
+        setOtpVerified(false);
+        setOtpData({ ...otpData, otp: '', otpMethod: getSelectedUserOtpMethod() });
+      } else {
+        showError(response.data.message || 'Failed to send OTP');
+        setOtpError(response.data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      if (error.response && error.response.data) {
+        if (error.response.data.message) {
+          showError(error.response.data.message);
+          setOtpError(error.response.data.message);
+        } else if (error.response.data.error) {
+          showError(error.response.data.error);
+          setOtpError(error.response.data.error);
+        } else {
+          showError('Failed to send OTP. Please try again.');
+          setOtpError('Failed to send OTP. Please try again.');
+        }
+      } else if (error.message) {
+        showError(error.message);
+        setOtpError(error.message);
+      } else {
+        showError('Failed to send OTP. Please try again.');
+        setOtpError('Failed to send OTP. Please try again.');
+      }
+      setOtpSent(false);
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!otpData.otp || otpData.otp.length < 6) {
+      showError('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setOtpError('');
+    
+    try {
+      // Using cross-database OTP verification endpoint
+      const response = await axiosInstance.post('/crossData/verify-otp', {
+        userId: selectedOtpUser,
+        otp: otpData.otp,
+        otpMethod: getSelectedUserOtpMethod()
+      });
+
+      if (response.data.status === 'success') {
+        showSuccess('OTP verified successfully!');
+        setOtpVerified(true);
+        setOtpError('');
+      } else {
+        showError(response.data.message || 'OTP verification failed');
+        setOtpError(response.data.message || 'OTP verification failed');
+        setOtpData({ ...otpData, otp: '' });
+      }
+    } catch (error) {
+      setOtpData({ ...otpData, otp: '' });
+      setOtpVerified(false);
+      
+      if (error.response && error.response.data) {
+        if (error.response.data.error === "Invalid OTP or expired") {
+          showError('Invalid OTP or expired. Please try again.');
+          setOtpError('Invalid OTP or expired. Please try again.');
+        } else if (error.response.data.message) {
+          showError(error.response.data.message);
+          setOtpError(error.response.data.message);
+        } else if (error.response.data.error) {
+          showError(error.response.data.error);
+          setOtpError(error.response.data.error);
+        } else {
+          showError('OTP verification failed. Please try again.');
+          setOtpError('OTP verification failed. Please try again.');
+        }
+      } else if (error.message) {
+        showError(error.message);
+        setOtpError(error.message);
+      } else {
+        showError('OTP verification failed. Please try again.');
+        setOtpError('OTP verification failed. Please try again.');
+      }
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
@@ -190,6 +368,14 @@ const StockMovement = () => {
       setVehicles([]);
       setFilteredVehicles([]);
       setSelectedVehicles([]);
+      // Reset OTP states when source database changes
+      setOtpUsers([]);
+      setShowOtpSection(false);
+      setSelectedOtpUser('');
+      setOtpSent(false);
+      setOtpVerified(false);
+      setOtpError('');
+      setOtpData({ otp: '', otpMethod: 'SMS' });
     }
 
     if (name === 'sourceLocationType') {
@@ -200,6 +386,14 @@ const StockMovement = () => {
       setVehicles([]);
       setFilteredVehicles([]);
       setSelectedVehicles([]);
+      // Reset OTP states when source location type changes
+      setOtpUsers([]);
+      setShowOtpSection(false);
+      setSelectedOtpUser('');
+      setOtpSent(false);
+      setOtpVerified(false);
+      setOtpError('');
+      setOtpData({ otp: '', otpMethod: 'SMS' });
     }
 
     if (name === 'targetDatabase') {
@@ -255,7 +449,7 @@ const StockMovement = () => {
       newErrors.targetLocationId = 'Target location is required';
     }
 
-    if (!formData.transferAllVehicles && selectedVehicles.length === 0) {
+    if (selectedVehicles.length === 0) {
       newErrors.vehicles = 'Please select at least one vehicle to transfer';
     }
 
@@ -265,83 +459,102 @@ const StockMovement = () => {
       newErrors.targetLocationId = 'Source and target locations cannot be the same';
     }
 
+    // OTP validation
+    if (otpUsers.length > 0 && !otpVerified) {
+      newErrors.otp = 'Please complete OTP verification before transferring vehicles';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+  if (!validateForm()) {
+    return;
+  }
 
-    setIsSubmitting(true);
-    setError(null);
+  setIsSubmitting(true);
+  setError(null);
 
-    try {
-      const payload = {
-        sourceDatabase: formData.sourceDatabase,
-        targetDatabase: formData.targetDatabase,
-        sourceLocationType: formData.sourceLocationType,
-        sourceLocationId: formData.sourceLocationId,
-        targetLocationType: formData.targetLocationType,
-        targetLocationId: formData.targetLocationId,
-        vehicleIds: formData.transferAllVehicles ? [] : selectedVehicles,
-        transferAllVehicles: formData.transferAllVehicles,
-        validateUniqueness: formData.validateUniqueness,
-        notes: formData.notes || ''
+  try {
+    const payload = {
+      sourceDatabase: formData.sourceDatabase,
+      targetDatabase: formData.targetDatabase,
+      sourceLocationType: formData.sourceLocationType,
+      sourceLocationId: formData.sourceLocationId,
+      targetLocationType: formData.targetLocationType,
+      targetLocationId: formData.targetLocationId,
+      vehicleIds: selectedVehicles,  // ← THIS WAS MISSING - Add this line
+      notes: formData.notes || ''
+    };
+
+    // Add OTP data if OTP was verified (using the correct structure)
+    if (otpUsers.length > 0 && otpVerified && selectedOtpUser) {
+      payload.otpData = {
+        userId: selectedOtpUser,
+        otp: otpData.otp,
+        otpMethod: getSelectedUserOtpMethod()
       };
-
-      const response = await axiosInstance.post('/crossData/transfer-vehicles', payload);
-
-      if (response.data.status === 'success') {
-        showSuccess('Vehicles transferred successfully!');
-        
-        // Prepare challan data
-        const sourceLocationData = getSourceLocationDetails();
-        const targetLocationData = getTargetLocationDetails();
-        const transferredVehicles = getTransferredVehiclesDetails();
-        
-        setChallanData({
-          transferDetails: response.data,
-          fromType: formData.sourceLocationType,
-          fromBranch: formData.sourceLocationType === 'branch' ? sourceLocationData : null,
-          fromSubdealer: formData.sourceLocationType === 'subdealer' ? sourceLocationData : null,
-          toType: formData.targetLocationType,
-          toBranch: formData.targetLocationType === 'branch' ? targetLocationData : null,
-          toSubdealer: formData.targetLocationType === 'subdealer' ? targetLocationData : null,
-          vehicles: transferredVehicles,
-          destinationName: targetLocationData?.name || '',
-        });
-        
-        setShowChallanModal(true);
-        
-        // Reset form
-        setFormData({
-          sourceDatabase: '',
-          sourceLocationType: 'branch',
-          sourceLocationId: '',
-          targetDatabase: '',
-          targetLocationType: 'branch',
-          targetLocationId: '',
-          notes: '',
-          transferAllVehicles: false,
-          validateUniqueness: true
-        });
-        setSelectedVehicles([]);
-        setVehicles([]);
-        setFilteredVehicles([]);
-      } else {
-        showError(response.data.message || 'Failed to transfer vehicles');
-      }
-    } catch (error) {
-      const message = showError(error);
-      if (message) setError(message);
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+
+    const response = await axiosInstance.post('/crossData/transfer-requests', payload);
+
+    if (response.data.status === 'success') {
+      showSuccess('Vehicles transferred successfully!');
+      
+      // Prepare challan data
+      const sourceLocationData = getSourceLocationDetails();
+      const targetLocationData = getTargetLocationDetails();
+      const transferredVehicles = getTransferredVehiclesDetails();
+      
+      setChallanData({
+        transferDetails: response.data,
+        fromType: formData.sourceLocationType,
+        fromBranch: formData.sourceLocationType === 'branch' ? sourceLocationData : null,
+        fromSubdealer: formData.sourceLocationType === 'subdealer' ? sourceLocationData : null,
+        toType: formData.targetLocationType,
+        toBranch: formData.targetLocationType === 'branch' ? targetLocationData : null,
+        toSubdealer: formData.targetLocationType === 'subdealer' ? targetLocationData : null,
+        vehicles: transferredVehicles,
+        destinationName: targetLocationData?.name || '',
+      });
+      
+      setShowChallanModal(true);
+      
+      // Reset form
+      setFormData({
+        sourceDatabase: '',
+        sourceLocationType: 'branch',
+        sourceLocationId: '',
+        targetDatabase: '',
+        targetLocationType: 'branch',
+        targetLocationId: '',
+        notes: ''
+      });
+      setSelectedVehicles([]);
+      setVehicles([]);
+      setFilteredVehicles([]);
+      
+      // Reset OTP states
+      setOtpUsers([]);
+      setShowOtpSection(false);
+      setSelectedOtpUser('');
+      setOtpSent(false);
+      setOtpVerified(false);
+      setOtpError('');
+      setOtpData({ otp: '', otpMethod: 'SMS' });
+    } else {
+      showError(response.data.message || 'Failed to transfer vehicles');
+    }
+  } catch (error) {
+    const message = showError(error);
+    if (message) setError(message);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const getSourceLocationDetails = () => {
     if (!formData.sourceDatabase || !formData.sourceLocationId) return null;
@@ -374,9 +587,6 @@ const StockMovement = () => {
   };
 
   const getTransferredVehiclesDetails = () => {
-    if (formData.transferAllVehicles) {
-      return vehicles;
-    }
     return vehicles.filter(v => selectedVehicles.includes(v._id));
   };
 
@@ -437,8 +647,6 @@ const StockMovement = () => {
       <div className='title'>Stock Movement (Cross Database)</div>
 
       <CCard className='table-container mt-4'>
-      
-        
         <CCardBody>
           <div className="form-container">
             {error && <CAlert color="danger">{error}</CAlert>}
@@ -528,6 +736,53 @@ const StockMovement = () => {
                       </div>
                     )}
 
+                    {/* OTP User Selection Field - appears when source is selected and OTP users exist */}
+                    {showOtpSection && otpUsers.length > 0 && (
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">OTP User</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon">
+                            <CIcon icon={cilShieldAlt} />
+                          </CInputGroupText>
+                          <CFormSelect 
+                            value={selectedOtpUser}
+                            onChange={(e) => {
+                              setSelectedOtpUser(e.target.value);
+                              setOtpSent(false);
+                              setOtpVerified(false);
+                              setOtpError('');
+                              setOtpData({ otp: '', otpMethod: getSelectedUserOtpMethod() });
+                            }}
+                            disabled={otpSent || isSubmitting}
+                            invalid={!selectedOtpUser && otpUsers.length > 0}
+                          >
+                            <option value="">-Select User-</option>
+                            {otpUsers.map((user) => (
+                              <option key={user._id} value={user._id}>
+                                {user.name} ({user.otpMethod})
+                              </option>
+                            ))}
+                          </CFormSelect>
+                        </CInputGroup>
+                        <div className="mt-2">
+                          <CButton 
+                            color="primary" 
+                            size="sm"
+                            onClick={handleSendOtp}
+                            disabled={!selectedOtpUser || isSendingOtp || otpSent}
+                          >
+                            {isSendingOtp ? 'Sending...' : 'Send OTP'}
+                          </CButton>
+                        </div>
+                        {otpError && !otpSent && (
+                          <small className="text-danger d-block mt-1">{otpError}</small>
+                        )}
+                      </div>
+                    )}
+
                     {/* Target Database */}
                     <div className="input-box">
                       <div className="details-container">
@@ -612,71 +867,79 @@ const StockMovement = () => {
                       </div>
                     )}
 
-                   {/* Transfer Options - Yes/No buttons like permissions */}
-<div className="input-box full-width">
-  <div className="details-container">
-    <span className="details">Transfer Options</span>
-  </div>
-  <div className="mt-2">
-    <div className="row">
-      <div className="col-md-6 mb-3">
-        <div className="d-flex align-items-center">
-          <span className="me-3" style={{ minWidth: '200px' }}>Transfer all in-stock vehicles</span>
-          <CButtonGroup size="sm">
-            <CButton 
-              color={formData.transferAllVehicles ? "success" : "secondary"} 
-              variant={formData.transferAllVehicles ? "solid" : "outline"}
-              onClick={() => setFormData(prev => ({ ...prev, transferAllVehicles: true }))}
-              disabled={isSubmitting}
-              style={formData.transferAllVehicles ? { backgroundColor: '#28a745', borderColor: '#28a745' } : {}}
-            >
-              <CIcon icon={cilCheck} /> Yes
-            </CButton>
-            <CButton 
-              color={!formData.transferAllVehicles ? "danger" : "secondary"} 
-              variant={!formData.transferAllVehicles ? "solid" : "outline"}
-              onClick={() => setFormData(prev => ({ ...prev, transferAllVehicles: false }))}
-              disabled={isSubmitting}
-              style={!formData.transferAllVehicles ? { backgroundColor: '#dc3545', borderColor: '#dc3545' } : {}}
-            >
-              <CIcon icon={cilX} /> No
-            </CButton>
-          </CButtonGroup>
-        </div>
-        {formData.transferAllVehicles && vehicles.length > 0 && (
-          <small className="text-muted d-block mt-1 ms-3">
-            This will transfer all {vehicles.length} in-stock vehicles from the source location
-          </small>
-        )}
-      </div>
-      <div className="col-md-6">
-        <div className="d-flex align-items-center">
-          <span className="me-3" style={{ minWidth: '200px' }}>Validate chassis number uniqueness</span>
-          <CButtonGroup size="sm">
-            <CButton 
-              color={formData.validateUniqueness ? "success" : "secondary"} 
-              variant={formData.validateUniqueness ? "solid" : "outline"}
-              onClick={() => setFormData(prev => ({ ...prev, validateUniqueness: true }))}
-              disabled={isSubmitting}
-              style={formData.validateUniqueness ? { backgroundColor: '#28a745', borderColor: '#28a745' } : {}}
-            >
-              <CIcon icon={cilCheck} /> Yes
-            </CButton>
-            <CButton 
-              color={!formData.validateUniqueness ? "danger" : "secondary"} 
-              variant={!formData.validateUniqueness ? "solid" : "outline"}
-              onClick={() => setFormData(prev => ({ ...prev, validateUniqueness: false }))}
-              disabled={isSubmitting}
-              style={!formData.validateUniqueness ? { backgroundColor: '#dc3545', borderColor: '#dc3545' } : {}}
-            >
-              <CIcon icon={cilX} /> No
-            </CButton>
-          </CButtonGroup>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+                    {/* OTP Input Field (appears after OTP is sent) */}
+                    {otpSent && !otpVerified && (
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Enter OTP</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon">
+                            <CIcon icon={cilShieldAlt} />
+                          </CInputGroupText>
+                          <CFormInput
+                            type="text"
+                            maxLength="6"
+                            placeholder="6-digit OTP"
+                            value={otpData.otp}
+                            onChange={(e) => {
+                              setOtpData({ ...otpData, otp: e.target.value });
+                              setOtpError('');
+                            }}
+                            disabled={isVerifyingOtp}
+                            invalid={!!otpError}
+                          />
+                          <CButton 
+                            color="success" 
+                            onClick={handleVerifyOtp}
+                            disabled={!otpData.otp || otpData.otp.length < 6 || isVerifyingOtp}
+                          >
+                            {isVerifyingOtp ? 'Verifying...' : 'Verify'}
+                          </CButton>
+                        </CInputGroup>
+                        {otpError && (
+                          <small className="text-danger d-block mt-1">{otpError}</small>
+                        )}
+                        <div className="d-flex justify-content-between align-items-center mt-2">
+                          <small className="text-muted">
+                            OTP sent to {getSelectedUserName()} via {getSelectedUserOtpMethod()}
+                          </small>
+                          <CButton 
+                            color="link" 
+                            size="sm" 
+                            onClick={handleSendOtp}
+                            disabled={isSendingOtp}
+                            className="p-0"
+                          >
+                            Resend OTP
+                          </CButton>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* OTP Verified Status */}
+                    {otpVerified && (
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">OTP Status</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon bg-success text-white">
+                            <CIcon icon={cilShieldAlt} />
+                          </CInputGroupText>
+                          <CFormInput
+                            type="text"
+                            value="✓ OTP Verified"
+                            readOnly
+                            className="bg-success bg-opacity-25 text-success border-success"
+                          />
+                        </CInputGroup>
+                        <small className="text-success d-block mt-1">
+                          You can now proceed with stock transfer
+                        </small>
+                      </div>
+                    )}
 
                     {/* Notes */}
                     <div className="input-box full-width">
@@ -703,11 +966,21 @@ const StockMovement = () => {
                     </div>
                   )}
 
+                  {/* OTP error message */}
+                  {errors.otp && (
+                    <div className="row">
+                      <div className="col-12">
+                        <div className="alert alert-warning mt-2">{errors.otp}</div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="form-footer">
                     <button 
                       type="submit" 
                       className="submit-button" 
-                      disabled={isSubmitting || !isSourceSelected || !isTargetSelected}
+                      disabled={isSubmitting || !isSourceSelected || !isTargetSelected || (otpUsers.length > 0 && !otpVerified)}
+                      title={otpUsers.length > 0 && !otpVerified ? "Please complete OTP verification first" : ""}
                     >
                       {isSubmitting ? (
                         <>
@@ -733,7 +1006,7 @@ const StockMovement = () => {
                 </form>
 
                 {/* Vehicles Table */}
-                {isSourceSelected && !formData.transferAllVehicles && (
+                {isSourceSelected && (
                   <div className="vehicle-table mt-4 p-3">
                     <h5>In-Stock Vehicle Details ({vehicles.length} vehicles available)</h5>
 
@@ -824,14 +1097,7 @@ const StockMovement = () => {
                   </div>
                 )}
 
-                {formData.transferAllVehicles && isSourceSelected && vehicles.length > 0 && (
-                  <div className="alert alert-warning mt-4">
-                    <strong>Note:</strong> You have selected "Transfer all in-stock vehicles". 
-                    All {vehicles.length} in-stock vehicles from {getSourceLocationName()} will be transferred to {getTargetLocationName()}.
-                  </div>
-                )}
-
-                {isSourceSelected && !formData.transferAllVehicles && vehicles.length === 0 && !isLoadingVehicles && (
+                {isSourceSelected && vehicles.length === 0 && !isLoadingVehicles && (
                   <div className="alert alert-info mt-4">
                     No in-stock vehicles found at the selected source location.
                   </div>

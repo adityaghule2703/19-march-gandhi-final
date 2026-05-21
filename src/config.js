@@ -11,9 +11,10 @@ const config = {
   
         //    baseURL:'https://gmplmis.com/dealership-api/api/v1'
         // baseURL : 'http://192.168.1.8:3009/api/v1'
+        //    baseURL : 'http://192.168.1.11:3009/api/v1'
              baseURL : 'http://192.168.1.6:3009/api/v1'
         // baseURL : 'http://192.168.1.16:3009/api/v1'
-        //  baseURL:'https://sgm.gmplmis.com/api-dealership/api/v1'  
+        //  baseURL:'https://sgm.gmplmis.com/api-dealership/api/v1'      
 };
 
 export default config;

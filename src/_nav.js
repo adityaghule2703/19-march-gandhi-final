@@ -4018,6 +4018,14 @@ if (stockMovementItems.length > 0) {
       to: '/sales-dashboard',
     });
   }
+
+   if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
+    salesReportItems.push({
+      component: CNavItem,
+      name: 'Sales Detailed Report',
+      to: '/sales-detailed-report',
+    });
+  }
   
   if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.PERIODIC_REPORT)) {
     salesReportItems.push({

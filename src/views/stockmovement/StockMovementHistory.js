@@ -331,7 +331,7 @@ const StockMovementHistory = () => {
   return (
     <div>
       <div className='title'>
-        Stock Movement History
+        INTER DEALER TRANSFER History
       </div>
 
       <CCard className='table-container mt-4'>

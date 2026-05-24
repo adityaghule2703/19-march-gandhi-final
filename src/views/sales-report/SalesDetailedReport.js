@@ -29,17 +29,13 @@ import {
   CModalTitle,
   CModalBody,
   CModalFooter,
-  CTooltip,
   CProgress
 } from '@coreui/react';
 import { 
   cilZoomOut, 
   cilChevronLeft, 
-  cilChevronRight, 
-  cilInfo, 
-  cilBuilding, 
-  cilUser,
-  cilChartPie
+  cilChevronRight,
+  cilReload
 } from '@coreui/icons';
 import CIcon from '@coreui/icons-react';
 import { axiosInstance, showError } from '../../utils/tableImports';
@@ -53,6 +49,7 @@ const SalesDetailedReport = () => {
   
   // Model wise state
   const [models, setModels] = useState([]);
+  const [modelsTotals, setModelsTotals] = useState(null);
   const [modelsLoading, setModelsLoading] = useState(true);
   const [modelsError, setModelsError] = useState(null);
   const [modelsSearchTerm, setModelsSearchTerm] = useState('');
@@ -61,6 +58,7 @@ const SalesDetailedReport = () => {
   
   // Branch wise state
   const [branches, setBranches] = useState([]);
+  const [branchesTotals, setBranchesTotals] = useState(null);
   const [branchesLoading, setBranchesLoading] = useState(true);
   const [branchesError, setBranchesError] = useState(null);
   const [branchesSearchTerm, setBranchesSearchTerm] = useState('');
@@ -69,82 +67,114 @@ const SalesDetailedReport = () => {
   
   // Executive wise state
   const [executives, setExecutives] = useState([]);
+  const [executivesTotals, setExecutivesTotals] = useState(null);
   const [executivesLoading, setExecutivesLoading] = useState(true);
   const [executivesError, setExecutivesError] = useState(null);
   const [executivesSearchTerm, setExecutivesSearchTerm] = useState('');
   const [selectedExecutive, setSelectedExecutive] = useState(null);
   const [executiveModalVisible, setExecutiveModalVisible] = useState(false);
-  const [executiveModalTab, setExecutiveModalTab] = useState('bookings'); // 'bookings' or 'breakdown'
+  const [executiveModalTab, setExecutiveModalTab] = useState('bookings');
   
-  // Pagination state for model list
+  // Pagination state for model list (server-side)
   const [modelPagination, setModelPagination] = useState({
     currentPage: 1,
     limit: DEFAULT_LIMIT,
     total: 0,
-    filteredModels: []
+    pages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
   });
 
-  // Pagination state for branch list
+  // Pagination state for branch list (server-side)
   const [branchPagination, setBranchPagination] = useState({
     currentPage: 1,
     limit: DEFAULT_LIMIT,
     total: 0,
-    filteredBranches: []
+    pages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
   });
 
-  // Pagination state for executive list
+  // Pagination state for executive list (server-side)
   const [executivePagination, setExecutivePagination] = useState({
     currentPage: 1,
     limit: DEFAULT_LIMIT,
     total: 0,
-    filteredExecutives: []
+    pages: 0,
+    hasNextPage: false,
+    hasPrevPage: false
   });
 
-  // Pagination state for bookings inside model modal
+  // Pagination state for bookings inside modals
   const [modelBookingPagination, setModelBookingPagination] = useState({
     currentPage: 1,
     limit: 10,
     total: 0,
-    filteredBookings: []
+    pages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    bookings: []
   });
 
-  // Pagination state for bookings inside branch modal
   const [branchBookingPagination, setBranchBookingPagination] = useState({
     currentPage: 1,
     limit: 10,
     total: 0,
-    filteredBookings: []
+    pages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    bookings: []
   });
 
-  // Pagination state for bookings inside executive modal
   const [executiveBookingPagination, setExecutiveBookingPagination] = useState({
     currentPage: 1,
     limit: 10,
     total: 0,
-    filteredBookings: []
+    pages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+    bookings: []
   });
 
+  // Debounce timers
   const modelsSearchTimer = useRef(null);
   const branchesSearchTimer = useRef(null);
   const executivesSearchTimer = useRef(null);
+  
+  // Input refs to maintain focus
   const modelsSearchInputRef = useRef(null);
   const branchesSearchInputRef = useRef(null);
   const executivesSearchInputRef = useRef(null);
 
-  // Fetch Model Wise Data
-  const fetchModelWiseData = async () => {
+  // Fetch Model Wise Data with server-side pagination and search
+  const fetchModelWiseData = useCallback(async (page = 1, limit = DEFAULT_LIMIT, search = '') => {
     try {
       setModelsLoading(true);
       setModelsError(null);
-      const response = await axiosInstance.get('/dashboard/sales/model-wise');
       
-      if (response.data?.success && response.data?.data?.models) {
-        setModels(response.data.data.models);
-        setModelPagination(prev => ({
-          ...prev,
-          total: response.data.data.models.length,
-          filteredModels: response.data.data.models
-        }));
+      const params = {
+        page,
+        limit,
+        search: search.trim()
+      };
+      
+      const response = await axiosInstance.get('/dashboard/sales/model-wise', { params });
+      
+      if (response.data?.success && response.data?.data) {
+        setModels(response.data.data.models || []);
+        setModelsTotals(response.data.data.totals || null);
+        
+        const pagination = response.data.data.pagination;
+        if (pagination) {
+          setModelPagination({
+            currentPage: pagination.page || page,
+            limit: pagination.limit || limit,
+            total: pagination.total || 0,
+            pages: pagination.pages || 0,
+            hasNextPage: pagination.hasNextPage || false,
+            hasPrevPage: pagination.hasPrevPage || false
+          });
+        }
       } else {
         setModelsError('Invalid response format from server');
       }
@@ -155,22 +185,37 @@ const SalesDetailedReport = () => {
     } finally {
       setModelsLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch Branch Wise Data
-  const fetchBranchWiseData = async () => {
+  // Fetch Branch Wise Data with server-side pagination and search
+  const fetchBranchWiseData = useCallback(async (page = 1, limit = DEFAULT_LIMIT, search = '') => {
     try {
       setBranchesLoading(true);
       setBranchesError(null);
-      const response = await axiosInstance.get('/dashboard/sales/branch-wise');
       
-      if (response.data?.success && response.data?.data?.branches) {
-        setBranches(response.data.data.branches);
-        setBranchPagination(prev => ({
-          ...prev,
-          total: response.data.data.branches.length,
-          filteredBranches: response.data.data.branches
-        }));
+      const params = {
+        page,
+        limit,
+        search: search.trim()
+      };
+      
+      const response = await axiosInstance.get('/dashboard/sales/branch-wise', { params });
+      
+      if (response.data?.success && response.data?.data) {
+        setBranches(response.data.data.branches || []);
+        setBranchesTotals(response.data.data.totals || null);
+        
+        const pagination = response.data.data.pagination;
+        if (pagination) {
+          setBranchPagination({
+            currentPage: pagination.page || page,
+            limit: pagination.limit || limit,
+            total: pagination.total || 0,
+            pages: pagination.pages || 0,
+            hasNextPage: pagination.hasNextPage || false,
+            hasPrevPage: pagination.hasPrevPage || false
+          });
+        }
       } else {
         setBranchesError('Invalid response format from server');
       }
@@ -181,22 +226,37 @@ const SalesDetailedReport = () => {
     } finally {
       setBranchesLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch Executive Wise Data
-  const fetchExecutiveWiseData = async () => {
+  // Fetch Executive Wise Data with server-side pagination and search
+  const fetchExecutiveWiseData = useCallback(async (page = 1, limit = DEFAULT_LIMIT, search = '') => {
     try {
       setExecutivesLoading(true);
       setExecutivesError(null);
-      const response = await axiosInstance.get('/dashboard/sales/executive-wise');
       
-      if (response.data?.success && response.data?.data?.executives) {
-        setExecutives(response.data.data.executives);
-        setExecutivePagination(prev => ({
-          ...prev,
-          total: response.data.data.executives.length,
-          filteredExecutives: response.data.data.executives
-        }));
+      const params = {
+        page,
+        limit,
+        search: search.trim()
+      };
+      
+      const response = await axiosInstance.get('/dashboard/sales/executive-wise', { params });
+      
+      if (response.data?.success && response.data?.data) {
+        setExecutives(response.data.data.executives || []);
+        setExecutivesTotals(response.data.data.totals || null);
+        
+        const pagination = response.data.data.pagination;
+        if (pagination) {
+          setExecutivePagination({
+            currentPage: pagination.page || page,
+            limit: pagination.limit || limit,
+            total: pagination.total || 0,
+            pages: pagination.pages || 0,
+            hasNextPage: pagination.hasNextPage || false,
+            hasPrevPage: pagination.hasPrevPage || false
+          });
+        }
       } else {
         setExecutivesError('Invalid response format from server');
       }
@@ -207,148 +267,175 @@ const SalesDetailedReport = () => {
     } finally {
       setExecutivesLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchModelWiseData();
-    fetchBranchWiseData();
-    fetchExecutiveWiseData();
   }, []);
 
-  // Filter models based on search term
-  const filterModels = useCallback(() => {
-    if (!models.length) return [];
+  // Fetch Model Bookings (server-side)
+  const fetchModelBookings = useCallback(async (modelId, page = 1, limit = 10) => {
+    if (!modelId) return;
     
-    let filtered = [...models];
+    try {
+      const params = { page, limit };
+      const response = await axiosInstance.get(`/dashboard/sales/model/${modelId}/bookings`, { params });
+      
+      if (response.data?.success && response.data?.data) {
+        const pagination = response.data.data.pagination;
+        setModelBookingPagination({
+          currentPage: pagination?.page || page,
+          limit: pagination?.limit || limit,
+          total: pagination?.total || 0,
+          pages: pagination?.pages || 0,
+          hasNextPage: pagination?.hasNextPage || false,
+          hasPrevPage: pagination?.hasPrevPage || false,
+          bookings: response.data.data.bookings || []
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching model bookings:', err);
+      showError(err);
+    }
+  }, []);
+
+  // Fetch Branch Bookings (server-side)
+  const fetchBranchBookings = useCallback(async (branchId, page = 1, limit = 10) => {
+    if (!branchId) return;
     
-    if (modelsSearchTerm.trim()) {
-      const term = modelsSearchTerm.toLowerCase();
-      filtered = filtered.filter(model => 
-        model.name?.toLowerCase().includes(term) ||
-        model.type?.toLowerCase().includes(term) ||
-        model.manufacturer?.toLowerCase().includes(term)
-      );
+    try {
+      const params = { page, limit };
+      const response = await axiosInstance.get(`/dashboard/sales/branch/${branchId}/bookings`, { params });
+      
+      if (response.data?.success && response.data?.data) {
+        const pagination = response.data.data.pagination;
+        setBranchBookingPagination({
+          currentPage: pagination?.page || page,
+          limit: pagination?.limit || limit,
+          total: pagination?.total || 0,
+          pages: pagination?.pages || 0,
+          hasNextPage: pagination?.hasNextPage || false,
+          hasPrevPage: pagination?.hasPrevPage || false,
+          bookings: response.data.data.bookings || []
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching branch bookings:', err);
+      showError(err);
+    }
+  }, []);
+
+  // Fetch Executive Bookings (server-side)
+  const fetchExecutiveBookings = useCallback(async (executiveId, page = 1, limit = 10) => {
+    if (!executiveId) return;
+    
+    try {
+      const params = { page, limit };
+      const response = await axiosInstance.get(`/dashboard/sales/executive/${executiveId}/bookings`, { params });
+      
+      if (response.data?.success && response.data?.data) {
+        const pagination = response.data.data.pagination;
+        setExecutiveBookingPagination({
+          currentPage: pagination?.page || page,
+          limit: pagination?.limit || limit,
+          total: pagination?.total || 0,
+          pages: pagination?.pages || 0,
+          hasNextPage: pagination?.hasNextPage || false,
+          hasPrevPage: pagination?.hasPrevPage || false,
+          bookings: response.data.data.bookings || []
+        });
+        
+        // Also update selected executive with new data
+        if (response.data.data.executive) {
+          setSelectedExecutive(prev => ({
+            ...prev,
+            ...response.data.data.executive
+          }));
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching executive bookings:', err);
+      showError(err);
+    }
+  }, []);
+
+  // Fetch Executive Breakdown (server-side)
+  const fetchExecutiveBreakdown = useCallback(async (executiveId) => {
+    if (!executiveId) return;
+    
+    try {
+      const response = await axiosInstance.get(`/dashboard/sales/executive/${executiveId}/breakdown`);
+      
+      if (response.data?.success && response.data?.data) {
+        setSelectedExecutive(prev => ({
+          ...prev,
+          modelBreakdown: response.data.data.modelBreakdown,
+          totalSales: response.data.data.totalSales
+        }));
+      }
+    } catch (err) {
+      console.error('Error fetching executive breakdown:', err);
+      showError(err);
+    }
+  }, []);
+
+  // Initial data load
+  useEffect(() => {
+    fetchModelWiseData(1, DEFAULT_LIMIT, '');
+    fetchBranchWiseData(1, DEFAULT_LIMIT, '');
+    fetchExecutiveWiseData(1, DEFAULT_LIMIT, '');
+  }, [fetchModelWiseData, fetchBranchWiseData, fetchExecutiveWiseData]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (modelsSearchTimer.current) clearTimeout(modelsSearchTimer.current);
+      if (branchesSearchTimer.current) clearTimeout(branchesSearchTimer.current);
+      if (executivesSearchTimer.current) clearTimeout(executivesSearchTimer.current);
+    };
+  }, []);
+
+  // Handle model search with debounce
+  const handleModelsSearch = useCallback((value) => {
+    setModelsSearchTerm(value);
+    
+    if (modelsSearchTimer.current) {
+      clearTimeout(modelsSearchTimer.current);
     }
     
-    return filtered;
-  }, [models, modelsSearchTerm]);
-
-  // Filter branches based on search term
-  const filterBranches = useCallback(() => {
-    if (!branches.length) return [];
-    
-    let filtered = [...branches];
-    
-    if (branchesSearchTerm.trim()) {
-      const term = branchesSearchTerm.toLowerCase();
-      filtered = filtered.filter(branch => 
-        branch.name?.toLowerCase().includes(term) ||
-        branch.city?.toLowerCase().includes(term) ||
-        branch.address?.toLowerCase().includes(term)
-      );
-    }
-    
-    return filtered;
-  }, [branches, branchesSearchTerm]);
-
-  // Filter executives based on search term
-  const filterExecutives = useCallback(() => {
-    if (!executives.length) return [];
-    
-    let filtered = [...executives];
-    
-    if (executivesSearchTerm.trim()) {
-      const term = executivesSearchTerm.toLowerCase();
-      filtered = filtered.filter(executive => 
-        executive.name?.toLowerCase().includes(term) ||
-        executive.email?.toLowerCase().includes(term) ||
-        executive.mobile?.includes(term) ||
-        executive.type?.toLowerCase().includes(term)
-      );
-    }
-    
-    return filtered;
-  }, [executives, executivesSearchTerm]);
-
-  // Update pagination when models or search term changes
-  useEffect(() => {
-    const filtered = filterModels();
-    const start = (modelPagination.currentPage - 1) * modelPagination.limit;
-    const paginated = filtered.slice(start, start + modelPagination.limit);
-    
-    setModelPagination(prev => ({
-      ...prev,
-      total: filtered.length,
-      filteredModels: paginated
-    }));
-  }, [models, modelsSearchTerm, modelPagination.currentPage, modelPagination.limit, filterModels]);
-
-  // Update pagination when branches or search term changes
-  useEffect(() => {
-    const filtered = filterBranches();
-    const start = (branchPagination.currentPage - 1) * branchPagination.limit;
-    const paginated = filtered.slice(start, start + branchPagination.limit);
-    
-    setBranchPagination(prev => ({
-      ...prev,
-      total: filtered.length,
-      filteredBranches: paginated
-    }));
-  }, [branches, branchesSearchTerm, branchPagination.currentPage, branchPagination.limit, filterBranches]);
-
-  // Update pagination when executives or search term changes
-  useEffect(() => {
-    const filtered = filterExecutives();
-    const start = (executivePagination.currentPage - 1) * executivePagination.limit;
-    const paginated = filtered.slice(start, start + executivePagination.limit);
-    
-    setExecutivePagination(prev => ({
-      ...prev,
-      total: filtered.length,
-      filteredExecutives: paginated
-    }));
-  }, [executives, executivesSearchTerm, executivePagination.currentPage, executivePagination.limit, filterExecutives]);
-
-  // Reset to first page when search term changes
-  useEffect(() => {
-    setModelPagination(prev => ({ ...prev, currentPage: 1 }));
-  }, [modelsSearchTerm]);
-
-  useEffect(() => {
-    setBranchPagination(prev => ({ ...prev, currentPage: 1 }));
-  }, [branchesSearchTerm]);
-
-  useEffect(() => {
-    setExecutivePagination(prev => ({ ...prev, currentPage: 1 }));
-  }, [executivesSearchTerm]);
-
-  // Handle search with debounce
-  const handleModelsSearch = (value) => {
-    clearTimeout(modelsSearchTimer.current);
     modelsSearchTimer.current = setTimeout(() => {
-      setModelsSearchTerm(value);
-    }, 300);
-  };
+      fetchModelWiseData(1, modelPagination.limit, value);
+    }, 500);
+  }, [fetchModelWiseData, modelPagination.limit]);
 
-  const handleBranchesSearch = (value) => {
-    clearTimeout(branchesSearchTimer.current);
+  // Handle branch search with debounce
+  const handleBranchesSearch = useCallback((value) => {
+    setBranchesSearchTerm(value);
+    
+    if (branchesSearchTimer.current) {
+      clearTimeout(branchesSearchTimer.current);
+    }
+    
     branchesSearchTimer.current = setTimeout(() => {
-      setBranchesSearchTerm(value);
-    }, 300);
-  };
+      fetchBranchWiseData(1, branchPagination.limit, value);
+    }, 500);
+  }, [fetchBranchWiseData, branchPagination.limit]);
 
-  const handleExecutivesSearch = (value) => {
-    clearTimeout(executivesSearchTimer.current);
+  // Handle executive search with debounce
+  const handleExecutivesSearch = useCallback((value) => {
+    setExecutivesSearchTerm(value);
+    
+    if (executivesSearchTimer.current) {
+      clearTimeout(executivesSearchTimer.current);
+    }
+    
     executivesSearchTimer.current = setTimeout(() => {
-      setExecutivesSearchTerm(value);
-    }, 300);
-  };
+      fetchExecutiveWiseData(1, executivePagination.limit, value);
+    }, 500);
+  }, [fetchExecutiveWiseData, executivePagination.limit]);
 
   const resetModelsSearch = () => {
     setModelsSearchTerm('');
     if (modelsSearchInputRef.current) {
       modelsSearchInputRef.current.value = '';
     }
+    fetchModelWiseData(1, modelPagination.limit, '');
   };
 
   const resetBranchesSearch = () => {
@@ -356,6 +443,7 @@ const SalesDetailedReport = () => {
     if (branchesSearchInputRef.current) {
       branchesSearchInputRef.current.value = '';
     }
+    fetchBranchWiseData(1, branchPagination.limit, '');
   };
 
   const resetExecutivesSearch = () => {
@@ -363,181 +451,40 @@ const SalesDetailedReport = () => {
     if (executivesSearchInputRef.current) {
       executivesSearchInputRef.current.value = '';
     }
+    fetchExecutiveWiseData(1, executivePagination.limit, '');
   };
 
   // Handle model pagination
   const handleModelPageChange = (newPage) => {
-    if (newPage < 1 || newPage > totalModelPages) return;
-    setModelPagination(prev => ({ ...prev, currentPage: newPage }));
+    if (newPage < 1 || newPage > modelPagination.pages) return;
+    fetchModelWiseData(newPage, modelPagination.limit, modelsSearchTerm);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleModelLimitChange = (newLimit) => {
-    setModelPagination({
-      currentPage: 1,
-      limit: parseInt(newLimit, 10),
-      total: modelPagination.total,
-      filteredModels: []
-    });
+    fetchModelWiseData(1, parseInt(newLimit, 10), modelsSearchTerm);
   };
 
   // Handle branch pagination
   const handleBranchPageChange = (newPage) => {
-    if (newPage < 1 || newPage > totalBranchPages) return;
-    setBranchPagination(prev => ({ ...prev, currentPage: newPage }));
+    if (newPage < 1 || newPage > branchPagination.pages) return;
+    fetchBranchWiseData(newPage, branchPagination.limit, branchesSearchTerm);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBranchLimitChange = (newLimit) => {
-    setBranchPagination({
-      currentPage: 1,
-      limit: parseInt(newLimit, 10),
-      total: branchPagination.total,
-      filteredBranches: []
-    });
+    fetchBranchWiseData(1, parseInt(newLimit, 10), branchesSearchTerm);
   };
 
   // Handle executive pagination
   const handleExecutivePageChange = (newPage) => {
-    if (newPage < 1 || newPage > totalExecutivePages) return;
-    setExecutivePagination(prev => ({ ...prev, currentPage: newPage }));
+    if (newPage < 1 || newPage > executivePagination.pages) return;
+    fetchExecutiveWiseData(newPage, executivePagination.limit, executivesSearchTerm);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleExecutiveLimitChange = (newLimit) => {
-    setExecutivePagination({
-      currentPage: 1,
-      limit: parseInt(newLimit, 10),
-      total: executivePagination.total,
-      filteredExecutives: []
-    });
-  };
-
-  // Handle modal open with selected model
-  const handleViewModelBookings = (model) => {
-    setSelectedModel(model);
-    setModelBookingPagination({
-      currentPage: 1,
-      limit: 10,
-      total: model.bookings?.length || 0,
-      filteredBookings: model.bookings?.slice(0, 10) || []
-    });
-    setModelModalVisible(true);
-  };
-
-  // Handle modal open with selected branch
-  const handleViewBranchBookings = (branch) => {
-    setSelectedBranch(branch);
-    setBranchBookingPagination({
-      currentPage: 1,
-      limit: 10,
-      total: branch.bookings?.length || 0,
-      filteredBookings: branch.bookings?.slice(0, 10) || []
-    });
-    setBranchModalVisible(true);
-  };
-
-  // Handle modal open with selected executive
-  const handleViewExecutiveDetails = (executive) => {
-    setSelectedExecutive(executive);
-    setExecutiveModalTab('bookings');
-    setExecutiveBookingPagination({
-      currentPage: 1,
-      limit: 10,
-      total: executive.bookings?.length || 0,
-      filteredBookings: executive.bookings?.slice(0, 10) || []
-    });
-    setExecutiveModalVisible(true);
-  };
-
-  // Handle model booking pagination
-  const handleModelBookingPageChange = (newPage) => {
-    if (!selectedModel) return;
-    
-    const bookings = selectedModel.bookings || [];
-    const start = (newPage - 1) * modelBookingPagination.limit;
-    const paginated = bookings.slice(start, start + modelBookingPagination.limit);
-    
-    setModelBookingPagination({
-      ...modelBookingPagination,
-      currentPage: newPage,
-      filteredBookings: paginated
-    });
-  };
-
-  const handleModelBookingLimitChange = (newLimit) => {
-    if (!selectedModel) return;
-    
-    const bookings = selectedModel.bookings || [];
-    const limit = parseInt(newLimit, 10);
-    const paginated = bookings.slice(0, limit);
-    
-    setModelBookingPagination({
-      currentPage: 1,
-      limit: limit,
-      total: bookings.length,
-      filteredBookings: paginated
-    });
-  };
-
-  // Handle branch booking pagination
-  const handleBranchBookingPageChange = (newPage) => {
-    if (!selectedBranch) return;
-    
-    const bookings = selectedBranch.bookings || [];
-    const start = (newPage - 1) * branchBookingPagination.limit;
-    const paginated = bookings.slice(start, start + branchBookingPagination.limit);
-    
-    setBranchBookingPagination({
-      ...branchBookingPagination,
-      currentPage: newPage,
-      filteredBookings: paginated
-    });
-  };
-
-  const handleBranchBookingLimitChange = (newLimit) => {
-    if (!selectedBranch) return;
-    
-    const bookings = selectedBranch.bookings || [];
-    const limit = parseInt(newLimit, 10);
-    const paginated = bookings.slice(0, limit);
-    
-    setBranchBookingPagination({
-      currentPage: 1,
-      limit: limit,
-      total: bookings.length,
-      filteredBookings: paginated
-    });
-  };
-
-  // Handle executive booking pagination
-  const handleExecutiveBookingPageChange = (newPage) => {
-    if (!selectedExecutive) return;
-    
-    const bookings = selectedExecutive.bookings || [];
-    const start = (newPage - 1) * executiveBookingPagination.limit;
-    const paginated = bookings.slice(start, start + executiveBookingPagination.limit);
-    
-    setExecutiveBookingPagination({
-      ...executiveBookingPagination,
-      currentPage: newPage,
-      filteredBookings: paginated
-    });
-  };
-
-  const handleExecutiveBookingLimitChange = (newLimit) => {
-    if (!selectedExecutive) return;
-    
-    const bookings = selectedExecutive.bookings || [];
-    const limit = parseInt(newLimit, 10);
-    const paginated = bookings.slice(0, limit);
-    
-    setExecutiveBookingPagination({
-      currentPage: 1,
-      limit: limit,
-      total: bookings.length,
-      filteredBookings: paginated
-    });
+    fetchExecutiveWiseData(1, parseInt(newLimit, 10), executivesSearchTerm);
   };
 
   // Format currency
@@ -562,58 +509,25 @@ const SalesDetailedReport = () => {
     });
   };
 
-  // Calculate totals for models
-  const totalModels = models.length;
-  const totalModelQuantity = models.reduce((sum, model) => sum + (model.quantity || 0), 0);
-  const totalModelRevenue = models.reduce((sum, model) => sum + (model.totalRevenue || 0), 0);
-  const totalModelDiscount = models.reduce((sum, model) => sum + (model.totalDiscount || 0), 0);
-
-  // Calculate totals for branches
-  const totalBranches = branches.length;
-  const totalBranchQuantity = branches.reduce((sum, branch) => sum + (branch.quantity || 0), 0);
-  const totalBranchRevenue = branches.reduce((sum, branch) => sum + (branch.totalRevenue || 0), 0);
-  const totalBranchBookings = branches.reduce((sum, branch) => sum + (branch.branchBookings || 0), 0);
-  const totalSubdealerBookings = branches.reduce((sum, branch) => sum + (branch.subdealerBookings || 0), 0);
-
-  // Calculate totals for executives
-  const totalExecutives = executives.length;
-  const totalExecutiveSales = executives.reduce((sum, exec) => sum + (exec.totalSales || 0), 0);
-  const totalExecutiveRevenue = executives.reduce((sum, exec) => sum + (exec.totalRevenue || 0), 0);
-  const totalExecutiveDiscount = executives.reduce((sum, exec) => sum + (exec.totalDiscount || 0), 0);
-
-  // Pagination calculations
-  const totalModelPages = Math.ceil(modelPagination.total / modelPagination.limit);
-  const modelStart = (modelPagination.currentPage - 1) * modelPagination.limit + 1;
+  // Pagination calculations for display
+  const modelStart = modelPagination.total === 0 ? 0 : (modelPagination.currentPage - 1) * modelPagination.limit + 1;
   const modelEnd = Math.min(modelPagination.currentPage * modelPagination.limit, modelPagination.total);
 
-  const totalBranchPages = Math.ceil(branchPagination.total / branchPagination.limit);
-  const branchStart = (branchPagination.currentPage - 1) * branchPagination.limit + 1;
+  const branchStart = branchPagination.total === 0 ? 0 : (branchPagination.currentPage - 1) * branchPagination.limit + 1;
   const branchEnd = Math.min(branchPagination.currentPage * branchPagination.limit, branchPagination.total);
 
-  const totalExecutivePages = Math.ceil(executivePagination.total / executivePagination.limit);
-  const executiveStart = (executivePagination.currentPage - 1) * executivePagination.limit + 1;
+  const executiveStart = executivePagination.total === 0 ? 0 : (executivePagination.currentPage - 1) * executivePagination.limit + 1;
   const executiveEnd = Math.min(executivePagination.currentPage * executivePagination.limit, executivePagination.total);
 
   // Booking pagination calculations
-  const totalModelBookingPages = Math.ceil(modelBookingPagination.total / modelBookingPagination.limit);
-  const modelBookingStart = (modelBookingPagination.currentPage - 1) * modelBookingPagination.limit + 1;
+  const modelBookingStart = modelBookingPagination.total === 0 ? 0 : (modelBookingPagination.currentPage - 1) * modelBookingPagination.limit + 1;
   const modelBookingEnd = Math.min(modelBookingPagination.currentPage * modelBookingPagination.limit, modelBookingPagination.total);
 
-  const totalBranchBookingPages = Math.ceil(branchBookingPagination.total / branchBookingPagination.limit);
-  const branchBookingStart = (branchBookingPagination.currentPage - 1) * branchBookingPagination.limit + 1;
+  const branchBookingStart = branchBookingPagination.total === 0 ? 0 : (branchBookingPagination.currentPage - 1) * branchBookingPagination.limit + 1;
   const branchBookingEnd = Math.min(branchBookingPagination.currentPage * branchBookingPagination.limit, branchBookingPagination.total);
 
-  const totalExecutiveBookingPages = Math.ceil(executiveBookingPagination.total / executiveBookingPagination.limit);
-  const executiveBookingStart = (executiveBookingPagination.currentPage - 1) * executiveBookingPagination.limit + 1;
+  const executiveBookingStart = executiveBookingPagination.total === 0 ? 0 : (executiveBookingPagination.currentPage - 1) * executiveBookingPagination.limit + 1;
   const executiveBookingEnd = Math.min(executiveBookingPagination.currentPage * executiveBookingPagination.limit, executiveBookingPagination.total);
-
-  // Get top models for executive breakdown
-  const getTopModels = (modelBreakdown) => {
-    if (!modelBreakdown) return [];
-    return Object.entries(modelBreakdown)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-  };
 
   // Render pagination component
   const renderPagination = (currentPage, totalPages, onPageChange, onLimitChange, currentLimit, total, start, end, isLoading = false) => {
@@ -722,7 +636,7 @@ const SalesDetailedReport = () => {
 
   // Render Model Wise Tab
   const renderModelWiseTab = () => {
-    if (modelsLoading) {
+    if (modelsLoading && models.length === 0) {
       return (
         <div className="d-flex justify-content-center align-items-center" style={{ height: '300px' }}>
           <CSpinner color="primary" />
@@ -739,13 +653,13 @@ const SalesDetailedReport = () => {
         <div className="d-flex justify-content-between mb-3">
           <div>
             {modelsSearchTerm && (
-              <CButton size="sm" className="action-btn" onClick={resetModelsSearch}>
-                <CIcon icon={cilZoomOut} className="icon" /> Reset Search
+              <CButton size="sm" variant="outline" onClick={resetModelsSearch}>
+                <CIcon icon={cilZoomOut} className="me-1" /> Reset Search
               </CButton>
             )}
           </div>
-          <div className="d-flex align-items-center">
-            <CFormLabel className="mb-0 me-2">Search:</CFormLabel>
+          <div className="d-flex align-items-center gap-2">
+            <CFormLabel className="mb-0">Search:</CFormLabel>
             <input
               ref={modelsSearchInputRef}
               type="text"
@@ -759,10 +673,12 @@ const SalesDetailedReport = () => {
                 fontSize: '14px' 
               }}
               className="d-inline-block"
+              value={modelsSearchTerm}
               onChange={(e) => handleModelsSearch(e.target.value)}
               placeholder="Search by model name, type..."
               autoComplete="off"
             />
+            {modelsLoading && <CSpinner size="sm" color="primary" />}
           </div>
         </div>
 
@@ -780,18 +696,17 @@ const SalesDetailedReport = () => {
                 <CTableHeaderCell scope="col" className="text-end">Avg. Price</CTableHeaderCell>
                 <CTableHeaderCell scope="col" className="text-end">Avg. Discount</CTableHeaderCell>
                 <CTableHeaderCell scope="col" className="text-center">Discount %</CTableHeaderCell>
-                <CTableHeaderCell scope="col" className="text-center">Actions</CTableHeaderCell>
               </CTableRow>
             </CTableHead>
             <CTableBody>
-              {modelPagination.filteredModels.length === 0 ? (
+              {models.length === 0 ? (
                 <CTableRow>
-                  <CTableDataCell colSpan="11" className="text-center text-danger">
+                  <CTableDataCell colSpan="10" className="text-center text-danger">
                     {modelsSearchTerm ? `No models found matching "${modelsSearchTerm}"` : 'No sales data available'}
                   </CTableDataCell>
                 </CTableRow>
               ) : (
-                modelPagination.filteredModels.map((model, index) => (
+                models.map((model, index) => (
                   <CTableRow key={model.id || index}>
                     <CTableDataCell>{modelStart + index}</CTableDataCell>
                     <CTableDataCell>
@@ -813,18 +728,6 @@ const SalesDetailedReport = () => {
                         {model.discountPercentage?.toFixed(2)}%
                       </CBadge>
                     </CTableDataCell>
-                    <CTableDataCell className="text-center">
-                      <CTooltip content="View Bookings">
-                        <CButton
-                          size="sm"
-                          variant="outline"
-                          color="info"
-                          onClick={() => handleViewModelBookings(model)}
-                        >
-                          <CIcon icon={cilInfo} /> Bookings
-                        </CButton>
-                      </CTooltip>
-                    </CTableDataCell>
                   </CTableRow>
                 ))
               )}
@@ -834,7 +737,7 @@ const SalesDetailedReport = () => {
 
         {renderPagination(
           modelPagination.currentPage,
-          totalModelPages,
+          modelPagination.pages,
           handleModelPageChange,
           handleModelLimitChange,
           modelPagination.limit,
@@ -849,7 +752,7 @@ const SalesDetailedReport = () => {
 
   // Render Branch Wise Tab
   const renderBranchWiseTab = () => {
-    if (branchesLoading) {
+    if (branchesLoading && branches.length === 0) {
       return (
         <div className="d-flex justify-content-center align-items-center" style={{ height: '300px' }}>
           <CSpinner color="primary" />
@@ -866,13 +769,13 @@ const SalesDetailedReport = () => {
         <div className="d-flex justify-content-between mb-3">
           <div>
             {branchesSearchTerm && (
-              <CButton size="sm" className="action-btn" onClick={resetBranchesSearch}>
-                <CIcon icon={cilZoomOut} className="icon" /> Reset Search
+              <CButton size="sm" variant="outline" onClick={resetBranchesSearch}>
+                <CIcon icon={cilZoomOut} className="me-1" /> Reset Search
               </CButton>
             )}
           </div>
-          <div className="d-flex align-items-center">
-            <CFormLabel className="mb-0 me-2">Search:</CFormLabel>
+          <div className="d-flex align-items-center gap-2">
+            <CFormLabel className="mb-0">Search:</CFormLabel>
             <input
               ref={branchesSearchInputRef}
               type="text"
@@ -886,10 +789,12 @@ const SalesDetailedReport = () => {
                 fontSize: '14px' 
               }}
               className="d-inline-block"
+              value={branchesSearchTerm}
               onChange={(e) => handleBranchesSearch(e.target.value)}
               placeholder="Search by branch name, city..."
               autoComplete="off"
             />
+            {branchesLoading && <CSpinner size="sm" color="primary" />}
           </div>
         </div>
 
@@ -905,18 +810,17 @@ const SalesDetailedReport = () => {
                 <CTableHeaderCell scope="col" className="text-end">Total Revenue</CTableHeaderCell>
                 <CTableHeaderCell scope="col" className="text-end">Branch Bookings</CTableHeaderCell>
                 <CTableHeaderCell scope="col" className="text-end">Subdealer Bookings</CTableHeaderCell>
-                <CTableHeaderCell scope="col" className="text-center">Actions</CTableHeaderCell>
               </CTableRow>
             </CTableHead>
             <CTableBody>
-              {branchPagination.filteredBranches.length === 0 ? (
+              {branches.length === 0 ? (
                 <CTableRow>
-                  <CTableDataCell colSpan="9" className="text-center text-danger">
+                  <CTableDataCell colSpan="8" className="text-center text-danger">
                     {branchesSearchTerm ? `No branches found matching "${branchesSearchTerm}"` : 'No branch sales data available'}
                   </CTableDataCell>
                 </CTableRow>
               ) : (
-                branchPagination.filteredBranches.map((branch, index) => (
+                branches.map((branch, index) => (
                   <CTableRow key={branch.id || index}>
                     <CTableDataCell>{branchStart + index}</CTableDataCell>
                     <CTableDataCell>
@@ -940,18 +844,6 @@ const SalesDetailedReport = () => {
                         {branch.subdealerBookings?.toLocaleString() || 0}
                       </CBadge>
                     </CTableDataCell>
-                    <CTableDataCell className="text-center">
-                      <CTooltip content="View Bookings">
-                        <CButton
-                          size="sm"
-                          variant="outline"
-                          color="info"
-                          onClick={() => handleViewBranchBookings(branch)}
-                        >
-                          <CIcon icon={cilBuilding} /> Bookings
-                        </CButton>
-                      </CTooltip>
-                    </CTableDataCell>
                   </CTableRow>
                 ))
               )}
@@ -961,7 +853,7 @@ const SalesDetailedReport = () => {
 
         {renderPagination(
           branchPagination.currentPage,
-          totalBranchPages,
+          branchPagination.pages,
           handleBranchPageChange,
           handleBranchLimitChange,
           branchPagination.limit,
@@ -976,7 +868,7 @@ const SalesDetailedReport = () => {
 
   // Render Executive Wise Tab
   const renderExecutiveWiseTab = () => {
-    if (executivesLoading) {
+    if (executivesLoading && executives.length === 0) {
       return (
         <div className="d-flex justify-content-center align-items-center" style={{ height: '300px' }}>
           <CSpinner color="primary" />
@@ -993,13 +885,13 @@ const SalesDetailedReport = () => {
         <div className="d-flex justify-content-between mb-3">
           <div>
             {executivesSearchTerm && (
-              <CButton size="sm" className="action-btn" onClick={resetExecutivesSearch}>
-                <CIcon icon={cilZoomOut} className="icon" /> Reset Search
+              <CButton size="sm" variant="outline" onClick={resetExecutivesSearch}>
+                <CIcon icon={cilZoomOut} className="me-1" /> Reset Search
               </CButton>
             )}
           </div>
-          <div className="d-flex align-items-center">
-            <CFormLabel className="mb-0 me-2">Search:</CFormLabel>
+          <div className="d-flex align-items-center gap-2">
+            <CFormLabel className="mb-0">Search:</CFormLabel>
             <input
               ref={executivesSearchInputRef}
               type="text"
@@ -1013,10 +905,12 @@ const SalesDetailedReport = () => {
                 fontSize: '14px' 
               }}
               className="d-inline-block"
+              value={executivesSearchTerm}
               onChange={(e) => handleExecutivesSearch(e.target.value)}
               placeholder="Search by name, email, mobile..."
               autoComplete="off"
             />
+            {executivesLoading && <CSpinner size="sm" color="primary" />}
           </div>
         </div>
 
@@ -1034,62 +928,44 @@ const SalesDetailedReport = () => {
                 <CTableHeaderCell scope="col" className="text-end">Total Discount</CTableHeaderCell>
                 <CTableHeaderCell scope="col" className="text-end">Branch Bookings</CTableHeaderCell>
                 <CTableHeaderCell scope="col" className="text-end">Subdealer Bookings</CTableHeaderCell>
-                <CTableHeaderCell scope="col" className="text-center">Actions</CTableHeaderCell>
               </CTableRow>
             </CTableHead>
             <CTableBody>
-              {executivePagination.filteredExecutives.length === 0 ? (
+              {executives.length === 0 ? (
                 <CTableRow>
-                  <CTableDataCell colSpan="11" className="text-center text-danger">
+                  <CTableDataCell colSpan="10" className="text-center text-danger">
                     {executivesSearchTerm ? `No executives found matching "${executivesSearchTerm}"` : 'No executive sales data available'}
                   </CTableDataCell>
                 </CTableRow>
               ) : (
-                executivePagination.filteredExecutives.map((executive, index) => {
-                  const topModels = getTopModels(executive.modelBreakdown);
-                  return (
-                    <CTableRow key={executive.id || index}>
-                      <CTableDataCell>{executiveStart + index}</CTableDataCell>
-                      <CTableDataCell>
-                        <strong>{executive.name}</strong>
-                      </CTableDataCell>
-                      <CTableDataCell>{executive.email || '—'}</CTableDataCell>
-                      <CTableDataCell>{executive.mobile || '—'}</CTableDataCell>
-                      <CTableDataCell>
-                        <CBadge color={executive.type === 'BRANCH_EXECUTIVE' ? 'primary' : 'secondary'}>
-                          {executive.type?.replace('_', ' ') || '—'}
-                        </CBadge>
-                      </CTableDataCell>
-                      <CTableDataCell className="text-end">{executive.totalSales?.toLocaleString() || 0}</CTableDataCell>
-                      <CTableDataCell className="text-end">{formatCurrency(executive.totalRevenue)}</CTableDataCell>
-                      <CTableDataCell className="text-end">{formatCurrency(executive.totalDiscount)}</CTableDataCell>
-                      <CTableDataCell className="text-end">
-                        <CBadge color="success">
-                          {executive.branchBookings?.toLocaleString() || 0}
-                        </CBadge>
-                      </CTableDataCell>
-                      <CTableDataCell className="text-end">
-                        <CBadge color="info">
-                          {executive.subdealerBookings?.toLocaleString() || 0}
-                        </CBadge>
-                      </CTableDataCell>
-                      <CTableDataCell className="text-center">
-                        <div className="d-flex gap-1 justify-content-center">
-                          <CTooltip content="View Details">
-                            <CButton
-                              size="sm"
-                              variant="outline"
-                              color="info"
-                              onClick={() => handleViewExecutiveDetails(executive)}
-                            >
-                              <CIcon icon={cilUser} /> Details
-                            </CButton>
-                          </CTooltip>
-                        </div>
-                      </CTableDataCell>
-                    </CTableRow>
-                  );
-                })
+                executives.map((executive, index) => (
+                  <CTableRow key={executive.id || index}>
+                    <CTableDataCell>{executiveStart + index}</CTableDataCell>
+                    <CTableDataCell>
+                      <strong>{executive.name}</strong>
+                    </CTableDataCell>
+                    <CTableDataCell>{executive.email || '—'}</CTableDataCell>
+                    <CTableDataCell>{executive.mobile || '—'}</CTableDataCell>
+                    <CTableDataCell>
+                      <CBadge color={executive.type === 'BRANCH_EXECUTIVE' ? 'primary' : 'secondary'}>
+                        {executive.type?.replace('_', ' ') || '—'}
+                      </CBadge>
+                    </CTableDataCell>
+                    <CTableDataCell className="text-end">{executive.totalSales?.toLocaleString() || 0}</CTableDataCell>
+                    <CTableDataCell className="text-end">{formatCurrency(executive.totalRevenue)}</CTableDataCell>
+                    <CTableDataCell className="text-end">{formatCurrency(executive.totalDiscount)}</CTableDataCell>
+                    <CTableDataCell className="text-end">
+                      <CBadge color="success">
+                        {executive.branchBookings?.toLocaleString() || 0}
+                      </CBadge>
+                    </CTableDataCell>
+                    <CTableDataCell className="text-end">
+                      <CBadge color="info">
+                        {executive.subdealerBookings?.toLocaleString() || 0}
+                      </CBadge>
+                    </CTableDataCell>
+                  </CTableRow>
+                ))
               )}
             </CTableBody>
           </CTable>
@@ -1097,7 +973,7 @@ const SalesDetailedReport = () => {
 
         {renderPagination(
           executivePagination.currentPage,
-          totalExecutivePages,
+          executivePagination.pages,
           handleExecutivePageChange,
           handleExecutiveLimitChange,
           executivePagination.limit,
@@ -1115,13 +991,13 @@ const SalesDetailedReport = () => {
       <div className="title">Sales Detailed Report</div>
 
       {/* Summary Cards - Model Wise */}
-      {activeTab === 0 && (
+      {activeTab === 0 && modelsTotals && (
         <CRow className="mt-3 mb-4">
           <CCol md={3} sm={6} className="mb-3">
             <CCard className="text-center border-primary">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Models</h5>
-                <h2 className="mb-0 text-primary">{totalModels}</h2>
+                <h2 className="mb-0 text-primary">{modelsTotals.totalModels?.toLocaleString() || 0}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1129,7 +1005,7 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-success">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Units Sold</h5>
-                <h2 className="mb-0 text-success">{totalModelQuantity.toLocaleString()}</h2>
+                <h2 className="mb-0 text-success">{modelsTotals.totalQuantity?.toLocaleString() || 0}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1137,7 +1013,7 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-info">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Revenue</h5>
-                <h2 className="mb-0 text-info">{formatCurrency(totalModelRevenue)}</h2>
+                <h2 className="mb-0 text-info">{formatCurrency(modelsTotals.totalRevenue)}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1145,7 +1021,7 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-warning">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Discount</h5>
-                <h2 className="mb-0 text-warning">{formatCurrency(totalModelDiscount)}</h2>
+                <h2 className="mb-0 text-warning">{formatCurrency(modelsTotals.totalDiscount)}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1153,13 +1029,13 @@ const SalesDetailedReport = () => {
       )}
 
       {/* Summary Cards - Branch Wise */}
-      {activeTab === 1 && (
+      {activeTab === 1 && branchesTotals && (
         <CRow className="mt-3 mb-4">
           <CCol md={3} sm={6} className="mb-3">
             <CCard className="text-center border-primary">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Branches</h5>
-                <h2 className="mb-0 text-primary">{totalBranches}</h2>
+                <h2 className="mb-0 text-primary">{branchesTotals.totalBranches?.toLocaleString() || 0}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1167,7 +1043,7 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-success">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Units Sold</h5>
-                <h2 className="mb-0 text-success">{totalBranchQuantity.toLocaleString()}</h2>
+                <h2 className="mb-0 text-success">{branchesTotals.totalQuantity?.toLocaleString() || 0}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1175,7 +1051,7 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-info">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Revenue</h5>
-                <h2 className="mb-0 text-info">{formatCurrency(totalBranchRevenue)}</h2>
+                <h2 className="mb-0 text-info">{formatCurrency(branchesTotals.totalRevenue)}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1183,9 +1059,12 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-secondary">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Bookings</h5>
-                <h2 className="mb-0 text-secondary">{(totalBranchBookings + totalSubdealerBookings).toLocaleString()}</h2>
+                <h2 className="mb-0 text-secondary">
+                  {((branchesTotals.totalBranchBookings || 0) + (branchesTotals.totalSubdealerBookings || 0)).toLocaleString()}
+                </h2>
                 <small className="text-muted">
-                  Branch: {totalBranchBookings.toLocaleString()} | Subdealer: {totalSubdealerBookings.toLocaleString()}
+                  Branch: {branchesTotals.totalBranchBookings?.toLocaleString() || 0} | 
+                  Subdealer: {branchesTotals.totalSubdealerBookings?.toLocaleString() || 0}
                 </small>
               </CCardBody>
             </CCard>
@@ -1194,13 +1073,13 @@ const SalesDetailedReport = () => {
       )}
 
       {/* Summary Cards - Executive Wise */}
-      {activeTab === 2 && (
+      {activeTab === 2 && executivesTotals && (
         <CRow className="mt-3 mb-4">
           <CCol md={3} sm={6} className="mb-3">
             <CCard className="text-center border-primary">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Executives</h5>
-                <h2 className="mb-0 text-primary">{totalExecutives}</h2>
+                <h2 className="mb-0 text-primary">{executivesTotals.totalExecutives?.toLocaleString() || 0}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1208,7 +1087,7 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-success">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Sales</h5>
-                <h2 className="mb-0 text-success">{totalExecutiveSales.toLocaleString()}</h2>
+                <h2 className="mb-0 text-success">{executivesTotals.totalSales?.toLocaleString() || 0}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1216,7 +1095,7 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-info">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Revenue</h5>
-                <h2 className="mb-0 text-info">{formatCurrency(totalExecutiveRevenue)}</h2>
+                <h2 className="mb-0 text-info">{formatCurrency(executivesTotals.totalRevenue)}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1224,7 +1103,7 @@ const SalesDetailedReport = () => {
             <CCard className="text-center border-warning">
               <CCardBody>
                 <h5 className="text-muted mb-2">Total Discount</h5>
-                <h2 className="mb-0 text-warning">{formatCurrency(totalExecutiveDiscount)}</h2>
+                <h2 className="mb-0 text-warning">{formatCurrency(executivesTotals.totalDiscount)}</h2>
               </CCardBody>
             </CCard>
           </CCol>
@@ -1293,416 +1172,6 @@ const SalesDetailedReport = () => {
           </CTabContent>
         </CCardBody>
       </CCard>
-
-      {/* Model Bookings Modal */}
-      <CModal 
-        visible={modelModalVisible} 
-        onClose={() => setModelModalVisible(false)} 
-        size="lg"
-        scrollable
-      >
-        <CModalHeader>
-          <CModalTitle>
-            Bookings for {selectedModel?.name}
-            {selectedModel && (
-              <span className="ms-2 text-muted small">
-                (Total: {selectedModel.bookingsCount || selectedModel.bookings?.length || 0} bookings)
-              </span>
-            )}
-          </CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {selectedModel && (
-            <>
-              <div className="mb-3 p-2 bg-light rounded">
-                <CRow>
-                  <CCol md={3} sm={6}>
-                    <small className="text-muted">Total Revenue</small>
-                    <div className="fw-bold">{formatCurrency(selectedModel.totalRevenue)}</div>
-                  </CCol>
-                  <CCol md={3} sm={6}>
-                    <small className="text-muted">Total Discount</small>
-                    <div className="fw-bold">{formatCurrency(selectedModel.totalDiscount)}</div>
-                  </CCol>
-                  <CCol md={3} sm={6}>
-                    <small className="text-muted">Avg. Price</small>
-                    <div className="fw-bold">{formatCurrency(selectedModel.averagePrice)}</div>
-                  </CCol>
-                  <CCol md={3} sm={6}>
-                    <small className="text-muted">Discount %</small>
-                    <div className="fw-bold">{selectedModel.discountPercentage?.toFixed(2)}%</div>
-                  </CCol>
-                </CRow>
-              </div>
-
-              <div className="responsive-table-wrapper">
-                <CTable striped bordered hover size="sm">
-                  <CTableHead>
-                    <CTableRow>
-                      <CTableHeaderCell style={{ width: '50px' }}>#</CTableHeaderCell>
-                      <CTableHeaderCell>Booking No.</CTableHeaderCell>
-                      <CTableHeaderCell>Customer Name</CTableHeaderCell>
-                      <CTableHeaderCell>Branch</CTableHeaderCell>
-                      <CTableHeaderCell className="text-end">Amount</CTableHeaderCell>
-                      <CTableHeaderCell className="text-end">Discount</CTableHeaderCell>
-                      <CTableHeaderCell>Date</CTableHeaderCell>
-                    </CTableRow>
-                  </CTableHead>
-                  <CTableBody>
-                    {modelBookingPagination.filteredBookings.length === 0 ? (
-                      <CTableRow>
-                        <CTableDataCell colSpan="7" className="text-center text-danger">
-                          No bookings available
-                        </CTableDataCell>
-                      </CTableRow>
-                    ) : (
-                      modelBookingPagination.filteredBookings.map((booking, idx) => (
-                        <CTableRow key={booking.bookingNumber || idx}>
-                          <CTableDataCell>{modelBookingStart + idx}</CTableDataCell>
-                          <CTableDataCell>
-                            <span className="fw-medium">{booking.bookingNumber}</span>
-                          </CTableDataCell>
-                          <CTableDataCell>{booking.customerName || '—'}</CTableDataCell>
-                          <CTableDataCell>{booking.branchName || '—'}</CTableDataCell>
-                          <CTableDataCell className="text-end">{formatCurrency(booking.amount)}</CTableDataCell>
-                          <CTableDataCell className="text-end">{formatCurrency(booking.discount)}</CTableDataCell>
-                          <CTableDataCell>{formatDate(booking.date)}</CTableDataCell>
-                        </CTableRow>
-                      ))
-                    )}
-                  </CTableBody>
-                </CTable>
-              </div>
-
-              {renderPagination(
-                modelBookingPagination.currentPage,
-                totalModelBookingPages,
-                handleModelBookingPageChange,
-                handleModelBookingLimitChange,
-                modelBookingPagination.limit,
-                modelBookingPagination.total,
-                modelBookingStart,
-                modelBookingEnd,
-                false
-              )}
-            </>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setModelModalVisible(false)}>
-            Close
-          </CButton>
-        </CModalFooter>
-      </CModal>
-
-      {/* Branch Bookings Modal */}
-      <CModal 
-        visible={branchModalVisible} 
-        onClose={() => setBranchModalVisible(false)} 
-        size="lg"
-        scrollable
-      >
-        <CModalHeader>
-          <CModalTitle>
-            Bookings for {selectedBranch?.name}
-            {selectedBranch && (
-              <span className="ms-2 text-muted small">
-                (Total: {selectedBranch.bookings?.length || 0} bookings)
-              </span>
-            )}
-          </CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {selectedBranch && (
-            <>
-              <div className="mb-3 p-2 bg-light rounded">
-                <CRow>
-                  <CCol md={4} sm={6}>
-                    <small className="text-muted">Total Revenue</small>
-                    <div className="fw-bold">{formatCurrency(selectedBranch.totalRevenue)}</div>
-                  </CCol>
-                  <CCol md={4} sm={6}>
-                    <small className="text-muted">Branch Bookings</small>
-                    <div className="fw-bold text-success">{selectedBranch.branchBookings?.toLocaleString() || 0}</div>
-                  </CCol>
-                  <CCol md={4} sm={6}>
-                    <small className="text-muted">Subdealer Bookings</small>
-                    <div className="fw-bold text-info">{selectedBranch.subdealerBookings?.toLocaleString() || 0}</div>
-                  </CCol>
-                </CRow>
-                <CRow className="mt-2">
-                  <CCol md={12}>
-                    <small className="text-muted">Address</small>
-                    <div className="small">{selectedBranch.address || '—'}</div>
-                  </CCol>
-                </CRow>
-              </div>
-
-              <div className="responsive-table-wrapper">
-                <CTable striped bordered hover size="sm">
-                  <CTableHead>
-                    <CTableRow>
-                      <CTableHeaderCell style={{ width: '50px' }}>#</CTableHeaderCell>
-                      <CTableHeaderCell>Booking No.</CTableHeaderCell>
-                      <CTableHeaderCell>Model Name</CTableHeaderCell>
-                      <CTableHeaderCell>Customer Name</CTableHeaderCell>
-                      <CTableHeaderCell>Booking Type</CTableHeaderCell>
-                      <CTableHeaderCell className="text-end">Amount</CTableHeaderCell>
-                      <CTableHeaderCell>Date</CTableHeaderCell>
-                    </CTableRow>
-                  </CTableHead>
-                  <CTableBody>
-                    {branchBookingPagination.filteredBookings.length === 0 ? (
-                      <CTableRow>
-                        <CTableDataCell colSpan="7" className="text-center text-danger">
-                          No bookings available
-                        </CTableDataCell>
-                      </CTableRow>
-                    ) : (
-                      branchBookingPagination.filteredBookings.map((booking, idx) => (
-                        <CTableRow key={booking.bookingNumber || idx}>
-                          <CTableDataCell>{branchBookingStart + idx}</CTableDataCell>
-                          <CTableDataCell>
-                            <span className="fw-medium">{booking.bookingNumber}</span>
-                          </CTableDataCell>
-                          <CTableDataCell>{booking.modelName || '—'}</CTableDataCell>
-                          <CTableDataCell>{booking.customerName || '—'}</CTableDataCell>
-                          <CTableDataCell>
-                            <CBadge color={booking.bookingType === 'BRANCH' ? 'success' : 'info'}>
-                              {booking.bookingType || '—'}
-                            </CBadge>
-                          </CTableDataCell>
-                          <CTableDataCell className="text-end">{formatCurrency(booking.amount)}</CTableDataCell>
-                          <CTableDataCell>{formatDate(booking.date)}</CTableDataCell>
-                        </CTableRow>
-                      ))
-                    )}
-                  </CTableBody>
-                </CTable>
-              </div>
-
-              {renderPagination(
-                branchBookingPagination.currentPage,
-                totalBranchBookingPages,
-                handleBranchBookingPageChange,
-                handleBranchBookingLimitChange,
-                branchBookingPagination.limit,
-                branchBookingPagination.total,
-                branchBookingStart,
-                branchBookingEnd,
-                false
-              )}
-            </>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setBranchModalVisible(false)}>
-            Close
-          </CButton>
-        </CModalFooter>
-      </CModal>
-
-      {/* Executive Details Modal */}
-      <CModal 
-        visible={executiveModalVisible} 
-        onClose={() => setExecutiveModalVisible(false)} 
-        size="xl"
-        scrollable
-      >
-        <CModalHeader>
-          <CModalTitle>
-            Executive Details: {selectedExecutive?.name}
-          </CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {selectedExecutive && (
-            <>
-              {/* Executive Info */}
-              <div className="mb-3 p-3 bg-light rounded">
-                <CRow>
-                  <CCol md={3} sm={6}>
-                    <small className="text-muted">Email</small>
-                    <div className="fw-bold">{selectedExecutive.email || '—'}</div>
-                  </CCol>
-                  <CCol md={3} sm={6}>
-                    <small className="text-muted">Mobile</small>
-                    <div className="fw-bold">{selectedExecutive.mobile || '—'}</div>
-                  </CCol>
-                  <CCol md={3} sm={6}>
-                    <small className="text-muted">Type</small>
-                    <div>
-                      <CBadge color={selectedExecutive.type === 'BRANCH_EXECUTIVE' ? 'primary' : 'secondary'}>
-                        {selectedExecutive.type?.replace('_', ' ') || '—'}
-                      </CBadge>
-                    </div>
-                  </CCol>
-                  <CCol md={3} sm={6}>
-                    <small className="text-muted">Total Sales</small>
-                    <div className="fw-bold text-success">{selectedExecutive.totalSales?.toLocaleString() || 0}</div>
-                  </CCol>
-                </CRow>
-                <CRow className="mt-2">
-                  <CCol md={4} sm={6}>
-                    <small className="text-muted">Total Revenue</small>
-                    <div className="fw-bold text-info">{formatCurrency(selectedExecutive.totalRevenue)}</div>
-                  </CCol>
-                  <CCol md={4} sm={6}>
-                    <small className="text-muted">Total Discount</small>
-                    <div className="fw-bold text-warning">{formatCurrency(selectedExecutive.totalDiscount)}</div>
-                  </CCol>
-                  <CCol md={4} sm={6}>
-                    <small className="text-muted">Avg. Discount per Sale</small>
-                    <div className="fw-bold">
-                      {selectedExecutive.totalSales > 0 
-                        ? formatCurrency(selectedExecutive.totalDiscount / selectedExecutive.totalSales)
-                        : formatCurrency(0)}
-                    </div>
-                  </CCol>
-                </CRow>
-              </div>
-
-              {/* Tabs inside modal */}
-              <CNav variant="tabs" className="mb-3">
-                <CNavItem>
-                  <CNavLink
-                    active={executiveModalTab === 'bookings'}
-                    onClick={() => setExecutiveModalTab('bookings')}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    Bookings ({selectedExecutive.bookings?.length || 0})
-                  </CNavLink>
-                </CNavItem>
-                <CNavItem>
-                  <CNavLink
-                    active={executiveModalTab === 'breakdown'}
-                    onClick={() => setExecutiveModalTab('breakdown')}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    Model Breakdown
-                  </CNavLink>
-                </CNavItem>
-              </CNav>
-
-              {/* Bookings Tab */}
-              {executiveModalTab === 'bookings' && (
-                <>
-                  <div className="responsive-table-wrapper">
-                    <CTable striped bordered hover size="sm">
-                      <CTableHead>
-                        <CTableRow>
-                          <CTableHeaderCell style={{ width: '50px' }}>#</CTableHeaderCell>
-                          <CTableHeaderCell>Booking No.</CTableHeaderCell>
-                          <CTableHeaderCell>Model Name</CTableHeaderCell>
-                          <CTableHeaderCell>Customer Name</CTableHeaderCell>
-                          <CTableHeaderCell>Branch</CTableHeaderCell>
-                          <CTableHeaderCell className="text-end">Amount</CTableHeaderCell>
-                          <CTableHeaderCell className="text-end">Discount</CTableHeaderCell>
-                          <CTableHeaderCell>Date</CTableHeaderCell>
-                        </CTableRow>
-                      </CTableHead>
-                      <CTableBody>
-                        {executiveBookingPagination.filteredBookings.length === 0 ? (
-                          <CTableRow>
-                            <CTableDataCell colSpan="8" className="text-center text-danger">
-                              No bookings available
-                            </CTableDataCell>
-                          </CTableRow>
-                        ) : (
-                          executiveBookingPagination.filteredBookings.map((booking, idx) => (
-                            <CTableRow key={booking.bookingNumber || idx}>
-                              <CTableDataCell>{executiveBookingStart + idx}</CTableDataCell>
-                              <CTableDataCell>
-                                <span className="fw-medium">{booking.bookingNumber}</span>
-                              </CTableDataCell>
-                              <CTableDataCell>{booking.modelName || '—'}</CTableDataCell>
-                              <CTableDataCell>{booking.customerName || '—'}</CTableDataCell>
-                              <CTableDataCell>{booking.branchName || '—'}</CTableDataCell>
-                              <CTableDataCell className="text-end">{formatCurrency(booking.amount)}</CTableDataCell>
-                              <CTableDataCell className="text-end">{formatCurrency(booking.discount)}</CTableDataCell>
-                              <CTableDataCell>{formatDate(booking.date)}</CTableDataCell>
-                            </CTableRow>
-                          ))
-                        )}
-                      </CTableBody>
-                    </CTable>
-                  </div>
-
-                  {renderPagination(
-                    executiveBookingPagination.currentPage,
-                    totalExecutiveBookingPages,
-                    handleExecutiveBookingPageChange,
-                    handleExecutiveBookingLimitChange,
-                    executiveBookingPagination.limit,
-                    executiveBookingPagination.total,
-                    executiveBookingStart,
-                    executiveBookingEnd,
-                    false
-                  )}
-                </>
-              )}
-
-              {/* Model Breakdown Tab */}
-              {executiveModalTab === 'breakdown' && selectedExecutive.modelBreakdown && (
-                <div className="responsive-table-wrapper">
-                  <CTable striped bordered hover size="sm">
-                    <CTableHead>
-                      <CTableRow>
-                        <CTableHeaderCell style={{ width: '50px' }}>#</CTableHeaderCell>
-                        <CTableHeaderCell>Model Name</CTableHeaderCell>
-                        <CTableHeaderCell className="text-end">Quantity Sold</CTableHeaderCell>
-                        <CTableHeaderCell style={{ width: '200px' }}>Distribution</CTableHeaderCell>
-                      </CTableRow>
-                    </CTableHead>
-                    <CTableBody>
-                      {Object.entries(selectedExecutive.modelBreakdown).length === 0 ? (
-                        <CTableRow>
-                          <CTableDataCell colSpan="4" className="text-center text-danger">
-                            No model breakdown data available
-                          </CTableDataCell>
-                        </CTableRow>
-                      ) : (
-                        Object.entries(selectedExecutive.modelBreakdown)
-                          .sort((a, b) => b[1] - a[1])
-                          .map(([modelName, quantity], idx) => {
-                            const percentage = (quantity / selectedExecutive.totalSales) * 100;
-                            return (
-                              <CTableRow key={idx}>
-                                <CTableDataCell>{idx + 1}</CTableDataCell>
-                                <CTableDataCell>
-                                  <strong>{modelName}</strong>
-                                </CTableDataCell>
-                                <CTableDataCell className="text-end">
-                                  <CBadge color="primary">{quantity.toLocaleString()}</CBadge>
-                                </CTableDataCell>
-                                <CTableDataCell>
-                                  <div className="d-flex align-items-center gap-2">
-                                    <CProgress 
-                                      value={percentage} 
-                                      color="primary" 
-                                      style={{ height: '8px', flex: 1 }}
-                                    />
-                                    <span className="small text-muted" style={{ minWidth: '45px' }}>
-                                      {percentage.toFixed(1)}%
-                                    </span>
-                                  </div>
-                                </CTableDataCell>
-                              </CTableRow>
-                            );
-                          })
-                      )}
-                    </CTableBody>
-                  </CTable>
-                </div>
-              )}
-            </>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setExecutiveModalVisible(false)}>
-            Close
-          </CButton>
-        </CModalFooter>
-      </CModal>
     </div>
   );
 };

@@ -385,7 +385,7 @@ const StockMovementRequests = () => {
     <div>
       <div className='title'>
        
-        Stock Movement Requests
+        INTER DEALER TRANSFER Requests
       </div>
 
       <CCard className='table-container mt-4'>

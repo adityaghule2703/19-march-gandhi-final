@@ -3820,39 +3820,43 @@ const getNav = (userPermissions = []) => {
   
 
  // Stock Movement Group
-const stockMovementItems = []
+// Stock Movement Group - ONLY for SUPERADMIN
+ const stockMovementItems = []
+  
+  // Get SUPERADMIN status from localStorage
+  const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
+  
+  // Only push items if user is SUPERADMIN
+  if (isSuperAdmin) {
+    stockMovementItems.push({
+      component: CNavItem,
+      name: 'IDT List',
+      to: '/stock-movement',
+    });
+    
+    stockMovementItems.push({
+      component: CNavItem,
+      name: 'IDT History',
+      to: '/stock-movement-history',
+    });
+    
+    stockMovementItems.push({
+      component: CNavItem,
+      name: 'IDT Requests',
+      to: '/stock-movement-requests',
+    });
+  }
 
-// Directly push items without permission checks
-stockMovementItems.push({
-  component: CNavItem,
-  name: 'Stock Movement List',
-  to: '/stock-movement',
-});
+  // Add Stock Movement group (only shows if isSuperAdmin is true)
+  if (stockMovementItems.length > 0) {
+    _nav.push({
+      component: CNavGroup,
+      name: 'IDT',
+      icon: <CIcon icon={cilInbox} customClassName="nav-icon" />,
+      items: stockMovementItems,
+    });
+  }
 
-// Add more pages as needed
-stockMovementItems.push({
-  component: CNavItem,
-  name: 'Stock Movement History',
-  to: '/stock-movement-history',
-});
-
-stockMovementItems.push({
-  component: CNavItem,
-  name: 'Stock Movement Requests',
-  to: '/stock-movement-requests',
-});
-
-
-
-// Add Stock Movement group (always show since you're pushing items)
-if (stockMovementItems.length > 0) {
-  _nav.push({
-    component: CNavGroup,
-    name: 'Stock Movement',
-    icon: <CIcon icon={cilInbox} customClassName="nav-icon" />,
-    items: stockMovementItems,
-  });
-}
 
 
 
@@ -4016,6 +4020,14 @@ if (stockMovementItems.length > 0) {
       component: CNavItem,
       name: 'Sales Dashboard',
       to: '/sales-dashboard',
+    });
+  }
+
+   if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
+    salesReportItems.push({
+      component: CNavItem,
+      name: 'Claim Dashboard',
+      to: '/claim-dashboard',
     });
   }
 

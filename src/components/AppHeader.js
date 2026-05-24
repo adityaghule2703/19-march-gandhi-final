@@ -95,38 +95,16 @@ const AppHeader = () => {
     },
     headerSub: { fontSize: 12, color: '#6c757d', margin: 0 },
 
-    /* summary tiles */
-    tileGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 0 },
-    tile: (bg) => ({
-      background: bg,
-      borderRadius: 8,
-      padding: '14px 16px',
-    }),
-    tileLabel: (color) => ({
-      fontSize: 11,
-      fontWeight: 600,
-      color,
-      textTransform: 'uppercase',
-      letterSpacing: '0.04em',
-      margin: '0 0 4px',
-    }),
-    tileValue: (color) => ({
-      fontSize: 28,
-      fontWeight: 500,
-      color,
-      margin: 0,
-      lineHeight: 1,
-    }),
-
-    /* warning strip */
-    warnStrip: {
+    /* summary tiles - removed totalPendingIssues and uniqueBookingsAffected as they don't exist in API */
+    warningStrip: {
       display: 'flex',
       alignItems: 'flex-start',
       gap: 8,
       background: 'rgba(255,193,7,0.12)',
-      padding: '10px 16px',
-      borderTop: '1px solid rgba(0,0,0,0.06)',
-      borderBottom: '1px solid rgba(0,0,0,0.06)',
+      padding: '12px 16px',
+      margin: '12px 20px',
+      borderRadius: 8,
+      borderLeft: '3px solid #ffc107',
     },
     warnText: { fontSize: 13, color: '#856404', margin: 0, lineHeight: 1.5 },
 
@@ -190,6 +168,7 @@ const AppHeader = () => {
       border: '1px solid rgba(220,53,69,0.25)',
       background: 'rgba(220,53,69,0.07)',
       padding: '10px 14px',
+      margin: '0 20px 18px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -278,26 +257,34 @@ const AppHeader = () => {
               onClick={handleNotificationClick}
             >
               <CIcon icon={cilBell} size="xl" className="d-block" />
-              {notificationData && notificationData.summary?.totalPendingIssues > 0 && (
-                <CBadge
-                  color="danger"
-                  shape="rounded-pill"
-                  className="position-absolute"
-                  style={{
-                    top: -4,
-                    right: -4,
-                    fontSize: 11,
-                    padding: '3px 6px',
-                    minWidth: 18,
-                    height: 18,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {notificationData.summary.totalPendingIssues}
-                </CBadge>
+              {/* Show total count from awaitingApproval + kycNotUpdated + insuranceNotUpdated */}
+              {notificationData && (
+                (() => {
+                  const total = (notificationData.awaitingApproval?.count || 0) + 
+                               (notificationData.kycNotUpdated?.count || 0) + 
+                               (notificationData.insuranceNotUpdated?.count || 0)
+                  return total > 0 && (
+                    <CBadge
+                      color="danger"
+                      shape="rounded-pill"
+                      className="position-absolute"
+                      style={{
+                        top: -4,
+                        right: -4,
+                        fontSize: 11,
+                        padding: '3px 6px',
+                        minWidth: 18,
+                        height: 18,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {total}
+                    </CBadge>
+                  )
+                })()
               )}
             </div>
             <AppHeaderDropdown />
@@ -378,27 +365,9 @@ const AppHeader = () => {
           {/* Content */}
           {notificationData && !loading && (
             <>
-              {/* Summary tiles */}
-              <div style={{ padding: '16px 20px 14px', borderBottom: '1px solid #e9ecef' }}>
-                <div style={s.tileGrid}>
-                  <div style={s.tile('rgba(220,53,69,0.08)')}>
-                    <p style={s.tileLabel('#842029')}>Total pending issues</p>
-                    <p style={s.tileValue('#dc3545')}>
-                      {formatNumber(notificationData.summary?.totalPendingIssues)}
-                    </p>
-                  </div>
-                  <div style={s.tile('rgba(13,110,253,0.08)')}>
-                    <p style={s.tileLabel('#084298')}>Bookings affected</p>
-                    <p style={s.tileValue('#0d6efd')}>
-                      {formatNumber(notificationData.summary?.uniqueBookingsAffected)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Warning strip */}
-              {notificationData.warnings?.length > 0 && (
-                <div style={s.warnStrip}>
+              {/* Warnings from API */}
+              {notificationData.warnings && notificationData.warnings.length > 0 && (
+                <div style={s.warningStrip}>
                   <CIcon icon={cilWarning} size="sm" style={{ color: '#856404', flexShrink: 0, marginTop: 1 }} />
                   <div>
                     {notificationData.warnings.map((w, i) => (
@@ -408,7 +377,7 @@ const AppHeader = () => {
                 </div>
               )}
 
-              {/* Sections */}
+              {/* Sections - only show what API provides */}
               <Section
                 icon={cilClock}
                 title="Awaiting approval"
@@ -427,23 +396,21 @@ const AppHeader = () => {
                 data={notificationData.insuranceNotUpdated}
               />
 
-              {/* Both issues callout */}
+              {/* Both issues callout - only if exists in API */}
               {notificationData.bothIssues && (
-                <div style={{ padding: '0 20px 18px' }}>
-                  <div style={s.bothCard}>
-                    <div className="d-flex align-items-center gap-2">
-                      <CIcon icon={cilWarning} size="sm" style={{ color: '#842029', flexShrink: 0 }} />
-                      <div>
-                        <p style={s.bothLabel}>Both KYC and insurance pending</p>
-                        <p style={s.bothSub}>
-                          {notificationData.bothIssues.description || 'Requires immediate attention'}
-                        </p>
-                      </div>
+                <div style={s.bothCard}>
+                  <div className="d-flex align-items-center gap-2">
+                    <CIcon icon={cilWarning} size="sm" style={{ color: '#842029', flexShrink: 0 }} />
+                    <div>
+                      <p style={s.bothLabel}>Both KYC and insurance pending</p>
+                      <p style={s.bothSub}>
+                        {notificationData.bothIssues.description || 'Requires immediate attention'}
+                      </p>
                     </div>
-                    <p style={s.bothCount}>
-                      {formatNumber(notificationData.bothIssues.count)}
-                    </p>
                   </div>
+                  <p style={s.bothCount}>
+                    {formatNumber(notificationData.bothIssues.count)}
+                  </p>
                 </div>
               )}
             </>

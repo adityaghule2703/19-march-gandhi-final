@@ -68,7 +68,7 @@ const Wallpaper = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
-  const baseURL = 'https://gmplmis.com';
+  const baseURL = 'https://gandhitvs.in/dealership';
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
   const { permissions } = useAuth();
@@ -148,24 +148,35 @@ const Wallpaper = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!canDeleteWallpapers) {
-      showError('You do not have permission to delete wallpapers');
-      return;
-    }
-    
-    const result = await confirmDelete();
-    if (result.isConfirmed) {
-      try {
-        await axiosInstance.delete(`/wallpapers/${id}`);
-        handleClose(); // Close menu before refreshing data
-        await fetchData();
-        showSuccess('Wallpaper deleted successfully!');
-      } catch (error) {
-        console.log(error);
-        showError();
+  if (!canDeleteWallpapers) {
+    showError('You do not have permission to delete wallpapers');
+    return;
+  }
+  
+  const result = await confirmDelete();
+  if (result.isConfirmed) {
+    try {
+      await axiosInstance.delete(`/wallpapers/${id}`);
+      handleClose();
+      await fetchData();
+      showSuccess('Wallpaper deleted successfully!');
+    } catch (error) {
+      console.log(error);
+      
+      // Use alert for testing
+      if (error.response?.data?.message) {
+        alert(error.response.data.message); // This will show a browser alert
+      } else {
+        alert("Failed to delete wallpaper");
+      }
+      
+      // Also try showError with the message
+      if (error.response?.data?.message) {
+        showError(error.response.data.message);
       }
     }
-  };
+  }
+};
 
   const handleActivate = async (id) => {
     if (!canUpdateWallpapers) {

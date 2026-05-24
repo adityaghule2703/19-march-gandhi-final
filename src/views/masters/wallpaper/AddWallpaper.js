@@ -16,7 +16,7 @@ function AddWallpaper() {
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const navigate = useNavigate();
   const { id } = useParams();
-  const baseURL = 'https://gmplmis.com/dealership-api';
+  const baseURL = 'https://gandhitvs.in/dealership';
 
   useEffect(() => {
     if (id) {

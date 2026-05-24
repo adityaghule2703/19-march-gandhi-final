@@ -5708,7 +5708,7 @@ import { enIN } from 'date-fns/locale';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_LIMIT = 25;
-const BASE_IMAGE_URL = 'http://192.168.1.8:3009/api/v1';
+const BASE_IMAGE_URL = 'https://gandhitvs.in/dealership/api/v1';
 
 const CustomersList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -6586,84 +6586,116 @@ const CustomersList = () => {
                 />
               </div>
               
-              {/* Attachments Section */}
-              <div className="mb-3">
-                <strong>Additional Attachments:</strong>
-                {attachments.length === 0 ? (
-                  <CAlert color="info" className="mt-2">
-                    No additional attachments available for the selected models.
-                  </CAlert>
-                ) : (
-                  <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="mt-2">
-                    {attachments.map((attachment) => (
-                      <div 
-                        key={attachment._id} 
-                        className="mb-3 p-3 border rounded"
-                        style={{
-                          backgroundColor: selectedAttachments.includes(attachment._id) ? '#f0fff4' : 'white',
-                          borderColor: selectedAttachments.includes(attachment._id) ? '#25D366' : '#dee2e6'
-                        }}
-                      >
-                        <CFormCheck
-                          id={`att-${attachment._id}`}
-                          label={
-                            <div>
-                              <strong>{attachment.title}</strong>
-                              {attachment.description && (
-                                <p className="text-muted small mb-0">{attachment.description}</p>
-                              )}
-                            </div>
-                          }
-                          checked={selectedAttachments.includes(attachment._id)}
-                          onChange={() => toggleAttachment(attachment._id)}
-                        />
-                        
-                        <div className="d-flex gap-2 mt-2 flex-wrap">
-                          {attachment.attachments?.slice(0, 4).map((media, idx) => (
-                            <div 
-                              key={idx} 
-                              style={{ 
-                                width: '60px', 
-                                height: '60px', 
-                                backgroundColor: '#f8f9fa',
-                                borderRadius: '4px',
-                                overflow: 'hidden',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                              }}
-                            >
-                              <img 
-                                src={`${BASE_IMAGE_URL}${media.thumbnail || media.url}`}
-                                alt={attachment.title}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                onError={(e) => {
-                                  e.target.src = 'https://via.placeholder.com/60?text=No+Image';
-                                }}
-                              />
-                            </div>
-                          ))}
-                          {attachment.attachments?.length > 4 && (
-                            <div style={{ 
-                              width: '60px', 
-                              height: '60px', 
-                              backgroundColor: '#f8f9fa',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '12px',
-                              color: '#6c757d'
-                            }}>
-                              +{attachment.attachments.length - 4}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+             {/* Attachments Section */}
+<div className="mb-3">
+  <strong>Additional Attachments:</strong>
+  {attachments.length === 0 ? (
+    <CAlert color="info" className="mt-2">
+      No additional attachments available for the selected models.
+    </CAlert>
+  ) : (
+    <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="mt-2">
+      {attachments.map((attachment) => (
+        <div 
+          key={attachment._id} 
+          className="mb-3 p-3 border rounded"
+          style={{
+            backgroundColor: selectedAttachments.includes(attachment._id) ? '#f0fff4' : 'white',
+            borderColor: selectedAttachments.includes(attachment._id) ? '#25D366' : '#dee2e6'
+          }}
+        >
+          <CFormCheck
+            id={`att-${attachment._id}`}
+            label={
+              <div>
+                <strong>{attachment.title}</strong>
+                {attachment.description && (
+                  <p className="text-muted small mb-0">{attachment.description}</p>
                 )}
               </div>
+            }
+            checked={selectedAttachments.includes(attachment._id)}
+            onChange={() => toggleAttachment(attachment._id)}
+          />
+          
+          <div className="d-flex gap-2 mt-2 flex-wrap">
+            {attachment.attachments?.slice(0, 4).map((media, idx) => {
+              // Check if the file is a PDF by extension or mime type
+              const isPdf = media.url?.toLowerCase().endsWith('.pdf') || 
+                           media.fileType === 'application/pdf' ||
+                           media.mimeType === 'application/pdf';
+              
+              return isPdf ? (
+                // Show PDF icon for PDF files
+                <div 
+                  key={idx} 
+                  style={{ 
+                    width: '60px', 
+                    height: '60px', 
+                    backgroundColor: '#dc3545', 
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    // Optional: Open PDF in new tab on click
+                    const fullUrl = `${BASE_IMAGE_URL}${media.url}`;
+                    window.open(fullUrl, '_blank');
+                  }}
+                  title="Click to open PDF"
+                >
+                  <CIcon icon={cilFile} size="xl" />
+                </div>
+              ) : (
+                // Show image preview for non-PDF files
+                <div 
+                  key={idx} 
+                  style={{ 
+                    width: '60px', 
+                    height: '60px', 
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <img 
+                    src={`${BASE_IMAGE_URL}${media.thumbnail || media.url}`}
+                    alt={attachment.title}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/60?text=No+Image';
+                    }}
+                  />
+                </div>
+              );
+            })}
+            {attachment.attachments?.length > 4 && (
+              <div style={{ 
+                width: '60px', 
+                height: '60px', 
+                backgroundColor: '#f8f9fa',
+                borderRadius: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '12px',
+                color: '#6c757d'
+              }}>
+                +{attachment.attachments.length - 4}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
               
               {/* Selection Summary */}
               <CAlert color="info" className="mt-3">

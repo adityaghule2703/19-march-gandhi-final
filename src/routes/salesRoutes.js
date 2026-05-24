@@ -3,6 +3,7 @@ import React from 'react';
 
 
 
+
 const NewBooking = React.lazy(() => import('../views/sales/booking/NewBooking'))
 const SelfInsurance = React.lazy(() => import('../views/sales/booking/SelfInsurance'))
 const BookingList = React.lazy(() => import('../views/sales/booking/BookingList'))
@@ -17,6 +18,7 @@ const uploadKYC = React.lazy(() => import('../views/sales/UploadKYC'))
 const UploadKYCRto = React.lazy(() => import('../views/sales/UploadKYCRto'))
 const SalesReport = React.lazy(() => import('../views/sales-report/SalesReport'))
 const SalesDashboard = React.lazy(() => import('../views/sales-report/SalesDashboard'))
+const ClaimDashboard = React.lazy(() => import('../views/sales-report/ClaimDashboard'))
 const SalesDetailedReport = React.lazy(() => import('../views/sales-report/SalesDetailedReport'))
 const PeriodicReport = React.lazy(() => import('../views/sales-report/PeriodicReport'))
 export const salesRoutes = [
@@ -39,6 +41,7 @@ export const salesRoutes = [
     
     { path:'/sales-report', name:'Sales Report', element:SalesReport},
     { path:'/sales-dashboard', name:'Sales Dashboard', element:SalesDashboard},
+     { path:'/claim-dashboard', name:'Claim Dashboard', element:ClaimDashboard},
     { path:'/sales-detailed-report', name:'Sales Detailed Report', element:SalesDetailedReport},
     { path:'/periodic-report', name:'Periodic Report', element:PeriodicReport},
   

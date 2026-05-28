@@ -9867,79 +9867,86 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
                   )}
                 </div>
 
-                {/* ===== MODEL HEADERS SECTION — shown on Tab 1 in EDIT MODE only ===== */}
-                {isEditMode && getSelectedModelHeaders().length > 0 && (
-                  <div className="model-headers-section">
-                    <h5>
-                      Model Options
-                      {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>(HPA-related options hidden as HPA is disabled)</span>}
-                      {formData.selfInsurance === true && <span style={{ color: '#28a745', fontSize: '0.9em', marginLeft: '10px' }}>(Insurance headers hidden as Self Insurance is enabled)</span>}
-                      {formData.selfInsurance === false && formData.insuranceFivePlusFive === true && <span style={{ color: '#ffc107', fontSize: '0.9em', marginLeft: '10px' }}>(INSURANCE CHARGES header hidden for Insurance 5+5)</span>}
-                      {formData.selfInsurance === false && formData.insuranceFivePlusFive === false && <span style={{ color: '#6c757d', fontSize: '0.9em', marginLeft: '10px' }}>(Standard insurance - INSURANCE CHARGES shown)</span>}
-                    </h5>
-                    <div className="headers-list">
-                      {getSelectedModelHeaders()
-                        .filter((price) => {
-                          const headerKey = price.header?.header_key || '';
-                          if (formData.selfInsurance === true) {
-                            if (headerKey.includes('INSURANCE') || headerKey === 'INSURANCE' || headerKey === 'INSURANCE CHARGES' || headerKey === 'Insurance: 5 + 5 Years') return false;
-                          }
-                          if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
-                            if (headerKey === 'INSURANCE CHARGES') return false;
-                            return true;
-                          }
-                          if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
-                            if (headerKey === 'Insurance: 5 + 5 Years') return false;
-                            return true;
-                          }
-                          return true;
-                        })
-                        .filter((price) => price.header && price.header._id)
-                        .map((price) => {
-                          const header = price.header;
-                          const isMandatory = header.is_mandatory;
-                          const headerId = header._id;
-                          const headerKey = header.header_key || '';
-                          const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
-                                              headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
-                          const shouldShowHeader = formData.hpa || !isHPAHeader;
-                          if (!shouldShowHeader) return null;
+              {/* ===== MODEL HEADERS SECTION — shown on Tab 1 for both NEW and EDIT MODE ===== */}
+{getSelectedModelHeaders().length > 0 && (
+  <div className="model-headers-section">
+    <h5>
+      Model Options
+      {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>(HPA-related options hidden as HPA is disabled)</span>}
+      {formData.selfInsurance === true && <span style={{ color: '#28a745', fontSize: '0.9em', marginLeft: '10px' }}>(Insurance headers hidden as Self Insurance is enabled)</span>}
+      {formData.selfInsurance === false && formData.insuranceFivePlusFive === true && <span style={{ color: '#ffc107', fontSize: '0.9em', marginLeft: '10px' }}>(INSURANCE CHARGES header hidden for Insurance 5+5)</span>}
+      {formData.selfInsurance === false && formData.insuranceFivePlusFive === false && <span style={{ color: '#6c757d', fontSize: '0.9em', marginLeft: '10px' }}>(Standard insurance - INSURANCE CHARGES shown)</span>}
+    </h5>
+    <div className="headers-list">
+      {getSelectedModelHeaders()
+        .filter((price) => {
+          const headerKey = price.header?.header_key || '';
+          if (formData.selfInsurance === true) {
+            if (headerKey.includes('INSURANCE') || headerKey === 'INSURANCE' || headerKey === 'INSURANCE CHARGES' || headerKey === 'Insurance: 5 + 5 Years') return false;
+          }
+          if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
+            if (headerKey === 'INSURANCE CHARGES') return false;
+            return true;
+          }
+          if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
+            if (headerKey === 'Insurance: 5 + 5 Years') return false;
+            return true;
+          }
+          return true;
+        })
+        .filter((price) => price.header && price.header._id)
+        .map((price) => {
+          const header = price.header;
+          const isMandatory = header.is_mandatory;
+          const headerId = header._id;
+          const headerKey = header.header_key || '';
+          const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
+                              headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
+          const shouldShowHeader = formData.hpa || !isHPAHeader;
+          if (!shouldShowHeader) return null;
 
-                          const isChecked = isMandatory || formData.optionalComponents.includes(headerId);
+          // Determine if checked based on mode
+          let isChecked;
+          if (isEditMode) {
+            isChecked = isMandatory || formData.optionalComponents.includes(headerId);
+          } else {
+            const isExplicitlyUnchecked = formData.uncheckedHeaders && formData.uncheckedHeaders.includes(headerId);
+            isChecked = isMandatory || !isExplicitlyUnchecked;
+          }
 
-                          return (
-                            <div key={headerId} className="header-item">
-                              <CFormCheck
-                                id={`header-${headerId}`}
-                                label={`${header.header_key} (₹${price.value}) ${isMandatory ? '(Mandatory)' : '(Optional)'}${isHPAHeader ? ' (HPA-related)' : ''}`}
-                                checked={isChecked}
-                                onChange={(e) => {
-                                  if (!isMandatory) {
-                                    const isNowChecked = e.target.checked;
-                                    if (!isNowChecked) {
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        uncheckedHeaders: [...(prev.uncheckedHeaders || []), headerId],
-                                        optionalComponents: prev.optionalComponents.filter(id => id !== headerId)
-                                      }));
-                                    } else {
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        uncheckedHeaders: prev.uncheckedHeaders?.filter(id => id !== headerId) || [],
-                                        optionalComponents: [...prev.optionalComponents, headerId]
-                                      }));
-                                    }
-                                  }
-                                }}
-                                disabled={isMandatory}
-                              />
-                              {isMandatory && <input type="hidden" name={`mandatory-${headerId}`} value={headerId} />}
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
+          return (
+            <div key={headerId} className="header-item">
+              <CFormCheck
+                id={`header-${headerId}`}
+                label={`${header.header_key} (₹${price.value}) ${isMandatory ? '(Mandatory)' : '(Optional)'}${isHPAHeader ? ' (HPA-related)' : ''}`}
+                checked={isChecked}
+                onChange={(e) => {
+                  if (!isMandatory) {
+                    const isNowChecked = e.target.checked;
+                    if (!isNowChecked) {
+                      setFormData(prev => ({
+                        ...prev,
+                        uncheckedHeaders: [...(prev.uncheckedHeaders || []), headerId],
+                        optionalComponents: prev.optionalComponents.filter(id => id !== headerId)
+                      }));
+                    } else {
+                      setFormData(prev => ({
+                        ...prev,
+                        uncheckedHeaders: prev.uncheckedHeaders?.filter(id => id !== headerId) || [],
+                        optionalComponents: [...prev.optionalComponents, headerId]
+                      }));
+                    }
+                  }
+                }}
+                disabled={isMandatory}
+              />
+              {isMandatory && <input type="hidden" name={`mandatory-${headerId}`} value={headerId} />}
+            </div>
+          );
+        })}
+    </div>
+  </div>
+)}
 
                 <div className="form-footer">
                   <button type="button" className="cancel-button" onClick={handleNextTab}>Next</button>

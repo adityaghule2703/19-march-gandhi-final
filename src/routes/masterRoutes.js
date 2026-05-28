@@ -104,12 +104,14 @@
 
 import React from 'react';
 
+
 const AddBranch = React.lazy(() => import('../views/masters/branch/AddBranch'))
 const BranchList = React.lazy(() => import('../views/masters/branch/BranchList'))
 const AddHeader = React.lazy(() => import('../views/masters/headers/AddHeader'))
 const HeadersList = React.lazy(() => import('../views/masters/headers/HeaderList'))
 const AddModel = React.lazy(() => import('../views/masters/model/AddModel'))
 const ModelList = React.lazy(() => import('../views/masters/model/ModelList'))
+const ModalAnalytics = React.lazy(() => import('../views/masters/modelanalytics/ModalAnalytics'))
 const UpdateModel = React.lazy(() => import('../views/masters/model/UpdateModel'))
 const AddAccessories = React.lazy(() => import('../views/masters/accessories/AddAccessories'))
 const AccessoriesList = React.lazy(() => import('../views/masters/accessories/AccessoriesList'))
@@ -169,6 +171,7 @@ export const masterRoutes = [
     { path:'/headers/add-header', name:'Add Headers', element:AddHeader},
     { path:'/headers/update-header/:id', name:'Add Headers', element:AddHeader},
     { path:'/model/model-list', name:"model List", element:ModelList},
+    { path:'/modelanalytics/model-analytics', name:"model analytics", element:ModalAnalytics},
     { path:'/model/add-model', name:"Add Model", element:AddModel},
     { path:'/model/update-model/:id', name:'Update Model', element:UpdateModel},
 

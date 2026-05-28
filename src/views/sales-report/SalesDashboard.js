@@ -380,13 +380,13 @@ const SalesDashboard = () => {
                 <div className="stat-info">
                   <p className="stat-title">{stat.title}</p>
                   <p className="stat-value">{stat.value}</p>
-                  <div className="stat-change">
+                  {/* <div className="stat-change">
                     {isIncrease ? <TrendUp size={12} /> : <TrendDown size={12} />}
                     <span className={isIncrease ? 'change-positive' : 'change-negative'}>
                       {stat.change}
                     </span>
                     <span className="change-label">from last period</span>
-                  </div>
+                  </div> */}
                 </div>
                 <div className="stat-icon" style={{ backgroundColor: stat.bgColor }}>
                   <Icon size={24} style={{ color: stat.color }} />

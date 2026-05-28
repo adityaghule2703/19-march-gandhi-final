@@ -27172,6 +27172,7 @@ function Receipt() {
   const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
   const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
   const branchName = data.branch?.name || data.bookingDetails?.branch?.name || 'GANDHI TVS';
+  const customerType = data.bookingDetails?.customerType || data.customerType || 'N/A';
 
   if (isFirstReceipt) {
     const filteredPriceComponents = data.priceComponents.filter((comp) => {
@@ -27192,7 +27193,7 @@ function Receipt() {
     });
     const findComp = (kws) => data.priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
     const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
-    const rtoCharges = findComp(['RTO','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
+    const rtoCharges = findComp(['RTO','ROAD TAX','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
     const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || data.hypothecationCharges || 0;
     const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
     const totalB = insuranceCharges + rtoCharges + hpCharges;
@@ -27262,12 +27263,14 @@ function Receipt() {
       <div class="receipt-info" style="padding: 8px;">
         <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
         <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+        <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
         <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
       </div>
       <div class="customer-info-container">
         <div class="customer-info-left">
           <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
           <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+          <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
           <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</span></div>
           <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
           <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
@@ -27380,12 +27383,14 @@ function Receipt() {
         <div class="receipt-info" style="padding: 6px;">
           <div class="receipt-info-row"><strong>Payment Receipt${isDuplicate ? ' (DUPLICATE)' : ''}</strong></div>
           <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+          <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
           <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
         </div>
         <div class="customer-info-container">
           <div class="customer-info-left">
             <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
             <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+            <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
             <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
             <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
             <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>

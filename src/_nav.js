@@ -3862,6 +3862,30 @@ const getNav = (userPermissions = []) => {
 
   // Purchase Group
   const purchaseItems = []
+
+   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
+      name: 'Stock Dashboard',
+      to: '/stock-dashboard',
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
+      name: 'Purchase Order Dashboard',
+      to: '/purchase-order-dashboard',
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
+      name: 'Purchase Order Config',
+      to: '/purchase-order-config',
+    });
+  }
   
   // Check each page in Purchase module
   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
@@ -3869,6 +3893,14 @@ const getNav = (userPermissions = []) => {
       component: CNavItem,
       name: 'Inward Stock',
       to: '/inward-list',
+    });
+  }
+
+   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
+      name: 'Stock Alert',
+      to: '/stock-alert',
     });
   }
   
@@ -4103,6 +4135,14 @@ const getNav = (userPermissions = []) => {
       to: '/refund',
     });
   }
+
+  // if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.REFUND)) {
+  //   accountItems.push({
+  //     component: CNavItem,
+  //     name: 'Claims',
+  //     to: '/claims',
+  //   });
+  // }
   
   if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.CANCELLED_BOOKING)) {
     accountItems.push({
@@ -4150,6 +4190,30 @@ const getNav = (userPermissions = []) => {
       component: CNavItem,
       name: 'DP Receipt',
       to: '/downpayment-receipt', // Updated to match the route in modulePermissions.js
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DP_RECEIPT)) {
+    accountItems.push({
+      component: CNavItem,
+      name: 'Receipts Dashboard',
+      to: '/finance-receipts-dashboard', // Updated to match the route in modulePermissions.js
+    });
+  }
+
+   if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DP_RECEIPT)) {
+    accountItems.push({
+      component: CNavItem,
+      name: 'Report Dashboard',
+      to: '/finance-report-dashboard', // Updated to match the route in modulePermissions.js
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DP_RECEIPT)) {
+    accountItems.push({
+      component: CNavItem,
+      name: 'Report Disbursement',
+      to: '/finance-disbursement', // Updated to match the route in modulePermissions.js
     });
   }
   
@@ -4400,6 +4464,14 @@ const getNav = (userPermissions = []) => {
       component: CNavItem,
       name: 'Vehicles',
       to: '/model/model-list',
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES)) {
+    mastersItems.push({
+      component: CNavItem,
+      name: 'Model Analytics',
+      to: '/modelanalytics/model-analytics',
     });
   }
   

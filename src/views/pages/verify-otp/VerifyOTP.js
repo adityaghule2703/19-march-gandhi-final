@@ -1736,3 +1736,408 @@ const VerifyOTP = () => {
 }
 
 export default VerifyOTP
+
+
+
+// import React, { useState, useEffect } from 'react'
+// import {
+//   CButton,
+//   CCard,
+//   CCardBody,
+//   CCardGroup,
+//   CCol,
+//   CContainer,
+//   CForm,
+//   CFormInput,
+//   CInputGroup,
+//   CInputGroupText,
+//   CRow,
+//   CAlert,
+//   CSpinner,
+// } from '@coreui/react'
+// import CIcon from '@coreui/icons-react'
+// import { cilLockLocked } from '@coreui/icons'
+// import logo from '../../../assets/images/logo.png'
+// import axios from 'axios'
+// import { useNavigate } from 'react-router-dom'
+// import { useAuth } from 'src/context/AuthContext'
+
+// const VerifyOTP = () => {
+//   const [otp, setOtp] = useState('');
+//   const [errorMessage, setErrorMessage] = useState('');
+//   const [isSubmitting, setIsSubmitting] = useState(false);
+//   const [backgroundImage, setBackgroundImage] = useState('');
+//   const [imageLoading, setImageLoading] = useState(true);
+//   const navigate = useNavigate();
+//   const { login } = useAuth();
+//   const baseURL = 'https://gmplmis.com/dealership-api/api/v1';
+
+//   // Fetch active wallpaper on component mount
+//   useEffect(() => {
+//     fetchActiveWallpaper();
+//   }, []);
+
+//   const fetchActiveWallpaper = async () => {
+//     try {
+//       setImageLoading(true);
+//       const response = await axios.get(`${baseURL}/wallpapers/active`, {
+//         headers: {
+//           'Content-Type': 'application/json',
+//         }
+//       });
+      
+//       if (response.data.success && response.data.data) {
+//         // Find the wallpaper with screen_name "login"
+//         const loginWallpaper = response.data.data.find(
+//           wallpaper => wallpaper.screen_name === 'login' && wallpaper.is_active === true
+//         );
+        
+//         if (loginWallpaper && loginWallpaper.image_url) {
+//           setBackgroundImage(loginWallpaper.image_url);
+//         } else {
+//           // Fallback to default background if no login wallpaper found
+//           console.log('No active wallpaper found for login screen');
+//           setBackgroundImage(require('../../../assets/images/background.jpg'));
+//         }
+//       } else {
+//         // Fallback to default background if no active wallpaper found
+//         setBackgroundImage(require('../../../assets/images/background.jpg'));
+//       }
+//     } catch (error) {
+//       console.error('Error fetching active wallpaper:', error);
+//       // Fallback to default background image
+//       setBackgroundImage(require('../../../assets/images/background.jpg'));
+//     } finally {
+//       setImageLoading(false);
+//     }
+//   };
+
+//  const handleVerify = async (e) => {
+//   e.preventDefault();
+  
+//   if (otp.length !== 6) {
+//     setErrorMessage('OTP must be 6 digits');
+//     return;
+//   }
+  
+//   setIsSubmitting(true);
+//   setErrorMessage('');
+
+//   try {
+//     const loginIdentifier = localStorage.getItem('login');
+//     const otpMethod = localStorage.getItem('otpMethod');
+
+//     if (!loginIdentifier || !otpMethod) {
+//       setErrorMessage('Session expired. Please login again.');
+//       setTimeout(() => {
+//         navigate('/login');
+//       }, 2000);
+//       return;
+//     }
+
+//     const response = await axios.post(`${baseURL}/auth/verify-otp`, {
+//       login: loginIdentifier,
+//       otp: otp,
+//       otpMethod: otpMethod
+//     });
+
+//     if (response.data.success) {
+//       const token = response.data.token;
+      
+//       // Store token first
+//       localStorage.setItem('token', token);
+      
+//       // Fetch user details to get roles
+//       const userResponse = await axios.get(`${baseURL}/auth/me`, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`
+//         }
+//       });
+      
+//       console.log('User API Response:', userResponse.data);
+      
+//       // Get roles from the response
+//       const roles = userResponse.data.data?.roles || [];
+//       console.log('User Roles:', roles);
+      
+//       // Check if user is SUPERADMIN
+//       const isSuperAdmin = roles.some(role => role.name === 'SUPERADMIN');
+//       console.log('Is Super Admin:', isSuperAdmin);
+      
+//       // Store in localStorage
+//       localStorage.setItem('userRoles', JSON.stringify(roles));
+//       localStorage.setItem('isSuperAdmin', isSuperAdmin);
+//       localStorage.setItem('userData', JSON.stringify(userResponse.data.data));
+      
+//       console.log('Stored in localStorage:', {
+//         isSuperAdmin: localStorage.getItem('isSuperAdmin'),
+//         userRoles: localStorage.getItem('userRoles')
+//       });
+      
+//       // Use the login function from AuthContext
+//       await login(token, response.data.data);
+      
+//       // Navigate to dashboard
+//       navigate('/inward-list');
+//     } else {
+//       setErrorMessage('Invalid OTP. Please try again.');
+//     }
+//   } catch (error) {
+//     console.error('OTP verification error:', error);
+    
+//     if (error.response?.status === 404) {
+//       setErrorMessage('Invalid login credentials. Please try again.');
+//     } else if (error.response?.status === 400) {
+//       setErrorMessage(error.response?.data?.message || 'Invalid OTP.');
+//     } else if (error.response?.status === 401) {
+//       setErrorMessage('Session expired. Please login again.');
+//       setTimeout(() => {
+//         navigate('/login');
+//       }, 2000);
+//     } else {
+//       setErrorMessage('Verification failed. Please try again.');
+//     }
+//   } finally {
+//     setIsSubmitting(false);
+//   }
+// };
+
+//   const handleResendOTP = async () => {
+//     setErrorMessage('');
+    
+//     try {
+//       const loginIdentifier = localStorage.getItem('login');
+//       const otpMethod = localStorage.getItem('otpMethod');
+
+//       if (!loginIdentifier || !otpMethod) {
+//         setErrorMessage('Session expired. Please login again.');
+//         setTimeout(() => {
+//           navigate('/login');
+//         }, 2000);
+//         return;
+//       }
+
+//       const response = await axios.post(`${baseURL}/auth/request-otp`, {
+//         login: loginIdentifier,
+//         otpMethod: otpMethod
+//       });
+
+//       if (response.data.success) {
+//         setErrorMessage('OTP resent successfully! Check your email/phone.');
+//       } else {
+//         setErrorMessage('Failed to resend OTP. Please try again.');
+//       }
+//     } catch (error) {
+//       console.error('Resend OTP error:', error);
+      
+//       if (error.response?.status === 400) {
+//         setErrorMessage(error.response?.data?.message || 'Failed to resend OTP.');
+//       } else if (error.response?.status === 404) {
+//         setErrorMessage('User not found. Please login again.');
+//         setTimeout(() => {
+//           navigate('/login');
+//         }, 2000);
+//       } else {
+//         setErrorMessage('Failed to resend OTP. Please try again.');
+//       }
+//     }
+//   };
+
+//   const handleBackToLogin = () => {
+//     // Clear the stored login data
+//     localStorage.removeItem('login');
+//     localStorage.removeItem('otpMethod');
+//     navigate('/login');
+//   };
+
+//   const getOtpMethodDisplay = () => {
+//     const otpMethod = localStorage.getItem('otpMethod');
+//     const loginIdentifier = localStorage.getItem('login') || '';
+    
+//     if (otpMethod === 'EMAIL') {
+//       return `Enter the OTP sent to your email address`;
+//     } else if (otpMethod === 'SMS') {
+//       return `Enter the OTP sent to your mobile number`;
+//     }
+    
+//     return 'Enter the OTP sent to you';
+//   };
+
+//   const formatLoginIdentifier = () => {
+//     const loginIdentifier = localStorage.getItem('login') || '';
+//     const otpMethod = localStorage.getItem('otpMethod');
+    
+//     if (otpMethod === 'EMAIL') {
+//       return `Email: ${loginIdentifier}`;
+//     } else if (otpMethod === 'SMS') {
+//       return `Mobile: ${loginIdentifier}`;
+//     }
+    
+//     return loginIdentifier;
+//   };
+
+//   if (imageLoading) {
+//     return (
+//       <div
+//         className="min-vh-100 d-flex flex-row align-items-center justify-content-center"
+//         style={{
+//           backgroundColor: '#f0f0f0',
+//         }}
+//       >
+//         <CSpinner color="primary" size="lg" />
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div
+//       className="min-vh-100 d-flex flex-row align-items-center"
+//       style={{
+//         backgroundImage: `url(${backgroundImage})`,
+//         backgroundSize: '100% 100%',
+//         backgroundPosition: 'center',
+//         backgroundRepeat: 'no-repeat',
+//         transition: 'background-image 0.5s ease-in-out',
+//       }}
+//     >
+//       {/* Add a semi-transparent overlay for better text readability */}
+//       <div style={{
+//         position: 'absolute',
+//         top: 0,
+//         left: 0,
+//         right: 0,
+//         bottom: 0,
+//         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+//         zIndex: 0
+//       }} />
+      
+//       <CContainer fluid style={{ position: 'relative', zIndex: 1 }}>
+//         <CRow className="justify-content-center align-items-center min-vh-100">
+//           <CCol md={6} className="d-flex justify-content-center align-items-center">
+//             <div className="text-center text-white">
+//               <img
+//                 src={logo}
+//                 alt="Company Logo"
+//                 style={{ maxWidth: '450px', marginTop: '50px' }}
+//               />
+//               <h1 className="display-4 fw-bold">Gandhi TVS</h1>
+//               <p className="lead">Welcome to our platform</p>
+//             </div>
+//           </CCol>
+
+//           <CCol md={4} className="me-5">
+//             <CCardGroup>
+//               <CCard className="p-4 shadow login-card" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+//                 <CCardBody>
+//                   <h5 className="text-center mb-4">Verify OTP</h5>
+                  
+//                   <div className="text-center mb-3">
+//                     <p className="text-muted mb-1">
+//                       {getOtpMethodDisplay()}
+//                     </p>
+//                     <p className="text-primary fw-bold">
+//                       {formatLoginIdentifier()}
+//                     </p>
+//                   </div>
+                
+//                   <CForm onSubmit={handleVerify}>
+//                     {errorMessage && (
+//                       <CAlert 
+//                         color={errorMessage.includes('successfully') ? 'success' : 'danger'} 
+//                         className="mb-3"
+//                       >
+//                         {errorMessage}
+//                       </CAlert>
+//                     )}
+
+//                     <CInputGroup className="mb-4">
+//                       <CInputGroupText>
+//                         <CIcon icon={cilLockLocked} />
+//                       </CInputGroupText>
+//                       <CFormInput
+//                         type="text"
+//                         placeholder="Enter 6-digit OTP"
+//                         value={otp}
+//                         onChange={(e) => {
+//                           const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+//                           setOtp(value);
+//                           setErrorMessage('');
+//                         }}
+//                         maxLength="6"
+//                         required
+//                         autoFocus
+//                       />
+//                     </CInputGroup>
+
+//                     <CRow className="text-center mt-3">
+//                       <CCol>
+//                         <CButton
+//                           className="px-4 login-button mb-2"
+//                           type="submit"
+//                           disabled={isSubmitting || otp.length !== 6}
+//                           style={{ minWidth: '120px' }}
+//                         >
+//                           {isSubmitting ? (
+//                             <>
+//                               <CSpinner
+//                                 component="span"
+//                                 size="sm"
+//                                 aria-hidden="true"
+//                               />
+//                               <span className="ms-2">Verifying...</span>
+//                             </>
+//                           ) : (
+//                             'Verify OTP'
+//                           )}
+//                         </CButton>
+//                       </CCol>
+//                     </CRow>
+
+//                     <CRow className="text-center mt-2">
+//                       <CCol>
+//                         <p className="mb-2">
+//                           Didn't receive OTP?{' '}
+//                           <CButton
+//                             color="link"
+//                             className="p-0"
+//                             onClick={handleResendOTP}
+//                             disabled={isSubmitting}
+//                           >
+//                             Resend OTP
+//                           </CButton>
+//                         </p>
+                        
+//                         <CButton
+//                           color="link"
+//                           className="p-0 text-muted"
+//                           onClick={handleBackToLogin}
+//                           disabled={isSubmitting}
+//                         >
+//                           ← Back to Login
+//                         </CButton>
+//                       </CCol>
+//                     </CRow>
+
+//                     <hr className="mt-4" />
+//                     <CRow>
+//                       <p className="footer-text text-center">
+//                         Design and Developed by{' '}
+//                         <a href="https://softcrowdtechnologies.com/" target="_blank" rel="noopener noreferrer">
+//                           <span className="sub-footer">
+//                             Softcrowd Technologies
+//                           </span>
+//                         </a>
+//                       </p>
+//                     </CRow>
+//                   </CForm>
+//                 </CCardBody>
+//               </CCard>
+//             </CCardGroup>
+//           </CCol>
+//         </CRow>
+//       </CContainer>
+//     </div>
+//   )
+// }
+
+// export default VerifyOTP

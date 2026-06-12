@@ -4612,11 +4612,11 @@ function SubdealerCustomerManagement() {
     }
   }, [selectedSubdealer]);
 
-  useEffect(() => {
+ useEffect(() => {
   if (bookings.length > 0) {
-    // First filter by status "ALLOCATED" AND balanceAmount != 0
+    // Filter by status "ALLOCATED" AND balanceAmount > 0 (positive balance only)
     let filtered = bookings.filter((booking) => 
-      booking.status === 'ALLOCATED' && booking.balanceAmount != 0
+      booking.status === 'ALLOCATED' && booking.balanceAmount > 0
     );
 
     if (searchTerm) {

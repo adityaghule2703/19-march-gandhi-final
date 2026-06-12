@@ -27134,6 +27134,2755 @@
 
 
 
+// import React, { useState, useEffect, useRef } from 'react';
+// import '../../../css/form.css';
+// import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CFormCheck, CTable, CTableHead, CTableRow, CTableHeaderCell, CTableBody, CTableDataCell, CAlert } from '@coreui/react';
+// import CIcon from '@coreui/icons-react';
+// import Select from "react-select";
+// import {
+//   cilBank,
+//   cilBarcode,
+//   cilBike,
+//   cilBirthdayCake,
+//   cilBriefcase,
+//   cilCalendar,
+//   cilCarAlt,
+//   cilCreditCard,
+//   cilEnvelopeClosed,
+//   cilFingerprint,
+//   cilHome,
+//   cilInstitution,
+//   cilList,
+//   cilLocationPin,
+//   cilMap,
+//   cilMoney,
+//   cilPaint,
+//   cilPeople,
+//   cilPhone,
+//   cilShieldAlt,
+//   cilUser,
+//   cilTask
+// } from '@coreui/icons';
+// import { useNavigate, useParams } from 'react-router-dom';
+// import { showFormSubmitError, showFormSubmitToast } from 'src/utils/sweetAlerts';
+// import axiosInstance from 'src/axiosInstance';
+// import { showError } from '../../../utils/sweetAlerts';
+
+// function SubdealerNewBooking() {
+//   const [formData, setFormData] = useState({
+//     verticle_id: '',
+//     model_id: '',
+//     model_color: '',
+//     customer_type: 'B2C',
+//     rto_type: 'MH',
+//     subdealer: '',
+//     optionalComponents: [],
+//     sales_executive: '',
+//     gstin: '',
+//     rto_amount: '',
+//     salutation: '',
+//     name: '',
+//     pan_no: '',
+//     dob: '',
+//     occupation: '',
+//     address: '',
+//     taluka: '',
+//     district: '',
+//     pincode: '',
+//     mobile1: '',
+//     mobile2: '',
+//     aadhar_number: '',
+//     nomineeName: '',
+//     nomineeRelation: '',
+//     nomineeAge: '',
+//     type: 'cash',
+//     financer_id: '',
+//     discountType: 'fixed',
+//     value: 0,
+//     hpa: true,
+//     selfInsurance: false,
+//     insuranceFivePlusFive: false,
+//     is_exchange: false,
+//     broker_id: '',
+//     vehicle_number: '',
+//     chassis_number: '',
+//     note: '',
+//     uncheckedHeaders: [],
+//     subsidy_amount: '',
+//     rto_code: '',
+//     gc_applicable: false,
+//     gc_amount: ''
+//   });
+  
+//   const [error, setError] = useState(null);
+//   const [errors, setErrors] = useState({});
+//   const [allVerticles, setAllVerticles] = useState([]);
+//   const [userVerticles, setUserVerticles] = useState([]);
+//   const [userVerticleIds, setUserVerticleIds] = useState([]);
+//   const [models, setModels] = useState([]);
+//   const [filteredModels, setFilteredModels] = useState([]);
+//   const [colors, setColors] = useState([]);
+//   const [subdealers, setSubdealers] = useState([]);
+//   const [financers, setFinancers] = useState([]);
+//   const [selectedSubdealerName, setSelectedSubdealerName] = useState('');
+//   const [modelDetails, setModelDetails] = useState(null);
+//   const [activeTab, setActiveTab] = useState(1);
+//   const [selectedModelHeaders, setSelectedModelHeaders] = useState([]);
+//   const [isSubmitting, setIsSubmitting] = useState(false);
+//   const [isEditMode, setIsEditMode] = useState(false);
+//   const [modelType, setModelType] = useState('');
+//   const [selectedModelName, setSelectedModelName] = useState('');
+//   const [headerDiscounts, setHeaderDiscounts] = useState({});
+//   const [bookingPriceComponents, setBookingPriceComponents] = useState([]);
+//   const [isSubdealerUser, setIsSubdealerUser] = useState(false);
+//   const [isEVModel, setIsEVModel] = useState(false);
+  
+//   // State for subdealer headers
+//   const [subdealerHeaders, setSubdealerHeaders] = useState([]);
+//   const [loadingSubdealerHeaders, setLoadingSubdealerHeaders] = useState(false);
+  
+//   // State for model prices (from the API)
+//   const [modelPrices, setModelPrices] = useState([]);
+  
+//   // State for RTO codes
+//   const [rtoCodes, setRtoCodes] = useState([]);
+//   const [loadingRtoCodes, setLoadingRtoCodes] = useState(false);
+
+//   // State for selected financer GC rate
+//   const [selectedFinancerGC, setSelectedFinancerGC] = useState('');
+
+//   // State for subdealer branch
+//   const [subdealerBranch, setSubdealerBranch] = useState(null);
+
+//   // ===== State for global discount distribution (NEW mode only) =====
+//   const [globalDiscount, setGlobalDiscount] = useState('');
+//   const [discountDistribution, setDiscountDistribution] = useState({});
+
+//   const isInitialBookingLoad = useRef(false);
+
+//   const navigate = useNavigate();
+//   const { id } = useParams();
+
+//   // ===== Function to distribute discount - SIMPLE PERCENTAGE OF TOTAL =====
+//   const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
+//     if (!headersList || headersList.length === 0) return {};
+    
+//     // Get discountable headers with unit cost > 0, sorted by priority
+//     // REMOVED the is_discount check
+//     const discountableHeaders = headersList
+//       .filter(price => {
+//         const hasDiscountPercentage = price.discount_percentage !== undefined && 
+//                                      price.discount_percentage !== null && 
+//                                      price.discount_percentage !== '';
+//         const unitCost = parseFloat(price.value) || 0;
+//         const unitCostValid = unitCost > 0;
+        
+//         return hasDiscountPercentage && unitCostValid;
+//       })
+//       .map(price => {
+//         let percentage = parseFloat(price.discount_percentage);
+//         // If percentage is less than 1 (like 0.1), it's likely stored as decimal, convert to percentage
+//         if (percentage <= 1 && percentage > 0) {
+//           percentage = percentage * 100;
+//         }
+//         return {
+//           ...price,
+//           header_id: price._id,
+//           unitCost: parseFloat(price.value) || 0,
+//           discountPercentage: percentage
+//         };
+//       })
+//       .sort((a, b) => (a.discount_priority || 999) - (b.discount_priority || 999));
+    
+//     if (discountableHeaders.length === 0) return {};
+//     if (!totalDiscountAmount || totalDiscountAmount <= 0) return {};
+    
+//     const distribution = {};
+//     let remainingDiscount = totalDiscountAmount;
+    
+//     // Process headers in priority order
+//     for (const header of discountableHeaders) {
+//       if (remainingDiscount <= 0) {
+//         distribution[header.header_id] = 0;
+//         continue;
+//       }
+      
+//       // Calculate discount: Total Discount × (Percentage / 100)
+//       let calculatedDiscount = totalDiscountAmount * (header.discountPercentage / 100);
+      
+//       // Cap at unit cost
+//       if (calculatedDiscount > header.unitCost) {
+//         calculatedDiscount = header.unitCost;
+//       }
+      
+//       // Don't exceed remaining discount
+//       const discountToApply = Math.min(calculatedDiscount, remainingDiscount);
+      
+//       distribution[header.header_id] = discountToApply;
+//       remainingDiscount -= discountToApply;
+//     }
+    
+//     // If there's remaining discount, add it to the first Ex-Showroom header found
+//     if (remainingDiscount > 0) {
+//       // Find any Ex-Showroom header (case insensitive pattern matching)
+//       const exShowroomHeader = headersList.find(price => {
+//         const headerKey = price.header_key || '';
+//         return /ex-showroom|ex showroom/i.test(headerKey);
+//       });
+      
+//       if (exShowroomHeader) {
+//         const exShowroomHeaderId = exShowroomHeader._id;
+//         distribution[exShowroomHeaderId] = (distribution[exShowroomHeaderId] || 0) + remainingDiscount;
+//       }
+//     }
+    
+//     return distribution;
+//   };
+
+//   // ===== Handle global discount change (NEW mode only) =====
+//   const handleGlobalDiscountChange = (value) => {
+//     const discountAmount = parseFloat(value) || 0;
+//     setGlobalDiscount(value);
+    
+//     if (discountAmount > 0) {
+//       const selectedHeaders = getSelectedHeadersWithPrices();
+//       const distribution = calculateDiscountDistribution(discountAmount, selectedHeaders);
+//       setDiscountDistribution(distribution);
+      
+//       const newHeaderDiscounts = { ...headerDiscounts };
+//       Object.keys(distribution).forEach(headerId => {
+//         newHeaderDiscounts[headerId] = distribution[headerId];
+//       });
+//       setHeaderDiscounts(newHeaderDiscounts);
+//     } else {
+//       setDiscountDistribution({});
+//       const resetDiscounts = { ...headerDiscounts };
+//       Object.keys(resetDiscounts).forEach(headerId => {
+//         resetDiscounts[headerId] = '';
+//       });
+//       setHeaderDiscounts(resetDiscounts);
+//     }
+//   };
+
+//   // Function to filter headers based on HPA status
+//   const filterHeadersByHPAStatus = (headers, hpaEnabled) => {
+//     if (hpaEnabled) {
+//       return headers;
+//     } else {
+//       return headers.filter(price => {
+//         const headerKey = price.header_key || '';
+//         const lowerHeaderKey = headerKey.toLowerCase();
+        
+//         return !(
+//           lowerHeaderKey.startsWith('hp') ||
+//           lowerHeaderKey.startsWith('hpa') ||
+//           lowerHeaderKey.includes('hypothecation') ||
+//           lowerHeaderKey.includes('loan')
+//         );
+//       });
+//     }
+//   };
+
+//   // Function to filter insurance headers based on insurance settings
+//   const filterInsuranceHeaders = (headers) => {
+//     return headers.filter(price => {
+//       const headerKey = price.header_key || '';
+      
+//       if (formData.selfInsurance === true) {
+//         if (headerKey.includes('INSURANCE') || 
+//             headerKey === 'INSURANCE' || 
+//             headerKey === 'INSURANCE CHARGES' || 
+//             headerKey === 'Insurance: 5 + 5 Years') {
+//           return false;
+//         }
+//       }
+      
+//       if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
+//         if (headerKey === 'INSURANCE CHARGES') {
+//           return false;
+//         }
+//         return true;
+//       }
+      
+//       if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
+//         if (headerKey === 'Insurance: 5 + 5 Years') {
+//           return false;
+//         }
+//         return true;
+//       }
+      
+//       return true;
+//     });
+//   };
+
+//   // Combined filter function that applies both HPA and insurance filters
+//   const getFilteredHeaders = (headers) => {
+//     const hpaFiltered = filterHeadersByHPAStatus(headers, formData.hpa);
+//     const insuranceFiltered = filterInsuranceHeaders(hpaFiltered);
+//     return insuranceFiltered;
+//   };
+
+//   useEffect(() => {
+//     fetchUserProfile();
+    
+//     if (id && !isInitialBookingLoad.current) {
+//       isInitialBookingLoad.current = true;
+//       fetchBookingDetails(id);
+//       setIsEditMode(true);
+//     }
+//   }, [id]);
+
+//   // Fetch RTO codes when RTO type is MH
+//   useEffect(() => {
+//     const fetchRtoCodes = async () => {
+//       if (formData.rto_type === 'MH') {
+//         setLoadingRtoCodes(true);
+//         try {
+//           const response = await axiosInstance.get('/rtos');
+//           const activeRtoCodes = response.data?.data?.filter(rto => rto.is_active) || [];
+//           setRtoCodes(activeRtoCodes);
+//         } catch (error) {
+//           console.error('Error fetching RTO codes:', error);
+//           setRtoCodes([]);
+//           const message = showError(error);
+//           if (message) {
+//             setError(message);
+//           }
+//         } finally {
+//           setLoadingRtoCodes(false);
+//         }
+//       } else {
+//         setRtoCodes([]);
+//         setFormData(prev => ({ ...prev, rto_code: '' }));
+//       }
+//     };
+    
+//     fetchRtoCodes();
+//   }, [formData.rto_type]);
+
+//   // Fetch financers based on subdealer's branch
+//   useEffect(() => {
+//     const fetchFinancers = async () => {
+//       if (!subdealerBranch && !isEditMode) {
+//         setFinancers([]);
+//         return;
+//       }
+
+//       try {
+//         const response = await axiosInstance.get('/financers/rates');
+        
+//         const groupedData = response.data.data?.groupedByProvider || [];
+        
+//         const financersList = groupedData.map(item => ({
+//           _id: item.providerId,
+//           financeProviderDetails: {
+//             _id: item.providerId,
+//             name: item.providerName
+//           },
+//           branchRates: item.branchRates || []
+//         }));
+        
+//         setFinancers(financersList);
+        
+//         if (isEditMode && formData.financer_id) {
+//           const selectedFinancer = financersList.find(f => f._id === formData.financer_id);
+//           if (selectedFinancer && subdealerBranch) {
+//             const branchRate = selectedFinancer.branchRates.find(
+//               rate => rate.branchId === subdealerBranch
+//             );
+//             if (branchRate) {
+//               setSelectedFinancerGC(branchRate.gcRate);
+//             }
+//           }
+//         }
+//       } catch (error) {
+//         console.error('Error fetching financers:', error);
+//         const message = showError(error);
+//         if (message) {
+//           setError(message);
+//         }
+//         setFinancers([]);
+//       }
+//     };
+    
+//     fetchFinancers();
+//   }, [subdealerBranch, isEditMode, formData.financer_id]);
+
+//   const fetchUserProfile = async () => {
+//     try {
+//       const response = await axiosInstance.get('/auth/me');
+//       const userData = response.data.data;
+//       const verticlesData = userData?.verticles || [];
+//       const userSubdealer = userData?.subdealer;
+      
+//       const verticleIds = verticlesData.map(verticle => verticle._id);
+//       setUserVerticleIds(verticleIds);
+      
+//       const userIsSubdealer = userData.roles?.some(role => 
+//         role.name === 'SUBDEALER' || role.name === 'Subdealer'
+//       );
+//       setIsSubdealerUser(userIsSubdealer);
+      
+//       if (userIsSubdealer && userSubdealer && userSubdealer._id) {
+//         setFormData(prev => ({
+//           ...prev,
+//           subdealer: userSubdealer._id
+//         }));
+//         setSelectedSubdealerName(userSubdealer.name || '');
+        
+//         if (userSubdealer.branch) {
+//           setSubdealerBranch(userSubdealer.branch);
+//         }
+        
+//         fetchSubdealerHeaders(userSubdealer._id);
+//         fetchModels(formData.customer_type || 'B2C', userSubdealer._id);
+//       }
+      
+//       await fetchAllVerticles(verticlesData);
+//     } catch (error) {
+//       const message = showError(error); 
+//       if (message) setError(message);
+//     }
+//   };
+
+//   const fetchAllVerticles = async (userVerticlesData) => {
+//     try {
+//       const response = await axiosInstance.get('/verticle-masters');
+//       const verticlesData = response.data.data?.verticleMasters || response.data.data || [];
+//       setAllVerticles(verticlesData);
+      
+//       const filteredVerticles = userVerticlesData.filter(verticle => 
+//         verticle.status === 'active'
+//       );
+//       setUserVerticles(filteredVerticles);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) setError(message);
+//     }
+//   };
+
+//   const fetchSubdealerHeaders = async (subdealerId) => {
+//     if (!subdealerId) {
+//       setSubdealerHeaders([]);
+//       return;
+//     }
+    
+//     setLoadingSubdealerHeaders(true);
+//     try {
+//       const response = await axiosInstance.get(`/subdealers/${subdealerId}/headers`);
+      
+//       if (response.data.data && response.data.data.headers) {
+//         const headers = response.data.data.headers;
+//         setSubdealerHeaders(headers);
+//       }
+//     } catch (error) {
+//       console.error('Error fetching subdealer headers:', error);
+//       setSubdealerHeaders([]);
+//       const message = showError(error);
+//       if (message) setError(message);
+//     } finally {
+//       setLoadingSubdealerHeaders(false);
+//     }
+//   };
+
+//   const fetchBookingDetails = async (bookingId) => {
+//     try {
+//       const response = await axiosInstance.get(`/bookings/${bookingId}`);
+//       const bookingData = response.data.data;
+
+//       // Get subsidy amount and isEV
+//       const isEV = bookingData.model?.type === 'EV';
+//       const subsidyAmount = bookingData.subsidyAmount || bookingData.subsidy_amount || 0;
+      
+//       setIsEVModel(isEV);
+      
+//       const discountsFromApi = {};
+//       const bookedHeaderIds = [];
+      
+//       bookingData.priceComponents.forEach((priceComponent) => {
+//         if (priceComponent.header && priceComponent.header._id) {
+//           const headerId = priceComponent.header._id;
+//           const headerKey = priceComponent.header.header_key || '';
+//           let discountAmount = priceComponent.discountAmount || 0;
+          
+//           // For Ex-Showroom headers, subtract subsidy from discount ONLY for EV models with subsidy
+//           const isExShowroomHeader = headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' || 
+//                                      headerKey === 'Ex-Showroom Price' || 
+//                                      headerKey === 'Ex-Showroom CSD';
+          
+//           if (isExShowroomHeader && isEV && subsidyAmount > 0) {
+//             discountAmount = Math.max(0, discountAmount - subsidyAmount);
+//           }
+          
+//           discountsFromApi[headerId] = discountAmount;
+//           bookedHeaderIds.push(headerId);
+//         }
+//       });
+      
+//       setHeaderDiscounts(discountsFromApi);
+      
+//       const bookingVerticle = bookingData.verticles && bookingData.verticles.length > 0 
+//         ? bookingData.verticles[0]._id || bookingData.verticles[0] 
+//         : '';
+
+//       if (bookingData.subdealer?.branch) {
+//         setSubdealerBranch(bookingData.subdealer.branch);
+//       }
+
+//       const formDataToSet = {
+//         verticle_id: bookingVerticle,
+//         model_id: bookingData.model?.id || '',
+//         model_color: bookingData.color?.id || '',
+//         customer_type: bookingData.customerType || 'B2C',
+//         rto_type: bookingData.rto || 'MH',
+//         subdealer: bookingData.subdealer?._id || '',
+//         optionalComponents: bookedHeaderIds,
+//         sales_executive: bookingData.salesExecutive?._id || '',
+//         gstin: bookingData.gstin || '',
+//         rto_amount: bookingData.rtoAmount || '',
+//         salutation: bookingData.customerDetails?.salutation || '',
+//         name: bookingData.customerDetails?.name || '',
+//         pan_no: bookingData.customerDetails?.panNo || '',
+//         dob: bookingData.customerDetails?.dob?.split('T')[0] || '',
+//         occupation: bookingData.customerDetails?.occupation || '',
+//         address: bookingData.customerDetails?.address || '',
+//         taluka: bookingData.customerDetails?.taluka || '',
+//         district: bookingData.customerDetails?.district || '',
+//         pincode: bookingData.customerDetails?.pincode || '',
+//         mobile1: bookingData.customerDetails?.mobile1 || '',
+//         mobile2: bookingData.customerDetails?.mobile2 || '',
+//         aadhar_number: bookingData.customerDetails?.aadharNumber || '',
+//         nomineeName: bookingData.customerDetails?.nomineeName || '',
+//         nomineeRelation: bookingData.customerDetails?.nomineeRelation || '',
+//         nomineeAge: bookingData.customerDetails?.nomineeAge || '',
+//         type: bookingData.payment?.type?.toLowerCase() || 'cash',
+//         financer_id: bookingData.payment?.financer?._id || '',
+//         gc_applicable: bookingData.payment?.gcApplicable || false,
+//         gc_amount: bookingData.payment?.gcAmount || '',
+//         value: bookingData.discounts?.[0]?.amount || 0,
+//         hpa: bookingData.hpa || false,
+//         selfInsurance: bookingData.selfInsurance || false,
+//         insuranceFivePlusFive: bookingData.insuranceFivePlusFive || false,
+//         note: bookingData.note || '',
+//         uncheckedHeaders: [],
+//         subsidy_amount: isEV ? (bookingData.subsidy_amount || bookingData.subsidyAmount || '') : '',
+//         rto_code: bookingData.rtoCode || bookingData.rto_code || ''
+//       };
+
+//       setFormData(formDataToSet);
+//       setSelectedSubdealerName(bookingData.subdealer?.name || '');
+//       setModelDetails(bookingData.model || null);
+
+//       if (bookingData.model) {
+//         setModelType(bookingData.model.type);
+//         setSelectedModelName(bookingData.model.model_name);
+//       }
+
+//       await fetchModels(bookingData.customerType, bookingData.subdealer?._id);
+      
+//       if (bookingData.subdealer?._id) {
+//         await fetchSubdealerHeaders(bookingData.subdealer._id);
+//       }
+      
+//       if (bookingData.model?.id) {
+//         await fetchModelPrices(bookingData.model.id, true);
+//         fetchModelColors(bookingData.model.id);
+//       }
+      
+//     } catch (error) {
+//       console.error('Error fetching booking details:', error);
+//       showFormSubmitError('Failed to load booking details');
+//     }
+//   };
+
+//   const fetchModelPrices = async (modelId, isEditModeParam = false) => {
+//     try {
+//       const response = await axiosInstance.get(`/models/${modelId}`);
+//       const modelData = response.data.data.model;
+//       const prices = modelData.prices || [];
+      
+//       const transformedPrices = prices.map(price => {
+//         return {
+//           header_id: price.header_id,
+//           value: price.value,
+//           header_key: price.header_key,
+//           is_mandatory: price.is_mandatory,
+//           is_discount: price.is_discount,
+//           discount_priority: price.discount_priority,
+//           discount_percentage: price.discount_percentage,
+//           category_key: price.category_key,
+//           metadata: price.metadata,
+//         };
+//       });
+      
+//       setModelPrices(transformedPrices);
+//       setSelectedModelHeaders(transformedPrices);
+//       setModelDetails(modelData);
+
+//       if (!isEditModeParam && !isEditMode) {
+//         const initialDiscounts = {};
+//         transformedPrices.forEach(price => {
+//           if (price.header_id) {
+//             initialDiscounts[price.header_id] = '';
+//           }
+//         });
+//         setHeaderDiscounts(initialDiscounts);
+//       } else {
+//         setHeaderDiscounts(prev => {
+//           const updated = { ...prev };
+//           transformedPrices.forEach(price => {
+//             if (price.header_id && updated[price.header_id] === undefined) {
+//               updated[price.header_id] = 0;
+//             }
+//           });
+//           return updated;
+//         });
+//       }
+//     } catch (error) {
+//       console.error('Failed to fetch model prices:', error);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (isEditMode && formData.model_id && models.length > 0) {
+//       const selectedModel = models.find((model) => model._id === formData.model_id);
+//       if (selectedModel) {
+//         fetchModelColors(formData.model_id);
+//       }
+//     }
+//   }, [isEditMode, formData.model_id, models]);
+
+//   const validateTab1 = () => {
+//     const requiredFields = ['customer_type', 'verticle_id', 'model_id'];
+//     if (!isSubdealerUser) {
+//       requiredFields.push('subdealer');
+//     }
+    
+//     const newErrors = {};
+
+//     requiredFields.forEach((field) => {
+//       if (!formData[field]) {
+//         newErrors[field] = 'This field is required';
+//       }
+//     });
+    
+//     if (formData.customer_type === 'B2B' && !formData.gstin) {
+//       newErrors.gstin = 'GSTIN is required for B2B customers';
+//     }
+
+//     if ((formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && !formData.rto_amount && formData.rto_amount !== 0) {
+//       newErrors.rto_amount = 'RTO amount is required';
+//     }
+
+//     if (formData.rto_type === 'MH' && !formData.rto_code) {
+//       newErrors.rto_code = 'RTO Code is required when RTO type is MH';
+//     }
+
+//     if (formData.selfInsurance === true && formData.insuranceFivePlusFive === true) {
+//       newErrors.insurance = 'Self Insurance and Insurance 5+5 cannot both be true';
+//     }
+
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const validateTab2 = () => {
+//     const requiredFields = ['model_color'];
+//     const newErrors = {};
+
+//     requiredFields.forEach((field) => {
+//       if (!formData[field]) {
+//         newErrors[field] = 'This field is required';
+//       }
+//     });
+
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const validateTab4 = () => {
+//     const newErrors = {};
+
+//     if (!formData.type) {
+//       newErrors.type = 'Payment type is required';
+//     }
+
+//     if (formData.type === 'finance') {
+//       const financeFields = ['financer_id'];
+//       financeFields.forEach((field) => {
+//         if (!formData[field]) {
+//           newErrors[field] = 'This field is required for finance';
+//         }
+//       });
+//     }
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const validateTab5 = () => {
+//     const newErrors = {};
+    
+//     Object.entries(headerDiscounts).forEach(([headerId, discountValue]) => {
+//       if (discountValue !== '' && discountValue !== null && discountValue !== undefined) {
+//         const numValue = parseFloat(discountValue);
+//         if (isNaN(numValue) || numValue < 0) {
+//           newErrors[`discount_${headerId}`] = 'Discount must be a positive number';
+//         }
+//       }
+//     });
+
+//     if (!isEditMode && globalDiscount && parseFloat(globalDiscount) < 0) {
+//       newErrors.globalDiscount = 'Discount must be a positive number';
+//     }
+
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const validateMobileNumber = (mobile) => {
+//     const regex = /^[6-9]\d{9}$/;
+//     return regex.test(mobile);
+//   };
+
+//   const validatePAN = (pan) => {
+//     const regex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+//     return regex.test(pan);
+//   };
+
+//   const validateAadhar = (aadhar) => {
+//     const regex = /^\d{12}$/;
+//     return regex.test(aadhar);
+//   };
+
+//   const validatePincode = (pincode) => {
+//     const regex = /^\d{6}$/;
+//     return regex.test(pincode);
+//   };
+
+//   const handleNextTab = () => {
+//     if (activeTab === 1) {
+//       if (!validateTab1()) {
+//         const firstErrorField = Object.keys(errors)[0];
+//         if (firstErrorField) {
+//           document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({
+//             behavior: 'smooth',
+//             block: 'center'
+//           });
+//         }
+//         return;
+//       }
+//     } else if (activeTab === 2) {
+//       if (!validateTab2()) {
+//         return;
+//       }
+//     } else if (activeTab === 3) {
+//       const newErrors = {};
+//       const requiredFields = [
+//         'salutation',
+//         'name',
+//         'address',
+//         'mobile1',
+//         'aadhar_number',
+//         'pan_no',
+//         'dob',
+//         'occupation',
+//         'taluka',
+//         'district',
+//         'pincode',
+//         'nomineeName',
+//         'nomineeRelation',
+//         'nomineeAge'
+//       ];
+
+//       requiredFields.forEach((field) => {
+//         if (!formData[field]) {
+//           newErrors[field] = 'This field is required';
+//         }
+//       });
+
+//       if (formData.mobile1 && !validateMobileNumber(formData.mobile1)) {
+//         newErrors.mobile1 = 'Invalid mobile number';
+//       }
+//       if (formData.mobile2 && !validateMobileNumber(formData.mobile2)) {
+//         newErrors.mobile2 = 'Invalid mobile number';
+//       }
+//       if (formData.pan_no && !validatePAN(formData.pan_no)) {
+//         newErrors.pan_no = 'Invalid PAN number';
+//       }
+//       if (formData.aadhar_number && !validateAadhar(formData.aadhar_number)) {
+//         newErrors.aadhar_number = 'Invalid Aadhar number';
+//       }
+//       if (formData.pincode && !validatePincode(formData.pincode)) {
+//         newErrors.pincode = 'Pincode must be exactly 6 digits';
+//       }
+
+//       setErrors(newErrors);
+//       if (Object.keys(newErrors).length > 0) {
+//         const firstErrorField = Object.keys(newErrors)[0];
+//         document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({
+//           behavior: 'smooth',
+//           block: 'center'
+//         });
+//         return;
+//       }
+//     } else if (activeTab === 4) {
+//       if (!validateTab4()) {
+//         const firstErrorField = Object.keys(errors)[0];
+//         if (firstErrorField) {
+//           document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({
+//             behavior: 'smooth',
+//             block: 'center'
+//           });
+//         }
+//         return;
+//       }
+//     } else if (activeTab === 5) {
+//       if (!validateTab5()) {
+//         const firstErrorField = Object.keys(errors)[0];
+//         if (firstErrorField) {
+//           document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({
+//             behavior: 'smooth',
+//             block: 'center'
+//           });
+//         }
+//         return;
+//       }
+//     }
+    
+//     if (activeTab < 5) {
+//       setActiveTab((prev) => prev + 1);
+//     }
+//   };
+
+//   useEffect(() => {
+//     fetchModels('B2C');
+//   }, []);
+
+//   const fetchModels = async (customerType = 'B2C', subdealerId = null) => {
+//     try {
+//       let endpoint = `/models/with-prices?customerType=${customerType}`;
+//       if (subdealerId) {
+//         endpoint += `&subdealer_id=${subdealerId}`;
+//       }
+
+//       const response = await axiosInstance.get(endpoint);
+//       let modelsData = response.data.data.models || [];
+      
+//       if (formData.verticle_id) {
+//         modelsData = modelsData.filter(model => 
+//           model.verticle_id === formData.verticle_id || model.verticle === formData.verticle_id
+//         );
+//       }
+
+//       const processedModels = modelsData.map((model) => {
+//         const mandatoryHeaders = model.prices.filter((price) => price.header && price.header.is_mandatory).map((price) => price.header._id);
+
+//         return {
+//           ...model,
+//           mandatoryHeaders,
+//           modelPrices: model.prices.filter((price) => price.header !== null)
+//         };
+//       });
+
+//       setModels(processedModels);
+//       setFilteredModels(processedModels);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   useEffect(() => {
+//     const fetchSubdealers = async () => {
+//       try {
+//         const response = await axiosInstance.get('/subdealers');
+//         setSubdealers(response.data.data.subdealers || []);
+//       } catch (error) {
+//         const message = showError(error);
+//         if (message) {
+//           setError(message);
+//         }
+//       }
+//     };
+//     fetchSubdealers();
+//   }, []);
+
+//   const getSelectedModelHeaders = () => {
+//     if (!formData.model_id) return [];
+
+//     const selectedModel = models.find((model) => model._id === formData.model_id);
+//     const allHeaders = selectedModel?.modelPrices || [];
+    
+//     return getFilteredHeaders(allHeaders);
+//   };
+
+//   const fetchModelColors = async (modelId) => {
+//     try {
+//       const response = await axiosInstance.get(`/colors/model/${modelId}`);
+//       setColors(response.data.data.colors || []);
+//     } catch (error) {
+//       console.error('Failed to fetch model colors:', error);
+//       setColors([]);
+//     }
+//   };
+
+//   const handleChange = (e) => {
+//     const { name, value, type, checked } = e.target;
+    
+//     if (type === 'checkbox') {
+//       setFormData((prevData) => ({ ...prevData, [name]: checked }));
+//     } else if (name === 'hpa') {
+//       const booleanValue = value === 'true';
+//       setFormData((prevData) => ({ 
+//         ...prevData, 
+//         [name]: booleanValue 
+//       }));
+
+//       if (name === 'hpa' && !booleanValue) {
+//         setTimeout(() => {
+//           const filteredHeaders = getAllAvailableHeaders();
+//           const filteredHeaderIds = filteredHeaders.map(item => item._id);
+          
+//           setFormData(prev => ({
+//             ...prev,
+//             optionalComponents: prev.optionalComponents.filter(id => filteredHeaderIds.includes(id))
+//           }));
+//         }, 100);
+//       }
+//     } 
+//     else if (name === 'selfInsurance') {
+//       const booleanValue = value === 'true';
+//       setFormData((prevData) => ({ 
+//         ...prevData, 
+//         [name]: booleanValue 
+//       }));
+      
+//       if (booleanValue === true) {
+//         setFormData(prev => ({
+//           ...prev,
+//           insuranceFivePlusFive: false
+//         }));
+//       }
+//     }
+//     else if (name === 'insuranceFivePlusFive') {
+//       const booleanValue = value === 'true';
+//       setFormData((prevData) => ({ 
+//         ...prevData, 
+//         [name]: booleanValue 
+//       }));
+      
+//       if (booleanValue === true && formData.selfInsurance === true) {
+//         setFormData(prev => ({
+//           ...prev,
+//           selfInsurance: false
+//         }));
+//       }
+//     }
+//     else if (name === 'financer_id') {
+//       setFormData((prevData) => ({ ...prevData, [name]: value }));
+      
+//       const selectedFinancer = financers.find(f => f._id === value);
+//       if (selectedFinancer && subdealerBranch) {
+//         const branchRate = selectedFinancer.branchRates.find(
+//           rate => rate.branchId === subdealerBranch
+//         );
+//         if (branchRate) {
+//           setSelectedFinancerGC(branchRate.gcRate);
+//           if (isEditMode && !formData.gc_amount) {
+//             setFormData(prev => ({
+//               ...prev,
+//               gc_amount: branchRate.gcRate || ''
+//             }));
+//           }
+//         }
+//       }
+//     } else {
+//       setFormData((prevData) => ({ ...prevData, [name]: value }));
+//     }
+    
+//     setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
+
+//     if (name === 'customer_type') {
+//       fetchModels(value, formData.subdealer);
+//       setFormData(prev => ({
+//         ...prev,
+//         verticle_id: '',
+//         model_id: '',
+//         model_name: '',
+//         optionalComponents: [],
+//         uncheckedHeaders: [],
+//         subsidy_amount: '',
+//         rto_code: ''
+//       }));
+//       setIsEVModel(false);
+//     } else if (name === 'verticle_id') {
+//       setFormData(prev => ({
+//         ...prev,
+//         verticle_id: value,
+//         model_id: '',
+//         model_name: '',
+//         optionalComponents: [],
+//         uncheckedHeaders: [],
+//         subsidy_amount: '',
+//         rto_code: ''
+//       }));
+//       setIsEVModel(false);
+
+//       if (value) {
+//         const filtered = models.filter(model => 
+//           model.verticle_id === value || model.verticle === value
+//         );
+//         setFilteredModels(filtered);
+//       } else {
+//         setFilteredModels(models);
+//       }
+//     } else if (name === 'subdealer') {
+//       const selectedSubdealer = subdealers.find((b) => b._id === value);
+//       setSelectedSubdealerName(selectedSubdealer ? selectedSubdealer.name : '');
+      
+//       if (selectedSubdealer?.branch) {
+//         setSubdealerBranch(selectedSubdealer.branch);
+//       } else {
+//         setSubdealerBranch(null);
+//       }
+      
+//       fetchSubdealerHeaders(value);
+      
+//       fetchModels(formData.customer_type, value);
+//       setFormData(prev => ({
+//         ...prev,
+//         verticle_id: '',
+//         model_id: '',
+//         model_name: '',
+//         optionalComponents: [],
+//         uncheckedHeaders: [],
+//         subsidy_amount: '',
+//         rto_code: ''
+//       }));
+//       setIsEVModel(false);
+      
+//       setModelPrices([]);
+//     } else if (name === 'model_id') {
+//       const selectedModel = models.find((model) => model._id === value);
+//       if (selectedModel) {
+//         const isEV = selectedModel.type === 'EV';
+//         setIsEVModel(isEV);
+        
+//         setFormData(prev => ({
+//           ...prev,
+//           model_name: selectedModel.model_name,
+//           model_id: value,
+//           optionalComponents: [],
+//           uncheckedHeaders: [],
+//           subsidy_amount: isEV ? (selectedModel.subsidy_amount || '') : '',
+//           rto_code: ''
+//         }));
+        
+//         setModelType(selectedModel.type);
+//         setSelectedModelName(selectedModel.model_name);
+        
+//         fetchModelPrices(value);
+//         fetchModelColors(value);
+        
+//         setGlobalDiscount('');
+//         setDiscountDistribution({});
+//       }
+//     }
+//     else if (name === 'rto_type' && value !== 'MH') {
+//       setFormData(prev => ({
+//         ...prev,
+//         rto_code: ''
+//       }));
+//     }
+//   };
+
+//   const handleHeaderSelection = (headerId, isChecked) => {
+//     setFormData((prev) => {
+//       if (isChecked) {
+//         return {
+//           ...prev,
+//           optionalComponents: [...prev.optionalComponents, headerId],
+//           uncheckedHeaders: prev.uncheckedHeaders?.filter(id => id !== headerId) || []
+//         };
+//       } else {
+//         return {
+//           ...prev,
+//           optionalComponents: prev.optionalComponents.filter((id) => id !== headerId),
+//           uncheckedHeaders: [...(prev.uncheckedHeaders || []), headerId]
+//         };
+//       }
+//     });
+//   };
+
+//   const handleHeaderDiscountChange = (headerId, value) => {
+//     setHeaderDiscounts(prev => {
+//       const updated = { ...prev, [headerId]: value };
+//       return updated;
+//     });
+//   };
+
+//   const calculateTaxableAmount = (unitCost, discount, gstRate, customerType) => {
+//     const netAmount = unitCost - (discount || 0);
+//     const gstRateDecimal = gstRate / 100;
+    
+//     if (gstRateDecimal === 0) {
+//       return netAmount;
+//     }
+    
+//     return netAmount / (1 + gstRateDecimal);
+//   };
+
+//   const calculateGST = (taxable, gstRate, customerType) => {
+//     const halfRate = gstRate / 2;
+//     const cgstAmount = taxable * (halfRate / 100);
+//     const sgstAmount = taxable * (halfRate / 100);
+//     return { cgstAmount, sgstAmount, halfRate, cgstRate: halfRate, sgstRate: halfRate };
+//   };
+
+//   const calculateLineTotal = (taxable, cgstAmount, sgstAmount) => {
+//     return taxable + cgstAmount + sgstAmount;
+//   };
+
+//   const getAllAvailableHeaders = () => {
+//     if (!formData.model_id || subdealerHeaders.length === 0 || modelPrices.length === 0) {
+//       return [];
+//     }
+
+//     const priceMap = {};
+//     modelPrices.forEach(price => {
+//       if (price.header_id) {
+//         priceMap[price.header_id] = price;
+//       }
+//     });
+
+//     const availableHeaders = subdealerHeaders
+//       .filter(header => {
+//         const hasPrice = priceMap[header._id];
+//         return hasPrice;
+//       })
+//       .map(header => {
+//         const priceData = priceMap[header._id];
+//         return {
+//           _id: header._id,
+//           header_key: header.header_key || header.name || 'Unknown',
+//           value: priceData.value || 0,
+//           is_mandatory: priceData.is_mandatory || false,
+//           is_discount: true, // Force all headers to be discountable
+//           discount_priority: priceData.discount_priority,
+//           discount_percentage: priceData.discount_percentage,
+//           category_key: priceData.category_key || '',
+//           metadata: priceData.metadata || {}
+//         };
+//       });
+    
+//     const filteredHeaders = getFilteredHeaders(availableHeaders);
+    
+//     return filteredHeaders;
+//   };
+
+//   const getSelectedHeadersWithPrices = () => {
+//     if (!formData.model_id || subdealerHeaders.length === 0 || modelPrices.length === 0) {
+//       return [];
+//     }
+
+//     const priceMap = {};
+//     modelPrices.forEach(price => {
+//       if (price.header_id) {
+//         priceMap[price.header_id] = price;
+//       }
+//     });
+
+//     let selectedHeaders = subdealerHeaders
+//       .filter(header => {
+//         const headerId = header._id;
+//         const priceData = priceMap[headerId];
+//         const hasPrice = !!priceData;
+        
+//         if (!hasPrice) return false;
+        
+//         if (isEditMode) {
+//           const isInOptionalComponents = formData.optionalComponents.includes(headerId);
+//           const isExplicitlyUnchecked = formData.uncheckedHeaders?.includes(headerId);
+//           const isSelected = priceData.is_mandatory || (isInOptionalComponents && !isExplicitlyUnchecked);
+//           return isSelected;
+//         } else {
+//           const isExplicitlyUnchecked = formData.uncheckedHeaders?.includes(headerId);
+//           const isSelected = priceData.is_mandatory || !isExplicitlyUnchecked;
+//           return isSelected;
+//         }
+//       })
+//       .map(header => {
+//         const priceData = priceMap[header._id];
+//         return {
+//           _id: header._id,
+//           header_key: header.header_key || header.name || 'Unknown',
+//           value: priceData.value || 0,
+//           is_mandatory: priceData.is_mandatory || false,
+//           is_discount: true, // Force all headers to be discountable
+//           discount_priority: priceData.discount_priority,
+//           discount_percentage: priceData.discount_percentage,
+//           category_key: priceData.category_key || '',
+//           metadata: priceData.metadata || {}
+//         };
+//       });
+    
+//     selectedHeaders = getFilteredHeaders(selectedHeaders);
+    
+//     return selectedHeaders;
+//   };
+
+//   const calculateTotalDealAmount = () => {
+//     const selectedHeaders = getSelectedHeadersWithPrices();
+
+//     const excludedHeaders = [
+//       'ON ROAD PRICE (A)',
+//       'TOTAL ONROAD + ADDON SERVICES',
+//       'TOTAL ONROAD+ADDON SERVICES',
+//       'ADDON SERVICES TOTAL (B)',
+//       'ACCESSORIES TOTAL',
+//       'ON ROAD PRICE',
+//       'ADDON SERVICES TOTAL',
+//       'ADD ON SERVICES TOTAL',
+//       'TOTAL AMOUNT',
+//       'GRAND TOTAL',
+//       'FINAL AMOUNT',
+//       'TOTAL',
+//       'ON-ROAD PRICE',
+//       'FINAL PRICE',
+//       'LESS:- CENTER SUBSIDY(FAME-II)',
+//       'COMPLETE PRICE',
+//       'LESS:- CENTER SUBSIDY'
+//     ];
+
+//     const filteredHeaders = selectedHeaders.filter((item) => {
+//       const headerKey = item.header_key || '';
+//       return !excludedHeaders.includes(headerKey);
+//     });
+
+//     let totalUnitCost = 0;
+//     let totalDiscount = 0;
+//     let subsidyAmount = parseFloat(formData.subsidy_amount) || 0;
+    
+//     filteredHeaders.forEach((item) => {
+//       const headerPrice = item.value || 0;
+//       totalUnitCost += headerPrice;
+      
+//       let discountForThisHeader = 0;
+//       const headerId = item._id;
+      
+//       if (isEditMode) {
+//         discountForThisHeader = headerDiscounts[headerId] !== undefined && headerDiscounts[headerId] !== '' 
+//           ? parseFloat(headerDiscounts[headerId]) 
+//           : 0;
+//       } else {
+//         discountForThisHeader = discountDistribution[headerId] || 0;
+//       }
+      
+//       totalDiscount += discountForThisHeader;
+//     });
+
+//     let finalTotal = totalUnitCost - totalDiscount - subsidyAmount;
+
+//     return {
+//       totalBeforeDiscount: totalUnitCost.toFixed(2),
+//       totalAfterDiscount: finalTotal.toFixed(2),
+//       totalDiscount: totalDiscount.toFixed(2),
+//       hasDiscount: totalDiscount > 0,
+//       subsidyAmount: subsidyAmount.toFixed(2)
+//     };
+//   };
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setIsSubmitting(true);
+
+//     const requiredFields = [
+//       'verticle_id',
+//       'model_id',
+//       'model_color',
+//       'customer_type',
+//       'name',
+//       'address',
+//       'mobile1',
+//       'aadhar_number',
+//       'pan_no'
+//     ];
+    
+//     if (!isSubdealerUser) {
+//       requiredFields.push('subdealer');
+//     }
+    
+//     let formErrors = {};
+
+//     requiredFields.forEach((field) => {
+//       if (!formData[field]) {
+//         formErrors[field] = 'This field is required';
+//       }
+//     });
+
+//     if (!formData.verticle_id) {
+//       formErrors.verticle_id = 'Verticle selection is required';
+//     }
+
+//     if (formData.customer_type === 'B2B' && !formData.gstin) {
+//       formErrors.gstin = 'GSTIN is required for B2B customers';
+//     }
+
+//     if (formData.rto_type === 'MH' && !formData.rto_code) {
+//       formErrors.rto_code = 'RTO Code is required when RTO type is MH';
+//     }
+
+//     if (formData.selfInsurance === true && formData.insuranceFivePlusFive === true) {
+//       formErrors.insurance = 'Self Insurance and Insurance 5+5 cannot both be true';
+//     }
+
+//     if (Object.keys(formErrors).length > 0) {
+//       setErrors(formErrors);
+//       setIsSubmitting(false);
+//       const firstErrorField = Object.keys(formErrors)[0];
+//       document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({
+//         behavior: 'smooth',
+//         block: 'center'
+//       });
+//       return;
+//     }
+
+//     const selectedHeaders = getSelectedHeadersWithPrices();
+//     const headersToSubmit = selectedHeaders.map(item => item._id);
+    
+//     let headerDiscountsArray = [];
+    
+//     if (isEditMode) {
+//       headerDiscountsArray = Object.entries(headerDiscounts)
+//         .filter(([headerId, value]) => {
+//           const isSelected = headersToSubmit.includes(headerId);
+//           const hasDiscount = value !== '' && value !== null && value !== undefined && !isNaN(parseFloat(value)) && parseFloat(value) > 0;
+//           return isSelected && hasDiscount;
+//         })
+//         .map(([headerId, value]) => ({
+//           headerId: headerId,
+//           discountAmount: parseFloat(value) || 0
+//         }));
+//     } else {
+//       headerDiscountsArray = Object.entries(discountDistribution)
+//         .filter(([headerId, value]) => {
+//           const isSelected = headersToSubmit.includes(headerId);
+//           const hasDiscount = value !== '' && value !== null && value !== undefined && !isNaN(parseFloat(value)) && parseFloat(value) > 0;
+//           return isSelected && hasDiscount;
+//         })
+//         .map(([headerId, value]) => ({
+//           headerId: headerId,
+//           discountAmount: parseFloat(value) || 0
+//         }));
+//     }
+
+//     const paymentDetails = {
+//       type: formData.type.toUpperCase(),
+//       ...(formData.type.toLowerCase() === 'finance' && {
+//         financer_id: formData.financer_id
+//       })
+//     };
+
+//     if (isEditMode && formData.type.toLowerCase() === 'finance') {
+//       paymentDetails.gc_applicable = formData.gc_applicable === true;
+//       if (formData.gc_applicable) {
+//         paymentDetails.gc_amount = parseFloat(formData.gc_amount) || 0;
+//       }
+//     }
+
+//     const requestBody = {
+//       model_id: formData.model_id,
+//       model_color: formData.model_color,
+//       customer_type: formData.customer_type,
+//       rto_type: formData.rto_type,
+//       subdealer: formData.subdealer,
+//       verticles: formData.verticle_id ? [formData.verticle_id] : [],
+//       optionalComponents: headersToSubmit,
+//       sales_executive: formData.sales_executive,
+//       customer_details: {
+//         salutation: formData.salutation,
+//         name: formData.name,
+//         pan_no: formData.pan_no,
+//         dob: formData.dob,
+//         occupation: formData.occupation,
+//         address: formData.address,
+//         taluka: formData.taluka,
+//         district: formData.district,
+//         pincode: formData.pincode,
+//         mobile1: formData.mobile1,
+//         mobile2: formData.mobile2,
+//         aadhar_number: formData.aadhar_number,
+//         nomineeName: formData.nomineeName,
+//         nomineeRelation: formData.nomineeRelation,
+//         nomineeAge: formData.nomineeAge ? parseInt(formData.nomineeAge) : undefined
+//       },
+//       payment: paymentDetails,
+//       headerDiscounts: headerDiscountsArray,
+//       discount: {
+//         type: formData.discountType,
+//         value: formData.value ? parseFloat(formData.value) : 0
+//       },
+//       hpa: formData.hpa === true,
+//       selfInsurance: formData.selfInsurance === true,
+//       insuranceFivePlusFive: formData.insuranceFivePlusFive === true,
+//       note: formData.note || '',
+//       ...(formData.rto_type === 'MH' && formData.rto_code && { rto_code: formData.rto_code }),
+//       ...(isEVModel && { subsidy_amount: formData.subsidy_amount ? parseFloat(formData.subsidy_amount) : 0 })
+//     };
+
+//     if (!isEditMode) {
+//       requestBody.globalDiscount = globalDiscount ? parseFloat(globalDiscount) : 0;
+//     }
+
+//     if (formData.customer_type === 'B2B') {
+//       requestBody.gstin = formData.gstin;
+//     }
+//     if (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') {
+//       requestBody.rto_amount = formData.rto_amount ? parseFloat(formData.rto_amount) : 0;
+//     }
+
+//     try {
+//       let response;
+//       if (isEditMode) {
+//         response = await axiosInstance.put(`/bookings/${id}`, requestBody);
+//       } else {
+//         response = await axiosInstance.post('/bookings', requestBody);
+//       }
+
+//       if (response.data.success) {
+//         const successMessage = isEditMode ? 'Booking updated successfully!' : 'Booking created successfully!';
+        
+//         if (!isEditMode) {
+//           await showFormSubmitToast(successMessage, () => 
+//             navigate(`/subdealer-all-bookings/chassis-allocation/${response.data.data._id || response.data.data.id}`)
+//           );
+//         } else {
+//           await showFormSubmitToast(successMessage, () => navigate('/subdealer-all-bookings'));
+//           navigate('/subdealer-all-bookings');
+//         }
+//       } else {
+//         showFormSubmitError(response.data.message || 'Submission failed');
+//       }
+//     } catch (error) {
+//       console.error('Submission error:', error);
+//       const message = showError(error);
+//       if (message) setError(message);
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+//   };
+
+//   const availableHeaders = getAllAvailableHeaders();
+//   const selectedHeaders = getSelectedHeadersWithPrices();
+//   const dealTotals = calculateTotalDealAmount();
+
+//   const getInsuranceStatusMessage = () => {
+//     if (formData.selfInsurance === true) {
+//       return "(Insurance headers hidden as Self Insurance is enabled)";
+//     }
+//     if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
+//       return "(INSURANCE CHARGES header hidden for Insurance 5+5, Insurance: 5 + 5 Years shown)";
+//     }
+//     if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
+//       return "(Standard insurance - INSURANCE CHARGES shown)";
+//     }
+//     return "";
+//   };
+
+//   return (
+//     <div className="form-container">
+//       <div className='title'>{isEditMode ? 'Edit Booking' : 'Create New Booking'}</div>
+//       {error && (
+//         <CAlert color="danger" className="mb-3">
+//           {error}
+//         </CAlert>
+//       )}
+//       <div className="form-card">
+//         <div className="form-body">
+//           <form onSubmit={handleSubmit} id="bookingForm">
+//             <div className="form-note">
+//               <span className="required">*</span> Field is mandatory
+//             </div>
+
+//             {activeTab === 1 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Customer Type</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilUser} />
+//                       </CInputGroupText>
+//                       <CFormSelect name="customer_type" value={formData.customer_type} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="B2B">B2B</option>
+//                         <option value="B2C" selected>
+//                           B2C
+//                         </option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.customer_type && <p className="error">{errors.customer_type}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Subdealer</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilLocationPin} />
+//                       </CInputGroupText>
+//                       {isSubdealerUser && formData.subdealer ? (
+//                         <CFormInput 
+//                           type="text" 
+//                           value={selectedSubdealerName}
+//                           readOnly
+//                           disabled
+//                         />
+//                       ) : (
+//                         <CFormSelect 
+//                           name="subdealer" 
+//                           value={formData.subdealer} 
+//                           onChange={handleChange}
+//                           disabled={isEditMode}
+//                         >
+//                           <option value="">-Select-</option>
+//                           {subdealers.map((subdealer) => (
+//                             <option key={subdealer._id} value={subdealer._id}>
+//                               {subdealer.name}
+//                             </option>
+//                           ))}
+//                         </CFormSelect>
+//                       )}
+//                     </CInputGroup>
+//                     {errors.subdealer && <p className="error">{errors.subdealer}</p>}
+//                     {isSubdealerUser && formData.subdealer && (
+//                       <small className="text-muted">
+//                         Subdealer auto-selected based on your account
+//                       </small>
+//                     )}
+//                   </div>
+                  
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Verticle</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilInstitution} />
+//                       </CInputGroupText>
+//                       <CFormSelect 
+//                         name="verticle_id" 
+//                         value={formData.verticle_id} 
+//                         onChange={handleChange}
+//                         disabled={userVerticles.length === 0}
+//                       >
+//                         <option value="">- Select Verticle -</option>
+//                         {userVerticles.length > 0 ? (
+//                           userVerticles
+//                             .filter(vertical => vertical.status === 'active')
+//                             .map((vertical) => (
+//                               <option key={vertical._id} value={vertical._id}>
+//                                 {vertical.name}
+//                               </option>
+//                             ))
+//                         ) : (
+//                           <option value="" disabled>
+//                             No verticles assigned to your account
+//                           </option>
+//                         )}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.verticle_id && <p className="error">{errors.verticle_id}</p>}
+//                     {userVerticles.filter(v => v.status === 'active').length === 0 && (
+//                       <small className="text-muted">No active verticles available. Please contact administrator.</small>
+//                     )}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Model Name</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilBike} />
+//                       </CInputGroupText>
+//                       <div style={{ flex: 1 }}>
+//                         <Select
+//                           name="model_id"
+//                           isDisabled={!formData.subdealer || !formData.verticle_id}
+//                           placeholder={
+//                             !formData.subdealer ? "Select subdealer first" :
+//                             !formData.verticle_id ? "Select verticle first" :
+//                             filteredModels.length === 0 ? "No models available" :
+//                             "Search Model"
+//                           }
+//                           value={
+//                             filteredModels.find((m) => m._id === formData.model_id)
+//                               ? {
+//                                   label: filteredModels.find(
+//                                     (m) => m._id === formData.model_id
+//                                   ).model_name,
+//                                   value: formData.model_id,
+//                                 }
+//                               : null
+//                           }
+//                           onChange={(selected) =>
+//                             handleChange({
+//                               target: {
+//                                 name: "model_id",
+//                                 value: selected ? selected.value : "",
+//                               },
+//                             })
+//                           }
+//                           options={
+//                             filteredModels.length > 0
+//                               ? filteredModels.map((model) => ({
+//                                   label: model.model_name,
+//                                   value: model._id,
+//                                 }))
+//                               : []
+//                           }
+//                           noOptionsMessage={() => {
+//                             if (!formData.subdealer) return "Please select a subdealer first";
+//                             if (!formData.verticle_id) return "Please select a verticle first";
+//                             return "No models available for this subdealer and verticle";
+//                           }}
+//                           classNamePrefix="react-select"
+//                           className={`react-select-container ${
+//                             errors.model_id ? "error-input" : formData.model_id ? "valid-input" : ""
+//                           }`}
+//                         />
+//                       </div>
+//                     </CInputGroup>
+//                     {errors.model_id && <p className="error">{errors.model_id}</p>}
+//                   </div>
+
+//                   {formData.customer_type === 'B2B' && (
+//                     <div className="input-box">
+//                       <div className="details-container">
+//                         <span className="details">GST Number</span>
+//                         <span className="required">*</span>
+//                       </div>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon">
+//                           <CIcon icon={cilBarcode} />
+//                         </CInputGroupText>
+//                         <CFormInput type="text" name="gstin" value={formData.gstin} onChange={handleChange} />
+//                       </CInputGroup>
+//                       {errors.gstin && <p className="error">{errors.gstin}</p>}
+//                     </div>
+//                   )}
+
+//                   <div className="input-box">
+//                     <span className="details">RTO</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilCarAlt} />
+//                       </CInputGroupText>
+//                       <CFormSelect name="rto_type" value={formData.rto_type} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="MH">MH</option>
+//                         <option value="BH">BH</option>
+//                         <option value="CRTM">CRTM</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                   </div>
+
+//                   {formData.rto_type === 'MH' && (
+//                     <div className="input-box">
+//                       <div className="details-container">
+//                         <span className="details">RTO Code</span>
+//                         <span className="required">*</span>
+//                       </div>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon">
+//                           <CIcon icon={cilCarAlt} />
+//                         </CInputGroupText>
+//                         <CFormSelect 
+//                           name="rto_code" 
+//                           value={formData.rto_code} 
+//                           onChange={handleChange}
+//                           disabled={loadingRtoCodes}
+//                         >
+//                           <option value="">-Select RTO Code-</option>
+//                           {loadingRtoCodes ? (
+//                             <option value="" disabled>Loading RTO codes...</option>
+//                           ) : rtoCodes.length > 0 ? (
+//                             rtoCodes.map((rto) => (
+//                               <option key={rto.id} value={rto.rto_code}>
+//                                 {rto.rto_code} - {rto.rto_name}
+//                               </option>
+//                             ))
+//                           ) : (
+//                             <option value="" disabled>No RTO codes available</option>
+//                           )}
+//                         </CFormSelect>
+//                       </CInputGroup>
+//                       {errors.rto_code && <p className="error">{errors.rto_code}</p>}
+//                       {loadingRtoCodes && <small className="text-muted">Loading RTO codes...</small>}
+//                     </div>
+//                   )}
+
+//                   {(formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && (
+//                     <div className="input-box">
+//                       <div className="details-container">
+//                         <span className="details">RTO Amount</span>
+//                         <span className="required">*</span>
+//                       </div>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon">
+//                           <CIcon icon={cilMoney} />
+//                         </CInputGroupText>
+//                         <CFormInput type="text" name="rto_amount" value={formData.rto_amount} onChange={handleChange} />
+//                       </CInputGroup>
+//                       {errors.rto_amount && <p className="error">{errors.rto_amount}</p>}
+//                     </div>
+//                   )}
+
+//                   {isEVModel && (
+//                     <div className="input-box">
+//                       <span className="details">Subsidy Amount</span>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon">
+//                           <CIcon icon={cilMoney} />
+//                         </CInputGroupText>
+//                         <CFormInput 
+//                           type="text" 
+//                           name="subsidy_amount" 
+//                           value={formData.subsidy_amount} 
+//                           onChange={handleChange}
+//                           disabled={true}
+//                           placeholder="Auto-filled for EV models"
+//                         />
+//                       </CInputGroup>
+//                       <small className="text-muted">Subsidy applicable for EV models only</small>
+//                     </div>
+//                   )}
+
+//                   <div className="input-box">
+//                     <span className="details">HPA Applicable</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilShieldAlt} />
+//                       </CInputGroupText>
+//                       <CFormSelect name="hpa" value={formData.hpa} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value={true}>Yes</option>
+//                         <option value={false}>No</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                   </div>
+
+//                   <div className="input-box">
+//                     <span className="details">Self Insurance</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilShieldAlt} />
+//                       </CInputGroupText>
+//                       <CFormSelect name="selfInsurance" value={formData.selfInsurance} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value={true}>Yes</option>
+//                         <option value={false}>No</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                   </div>
+
+//                   <div className="input-box">
+//                     <span className="details">Insurance 5+5</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilShieldAlt} />
+//                       </CInputGroupText>
+//                       <CFormSelect 
+//                         name="insuranceFivePlusFive" 
+//                         value={formData.insuranceFivePlusFive} 
+//                         onChange={handleChange}
+//                       >
+//                         <option value="">-Select-</option>
+//                         <option value={true}>Yes</option>
+//                         <option value={false}>No</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                   </div>
+
+//                   {errors.insurance && (
+//                     <div className="input-box" style={{ width: '100%' }}>
+//                       <p className="error" style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '5px' }}>
+//                         {errors.insurance}
+//                       </p>
+//                     </div>
+//                   )}
+
+//                   {formData.selfInsurance === true && 
+//                     formData.insuranceFivePlusFive === true && (
+//                       <div className="input-box" style={{ width: '100%' }}>
+//                         <p className="error" style={{ color: '#dc3545', fontSize: '0.9em' }}>
+//                           Both Self Insurance and Insurance 5+5 cannot be selected together
+//                         </p>
+//                       </div>
+//                     )
+//                   }
+//                 </div>
+
+//                 {/* Subdealer Headers Selection Section */}
+//                 {formData.subdealer && formData.model_id && (
+//                   <div className="model-headers-section">
+//                     <h5>
+//                       Available Headers for Selected Model ({availableHeaders.length} available)
+//                       {!formData.hpa && (
+//                         <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>
+//                           (HPA-related headers hidden as HPA is disabled)
+//                         </span>
+//                       )}
+//                       {getInsuranceStatusMessage() && (
+//                         <span style={{ 
+//                           color: formData.selfInsurance === true ? '#28a745' : 
+//                                  formData.insuranceFivePlusFive === true ? '#ffc107' : '#6c757d', 
+//                           fontSize: '0.9em', 
+//                           marginLeft: '10px' 
+//                         }}>
+//                           {getInsuranceStatusMessage()}
+//                         </span>
+//                       )}
+//                       {loadingSubdealerHeaders && <span className="text-muted"> (Loading...)</span>}
+//                     </h5>
+//                     {loadingSubdealerHeaders ? (
+//                       <p>Loading headers...</p>
+//                     ) : availableHeaders.length > 0 ? (
+//                       <div className="headers-grid">
+//                         {availableHeaders.map((item) => {
+//                           const headerId = item._id;
+//                           const isMandatory = item.is_mandatory;
+//                           const headerPrice = item.value || 0;
+//                           const headerKey = item.header_key || '';
+                          
+//                           const isInsuranceHeader = headerKey.includes('INSURANCE') || 
+//                                                     headerKey === 'INSURANCE' || 
+//                                                     headerKey === 'INSURANCE CHARGES' || 
+//                                                     headerKey === 'Insurance: 5 + 5 Years';
+                          
+//                           let shouldShow = true;
+//                           if (formData.selfInsurance === true && isInsuranceHeader) {
+//                             shouldShow = false;
+//                           }
+//                           if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
+//                             if (headerKey === 'INSURANCE CHARGES') {
+//                               shouldShow = false;
+//                             }
+//                           }
+//                           if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
+//                             if (headerKey === 'Insurance: 5 + 5 Years') {
+//                               shouldShow = false;
+//                             }
+//                           }
+                          
+//                           if (!shouldShow) return null;
+                          
+//                           let isChecked;
+//                           if (isEditMode) {
+//                             const isInOptionalComponents = formData.optionalComponents.includes(headerId);
+//                             const isExplicitlyUnchecked = formData.uncheckedHeaders?.includes(headerId);
+//                             isChecked = isMandatory || (isInOptionalComponents && !isExplicitlyUnchecked);
+//                           } else {
+//                             const isExplicitlyUnchecked = formData.uncheckedHeaders?.includes(headerId);
+//                             isChecked = isMandatory || !isExplicitlyUnchecked;
+//                           }
+                          
+//                           return (
+//                             <div key={headerId} className="header-item">
+//                               <CFormCheck
+//                                 id={`subdealer-header-${headerId}`}
+//                                 label={`${headerKey} (₹${headerPrice}) ${isMandatory ? '(Mandatory)' : ''} ${isInsuranceHeader ? '(Insurance-related)' : ''}`}
+//                                 checked={isChecked}
+//                                 onChange={(e) => {
+//                                   const isNowChecked = e.target.checked;
+//                                   handleHeaderSelection(headerId, isNowChecked);
+                                  
+//                                   if (!isNowChecked) {
+//                                     setHeaderDiscounts(prev => {
+//                                       const updated = { ...prev };
+//                                       delete updated[headerId];
+//                                       return updated;
+//                                     });
+//                                   }
+//                                 }}
+//                                 disabled={isMandatory}
+//                               />
+//                               {isMandatory && (
+//                                 <input type="hidden" name={`mandatory-${headerId}`} value={headerId} />
+//                               )}
+//                             </div>
+//                           );
+//                         })}
+//                       </div>
+//                     ) : (
+//                       <p className="text-muted">No headers with prices available for this model</p>
+//                     )}
+//                   </div>
+//                 )}
+
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={handleNextTab}>
+//                     Next
+//                   </button>
+//                 </div>
+//               </>
+//             )}
+
+//             {activeTab === 2 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Verticle</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilInstitution} />
+//                       </CInputGroupText>
+//                       <CFormSelect 
+//                         name="verticle_id" 
+//                         value={formData.verticle_id} 
+//                         onChange={handleChange}
+//                         disabled={userVerticles.length === 0 || isEditMode}
+//                       >
+//                         <option value="">- Select Verticle -</option>
+//                         {userVerticles.length > 0 ? (
+//                           userVerticles
+//                             .filter(vertical => vertical.status === 'active')
+//                             .map((vertical) => (
+//                               <option key={vertical._id} value={vertical._id}>
+//                                 {vertical.name}
+//                               </option>
+//                             ))
+//                         ) : (
+//                           <option value="" disabled>
+//                             No verticles assigned to your account
+//                           </option>
+//                         )}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.verticle_id && <p className="error">{errors.verticle_id}</p>}
+//                   </div>
+                  
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Vehicle Model</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilBike} />
+//                       </CInputGroupText>
+//                       <CFormSelect 
+//                         name="model_id" 
+//                         value={formData.model_id} 
+//                         onChange={handleChange} 
+//                         disabled={isEditMode || !formData.verticle_id}
+//                       >
+//                         <option value="">- Select a Model -</option>
+//                         {filteredModels.length > 0 ? (
+//                           filteredModels.map((model) => (
+//                             <option key={model._id} value={model._id}>
+//                               {model.model_name}
+//                             </option>
+//                           ))
+//                         ) : formData.verticle_id ? (
+//                           <option value="" disabled>
+//                             No models available for this verticle
+//                           </option>
+//                         ) : (
+//                           <option value="" disabled>
+//                             Please select a verticle first
+//                           </option>
+//                         )}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.model_id && <p className="error">{errors.model_id}</p>}
+//                   </div>
+                  
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Color</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilPaint} />
+//                       </CInputGroupText>
+//                       <CFormSelect name="model_color" value={formData.model_color || ''} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         {colors.map((color) => (
+//                           <option key={color._id} value={color.id}>
+//                             {color.name}
+//                           </option>
+//                         ))}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.model_color && <p className="error">{errors.model_color}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Booking Date</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilCalendar} />
+//                       </CInputGroupText>
+//                       <CFormInput type="date" value={new Date().toISOString().split('T')[0]} readOnly />
+//                     </CInputGroup>
+//                   </div>
+//                 </div>
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={() => setActiveTab(1)}>
+//                     Back
+//                   </button>
+//                   <button type="button" className="submit-button" onClick={handleNextTab}>
+//                     Next
+//                   </button>
+//                 </div>
+//               </>
+//             )}
+
+//             {activeTab === 3 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Salutation</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilUser} />
+//                       </CInputGroupText>
+//                       <CFormSelect name="salutation" value={formData.salutation} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="Mr.">Mr.</option>
+//                         <option value="Mrs.">Mrs.</option>
+//                         <option value="Miss">Miss</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.salutation && <p className="error">{errors.salutation}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Full Name</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilUser} />
+//                       </CInputGroupText>
+//                       <CFormInput name="name" value={formData.name} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.name && <p className="error">{errors.name}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Address</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilHome} />
+//                       </CInputGroupText>
+//                       <CFormInput name="address" value={formData.address} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.address && <p className="error">{errors.address}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Taluka</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilMap} />
+//                       </CInputGroupText>
+//                       <CFormInput name="taluka" value={formData.taluka} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.taluka && <p className="error">{errors.taluka}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">District</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilMap} />
+//                       </CInputGroupText>
+//                       <CFormInput name="district" value={formData.district} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.district && <p className="error">{errors.district}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Pin Code</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilEnvelopeClosed} />
+//                       </CInputGroupText>
+//                       <CFormInput name="pincode" value={formData.pincode} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.pincode && <p className="error">{errors.pincode}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Contact Number</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilPhone} />
+//                       </CInputGroupText>
+//                       <CFormInput name="mobile1" value={formData.mobile1} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.mobile1 && <p className="error">{errors.mobile1}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <span className="details">Alternate Contact Number</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilPhone} />
+//                       </CInputGroupText>
+//                       <CFormInput name="mobile2" value={formData.mobile2} onChange={handleChange} />
+//                     </CInputGroup>
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Aadhaar Number</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilFingerprint} />
+//                       </CInputGroupText>
+//                       <CFormInput name="aadhar_number" value={formData.aadhar_number} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.aadhar_number && <p className="error">{errors.aadhar_number}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">PAN Number</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilCreditCard} />
+//                       </CInputGroupText>
+//                       <CFormInput name="pan_no" value={formData.pan_no} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.pan_no && <p className="error">{errors.pan_no}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Birth Date</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilCalendar} />
+//                       </CInputGroupText>
+//                       <CFormInput type="date" name="dob" value={formData.dob} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.dob && <p className="error">{errors.dob}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Occupation</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilBriefcase} />
+//                       </CInputGroupText>
+//                       <CFormSelect name="occupation" value={formData.occupation} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="Student">Student</option>
+//                         <option value="Business">Business</option>
+//                         <option value="Service">Service</option>
+//                         <option value="Farmer">Farmer</option>
+//                         <option value="Self Employed">Self Employed</option>
+//                         <option value="Government Servant">Government Servant</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.occupation && <p className="error">{errors.occupation}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Nominee Name</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilUser} />
+//                       </CInputGroupText>
+//                       <CFormInput name="nomineeName" value={formData.nomineeName} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.nomineeName && <p className="error">{errors.nomineeName}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Nominee Relationship</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilPeople} />
+//                       </CInputGroupText>
+//                       <CFormInput name="nomineeRelation" value={formData.nomineeRelation} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.nomineeRelation && <p className="error">{errors.nomineeRelation}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Nominee Age</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilBirthdayCake} />
+//                       </CInputGroupText>
+//                       <CFormInput name="nomineeAge" value={formData.nomineeAge} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.nomineeAge && <p className="error">{errors.nomineeAge}</p>}
+//                   </div>
+//                 </div>
+
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={() => setActiveTab(2)}>
+//                     Back
+//                   </button>
+//                   <button type="button" className="submit-button" onClick={handleNextTab}>
+//                     Next
+//                   </button>
+//                 </div>
+//               </>
+//             )}
+
+//             {activeTab === 4 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Payment Type</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon">
+//                         <CIcon icon={cilBank} />
+//                       </CInputGroupText>
+//                       <CFormSelect name="type" value={formData.type} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="cash">Cash</option>
+//                         <option value="finance">Finance</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.type && <p className="error">{errors.type}</p>}
+//                   </div>
+
+//                   {formData.type === 'finance' && (
+//                     <>
+//                       <div className="input-box">
+//                         <div className="details-container">
+//                           <span className="details">Financer Name</span>
+//                           <span className="required">*</span>
+//                         </div>
+//                         <CInputGroup>
+//                           <CInputGroupText className="input-icon">
+//                             <CIcon icon={cilInstitution} />
+//                           </CInputGroupText>
+//                           <CFormSelect 
+//                             name="financer_id" 
+//                             value={formData.financer_id} 
+//                             onChange={handleChange}
+//                             disabled={!isEditMode && !subdealerBranch}
+//                           >
+//                             <option value="">-Select Financer-</option>
+//                             {financers.length > 0 ? (
+//                               financers
+//                                 .filter(financer => {
+//                                   if (isEditMode) return true;
+//                                   if (!subdealerBranch) return false;
+//                                   return financer.branchRates.some(rate => rate.branchId === subdealerBranch);
+//                                 })
+//                                 .map((financer) => {
+//                                   const branchRate = financer.branchRates.find(
+//                                     rate => rate.branchId === subdealerBranch
+//                                   );
+                                  
+//                                   return (
+//                                     <option key={financer._id} value={financer._id}>
+//                                       {financer.financeProviderDetails.name}
+//                                     </option>
+//                                   );
+//                                 })
+//                             ) : (
+//                               <option value="" disabled>No financers available</option>
+//                             )}
+//                           </CFormSelect>
+//                         </CInputGroup>
+//                         {errors.financer_id && <p className="error">{errors.financer_id}</p>}
+                        
+//                         {!isEditMode && subdealerBranch && financers.filter(f => 
+//                           f.branchRates.some(rate => rate.branchId === subdealerBranch)
+//                         ).length === 0 && (
+//                           <small className="text-muted">No financers available for this subdealer's branch</small>
+//                         )}
+//                       </div>
+
+//                       {isEditMode && (
+//                         <>
+//                           <div className="input-box">
+//                             <div className="details-container">
+//                               <span className="details">GC Applicable</span>
+//                               <span className="required">*</span>
+//                             </div>
+//                             <CInputGroup>
+//                               <CInputGroupText className="input-icon">
+//                                 <CIcon icon={cilTask} />
+//                               </CInputGroupText>
+//                               <CFormSelect 
+//                                 name="gc_applicable" 
+//                                 value={formData.gc_applicable} 
+//                                 onChange={handleChange}
+//                               >
+//                                 <option value="">-Select-</option>
+//                                 <option value={true}>Yes</option>
+//                                 <option value={false}>No</option>
+//                               </CFormSelect>
+//                             </CInputGroup>
+//                             {errors.gc_applicable && <p className="error">{errors.gc_applicable}</p>}
+//                           </div>
+
+//                           {formData.gc_applicable && (
+//                             <div className="input-box">
+//                               <div className="details-container">
+//                                 <span className="details">GC Amount</span>
+//                                 {selectedFinancerGC > 0 && (
+//                                   <span className="text-muted small ms-2">
+//                                     (Rate: ₹{selectedFinancerGC})
+//                                   </span>
+//                                 )}
+//                               </div>
+//                               <CInputGroup>
+//                                 <CInputGroupText className="input-icon">
+//                                   <CIcon icon={cilMoney} />
+//                                 </CInputGroupText>
+//                                 <CFormInput 
+//                                   name="gc_amount" 
+//                                   type="number"
+//                                   value={formData.gc_amount} 
+//                                   onChange={handleChange}
+//                                   placeholder={selectedFinancerGC > 0 ? `Suggested: ₹${selectedFinancerGC}` : "Enter GC amount"}
+//                                 />
+//                               </CInputGroup>
+//                               {errors.gc_amount && <p className="error">{errors.gc_amount}</p>}
+//                             </div>
+//                           )}
+//                         </>
+//                       )}
+//                     </>
+//                   )}
+//                 </div>
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={() => setActiveTab(3)}>
+//                     Back
+//                   </button>
+//                   <button type="button" className="submit-button" onClick={handleNextTab}>
+//                     Next
+//                   </button>
+//                 </div>
+//               </>
+//             )}
+
+//             {activeTab === 5 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+//                     <div style={{ flex: '1', minWidth: '250px' }}>
+//                       <span className="details">Note</span>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon">
+//                           <CIcon icon={cilList} />
+//                         </CInputGroupText>
+//                         <CFormInput name="note" value={formData.note} onChange={handleChange} />
+//                       </CInputGroup>
+//                     </div>
+
+//                     {/* Global Discount — NEW mode only */}
+//                     {!isEditMode && (
+//                       <div style={{ flex: '1', minWidth: '250px' }}>
+//                         <div className="details-container">
+//                           <span className="details">Total Discount Amount (₹)</span>
+//                         </div>
+//                         <CInputGroup>
+//                           <CInputGroupText className="input-icon">
+//                             <CIcon icon={cilMoney} />
+//                           </CInputGroupText>
+//                           <CFormInput 
+//                             type="number" 
+//                             step="1" 
+//                             min="0" 
+//                             value={globalDiscount} 
+//                             onChange={(e) => handleGlobalDiscountChange(e.target.value)} 
+//                             placeholder="Enter total discount amount" 
+//                           />
+//                         </CInputGroup>
+//                         <small className="text-muted">Discount will be distributed based on discount priority and percentage</small>
+//                         {errors.globalDiscount && <p className="error">{errors.globalDiscount}</p>}
+//                       </div>
+//                     )}
+
+//                     <div style={{ flex: '1', minWidth: '250px', textAlign: 'right' }}>
+//                       <div className="details" style={{ marginBottom: '5px', display: 'block' }}>Total Deal Amount</div>
+//                       <div style={{ 
+//                         display: 'inline-block',
+//                         backgroundColor: '#f8f9fa',
+//                         padding: '10px 15px',
+//                         borderRadius: '5px',
+//                         border: '1px solid #dee2e6',
+//                         minWidth: '200px',
+//                         textAlign: 'left'
+//                       }}>
+//                         {(() => {
+//                           const totals = calculateTotalDealAmount();
+//                           const totalBeforeDiscount = parseFloat(totals.totalBeforeDiscount);
+//                           const totalAfterDiscount = parseFloat(totals.totalAfterDiscount);
+//                           const totalDiscount = parseFloat(totals.totalDiscount);
+//                           const subsidyAmount = parseFloat(totals.subsidyAmount);
+//                           const hasDiscount = totals.hasDiscount;
+                          
+//                           return (
+//                             <>
+//                               <div style={{ 
+//                                 display: 'flex', 
+//                                 justifyContent: 'space-between',
+//                                 alignItems: 'center',
+//                                 marginBottom: '3px'
+//                               }}>
+//                                 <small>Original Total:</small>
+//                                 <span>₹{totalBeforeDiscount.toLocaleString('en-IN')}</span>
+//                               </div>
+                              
+//                               {hasDiscount && (
+//                                 <div style={{ 
+//                                   display: 'flex', 
+//                                   justifyContent: 'space-between',
+//                                   alignItems: 'center',
+//                                   marginBottom: '3px',
+//                                   color: '#dc3545',
+//                                   fontSize: '12px'
+//                                 }}>
+//                                   <small>Discount:</small>
+//                                   <span>- ₹{totalDiscount.toLocaleString('en-IN')}</span>
+//                                 </div>
+//                               )}
+                              
+//                               {subsidyAmount > 0 && isEVModel && (
+//                                 <div style={{ 
+//                                   display: 'flex', 
+//                                   justifyContent: 'space-between',
+//                                   alignItems: 'center',
+//                                   marginBottom: '3px',
+//                                   color: '#0d6efd',
+//                                   fontSize: '12px'
+//                                 }}>
+//                                   <small>EV Subsidy:</small>
+//                                   <span>- ₹{subsidyAmount.toLocaleString('en-IN')}</span>
+//                                 </div>
+//                               )}
+                              
+//                               {(hasDiscount || (subsidyAmount > 0 && isEVModel)) && (
+//                                 <div style={{ 
+//                                   width: '100%', 
+//                                   height: '1px', 
+//                                   backgroundColor: '#ccc', 
+//                                   margin: '3px 0',
+//                                   borderTop: '1px dashed #999'
+//                                 }}></div>
+//                               )}
+                              
+//                               <div style={{ 
+//                                 display: 'flex', 
+//                                 justifyContent: 'space-between',
+//                                 alignItems: 'center',
+//                                 marginTop: '3px',
+//                                 fontWeight: 'bold'
+//                               }}>
+//                                 <span>{(hasDiscount || (subsidyAmount > 0 && isEVModel)) ? 'Final Amount:' : 'Total:'}</span>
+//                                 <span style={{ 
+//                                   color: (hasDiscount || (subsidyAmount > 0 && isEVModel)) ? '#198754' : '#198754', 
+//                                   fontSize: '16px' 
+//                                 }}>
+//                                   ₹{totalAfterDiscount.toLocaleString('en-IN')}
+//                                 </span>
+//                               </div>
+//                             </>
+//                           );
+//                         })()}
+//                       </div>
+//                     </div>
+//                   </div>
+//                 </div>
+                
+//                 {selectedHeaders.length > 0 && (
+//                   <div className="model-headers-section" style={{ marginTop: '20px' }}>
+//                     <h5>
+//                       Selected Headers with Prices ({selectedHeaders.length} selected)
+//                       {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>
+//                         (HPA-related options hidden as HPA is disabled)
+//                       </span>}
+//                       {getInsuranceStatusMessage() && (
+//                         <span style={{ 
+//                           color: formData.selfInsurance === true ? '#28a745' : 
+//                                  formData.insuranceFivePlusFive === true ? '#ffc107' : '#6c757d', 
+//                           fontSize: '0.9em', 
+//                           marginLeft: '10px' 
+//                         }}>
+//                           {getInsuranceStatusMessage()}
+//                         </span>
+//                       )}
+//                     </h5>
+                    
+//                     <div className="table-responsive">
+//                       <CTable striped hover responsive>
+//                         <CTableHead>
+//                           <CTableRow>
+//                             <CTableHeaderCell>Particulars</CTableHeaderCell>
+//                             <CTableHeaderCell>HSN</CTableHeaderCell>
+//                             <CTableHeaderCell>Unit Cost (₹)</CTableHeaderCell>
+//                             <CTableHeaderCell>Discount (₹)</CTableHeaderCell>
+//                             <CTableHeaderCell>Taxable (₹)</CTableHeaderCell>
+//                             <CTableHeaderCell>CGST %</CTableHeaderCell>
+//                             <CTableHeaderCell>CGST Amount (₹)</CTableHeaderCell>
+//                             <CTableHeaderCell>SGST %</CTableHeaderCell>
+//                             <CTableHeaderCell>SGST Amount (₹)</CTableHeaderCell>
+//                             <CTableHeaderCell>LINE TOTAL (₹)</CTableHeaderCell>
+//                           </CTableRow>
+//                         </CTableHead>
+//                         <CTableBody>
+//                           {selectedHeaders.map((item) => {
+//                             const headerId = item._id;
+//                             const headerKey = item.header_key || '';
+//                             const isMandatory = item.is_mandatory;
+                            
+//                             const isHPAHeader = headerKey.startsWith('HP') || 
+//                                                 headerKey.startsWith('HPA') ||
+//                                                 headerKey.toLowerCase().includes('hypothecation') ||
+//                                                 headerKey.toLowerCase().includes('loan');
+                            
+//                             const shouldShowHeader = formData.hpa || !isHPAHeader;
+                            
+//                             if (!shouldShowHeader) {
+//                               return null;
+//                             }
+
+//                             const isExShowroomHeader = headerKey === 'Ex-Showroom Price' || 
+//                                                        headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' || 
+//                                                        headerKey === 'Ex-Showroom CSD';
+
+//                             let discountValue;
+//                             if (isEditMode) {
+//                               discountValue = headerDiscounts[headerId] !== undefined 
+//                                 ? headerDiscounts[headerId].toString()
+//                                 : '';
+//                             } else {
+//                               discountValue = discountDistribution[headerId] !== undefined 
+//                                 ? discountDistribution[headerId].toString()
+//                                 : '';
+//                             }
+                            
+//                             const headerPrice = item.value || 0;
+//                             const discountAmount = discountValue !== '' ? parseFloat(discountValue) : 0;
+                            
+//                             const gstRate = item.metadata?.gst_rate ? parseFloat(item.metadata.gst_rate) : 0;
+//                             const hsnCode = item.metadata?.hsn_code || 'N/A';
+                            
+//                             const taxable = calculateTaxableAmount(headerPrice, discountAmount, gstRate, formData.customer_type);
+                            
+//                             const { cgstAmount, sgstAmount, cgstRate, sgstRate } = calculateGST(taxable, gstRate, formData.customer_type);
+                            
+//                             let lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+                            
+//                             // For Ex-Showroom, subtract subsidy from line total ONLY for EV models with subsidy
+//                             if (isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0) {
+//                               lineTotal = lineTotal - (parseFloat(formData.subsidy_amount) || 0);
+//                             }
+
+//                             return (
+//                               <CTableRow key={headerId}>
+//                                 <CTableDataCell>
+//                                   <div style={{ display: 'flex', alignItems: 'center' }}>
+//                                     <span>
+//                                       {headerKey} {isMandatory ? '(Mandatory)' : '(Optional)'}
+//                                       {isHPAHeader && ' (HPA-related)'}
+//                                       {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 && ' (Subsidy applied)'}
+//                                     </span>
+//                                   </div>
+//                                 </CTableDataCell>
+//                                 <CTableDataCell>{hsnCode}</CTableDataCell>
+//                                 <CTableDataCell>₹{headerPrice.toFixed(2)}</CTableDataCell>
+//                                 <CTableDataCell>
+//                                   {isEditMode ? (
+//                                     <CFormInput
+//                                       type="number"
+//                                       min="0"
+//                                       step="0.01"
+//                                       placeholder="Enter discount"
+//                                       value={discountValue}
+//                                       onChange={(e) => handleHeaderDiscountChange(headerId, e.target.value)}
+//                                       style={{ width: '150px' }}
+//                                       onWheel={(e) => e.target.blur()}
+//                                     />
+//                                   ) : (
+//                                     <strong style={{ color: discountAmount > 0 ? '#28a745' : '#6c757d' }}>
+//                                       ₹{discountAmount.toFixed(2)}
+//                                     </strong>
+//                                   )}
+//                                   {errors[`discount_${headerId}`] && (
+//                                     <small className="text-danger d-block">{errors[`discount_${headerId}`]}</small>
+//                                   )}
+//                                   {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 && discountAmount > 0 && (
+//                                     <div style={{ fontSize: '11px', color: '#28a745', marginTop: '2px' }}>
+//                                       Effective discount after ₹{formData.subsidy_amount} subsidy
+//                                     </div>
+//                                   )}
+//                                 </CTableDataCell>
+//                                 <CTableDataCell>₹{taxable.toFixed(2)}</CTableDataCell>
+//                                 <CTableDataCell>{cgstRate.toFixed(2)}%</CTableDataCell>
+//                                 <CTableDataCell>₹{cgstAmount.toFixed(2)}</CTableDataCell>
+//                                 <CTableDataCell>{sgstRate.toFixed(2)}%</CTableDataCell>
+//                                 <CTableDataCell>₹{sgstAmount.toFixed(2)}</CTableDataCell>
+//                                 <CTableDataCell>
+//                                   <strong>₹{lineTotal.toFixed(2)}</strong>
+//                                   {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 && (
+//                                     <div style={{ fontSize: '11px', color: '#666' }}>
+//                                       (After ₹{formData.subsidy_amount} EV subsidy)
+//                                     </div>
+//                                   )}
+//                                 </CTableDataCell>
+//                               </CTableRow>
+//                             );
+//                           })}
+//                         </CTableBody>
+//                       </CTable>
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={() => setActiveTab(4)}>
+//                     Back
+//                   </button>
+//                   <button type="submit" className="submit-button" disabled={isSubmitting}>
+//                     {isSubmitting ? 'Submitting...' : 'Apply for Approval'}
+//                   </button>
+//                 </div>
+//               </>
+//             )}
+//           </form>
+//         </div>
+//       </div>
+
+//       <style>{`
+//         .headers-grid {
+//           display: grid;
+//           grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+//           gap: 12px;
+//           margin-top: 15px;
+//           max-height: 400px;
+//           overflow-y: auto;
+//           padding: 10px;
+//           border: 1px solid #d8dbe0;
+//           border-radius: 5px;
+//           background-color: #f8f9fa;
+//         }
+//         .header-item {
+//           padding: 8px 10px;
+//           background-color: #ffffff;
+//           border-radius: 4px;
+//           border: 1px solid #e9ecef;
+//           transition: all 0.2s;
+//         }
+//         .header-item:hover {
+//           background-color: #e9ecef;
+//           border-color: #a6b3c0;
+//         }
+//         .header-item .form-check {
+//           margin: 0;
+//         }
+//         .header-item .form-check-label {
+//           font-size: 14px;
+//           color: #333;
+//           cursor: pointer;
+//         }
+//         .text-muted {
+//           color: #6c757d;
+//           font-size: 12px;
+//           margin-top: 5px;
+//           display: block;
+//         }
+//         .react-select-container {
+//           width: 100%;
+//         }
+//         .react-select__control {
+//           border: 1px solid #d8dbe0;
+//           min-height: 38px;
+//           border-radius: 0.25rem;
+//         }
+//         .react-select__control:hover {
+//           border-color: #a6b3c0;
+//         }
+//         .react-select__control--is-focused {
+//           border-color: #a6b3c0;
+//           box-shadow: 0 0 0 0.2rem rgba(50, 31, 219, 0.25);
+//         }
+//         .react-select__menu {
+//           z-index: 9999;
+//         }
+//       `}</style>
+//     </div>
+//   );
+// }
+
+// export default SubdealerNewBooking;
+
+
+
+
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import '../../../css/form.css';
 import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CFormCheck, CTable, CTableHead, CTableRow, CTableHeaderCell, CTableBody, CTableDataCell, CAlert } from '@coreui/react';
@@ -27254,7 +30003,7 @@ function SubdealerNewBooking() {
   // State for subdealer branch
   const [subdealerBranch, setSubdealerBranch] = useState(null);
 
-  // ===== State for global discount distribution (NEW mode only) =====
+  // ===== State for global discount distribution (for both NEW and EDIT mode) =====
   const [globalDiscount, setGlobalDiscount] = useState('');
   const [discountDistribution, setDiscountDistribution] = useState({});
 
@@ -27263,35 +30012,8 @@ function SubdealerNewBooking() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // Logger utility
-  const logStep = (step, data) => {
-    console.log(`\n=== ${step} ===`);
-    console.log(JSON.stringify(data, null, 2));
-    console.log('='.repeat(step.length + 8));
-  };
-
-  const logHeaderDetails = (headers, source) => {
-    console.log(`\n--- Headers from ${source} ---`);
-    headers.forEach((item, index) => {
-      console.log(`[${index + 1}] Header ID: ${item._id || item.header?._id}`);
-      console.log(`    Name: ${item.header_key || item.header?.header_key}`);
-      console.log(`    Price: ₹${item.value}`);
-      console.log(`    Mandatory: ${item.is_mandatory || item.header?.is_mandatory}`);
-      console.log(`    Discount Allowed: ${item.is_discount || item.header?.is_discount}`);
-      console.log(`    Discount Priority: ${item.discount_priority || item.header?.discount_priority}`);
-      console.log(`    Discount Percentage: ${item.discount_percentage || item.header?.discount_percentage}%`);
-      console.log(`    GST Rate: ${item.metadata?.gst_rate || item.header?.metadata?.gst_rate || 0}%`);
-      console.log(`    HSN: ${item.metadata?.hsn_code || item.header?.metadata?.hsn_code || 'N/A'}`);
-    });
-    console.log('---');
-  };
-
   // ===== Function to distribute discount - SIMPLE PERCENTAGE OF TOTAL =====
   const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
-    console.log('=== calculateDiscountDistribution called ===');
-    console.log('totalDiscountAmount:', totalDiscountAmount);
-    console.log('headersList:', headersList.map(h => ({ name: h.header_key, discount_percentage: h.discount_percentage, is_discount: h.is_discount, value: h.value })));
-    
     if (!headersList || headersList.length === 0) return {};
     
     // Get discountable headers with unit cost > 0, sorted by priority
@@ -27300,13 +30022,10 @@ function SubdealerNewBooking() {
         const hasDiscountPercentage = price.discount_percentage !== undefined && 
                                      price.discount_percentage !== null && 
                                      price.discount_percentage !== '';
-        const isDiscountable = price.is_discount === true;
         const unitCost = parseFloat(price.value) || 0;
         const unitCostValid = unitCost > 0;
         
-        console.log(`Filtering ${price.header_key}: hasDiscountPercentage=${hasDiscountPercentage}, isDiscountable=${isDiscountable}, unitCost=${unitCost}, valid=${unitCostValid}`);
-        
-        return hasDiscountPercentage && isDiscountable && unitCostValid;
+        return hasDiscountPercentage && unitCostValid;
       })
       .map(price => {
         let percentage = parseFloat(price.discount_percentage);
@@ -27323,21 +30042,8 @@ function SubdealerNewBooking() {
       })
       .sort((a, b) => (a.discount_priority || 999) - (b.discount_priority || 999));
     
-    console.log('Discountable headers after filtering:', discountableHeaders.map(h => ({
-      name: h.header_key,
-      priority: h.discount_priority,
-      percentage: h.discountPercentage,
-      unitCost: h.unitCost
-    })));
-    
-    if (discountableHeaders.length === 0) {
-      console.log('No discountable headers found');
-      return {};
-    }
-    if (!totalDiscountAmount || totalDiscountAmount <= 0) {
-      console.log('No discount amount');
-      return {};
-    }
+    if (discountableHeaders.length === 0) return {};
+    if (!totalDiscountAmount || totalDiscountAmount <= 0) return {};
     
     const distribution = {};
     let remainingDiscount = totalDiscountAmount;
@@ -27352,12 +30058,9 @@ function SubdealerNewBooking() {
       // Calculate discount: Total Discount × (Percentage / 100)
       let calculatedDiscount = totalDiscountAmount * (header.discountPercentage / 100);
       
-      console.log(`Header ${header.header_key}: percentage=${header.discountPercentage}%, calculated=${calculatedDiscount}, unitCost=${header.unitCost}`);
-      
       // Cap at unit cost
       if (calculatedDiscount > header.unitCost) {
         calculatedDiscount = header.unitCost;
-        console.log(`  Capped at unit cost: ${calculatedDiscount}`);
       }
       
       // Don't exceed remaining discount
@@ -27365,44 +30068,61 @@ function SubdealerNewBooking() {
       
       distribution[header.header_id] = discountToApply;
       remainingDiscount -= discountToApply;
-      
-      console.log(`  Applied: ${discountToApply}, Remaining: ${remainingDiscount}`);
     }
     
-    console.log('Final distribution:', distribution);
+    // If there's remaining discount, add it to the first Ex-Showroom header found
+    if (remainingDiscount > 0) {
+      // Find any Ex-Showroom header (case insensitive pattern matching)
+      const exShowroomHeader = headersList.find(price => {
+        const headerKey = price.header_key || '';
+        return /ex-showroom|ex showroom/i.test(headerKey);
+      });
+      
+      if (exShowroomHeader) {
+        const exShowroomHeaderId = exShowroomHeader._id;
+        distribution[exShowroomHeaderId] = (distribution[exShowroomHeaderId] || 0) + remainingDiscount;
+      }
+    }
+    
     return distribution;
   };
 
-  // ===== Handle global discount change (NEW mode only) =====
+  // ===== Handle global discount change (for both NEW and EDIT mode) =====
   const handleGlobalDiscountChange = (value) => {
-    console.log('=== handleGlobalDiscountChange called ===');
-    console.log('value:', value);
-    
-    const discountAmount = parseFloat(value) || 0;
-    setGlobalDiscount(value);
-    
-    if (discountAmount > 0) {
-      const selectedHeaders = getSelectedHeadersWithPrices();
-      console.log('Selected headers for discount distribution:', selectedHeaders);
-      const distribution = calculateDiscountDistribution(discountAmount, selectedHeaders);
-      setDiscountDistribution(distribution);
-      
-      // Update headerDiscounts with distributed amounts
-      const newHeaderDiscounts = { ...headerDiscounts };
-      Object.keys(distribution).forEach(headerId => {
-        newHeaderDiscounts[headerId] = distribution[headerId];
-      });
-      setHeaderDiscounts(newHeaderDiscounts);
-      console.log('Updated headerDiscounts with distribution:', newHeaderDiscounts);
-    } else {
+    // Allow empty string for clearing the input
+    if (value === '') {
+      setGlobalDiscount('');
       setDiscountDistribution({});
-      // Reset all discounts
       const resetDiscounts = { ...headerDiscounts };
       Object.keys(resetDiscounts).forEach(headerId => {
         resetDiscounts[headerId] = '';
       });
       setHeaderDiscounts(resetDiscounts);
-      console.log('Reset headerDiscounts');
+      return;
+    }
+    
+    const discountAmount = parseFloat(value);
+    if (isNaN(discountAmount)) return;
+    
+    setGlobalDiscount(value);
+    
+    if (discountAmount > 0) {
+      const selectedHeaders = getSelectedHeadersWithPrices();
+      const distribution = calculateDiscountDistribution(discountAmount, selectedHeaders);
+      setDiscountDistribution(distribution);
+      
+      const newHeaderDiscounts = { ...headerDiscounts };
+      Object.keys(distribution).forEach(headerId => {
+        newHeaderDiscounts[headerId] = distribution[headerId];
+      });
+      setHeaderDiscounts(newHeaderDiscounts);
+    } else {
+      setDiscountDistribution({});
+      const resetDiscounts = { ...headerDiscounts };
+      Object.keys(resetDiscounts).forEach(headerId => {
+        resetDiscounts[headerId] = '';
+      });
+      setHeaderDiscounts(resetDiscounts);
     }
   };
 
@@ -27465,13 +30185,9 @@ function SubdealerNewBooking() {
   };
 
   useEffect(() => {
-    console.log('=== Component Mounted ===');
-    console.log('isEditMode:', isEditMode);
-    console.log('id:', id);
     fetchUserProfile();
     
     if (id && !isInitialBookingLoad.current) {
-      console.log('Loading booking for edit mode, ID:', id);
       isInitialBookingLoad.current = true;
       fetchBookingDetails(id);
       setIsEditMode(true);
@@ -27528,7 +30244,6 @@ function SubdealerNewBooking() {
           branchRates: item.branchRates || []
         }));
         
-        console.log('Financers list:', financersList);
         setFinancers(financersList);
         
         if (isEditMode && formData.financer_id) {
@@ -27556,7 +30271,6 @@ function SubdealerNewBooking() {
   }, [subdealerBranch, isEditMode, formData.financer_id]);
 
   const fetchUserProfile = async () => {
-    console.log('=== fetchUserProfile called ===');
     try {
       const response = await axiosInstance.get('/auth/me');
       const userData = response.data.data;
@@ -27570,10 +30284,8 @@ function SubdealerNewBooking() {
         role.name === 'SUBDEALER' || role.name === 'Subdealer'
       );
       setIsSubdealerUser(userIsSubdealer);
-      console.log('isSubdealerUser:', userIsSubdealer);
       
       if (userIsSubdealer && userSubdealer && userSubdealer._id) {
-        console.log('Auto-selecting subdealer:', userSubdealer.name);
         setFormData(prev => ({
           ...prev,
           subdealer: userSubdealer._id
@@ -27582,7 +30294,6 @@ function SubdealerNewBooking() {
         
         if (userSubdealer.branch) {
           setSubdealerBranch(userSubdealer.branch);
-          console.log('Subdealer branch:', userSubdealer.branch);
         }
         
         fetchSubdealerHeaders(userSubdealer._id);
@@ -27613,9 +30324,6 @@ function SubdealerNewBooking() {
   };
 
   const fetchSubdealerHeaders = async (subdealerId) => {
-    console.log('=== fetchSubdealerHeaders called ===');
-    console.log('subdealerId:', subdealerId);
-    
     if (!subdealerId) {
       setSubdealerHeaders([]);
       return;
@@ -27624,13 +30332,10 @@ function SubdealerNewBooking() {
     setLoadingSubdealerHeaders(true);
     try {
       const response = await axiosInstance.get(`/subdealers/${subdealerId}/headers`);
-      console.log('Subdealer headers response:', response.data);
       
       if (response.data.data && response.data.data.headers) {
         const headers = response.data.data.headers;
         setSubdealerHeaders(headers);
-        console.log('Subdealer headers set:', headers.length);
-        logStep('Fetched Subdealer Headers', headers.map(h => ({ id: h._id, name: h.header_key })));
       }
     } catch (error) {
       console.error('Error fetching subdealer headers:', error);
@@ -27643,41 +30348,79 @@ function SubdealerNewBooking() {
   };
 
   const fetchBookingDetails = async (bookingId) => {
-  console.log('=== fetchBookingDetails called ===');
-  console.log('bookingId:', bookingId);
-  
   try {
     const response = await axiosInstance.get(`/bookings/${bookingId}`);
     const bookingData = response.data.data;
 
-    console.log('Booking data received:', bookingData);
+    // Get subsidy amount and isEV
+    const isEV = bookingData.model?.type === 'EV';
+    const subsidyAmount = bookingData.subsidyAmount || bookingData.subsidy_amount || 0;
     
-    // STEP 1: Extract discounts from priceComponents FIRST
+    setIsEVModel(isEV);
+    
+    // Load global discount from the correct location in the response
+    let globalDiscountAmount = 0;
+    if (bookingData.totalDiscountDetails?.globalDiscount?.applied && 
+        bookingData.totalDiscountDetails.globalDiscount.totalAmount) {
+      globalDiscountAmount = bookingData.totalDiscountDetails.globalDiscount.totalAmount;
+    } else if (bookingData.globalDiscount) {
+      globalDiscountAmount = bookingData.globalDiscount;
+    }
+    
+    // Set the global discount state
+    setGlobalDiscount(globalDiscountAmount.toString());
+    
+    const priceComponents = bookingData.priceComponents || [];
+    setBookingPriceComponents(priceComponents);
+    
+    // IMPORTANT: Map the individual header discounts from priceComponents
     const discountsFromApi = {};
     const bookedHeaderIds = [];
     
-    bookingData.priceComponents.forEach((priceComponent) => {
+    priceComponents.forEach((priceComponent) => {
       if (priceComponent.header && priceComponent.header._id) {
         const headerId = priceComponent.header._id;
-        const discountAmount = priceComponent.discountAmount || 0;
+        const headerKey = priceComponent.header.header_key || '';
+        let discountAmount = priceComponent.discountAmount || 0;
+        
+        // For Ex-Showroom headers, subtract subsidy from discount ONLY for EV models with subsidy
+        const isExShowroomHeader = headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' || 
+                                   headerKey === 'Ex-Showroom Price' || 
+                                   headerKey === 'Ex-Showroom CSD';
+        
+        if (isExShowroomHeader && isEV && subsidyAmount > 0) {
+          discountAmount = Math.max(0, discountAmount - subsidyAmount);
+        }
+        
+        // Store the discount amount for this header
         discountsFromApi[headerId] = discountAmount;
         bookedHeaderIds.push(headerId);
-        console.log(`Found discount for header ${priceComponent.header.header_key} (${headerId}): ₹${discountAmount}`);
       }
     });
     
-    console.log('Discounts extracted from API:', discountsFromApi);
-    
-    // STEP 2: Set headerDiscounts IMMEDIATELY
+    // Set the header discounts from API
     setHeaderDiscounts(discountsFromApi);
     
-    // STEP 3: Set form data
+    // If global discount is applied, also calculate distribution for display
+    if (globalDiscountAmount > 0) {
+      // Get the selected headers with their discount percentages
+      const selectedHeaders = getSelectedHeadersWithPrices();
+      const distribution = calculateDiscountDistribution(globalDiscountAmount, selectedHeaders);
+      setDiscountDistribution(distribution);
+    } else {
+      // If no global discount, create distribution from individual discounts for display
+      const distribution = {};
+      Object.entries(discountsFromApi).forEach(([headerId, amount]) => {
+        if (parseFloat(amount) > 0) {
+          distribution[headerId] = parseFloat(amount);
+        }
+      });
+      setDiscountDistribution(distribution);
+    }
+    
     const bookingVerticle = bookingData.verticles && bookingData.verticles.length > 0 
       ? bookingData.verticles[0]._id || bookingData.verticles[0] 
       : '';
-
-    const isEV = bookingData.model?.type === 'EV';
-    setIsEVModel(isEV);
 
     if (bookingData.subdealer?.branch) {
       setSubdealerBranch(bookingData.subdealer.branch);
@@ -27719,7 +30462,7 @@ function SubdealerNewBooking() {
       insuranceFivePlusFive: bookingData.insuranceFivePlusFive || false,
       note: bookingData.note || '',
       uncheckedHeaders: [],
-      subsidy_amount: isEV ? (bookingData.subsidy_amount || '') : '',
+      subsidy_amount: isEV ? (bookingData.subsidy_amount || bookingData.subsidyAmount || '') : '',
       rto_code: bookingData.rtoCode || bookingData.rto_code || ''
     };
 
@@ -27732,23 +30475,16 @@ function SubdealerNewBooking() {
       setSelectedModelName(bookingData.model.model_name);
     }
 
-    // STEP 4: Fetch models and subdealer headers (but DON'T reset discounts)
     await fetchModels(bookingData.customerType, bookingData.subdealer?._id);
     
     if (bookingData.subdealer?._id) {
       await fetchSubdealerHeaders(bookingData.subdealer._id);
     }
     
-    // STEP 5: Fetch model prices with a flag that we're in edit mode
     if (bookingData.model?.id) {
-      await fetchModelPrices(bookingData.model.id, true); // Pass true for isEditMode
+      await fetchModelPrices(bookingData.model.id, true);
       fetchModelColors(bookingData.model.id);
     }
-    
-    // STEP 6: Verify discounts are still there
-    setTimeout(() => {
-      console.log('Final headerDiscounts after all loading:', headerDiscounts);
-    }, 500);
     
   } catch (error) {
     console.error('Error fetching booking details:', error);
@@ -27756,13 +30492,7 @@ function SubdealerNewBooking() {
   }
 };
 
-  // Function to fetch model prices from the API
- const fetchModelPrices = async (modelId, isEditModeParam = false) => {
-  console.log('=== fetchModelPrices called ===');
-  console.log('modelId:', modelId);
-  console.log('isEditModeParam:', isEditModeParam);
-  console.log('Current headerDiscounts before fetch:', headerDiscounts);
-  
+  const fetchModelPrices = async (modelId, isEditModeParam = false) => {
   try {
     const response = await axiosInstance.get(`/models/${modelId}`);
     const modelData = response.data.data.model;
@@ -27779,6 +30509,7 @@ function SubdealerNewBooking() {
         discount_percentage: price.discount_percentage,
         category_key: price.category_key,
         metadata: price.metadata,
+        _id: price.header_id
       };
     });
     
@@ -27786,8 +30517,8 @@ function SubdealerNewBooking() {
     setSelectedModelHeaders(transformedPrices);
     setModelDetails(modelData);
 
-    // CRITICAL: Only initialize discounts if NOT in edit mode
     if (!isEditModeParam && !isEditMode) {
+      // For new mode: initialize empty discounts
       const initialDiscounts = {};
       transformedPrices.forEach(price => {
         if (price.header_id) {
@@ -27795,20 +30526,10 @@ function SubdealerNewBooking() {
         }
       });
       setHeaderDiscounts(initialDiscounts);
-      console.log('Create mode: Initialized empty discounts');
-    } else {
-      // Edit mode: Preserve existing discounts, only add missing headers
-      console.log('Edit mode: Preserving existing discounts');
-      setHeaderDiscounts(prev => {
-        const updated = { ...prev };
-        transformedPrices.forEach(price => {
-          if (price.header_id && updated[price.header_id] === undefined) {
-            updated[price.header_id] = 0;
-          }
-        });
-        console.log('Preserved discounts:', updated);
-        return updated;
-      });
+    } else if (isEditModeParam || isEditMode) {
+      // For edit mode: don't override existing discounts from API
+      // The discounts are already set in fetchBookingDetails
+      console.log('Edit mode - keeping existing discounts');
     }
   } catch (error) {
     console.error('Failed to fetch model prices:', error);
@@ -27903,7 +30624,7 @@ function SubdealerNewBooking() {
       }
     });
 
-    if (!isEditMode && globalDiscount && parseFloat(globalDiscount) < 0) {
+    if (globalDiscount && parseFloat(globalDiscount) < 0) {
       newErrors.globalDiscount = 'Discount must be a positive number';
     }
 
@@ -28112,13 +30833,6 @@ function SubdealerNewBooking() {
         [name]: booleanValue 
       }));
 
-      if (name === 'rto_amount') {
-        const numValue = value === '' ? '' : parseFloat(value);
-        setFormData((prevData) => ({ ...prevData, [name]: numValue }));
-        setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
-        return;
-      }
-      
       if (name === 'hpa' && !booleanValue) {
         setTimeout(() => {
           const filteredHeaders = getAllAvailableHeaders();
@@ -28265,7 +30979,6 @@ function SubdealerNewBooking() {
         fetchModelPrices(value);
         fetchModelColors(value);
         
-        // Reset global discount when model changes
         setGlobalDiscount('');
         setDiscountDistribution({});
       }
@@ -28279,10 +30992,6 @@ function SubdealerNewBooking() {
   };
 
   const handleHeaderSelection = (headerId, isChecked) => {
-    console.log('=== handleHeaderSelection called ===');
-    console.log('headerId:', headerId);
-    console.log('isChecked:', isChecked);
-    
     setFormData((prev) => {
       if (isChecked) {
         return {
@@ -28301,13 +31010,8 @@ function SubdealerNewBooking() {
   };
 
   const handleHeaderDiscountChange = (headerId, value) => {
-    console.log('=== handleHeaderDiscountChange called ===');
-    console.log('headerId:', headerId);
-    console.log('value:', value);
-    
     setHeaderDiscounts(prev => {
       const updated = { ...prev, [headerId]: value };
-      console.log('Updated headerDiscounts:', updated);
       return updated;
     });
   };
@@ -28335,13 +31039,7 @@ function SubdealerNewBooking() {
   };
 
   const getAllAvailableHeaders = () => {
-    console.log('=== getAllAvailableHeaders called ===');
-    console.log('formData.model_id:', formData.model_id);
-    console.log('subdealerHeaders.length:', subdealerHeaders.length);
-    console.log('modelPrices.length:', modelPrices.length);
-    
     if (!formData.model_id || subdealerHeaders.length === 0 || modelPrices.length === 0) {
-      console.log('Missing data, returning empty array');
       return [];
     }
 
@@ -28355,9 +31053,6 @@ function SubdealerNewBooking() {
     const availableHeaders = subdealerHeaders
       .filter(header => {
         const hasPrice = priceMap[header._id];
-        if (!hasPrice) {
-          console.log(`Header ${header.header_key} has no price, filtering out`);
-        }
         return hasPrice;
       })
       .map(header => {
@@ -28367,7 +31062,7 @@ function SubdealerNewBooking() {
           header_key: header.header_key || header.name || 'Unknown',
           value: priceData.value || 0,
           is_mandatory: priceData.is_mandatory || false,
-          is_discount: priceData.is_discount !== undefined ? priceData.is_discount : true,
+          is_discount: true,
           discount_priority: priceData.discount_priority,
           discount_percentage: priceData.discount_percentage,
           category_key: priceData.category_key || '',
@@ -28375,91 +31070,65 @@ function SubdealerNewBooking() {
         };
       });
     
-    console.log('Available headers before filters:', availableHeaders.length);
-    
-    // Apply HPA and insurance filters
     const filteredHeaders = getFilteredHeaders(availableHeaders);
-    console.log('Available headers after filters:', filteredHeaders.length);
     
     return filteredHeaders;
   };
 
   const getSelectedHeadersWithPrices = () => {
-    console.log('=== getSelectedHeadersWithPrices called ===');
-    console.log('isEditMode:', isEditMode);
-    console.log('formData.model_id:', formData.model_id);
-    console.log('subdealerHeaders.length:', subdealerHeaders.length);
-    console.log('modelPrices.length:', modelPrices.length);
-    console.log('Current headerDiscounts:', headerDiscounts);
-    
-    if (!formData.model_id || subdealerHeaders.length === 0 || modelPrices.length === 0) {
-      console.log('Missing data, returning empty array');
-      return [];
+  if (!formData.model_id || subdealerHeaders.length === 0 || modelPrices.length === 0) {
+    return [];
+  }
+
+  const priceMap = {};
+  modelPrices.forEach(price => {
+    if (price.header_id) {
+      priceMap[price.header_id] = price;
     }
+  });
 
-    // Create a map of header_id to price data for quick lookup
-    const priceMap = {};
-    modelPrices.forEach(price => {
-      if (price.header_id) {
-        priceMap[price.header_id] = price;
+  let selectedHeaders = subdealerHeaders
+    .filter(header => {
+      const headerId = header._id;
+      const priceData = priceMap[headerId];
+      const hasPrice = !!priceData;
+      
+      if (!hasPrice) return false;
+      
+      if (isEditMode) {
+        const isInOptionalComponents = formData.optionalComponents.includes(headerId);
+        const isExplicitlyUnchecked = formData.uncheckedHeaders?.includes(headerId);
+        const isSelected = priceData.is_mandatory || (isInOptionalComponents && !isExplicitlyUnchecked);
+        return isSelected;
+      } else {
+        const isExplicitlyUnchecked = formData.uncheckedHeaders?.includes(headerId);
+        const isSelected = priceData.is_mandatory || !isExplicitlyUnchecked;
+        return isSelected;
       }
+    })
+    .map(header => {
+      const priceData = priceMap[header._id];
+      return {
+        _id: header._id,
+        header_key: header.header_key || header.name || 'Unknown',
+        value: priceData.value || 0,
+        is_mandatory: priceData.is_mandatory || false,
+        is_discount: true,
+        discount_priority: priceData.discount_priority,
+        discount_percentage: priceData.discount_percentage,
+        category_key: priceData.category_key || '',
+        metadata: priceData.metadata || {}
+      };
     });
-
-    // Filter subdealer headers to only those that:
-    // 1. Have prices in the model
-    // 2. Are selected (in optionalComponents or mandatory)
-    let selectedHeaders = subdealerHeaders
-      .filter(header => {
-        const headerId = header._id;
-        const priceData = priceMap[headerId];
-        const hasPrice = !!priceData;
-        
-        if (!hasPrice) return false;
-        
-        // Check if header is selected
-        if (isEditMode) {
-          const isInOptionalComponents = formData.optionalComponents.includes(headerId);
-          const isExplicitlyUnchecked = formData.uncheckedHeaders?.includes(headerId);
-          const isSelected = priceData.is_mandatory || (isInOptionalComponents && !isExplicitlyUnchecked);
-          console.log(`Header ${header.header_key}: mandatory=${priceData.is_mandatory}, inOptional=${isInOptionalComponents}, unchecked=${isExplicitlyUnchecked}, selected=${isSelected}`);
-          return isSelected;
-        } else {
-          const isExplicitlyUnchecked = formData.uncheckedHeaders?.includes(headerId);
-          const isSelected = priceData.is_mandatory || !isExplicitlyUnchecked;
-          return isSelected;
-        }
-      })
-      .map(header => {
-        const priceData = priceMap[header._id];
-        return {
-          _id: header._id,
-          header_key: header.header_key || header.name || 'Unknown',
-          value: priceData.value || 0,
-          is_mandatory: priceData.is_mandatory || false,
-          is_discount: priceData.is_discount !== undefined ? priceData.is_discount : true,
-          discount_priority: priceData.discount_priority,
-          discount_percentage: priceData.discount_percentage,
-          category_key: priceData.category_key || '',
-          metadata: priceData.metadata || {}
-        };
-      });
-    
-    // Apply HPA and insurance filters
-    selectedHeaders = getFilteredHeaders(selectedHeaders);
-    
-    console.log('Selected headers count:', selectedHeaders.length);
-    selectedHeaders.forEach(h => {
-      const discount = headerDiscounts[h._id] || 0;
-      console.log(`${h.header_key}: id=${h._id}, discount=${discount}, is_discount=${h.is_discount}, discount_percentage=${h.discount_percentage}`);
-    });
-    
-    return selectedHeaders;
-  };
+  
+  selectedHeaders = getFilteredHeaders(selectedHeaders);
+  
+  return selectedHeaders;
+};
 
   const calculateTotalDealAmount = () => {
     const selectedHeaders = getSelectedHeadersWithPrices();
 
-    // List of headers to exclude from total calculation
     const excludedHeaders = [
       'ON ROAD PRICE (A)',
       'TOTAL ONROAD + ADDON SERVICES',
@@ -28476,55 +31145,44 @@ function SubdealerNewBooking() {
       'ON-ROAD PRICE',
       'FINAL PRICE',
       'LESS:- CENTER SUBSIDY(FAME-II)',
-      'COMPLETE PRICE'
+      'COMPLETE PRICE',
+      'LESS:- CENTER SUBSIDY'
     ];
 
-    // Filter out excluded headers
     const filteredHeaders = selectedHeaders.filter((item) => {
       const headerKey = item.header_key || '';
       return !excludedHeaders.includes(headerKey);
     });
 
-    let totalBeforeDiscount = 0;
+    let totalUnitCost = 0;
     let totalDiscount = 0;
     let subsidyAmount = parseFloat(formData.subsidy_amount) || 0;
     
     filteredHeaders.forEach((item) => {
       const headerPrice = item.value || 0;
-      const gstRate = item.metadata?.gst_rate ? parseFloat(item.metadata.gst_rate) : 0;
+      totalUnitCost += headerPrice;
       
-      const taxable = calculateTaxableAmount(headerPrice, 0, gstRate, formData.customer_type);
-      const { cgstAmount, sgstAmount } = calculateGST(taxable, gstRate, formData.customer_type);
-      const originalLineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+      let discountForThisHeader = 0;
+      const headerId = item._id;
       
-      totalBeforeDiscount += originalLineTotal;
+      if (isEditMode) {
+        discountForThisHeader = headerDiscounts[headerId] !== undefined && headerDiscounts[headerId] !== '' 
+          ? parseFloat(headerDiscounts[headerId]) 
+          : 0;
+      } else {
+        discountForThisHeader = discountDistribution[headerId] || 0;
+      }
+      
+      totalDiscount += discountForThisHeader;
     });
-    
-    if (isEditMode) {
-      Object.values(headerDiscounts).forEach(amount => {
-        const discountAmount = amount !== '' && amount !== null && !isNaN(parseFloat(amount)) ? parseFloat(amount) : 0;
-        totalDiscount += discountAmount;
-      });
-    } else {
-      Object.values(discountDistribution).forEach(amount => { totalDiscount += amount; });
-    }
 
-    const totalAllDiscounts = totalDiscount;
-    let finalTotal = totalBeforeDiscount - totalAllDiscounts;
-    
-    const exShowroomHeader = filteredHeaders.find(item => 
-      item.header_key === 'Ex-Showroom Price'
-    );
-    
-    if (exShowroomHeader && subsidyAmount > 0 && isEVModel) {
-      finalTotal -= subsidyAmount;
-    }
+    let finalTotal = totalUnitCost - totalDiscount - subsidyAmount;
 
     return {
-      totalBeforeDiscount: totalBeforeDiscount.toFixed(2),
+      totalBeforeDiscount: totalUnitCost.toFixed(2),
       totalAfterDiscount: finalTotal.toFixed(2),
-      totalDiscount: totalAllDiscounts.toFixed(2),
-      hasDiscount: totalAllDiscounts > 0,
+      totalDiscount: totalDiscount.toFixed(2),
+      hasDiscount: totalDiscount > 0,
       subsidyAmount: subsidyAmount.toFixed(2)
     };
   };
@@ -28533,10 +31191,6 @@ function SubdealerNewBooking() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    console.log('\n========== BOOKING SUBMISSION START ==========');
-    console.log('Mode:', isEditMode ? 'EDIT' : 'CREATE');
-    console.log('headerDiscounts before submit:', headerDiscounts);
-    
     const requiredFields = [
       'verticle_id',
       'model_id',
@@ -28588,14 +31242,9 @@ function SubdealerNewBooking() {
       return;
     }
 
-    console.log('\n--- STEP 1: Getting selected headers ---');
     const selectedHeaders = getSelectedHeadersWithPrices();
-    console.log(`Total selected headers: ${selectedHeaders.length}`);
-    
     const headersToSubmit = selectedHeaders.map(item => item._id);
-    console.log('Headers to submit (IDs):', headersToSubmit);
     
-    console.log('\n--- STEP 2: Processing Discounts ---');
     let headerDiscountsArray = [];
     
     if (isEditMode) {
@@ -28603,9 +31252,6 @@ function SubdealerNewBooking() {
         .filter(([headerId, value]) => {
           const isSelected = headersToSubmit.includes(headerId);
           const hasDiscount = value !== '' && value !== null && value !== undefined && !isNaN(parseFloat(value)) && parseFloat(value) > 0;
-          if (isSelected && hasDiscount) {
-            console.log(`Discount for header ${headerId}: ₹${value}`);
-          }
           return isSelected && hasDiscount;
         })
         .map(([headerId, value]) => ({
@@ -28624,9 +31270,6 @@ function SubdealerNewBooking() {
           discountAmount: parseFloat(value) || 0
         }));
     }
-
-    console.log(`Total discounts to submit: ${headerDiscountsArray.length}`);
-    console.log('Discounts to submit:', headerDiscountsArray);
 
     const paymentDetails = {
       type: formData.type.toUpperCase(),
@@ -28678,13 +31321,10 @@ function SubdealerNewBooking() {
       selfInsurance: formData.selfInsurance === true,
       insuranceFivePlusFive: formData.insuranceFivePlusFive === true,
       note: formData.note || '',
+      globalDiscount: globalDiscount ? parseFloat(globalDiscount) : 0,
       ...(formData.rto_type === 'MH' && formData.rto_code && { rto_code: formData.rto_code }),
       ...(isEVModel && { subsidy_amount: formData.subsidy_amount ? parseFloat(formData.subsidy_amount) : 0 })
     };
-
-    if (!isEditMode) {
-      requestBody.globalDiscount = globalDiscount ? parseFloat(globalDiscount) : 0;
-    }
 
     if (formData.customer_type === 'B2B') {
       requestBody.gstin = formData.gstin;
@@ -28693,15 +31333,11 @@ function SubdealerNewBooking() {
       requestBody.rto_amount = formData.rto_amount ? parseFloat(formData.rto_amount) : 0;
     }
 
-    console.log('Request body prepared:', JSON.stringify(requestBody, null, 2));
-
     try {
       let response;
       if (isEditMode) {
-        console.log('Sending PUT request to:', `/bookings/${id}`);
         response = await axiosInstance.put(`/bookings/${id}`, requestBody);
       } else {
-        console.log('Sending POST request to:', '/bookings');
         response = await axiosInstance.post('/bookings', requestBody);
       }
 
@@ -29694,29 +32330,30 @@ function SubdealerNewBooking() {
                       </CInputGroup>
                     </div>
 
-                    {/* Global Discount — NEW mode only */}
-                    {!isEditMode && (
-                      <div style={{ flex: '1', minWidth: '250px' }}>
-                        <div className="details-container">
-                          <span className="details">Global Discount Amount (₹)</span>
-                        </div>
-                        <CInputGroup>
-                          <CInputGroupText className="input-icon">
-                            <CIcon icon={cilMoney} />
-                          </CInputGroupText>
-                          <CFormInput 
-                            type="number" 
-                            step="1" 
-                            min="0" 
-                            value={globalDiscount} 
-                            onChange={(e) => handleGlobalDiscountChange(e.target.value)} 
-                            placeholder="Enter total discount amount" 
-                          />
-                        </CInputGroup>
-                        <small className="text-muted">Discount will be distributed based on discount priority and percentage</small>
-                        {errors.globalDiscount && <p className="error">{errors.globalDiscount}</p>}
+                    {/* Global Discount — For both NEW and EDIT mode */}
+                    <div style={{ flex: '1', minWidth: '250px' }}>
+                      <div className="details-container">
+                        <span className="details">Total Discount Amount (₹)</span>
+                        {isEditMode && (
+                          <small className="text-muted ms-2">(Change this value to auto-distribute discounts)</small>
+                        )}
                       </div>
-                    )}
+                      <CInputGroup>
+                        <CInputGroupText className="input-icon">
+                          <CIcon icon={cilMoney} />
+                        </CInputGroupText>
+                        <CFormInput 
+                          type="number" 
+                          step="1" 
+                          min="0" 
+                          value={globalDiscount} 
+                          onChange={(e) => handleGlobalDiscountChange(e.target.value)} 
+                          placeholder="Enter total discount amount" 
+                        />
+                      </CInputGroup>
+                      <small className="text-muted">Discount will be distributed based on discount priority and percentage</small>
+                      {errors.globalDiscount && <p className="error">{errors.globalDiscount}</p>}
+                    </div>
 
                     <div style={{ flex: '1', minWidth: '250px', textAlign: 'right' }}>
                       <div className="details" style={{ marginBottom: '5px', display: 'block' }}>Total Deal Amount</div>
@@ -29810,6 +32447,39 @@ function SubdealerNewBooking() {
                   </div>
                 </div>
                 
+                {/* Discount Distribution Information */}
+                {globalDiscount && parseFloat(globalDiscount) > 0 && Object.keys(discountDistribution).length > 0 && (
+                  <div className="discount-limits-info" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e7f3ff', borderRadius: '5px', border: '1px solid #b8daff' }}>
+                    <h6 style={{ marginBottom: '10px', color: '#004085' }}>Discount Distribution Details</h6>
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <small style={{ display: 'block', color: '#6c757d' }}>Total Global Discount</small>
+                        <strong style={{ fontSize: '1.1em' }}>₹{(parseFloat(globalDiscount)).toLocaleString('en-IN')}</strong>
+                      </div>
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <small style={{ display: 'block', color: '#6c757d' }}>Distributed Discount</small>
+                        <strong style={{ fontSize: '1.1em' }}>
+                          ₹{Object.values(discountDistribution).reduce((sum, val) => sum + (parseFloat(val) || 0), 0).toLocaleString('en-IN')}
+                        </strong>
+                      </div>
+                      <div style={{ flex: 2, minWidth: '300px' }}>
+                        <small style={{ display: 'block', color: '#6c757d' }}>Distribution Breakdown</small>
+                        <div style={{ fontSize: '0.9em', marginTop: '5px', maxHeight: '150px', overflowY: 'auto' }}>
+                          {Object.entries(discountDistribution).map(([headerId, amount]) => {
+                            const header = selectedHeaders.find(h => h._id === headerId);
+                            return header && parseFloat(amount) > 0 ? (
+                              <div key={headerId} style={{ marginBottom: '2px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{header.header_key}:</span>
+                                <span className="text-success">₹{parseFloat(amount).toLocaleString('en-IN')}</span>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {selectedHeaders.length > 0 && (
                   <div className="model-headers-section" style={{ marginTop: '20px' }}>
                     <h5>
@@ -29850,7 +32520,6 @@ function SubdealerNewBooking() {
                             const headerId = item._id;
                             const headerKey = item.header_key || '';
                             const isMandatory = item.is_mandatory;
-                            const isDiscountAllowed = item.is_discount;
                             
                             const isHPAHeader = headerKey.startsWith('HP') || 
                                                 headerKey.startsWith('HPA') ||
@@ -29863,12 +32532,15 @@ function SubdealerNewBooking() {
                               return null;
                             }
 
+                            const isExShowroomHeader = headerKey === 'Ex-Showroom Price' || 
+                                                       headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' || 
+                                                       headerKey === 'Ex-Showroom CSD';
+
                             let discountValue;
                             if (isEditMode) {
                               discountValue = headerDiscounts[headerId] !== undefined 
                                 ? headerDiscounts[headerId].toString()
                                 : '';
-                              console.log(`Rendering header ${headerKey}: discount from state = ${discountValue}`);
                             } else {
                               discountValue = discountDistribution[headerId] !== undefined 
                                 ? discountDistribution[headerId].toString()
@@ -29885,13 +32557,11 @@ function SubdealerNewBooking() {
                             
                             const { cgstAmount, sgstAmount, cgstRate, sgstRate } = calculateGST(taxable, gstRate, formData.customer_type);
                             
-                            let lineTotal;
-                            if (headerKey === 'Ex-Showroom Price' && formData.subsidy_amount && isEVModel) {
-                              const subsidyAmountVal = parseFloat(formData.subsidy_amount) || 0;
-                              const calculatedLineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
-                              lineTotal = calculatedLineTotal - subsidyAmountVal;
-                            } else {
-                              lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+                            let lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+                            
+                            // For Ex-Showroom, subtract subsidy from line total ONLY for EV models with subsidy
+                            if (isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0) {
+                              lineTotal = lineTotal - (parseFloat(formData.subsidy_amount) || 0);
                             }
 
                             return (
@@ -29901,7 +32571,7 @@ function SubdealerNewBooking() {
                                     <span>
                                       {headerKey} {isMandatory ? '(Mandatory)' : '(Optional)'}
                                       {isHPAHeader && ' (HPA-related)'}
-                                      {headerKey === 'Ex-Showroom Price' && formData.subsidy_amount && isEVModel && ' (Subsidy applied)'}
+                                      {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 && ' (Subsidy applied)'}
                                     </span>
                                   </div>
                                 </CTableDataCell>
@@ -29916,8 +32586,8 @@ function SubdealerNewBooking() {
                                       placeholder="Enter discount"
                                       value={discountValue}
                                       onChange={(e) => handleHeaderDiscountChange(headerId, e.target.value)}
-                                      disabled={!isDiscountAllowed}
                                       style={{ width: '150px' }}
+                                      onWheel={(e) => e.target.blur()}
                                     />
                                   ) : (
                                     <strong style={{ color: discountAmount > 0 ? '#28a745' : '#6c757d' }}>
@@ -29927,6 +32597,11 @@ function SubdealerNewBooking() {
                                   {errors[`discount_${headerId}`] && (
                                     <small className="text-danger d-block">{errors[`discount_${headerId}`]}</small>
                                   )}
+                                  {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 && discountAmount > 0 && (
+                                    <div style={{ fontSize: '11px', color: '#28a745', marginTop: '2px' }}>
+                                      Effective discount after ₹{formData.subsidy_amount} subsidy
+                                    </div>
+                                  )}
                                 </CTableDataCell>
                                 <CTableDataCell>₹{taxable.toFixed(2)}</CTableDataCell>
                                 <CTableDataCell>{cgstRate.toFixed(2)}%</CTableDataCell>
@@ -29935,7 +32610,7 @@ function SubdealerNewBooking() {
                                 <CTableDataCell>₹{sgstAmount.toFixed(2)}</CTableDataCell>
                                 <CTableDataCell>
                                   <strong>₹{lineTotal.toFixed(2)}</strong>
-                                  {headerKey === 'Ex-Showroom Price' && formData.subsidy_amount && isEVModel && (
+                                  {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 && (
                                     <div style={{ fontSize: '11px', color: '#666' }}>
                                       (After ₹{formData.subsidy_amount} EV subsidy)
                                     </div>

@@ -1,23 +1,19 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../../css/form.css';
 import { 
   CInputGroup, 
   CInputGroupText, 
   CFormInput, 
   CFormSelect, 
-  CFormCheck, 
   CButton, 
   CModal,
   CModalHeader,
   CModalTitle,
   CModalBody,
-  CModalFooter,
-  CCard,
-  CCardBody,
-  CRow,
-  CCol,
   CSpinner,
-  CAlert
+  CAlert,
+  CButtonGroup
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
@@ -27,64 +23,63 @@ import {
   cilBell, 
   cilChartLine, 
   cilCloudDownload,
-  cilCheckCircle,
   cilWarning,
-  cilUser,
-  cilInstitution,
   cilList,
   cilTask,
-  cilShieldAlt
+  cilCheck,
+  cilX
 } from '@coreui/icons';
 import { axiosInstance, showError, showSuccess } from '../../utils/tableImports';
 
 const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState(1);
   const [error, setError] = useState(null);
   
-  // Form state
+  // Form state - all fields empty by default
   const [formData, setFormData] = useState({
-    configType: 'BOTH',
+    configType: '',
     thirtyDayConfig: {
-      safetyStockPercentage: 40,
-      leadTimeDays: 10,
+      safetyStockPercentage: '',
+      leadTimeDays: '',
       alertThresholds: {
-        critical: 3,
-        high: 10,
-        medium: 20
+        critical: '',
+        high: '',
+        medium: ''
       },
-      minStockLevel: 8,
-      reorderMethod: 'PERCENTAGE'
+      minStockLevel: '',
+      reorderMethod: ''
     },
     hundredTwentyDayConfig: {
-      trendAnalysisDays: 150,
-      safetyStockPercentage: 50,
-      leadTimeDays: 12,
+      trendAnalysisDays: '',
+      safetyStockPercentage: '',
+      leadTimeDays: '',
       alertThresholds: {
-        critical: 5,
-        high: 12,
-        medium: 25
+        critical: '',
+        high: '',
+        medium: ''
       },
-      minStockLevel: 10,
-      reorderMethod: 'SMART',
-      trendWeight: 0.65,
-      seasonalAdjustment: true
+      minStockLevel: '',
+      reorderMethod: '',
+      trendWeight: '',
+      seasonalAdjustment: false
     },
     autoReorder: {
-      enabled: true,
-      minOrderQuantity: 10,
-      maxOrderQuantity: 60,
-      reorderFrequency: 'WEEKLY'
+      enabled: false,
+      minOrderQuantity: '',
+      maxOrderQuantity: '',
+      reorderFrequency: ''
     },
     notifications: {
-      emailAlerts: true,
-      dashboardAlerts: true,
-      minimumAlertLevel: 'MEDIUM'
+      emailAlerts: false,
+      dashboardAlerts: false,
+      minimumAlertLevel: ''
     },
     seasonalFactors: {
-      jan: 1.0, feb: 1.0, mar: 1.0, apr: 1.0,
-      may: 1.0, jun: 1.0, jul: 1.0, aug: 1.0,
-      sep: 1.0, oct: 1.0, nov: 1.0, dec: 1.0
+      jan: '', feb: '', mar: '', apr: '',
+      may: '', jun: '', jul: '', aug: '',
+      sep: '', oct: '', nov: '', dec: ''
     },
     notes: ''
   });
@@ -109,7 +104,7 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
       ...prev,
       [configKey]: {
         ...prev[configKey],
-        alertThresholds: { ...prev[configKey].alertThresholds, [level]: parseInt(value) }
+        alertThresholds: { ...prev[configKey].alertThresholds, [level]: value ? parseInt(value) : '' }
       }
     }));
   };
@@ -117,7 +112,7 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
   const handleSeasonalFactorChange = (month, value) => {
     setFormData(prev => ({
       ...prev,
-      seasonalFactors: { ...prev.seasonalFactors, [month]: parseFloat(value) }
+      seasonalFactors: { ...prev.seasonalFactors, [month]: value ? parseFloat(value) : '' }
     }));
   };
 
@@ -127,16 +122,20 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
     if (section === 1) {
       if (!formData.configType) newErrors.configType = 'Configuration type is required';
     } else if (section === 2) {
-      if (!formData.thirtyDayConfig.safetyStockPercentage) newErrors.safetyStockPercentage = 'Safety stock percentage is required';
-      if (!formData.thirtyDayConfig.leadTimeDays) newErrors.leadTimeDays = 'Lead time days is required';
-      if (!formData.thirtyDayConfig.minStockLevel) newErrors.minStockLevel = 'Min stock level is required';
-      if (!formData.thirtyDayConfig.reorderMethod) newErrors.reorderMethod = 'Reorder method is required';
-    } else if (section === 3) {
-      if (!formData.hundredTwentyDayConfig.trendAnalysisDays) newErrors.trendAnalysisDays = 'Trend analysis days is required';
-      if (!formData.hundredTwentyDayConfig.safetyStockPercentage) newErrors.safetyStockPercentage = 'Safety stock percentage is required';
-      if (!formData.hundredTwentyDayConfig.leadTimeDays) newErrors.leadTimeDays = 'Lead time days is required';
-      if (!formData.hundredTwentyDayConfig.minStockLevel) newErrors.minStockLevel = 'Min stock level is required';
-      if (!formData.hundredTwentyDayConfig.reorderMethod) newErrors.reorderMethod = 'Reorder method is required';
+      // Validate based on config type
+      if (formData.configType === '30_DAYS' || formData.configType === 'BOTH') {
+        if (!formData.thirtyDayConfig.safetyStockPercentage) newErrors.safetyStockPercentage = 'Safety stock percentage is required';
+        if (!formData.thirtyDayConfig.leadTimeDays) newErrors.leadTimeDays = 'Lead time days is required';
+        if (!formData.thirtyDayConfig.minStockLevel) newErrors.minStockLevel = 'Min stock level is required';
+        if (!formData.thirtyDayConfig.reorderMethod) newErrors.reorderMethod = 'Reorder method is required';
+      }
+      if (formData.configType === '120_DAYS' || formData.configType === 'BOTH') {
+        if (!formData.hundredTwentyDayConfig.trendAnalysisDays) newErrors.trendAnalysisDays = 'Trend analysis days is required';
+        if (!formData.hundredTwentyDayConfig.safetyStockPercentage) newErrors.safetyStockPercentage120 = 'Safety stock percentage is required';
+        if (!formData.hundredTwentyDayConfig.leadTimeDays) newErrors.leadTimeDays120 = 'Lead time days is required';
+        if (!formData.hundredTwentyDayConfig.minStockLevel) newErrors.minStockLevel120 = 'Min stock level is required';
+        if (!formData.hundredTwentyDayConfig.reorderMethod) newErrors.reorderMethod120 = 'Reorder method is required';
+      }
     }
 
     setErrors(newErrors);
@@ -145,7 +144,7 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
 
   const handleNext = () => {
     if (validateSection(activeSection)) {
-      if (activeSection < 6) setActiveSection(prev => prev + 1);
+      if (activeSection < 5) setActiveSection(prev => prev + 1);
     }
   };
 
@@ -170,20 +169,68 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
         branchId: null,
         configType: formData.configType,
         settings: {
-          thirtyDayConfig: formData.thirtyDayConfig,
-          hundredTwentyDayConfig: formData.hundredTwentyDayConfig,
-          autoReorder: formData.autoReorder,
-          notifications: formData.notifications
+          thirtyDayConfig: {
+            safetyStockPercentage: formData.thirtyDayConfig.safetyStockPercentage ? parseInt(formData.thirtyDayConfig.safetyStockPercentage) : 0,
+            leadTimeDays: formData.thirtyDayConfig.leadTimeDays ? parseInt(formData.thirtyDayConfig.leadTimeDays) : 0,
+            alertThresholds: {
+              critical: formData.thirtyDayConfig.alertThresholds.critical ? parseInt(formData.thirtyDayConfig.alertThresholds.critical) : 0,
+              high: formData.thirtyDayConfig.alertThresholds.high ? parseInt(formData.thirtyDayConfig.alertThresholds.high) : 0,
+              medium: formData.thirtyDayConfig.alertThresholds.medium ? parseInt(formData.thirtyDayConfig.alertThresholds.medium) : 0
+            },
+            minStockLevel: formData.thirtyDayConfig.minStockLevel ? parseInt(formData.thirtyDayConfig.minStockLevel) : 0,
+            reorderMethod: formData.thirtyDayConfig.reorderMethod
+          },
+          hundredTwentyDayConfig: {
+            trendAnalysisDays: formData.hundredTwentyDayConfig.trendAnalysisDays ? parseInt(formData.hundredTwentyDayConfig.trendAnalysisDays) : 0,
+            safetyStockPercentage: formData.hundredTwentyDayConfig.safetyStockPercentage ? parseInt(formData.hundredTwentyDayConfig.safetyStockPercentage) : 0,
+            leadTimeDays: formData.hundredTwentyDayConfig.leadTimeDays ? parseInt(formData.hundredTwentyDayConfig.leadTimeDays) : 0,
+            alertThresholds: {
+              critical: formData.hundredTwentyDayConfig.alertThresholds.critical ? parseInt(formData.hundredTwentyDayConfig.alertThresholds.critical) : 0,
+              high: formData.hundredTwentyDayConfig.alertThresholds.high ? parseInt(formData.hundredTwentyDayConfig.alertThresholds.high) : 0,
+              medium: formData.hundredTwentyDayConfig.alertThresholds.medium ? parseInt(formData.hundredTwentyDayConfig.alertThresholds.medium) : 0
+            },
+            minStockLevel: formData.hundredTwentyDayConfig.minStockLevel ? parseInt(formData.hundredTwentyDayConfig.minStockLevel) : 0,
+            reorderMethod: formData.hundredTwentyDayConfig.reorderMethod,
+            trendWeight: formData.hundredTwentyDayConfig.trendWeight ? parseFloat(formData.hundredTwentyDayConfig.trendWeight) : 0,
+            seasonalAdjustment: formData.hundredTwentyDayConfig.seasonalAdjustment
+          },
+          autoReorder: {
+            enabled: formData.autoReorder.enabled,
+            minOrderQuantity: formData.autoReorder.minOrderQuantity ? parseInt(formData.autoReorder.minOrderQuantity) : 0,
+            maxOrderQuantity: formData.autoReorder.maxOrderQuantity ? parseInt(formData.autoReorder.maxOrderQuantity) : 0,
+            reorderFrequency: formData.autoReorder.reorderFrequency
+          },
+          notifications: {
+            emailAlerts: formData.notifications.emailAlerts,
+            dashboardAlerts: formData.notifications.dashboardAlerts,
+            minimumAlertLevel: formData.notifications.minimumAlertLevel
+          }
         },
-        seasonalFactors: formData.seasonalFactors,
+        seasonalFactors: {
+          jan: formData.seasonalFactors.jan ? parseFloat(formData.seasonalFactors.jan) : 1.0,
+          feb: formData.seasonalFactors.feb ? parseFloat(formData.seasonalFactors.feb) : 1.0,
+          mar: formData.seasonalFactors.mar ? parseFloat(formData.seasonalFactors.mar) : 1.0,
+          apr: formData.seasonalFactors.apr ? parseFloat(formData.seasonalFactors.apr) : 1.0,
+          may: formData.seasonalFactors.may ? parseFloat(formData.seasonalFactors.may) : 1.0,
+          jun: formData.seasonalFactors.jun ? parseFloat(formData.seasonalFactors.jun) : 1.0,
+          jul: formData.seasonalFactors.jul ? parseFloat(formData.seasonalFactors.jul) : 1.0,
+          aug: formData.seasonalFactors.aug ? parseFloat(formData.seasonalFactors.aug) : 1.0,
+          sep: formData.seasonalFactors.sep ? parseFloat(formData.seasonalFactors.sep) : 1.0,
+          oct: formData.seasonalFactors.oct ? parseFloat(formData.seasonalFactors.oct) : 1.0,
+          nov: formData.seasonalFactors.nov ? parseFloat(formData.seasonalFactors.nov) : 1.0,
+          dec: formData.seasonalFactors.dec ? parseFloat(formData.seasonalFactors.dec) : 1.0
+        },
         notes: formData.notes
       };
 
       const response = await axiosInstance.post('/low-stock/config', payload);
       if (response.data.success) {
         showSuccess('Configuration added successfully!');
-        if (onSuccess) onSuccess();
         onClose();
+        if (onSuccess) {
+          onSuccess();
+        }
+        navigate('/purchase-config-list');
       }
     } catch (error) {
       console.error('Error saving config:', error);
@@ -193,6 +240,15 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper to check if field should be shown
+  const show30DayConfig = () => {
+    return formData.configType === '30_DAYS' || formData.configType === 'BOTH';
+  };
+
+  const show120DayConfig = () => {
+    return formData.configType === '120_DAYS' || formData.configType === 'BOTH';
   };
 
   return (
@@ -223,6 +279,7 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
                         value={formData.configType}
                         onChange={(e) => handleChange(null, 'configType', e.target.value)}
                       >
+                        <option value="">- Select -</option>
                         <option value="30_DAYS">30 Days Only</option>
                         <option value="120_DAYS">120 Days Only</option>
                         <option value="BOTH">Both</option>
@@ -250,125 +307,345 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
               </>
             )}
 
-            {/* Section 2: 30-Day Config */}
+            {/* Section 2: Configuration Settings (Combined - No Duplicates) */}
             {activeSection === 2 && (
               <>
                 <div className="user-details">
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Safety Stock Percentage (%)</span>
-                      <span className="required">*</span>
+                  
+                  {/* 30 DAY CONFIGURATION */}
+                  {show30DayConfig() && (
+                    <>
+                      <div className="input-box full-width">
+                        <h5 style={{ marginBottom: '15px', color: '#4e73df', borderBottom: '2px solid #4e73df', paddingBottom: '8px' }}>
+                          <CIcon icon={cilCalendar} className="me-2" />
+                          30-Day Configuration
+                        </h5>
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Safety Stock Percentage (%)</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.thirtyDayConfig.safetyStockPercentage}
+                            onChange={(e) => handleChange('thirtyDayConfig', 'safetyStockPercentage', e.target.value)}
+                            placeholder="Enter safety stock percentage"
+                          />
+                        </CInputGroup>
+                        {errors.safetyStockPercentage && <p className="error">{errors.safetyStockPercentage}</p>}
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Lead Time (Days)</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilCalendar} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.thirtyDayConfig.leadTimeDays}
+                            onChange={(e) => handleChange('thirtyDayConfig', 'leadTimeDays', e.target.value)}
+                            placeholder="Enter lead time in days"
+                          />
+                        </CInputGroup>
+                        {errors.leadTimeDays && <p className="error">{errors.leadTimeDays}</p>}
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Min Stock Level</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilCloudDownload} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.thirtyDayConfig.minStockLevel}
+                            onChange={(e) => handleChange('thirtyDayConfig', 'minStockLevel', e.target.value)}
+                            placeholder="Enter minimum stock level"
+                          />
+                        </CInputGroup>
+                        {errors.minStockLevel && <p className="error">{errors.minStockLevel}</p>}
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Reorder Method</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilTask} /></CInputGroupText>
+                          <CFormSelect
+                            value={formData.thirtyDayConfig.reorderMethod}
+                            onChange={(e) => handleChange('thirtyDayConfig', 'reorderMethod', e.target.value)}
+                          >
+                            <option value="">- Select -</option>
+                            <option value="PERCENTAGE">Percentage</option>
+                            <option value="ABSOLUTE">Absolute</option>
+                            <option value="DAYS_OF_INVENTORY">Days of Inventory</option>
+                            <option value="SMART">Smart</option>
+                          </CFormSelect>
+                        </CInputGroup>
+                        {errors.reorderMethod && <p className="error">{errors.reorderMethod}</p>}
+                      </div>
+
+                      <div className="input-box" style={{ width: '100%' }}>
+                        <h6 style={{ marginBottom: '15px', marginTop: '10px' }}>Alert Thresholds</h6>
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Critical (units)</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.thirtyDayConfig.alertThresholds.critical}
+                            onChange={(e) => handleThresholdChange('30_DAYS', 'critical', e.target.value)}
+                            placeholder="Enter critical threshold"
+                          />
+                        </CInputGroup>
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">High (units)</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.thirtyDayConfig.alertThresholds.high}
+                            onChange={(e) => handleThresholdChange('30_DAYS', 'high', e.target.value)}
+                            placeholder="Enter high threshold"
+                          />
+                        </CInputGroup>
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Medium (units)</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.thirtyDayConfig.alertThresholds.medium}
+                            onChange={(e) => handleThresholdChange('30_DAYS', 'medium', e.target.value)}
+                            placeholder="Enter medium threshold"
+                          />
+                        </CInputGroup>
+                      </div>
+
+                      <div style={{ width: '100%', height: '2px', backgroundColor: '#e0e0e0', margin: '20px 0', borderRadius: '2px' }}></div>
+                    </>
+                  )}
+
+                  {/* 120 DAY CONFIGURATION */}
+                  {show120DayConfig() && (
+                    <>
+                      <div className="input-box full-width">
+                        <h5 style={{ marginBottom: '15px', color: '#4e73df', borderBottom: '2px solid #4e73df', paddingBottom: '8px' }}>
+                          <CIcon icon={cilChartLine} className="me-2" />
+                          120-Day Configuration
+                        </h5>
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Trend Analysis Days</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilChartLine} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.hundredTwentyDayConfig.trendAnalysisDays}
+                            onChange={(e) => handleChange('hundredTwentyDayConfig', 'trendAnalysisDays', e.target.value)}
+                            placeholder="Enter trend analysis days"
+                          />
+                        </CInputGroup>
+                        {errors.trendAnalysisDays && <p className="error">{errors.trendAnalysisDays}</p>}
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Safety Stock Percentage (%)</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.hundredTwentyDayConfig.safetyStockPercentage}
+                            onChange={(e) => handleChange('hundredTwentyDayConfig', 'safetyStockPercentage', e.target.value)}
+                            placeholder="Enter safety stock percentage"
+                          />
+                        </CInputGroup>
+                        {errors.safetyStockPercentage120 && <p className="error">{errors.safetyStockPercentage120}</p>}
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Lead Time (Days)</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilCalendar} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.hundredTwentyDayConfig.leadTimeDays}
+                            onChange={(e) => handleChange('hundredTwentyDayConfig', 'leadTimeDays', e.target.value)}
+                            placeholder="Enter lead time in days"
+                          />
+                        </CInputGroup>
+                        {errors.leadTimeDays120 && <p className="error">{errors.leadTimeDays120}</p>}
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Min Stock Level</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilCloudDownload} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.hundredTwentyDayConfig.minStockLevel}
+                            onChange={(e) => handleChange('hundredTwentyDayConfig', 'minStockLevel', e.target.value)}
+                            placeholder="Enter minimum stock level"
+                          />
+                        </CInputGroup>
+                        {errors.minStockLevel120 && <p className="error">{errors.minStockLevel120}</p>}
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Reorder Method</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilTask} /></CInputGroupText>
+                          <CFormSelect
+                            value={formData.hundredTwentyDayConfig.reorderMethod}
+                            onChange={(e) => handleChange('hundredTwentyDayConfig', 'reorderMethod', e.target.value)}
+                          >
+                            <option value="">- Select -</option>
+                            <option value="PERCENTAGE">Percentage</option>
+                            <option value="ABSOLUTE">Absolute</option>
+                            <option value="DAYS_OF_INVENTORY">Days of Inventory</option>
+                            <option value="SMART">Smart</option>
+                          </CFormSelect>
+                        </CInputGroup>
+                        {errors.reorderMethod120 && <p className="error">{errors.reorderMethod120}</p>}
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Trend Weight</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilChartLine} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            step="0.05"
+                            value={formData.hundredTwentyDayConfig.trendWeight}
+                            onChange={(e) => handleChange('hundredTwentyDayConfig', 'trendWeight', e.target.value)}
+                            placeholder="Enter trend weight (0-1)"
+                          />
+                        </CInputGroup>
+                      </div>
+
+                      <div className="input-box full-width">
+                        <div className="details-container">
+                          <span className="details">Seasonal Adjustment</span>
+                        </div>
+                        <div className="mt-2">
+                          <div className="d-flex align-items-center">
+                            <CButtonGroup size="sm">
+                              <CButton 
+                                color={formData.hundredTwentyDayConfig.seasonalAdjustment ? "success" : "secondary"} 
+                                variant={formData.hundredTwentyDayConfig.seasonalAdjustment ? "solid" : "outline"}
+                                onClick={() => handleChange('hundredTwentyDayConfig', 'seasonalAdjustment', true)}
+                                style={formData.hundredTwentyDayConfig.seasonalAdjustment ? { backgroundColor: '#28a745', borderColor: '#28a745' } : {}}
+                              >
+                                <CIcon icon={cilCheck} /> Yes
+                              </CButton>
+                              <CButton 
+                                color={!formData.hundredTwentyDayConfig.seasonalAdjustment ? "danger" : "secondary"} 
+                                variant={!formData.hundredTwentyDayConfig.seasonalAdjustment ? "solid" : "outline"}
+                                onClick={() => handleChange('hundredTwentyDayConfig', 'seasonalAdjustment', false)}
+                                style={!formData.hundredTwentyDayConfig.seasonalAdjustment ? { backgroundColor: '#dc3545', borderColor: '#dc3545' } : {}}
+                              >
+                                <CIcon icon={cilX} /> No
+                              </CButton>
+                            </CButtonGroup>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="input-box" style={{ width: '100%' }}>
+                        <h6 style={{ marginBottom: '15px', marginTop: '10px' }}>Alert Thresholds</h6>
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Critical (units)</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.hundredTwentyDayConfig.alertThresholds.critical}
+                            onChange={(e) => handleThresholdChange('120_DAYS', 'critical', e.target.value)}
+                            placeholder="Enter critical threshold"
+                          />
+                        </CInputGroup>
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">High (units)</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.hundredTwentyDayConfig.alertThresholds.high}
+                            onChange={(e) => handleThresholdChange('120_DAYS', 'high', e.target.value)}
+                            placeholder="Enter high threshold"
+                          />
+                        </CInputGroup>
+                      </div>
+
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">Medium (units)</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
+                          <CFormInput
+                            type="number"
+                            value={formData.hundredTwentyDayConfig.alertThresholds.medium}
+                            onChange={(e) => handleThresholdChange('120_DAYS', 'medium', e.target.value)}
+                            placeholder="Enter medium threshold"
+                          />
+                        </CInputGroup>
+                      </div>
+                    </>
+                  )}
+
+                  {!show30DayConfig() && !show120DayConfig() && (
+                    <div className="alert alert-info">
+                      Please select a configuration type in the previous section.
                     </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.thirtyDayConfig.safetyStockPercentage}
-                        onChange={(e) => handleChange('thirtyDayConfig', 'safetyStockPercentage', parseInt(e.target.value))}
-                      />
-                    </CInputGroup>
-                    {errors.safetyStockPercentage && <p className="error">{errors.safetyStockPercentage}</p>}
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Lead Time (Days)</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilCalendar} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.thirtyDayConfig.leadTimeDays}
-                        onChange={(e) => handleChange('thirtyDayConfig', 'leadTimeDays', parseInt(e.target.value))}
-                      />
-                    </CInputGroup>
-                    {errors.leadTimeDays && <p className="error">{errors.leadTimeDays}</p>}
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Min Stock Level</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilCloudDownload} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.thirtyDayConfig.minStockLevel}
-                        onChange={(e) => handleChange('thirtyDayConfig', 'minStockLevel', parseInt(e.target.value))}
-                      />
-                    </CInputGroup>
-                    {errors.minStockLevel && <p className="error">{errors.minStockLevel}</p>}
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Reorder Method</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilTask} /></CInputGroupText>
-                      <CFormSelect
-                        value={formData.thirtyDayConfig.reorderMethod}
-                        onChange={(e) => handleChange('thirtyDayConfig', 'reorderMethod', e.target.value)}
-                      >
-                        <option value="PERCENTAGE">Percentage</option>
-                        <option value="ABSOLUTE">Absolute</option>
-                        <option value="DAYS_OF_INVENTORY">Days of Inventory</option>
-                        <option value="SMART">Smart</option>
-                      </CFormSelect>
-                    </CInputGroup>
-                    {errors.reorderMethod && <p className="error">{errors.reorderMethod}</p>}
-                  </div>
-
-                  <div style={{ width: '100%', height: '2px', backgroundColor: '#e0e0e0', margin: '15px 0', borderRadius: '2px' }}></div>
-
-                  <div className="input-box" style={{ width: '100%' }}>
-                    <h6 style={{ marginBottom: '15px' }}>Alert Thresholds</h6>
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Critical (units)</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.thirtyDayConfig.alertThresholds.critical}
-                        onChange={(e) => handleThresholdChange('30_DAYS', 'critical', e.target.value)}
-                      />
-                    </CInputGroup>
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">High (units)</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.thirtyDayConfig.alertThresholds.high}
-                        onChange={(e) => handleThresholdChange('30_DAYS', 'high', e.target.value)}
-                      />
-                    </CInputGroup>
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Medium (units)</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.thirtyDayConfig.alertThresholds.medium}
-                        onChange={(e) => handleThresholdChange('30_DAYS', 'medium', e.target.value)}
-                      />
-                    </CInputGroup>
-                  </div>
+                  )}
                 </div>
                 <div className="form-footer">
                   <button type="button" className="cancel-button" onClick={handleBack}>Back</button>
@@ -377,182 +654,36 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
               </>
             )}
 
-            {/* Section 3: 120-Day Config */}
+            {/* Section 3: Auto Reorder */}
             {activeSection === 3 && (
               <>
                 <div className="user-details">
-                  <div className="input-box">
+                  <div className="input-box full-width">
                     <div className="details-container">
-                      <span className="details">Trend Analysis Days</span>
-                      <span className="required">*</span>
+                      <span className="details">Enable Auto Reorder</span>
                     </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilChartLine} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.hundredTwentyDayConfig.trendAnalysisDays}
-                        onChange={(e) => handleChange('hundredTwentyDayConfig', 'trendAnalysisDays', parseInt(e.target.value))}
-                      />
-                    </CInputGroup>
-                    {errors.trendAnalysisDays && <p className="error">{errors.trendAnalysisDays}</p>}
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Safety Stock Percentage (%)</span>
-                      <span className="required">*</span>
+                    <div className="mt-2">
+                      <div className="d-flex align-items-center">
+                        <CButtonGroup size="sm">
+                          <CButton 
+                            color={formData.autoReorder.enabled ? "success" : "secondary"} 
+                            variant={formData.autoReorder.enabled ? "solid" : "outline"}
+                            onClick={() => handleChange('autoReorder', 'enabled', true)}
+                            style={formData.autoReorder.enabled ? { backgroundColor: '#28a745', borderColor: '#28a745' } : {}}
+                          >
+                            <CIcon icon={cilCheck} /> Yes
+                          </CButton>
+                          <CButton 
+                            color={!formData.autoReorder.enabled ? "danger" : "secondary"} 
+                            variant={!formData.autoReorder.enabled ? "solid" : "outline"}
+                            onClick={() => handleChange('autoReorder', 'enabled', false)}
+                            style={!formData.autoReorder.enabled ? { backgroundColor: '#dc3545', borderColor: '#dc3545' } : {}}
+                          >
+                            <CIcon icon={cilX} /> No
+                          </CButton>
+                        </CButtonGroup>
+                      </div>
                     </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.hundredTwentyDayConfig.safetyStockPercentage}
-                        onChange={(e) => handleChange('hundredTwentyDayConfig', 'safetyStockPercentage', parseInt(e.target.value))}
-                      />
-                    </CInputGroup>
-                    {errors.safetyStockPercentage && <p className="error">{errors.safetyStockPercentage}</p>}
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Lead Time (Days)</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilCalendar} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.hundredTwentyDayConfig.leadTimeDays}
-                        onChange={(e) => handleChange('hundredTwentyDayConfig', 'leadTimeDays', parseInt(e.target.value))}
-                      />
-                    </CInputGroup>
-                    {errors.leadTimeDays && <p className="error">{errors.leadTimeDays}</p>}
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Min Stock Level</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilCloudDownload} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.hundredTwentyDayConfig.minStockLevel}
-                        onChange={(e) => handleChange('hundredTwentyDayConfig', 'minStockLevel', parseInt(e.target.value))}
-                      />
-                    </CInputGroup>
-                    {errors.minStockLevel && <p className="error">{errors.minStockLevel}</p>}
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Reorder Method</span>
-                      <span className="required">*</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilTask} /></CInputGroupText>
-                      <CFormSelect
-                        value={formData.hundredTwentyDayConfig.reorderMethod}
-                        onChange={(e) => handleChange('hundredTwentyDayConfig', 'reorderMethod', e.target.value)}
-                      >
-                        <option value="PERCENTAGE">Percentage</option>
-                        <option value="ABSOLUTE">Absolute</option>
-                        <option value="DAYS_OF_INVENTORY">Days of Inventory</option>
-                        <option value="SMART">Smart</option>
-                      </CFormSelect>
-                    </CInputGroup>
-                    {errors.reorderMethod && <p className="error">{errors.reorderMethod}</p>}
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Trend Weight</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilChartLine} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        step="0.05"
-                        value={formData.hundredTwentyDayConfig.trendWeight}
-                        onChange={(e) => handleChange('hundredTwentyDayConfig', 'trendWeight', parseFloat(e.target.value))}
-                      />
-                    </CInputGroup>
-                  </div>
-
-                  <div className="input-box">
-                    <CFormCheck
-                      label="Seasonal Adjustment"
-                      checked={formData.hundredTwentyDayConfig.seasonalAdjustment}
-                      onChange={(e) => handleChange('hundredTwentyDayConfig', 'seasonalAdjustment', e.target.checked)}
-                    />
-                  </div>
-
-                  <div style={{ width: '100%', height: '2px', backgroundColor: '#e0e0e0', margin: '15px 0', borderRadius: '2px' }}></div>
-
-                  <div className="input-box" style={{ width: '100%' }}>
-                    <h6 style={{ marginBottom: '15px' }}>Alert Thresholds</h6>
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Critical (units)</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.hundredTwentyDayConfig.alertThresholds.critical}
-                        onChange={(e) => handleThresholdChange('120_DAYS', 'critical', e.target.value)}
-                      />
-                    </CInputGroup>
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">High (units)</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.hundredTwentyDayConfig.alertThresholds.high}
-                        onChange={(e) => handleThresholdChange('120_DAYS', 'high', e.target.value)}
-                      />
-                    </CInputGroup>
-                  </div>
-
-                  <div className="input-box">
-                    <div className="details-container">
-                      <span className="details">Medium (units)</span>
-                    </div>
-                    <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilWarning} /></CInputGroupText>
-                      <CFormInput
-                        type="number"
-                        value={formData.hundredTwentyDayConfig.alertThresholds.medium}
-                        onChange={(e) => handleThresholdChange('120_DAYS', 'medium', e.target.value)}
-                      />
-                    </CInputGroup>
-                  </div>
-                </div>
-                <div className="form-footer">
-                  <button type="button" className="cancel-button" onClick={handleBack}>Back</button>
-                  <button type="button" className="submit-button" onClick={handleNext}>Next</button>
-                </div>
-              </>
-            )}
-
-            {/* Section 4: Auto Reorder */}
-            {activeSection === 4 && (
-              <>
-                <div className="user-details">
-                  <div className="input-box">
-                    <CFormCheck
-                      label="Enable Auto Reorder"
-                      checked={formData.autoReorder.enabled}
-                      onChange={(e) => handleChange('autoReorder', 'enabled', e.target.checked)}
-                    />
                   </div>
 
                   <div className="input-box">
@@ -564,7 +695,8 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
                       <CFormInput
                         type="number"
                         value={formData.autoReorder.minOrderQuantity}
-                        onChange={(e) => handleChange('autoReorder', 'minOrderQuantity', parseInt(e.target.value))}
+                        onChange={(e) => handleChange('autoReorder', 'minOrderQuantity', e.target.value)}
+                        placeholder="Enter minimum order quantity"
                       />
                     </CInputGroup>
                   </div>
@@ -578,7 +710,8 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
                       <CFormInput
                         type="number"
                         value={formData.autoReorder.maxOrderQuantity}
-                        onChange={(e) => handleChange('autoReorder', 'maxOrderQuantity', parseInt(e.target.value))}
+                        onChange={(e) => handleChange('autoReorder', 'maxOrderQuantity', e.target.value)}
+                        placeholder="Enter maximum order quantity"
                       />
                     </CInputGroup>
                   </div>
@@ -593,6 +726,7 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
                         value={formData.autoReorder.reorderFrequency}
                         onChange={(e) => handleChange('autoReorder', 'reorderFrequency', e.target.value)}
                       >
+                        <option value="">- Select -</option>
                         <option value="DAILY">Daily</option>
                         <option value="WEEKLY">Weekly</option>
                         <option value="BIWEEKLY">Bi-Weekly</option>
@@ -608,24 +742,64 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
               </>
             )}
 
-            {/* Section 5: Notifications */}
-            {activeSection === 5 && (
+            {/* Section 4: Notifications */}
+            {activeSection === 4 && (
               <>
                 <div className="user-details">
-                  <div className="input-box">
-                    <CFormCheck
-                      label="Email Alerts"
-                      checked={formData.notifications.emailAlerts}
-                      onChange={(e) => handleChange('notifications', 'emailAlerts', e.target.checked)}
-                    />
+                  <div className="input-box full-width">
+                    <div className="details-container">
+                      <span className="details">Email Alerts</span>
+                    </div>
+                    <div className="mt-2">
+                      <div className="d-flex align-items-center">
+                        <CButtonGroup size="sm">
+                          <CButton 
+                            color={formData.notifications.emailAlerts ? "success" : "secondary"} 
+                            variant={formData.notifications.emailAlerts ? "solid" : "outline"}
+                            onClick={() => handleChange('notifications', 'emailAlerts', true)}
+                            style={formData.notifications.emailAlerts ? { backgroundColor: '#28a745', borderColor: '#28a745' } : {}}
+                          >
+                            <CIcon icon={cilCheck} /> Yes
+                          </CButton>
+                          <CButton 
+                            color={!formData.notifications.emailAlerts ? "danger" : "secondary"} 
+                            variant={!formData.notifications.emailAlerts ? "solid" : "outline"}
+                            onClick={() => handleChange('notifications', 'emailAlerts', false)}
+                            style={!formData.notifications.emailAlerts ? { backgroundColor: '#dc3545', borderColor: '#dc3545' } : {}}
+                          >
+                            <CIcon icon={cilX} /> No
+                          </CButton>
+                        </CButtonGroup>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="input-box">
-                    <CFormCheck
-                      label="Dashboard Alerts"
-                      checked={formData.notifications.dashboardAlerts}
-                      onChange={(e) => handleChange('notifications', 'dashboardAlerts', e.target.checked)}
-                    />
+                  <div className="input-box full-width">
+                    <div className="details-container">
+                      <span className="details">Dashboard Alerts</span>
+                    </div>
+                    <div className="mt-2">
+                      <div className="d-flex align-items-center">
+                        <CButtonGroup size="sm">
+                          <CButton 
+                            color={formData.notifications.dashboardAlerts ? "success" : "secondary"} 
+                            variant={formData.notifications.dashboardAlerts ? "solid" : "outline"}
+                            onClick={() => handleChange('notifications', 'dashboardAlerts', true)}
+                            style={formData.notifications.dashboardAlerts ? { backgroundColor: '#28a745', borderColor: '#28a745' } : {}}
+                          >
+                            <CIcon icon={cilCheck} /> Yes
+                          </CButton>
+                          <CButton 
+                            color={!formData.notifications.dashboardAlerts ? "danger" : "secondary"} 
+                            variant={!formData.notifications.dashboardAlerts ? "solid" : "outline"}
+                            onClick={() => handleChange('notifications', 'dashboardAlerts', false)}
+                            style={!formData.notifications.dashboardAlerts ? { backgroundColor: '#dc3545', borderColor: '#dc3545' } : {}}
+                          >
+                            <CIcon icon={cilX} /> No
+                          </CButton>
+                        </CButtonGroup>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="input-box">
@@ -638,6 +812,7 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
                         value={formData.notifications.minimumAlertLevel}
                         onChange={(e) => handleChange('notifications', 'minimumAlertLevel', e.target.value)}
                       >
+                        <option value="">- Select -</option>
                         <option value="INFO">Info</option>
                         <option value="MEDIUM">Medium</option>
                         <option value="HIGH">High</option>
@@ -653,8 +828,8 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
               </>
             )}
 
-            {/* Section 6: Seasonal Factors */}
-            {activeSection === 6 && (
+            {/* Section 5: Seasonal Factors */}
+            {activeSection === 5 && (
               <>
                 <div className="user-details">
                   {Object.entries(formData.seasonalFactors).map(([month, value]) => (
@@ -669,6 +844,7 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
                           step="0.1"
                           value={value}
                           onChange={(e) => handleSeasonalFactorChange(month, e.target.value)}
+                          placeholder="Enter seasonal factor"
                         />
                       </CInputGroup>
                     </div>
@@ -692,9 +868,6 @@ const AddConfigModal = ({ visible, onClose, model, onSuccess }) => {
           </div>
         </div>
       </CModalBody>
-      <CModalFooter style={{ display: 'none' }}>
-        {/* Hidden footer as we have buttons inside each section */}
-      </CModalFooter>
     </CModal>
   );
 };

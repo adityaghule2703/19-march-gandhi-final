@@ -8052,7 +8052,7 @@ function BookingForm() {
     other: 0
   });
 
-  // State for global discount distribution (NEW mode only)
+  // State for global discount distribution (for both NEW and EDIT mode)
   const [globalDiscount, setGlobalDiscount] = useState('');
   const [discountDistribution, setDiscountDistribution] = useState({});
 
@@ -8191,84 +8191,155 @@ function BookingForm() {
     };
   };
 
-// ===== Function to distribute discount - SIMPLE PERCENTAGE OF TOTAL =====
-const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
-  if (!headersList || headersList.length === 0) return {};
-  
-  // Get discountable headers with unit cost > 0, sorted by priority
-  const discountableHeaders = headersList
-    .filter(price => {
-      const hasDiscountPercentage = price.discount_percentage !== undefined && 
-                                   price.discount_percentage !== null && 
-                                   price.discount_percentage !== '';
-      const isDiscountable = price.is_discount === true;
-      const unitCost = parseFloat(price.value) || 0;
-      // Skip headers with zero unit cost
-      return hasDiscountPercentage && isDiscountable && unitCost > 0;
-    })
-    .map(price => ({
-      ...price,
-      header_id: price.header_id,
-      unitCost: parseFloat(price.value) || 0,
-      discountPercentage: parseFloat(price.discount_percentage)
-    }))
-    .sort((a, b) => a.discount_priority - b.discount_priority);
-  
-  if (discountableHeaders.length === 0) return {};
-  if (!totalDiscountAmount || totalDiscountAmount <= 0) return {};
-  
-  const distribution = {};
-  let remainingDiscount = totalDiscountAmount;
-  
-  // Process headers in priority order
-  for (const header of discountableHeaders) {
-    if (remainingDiscount <= 0) {
-      distribution[header.header_id] = 0;
-      continue;
-    }
+  // ===== Function to distribute discount - SIMPLE PERCENTAGE OF TOTAL =====
+  const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
+    if (!headersList || headersList.length === 0) return {};
     
-    // Calculate discount: Total Discount × (Percentage / 100)
-    let calculatedDiscount = totalDiscountAmount * (header.discountPercentage / 100);
+    // Get discountable headers with unit cost > 0, sorted by priority
+    const discountableHeaders = headersList
+      .filter(price => {
+        const hasDiscountPercentage = price.discount_percentage !== undefined && 
+                                     price.discount_percentage !== null && 
+                                     price.discount_percentage !== '';
+        const unitCost = parseFloat(price.value) || 0;
+        // Skip headers with zero unit cost
+        return hasDiscountPercentage && unitCost > 0;
+      })
+      .map(price => ({
+        ...price,
+        header_id: price.header_id,
+        unitCost: parseFloat(price.value) || 0,
+        discountPercentage: parseFloat(price.discount_percentage)
+      }))
+      .sort((a, b) => a.discount_priority - b.discount_priority);
     
-    // Cap at unit cost
-    if (calculatedDiscount > header.unitCost) {
-      calculatedDiscount = header.unitCost;
-    }
+    if (discountableHeaders.length === 0) return {};
+    if (!totalDiscountAmount || totalDiscountAmount <= 0) return {};
     
-    // Don't exceed remaining discount
-    const discountToApply = Math.min(calculatedDiscount, remainingDiscount);
+    const distribution = {};
+    let remainingDiscount = totalDiscountAmount;
     
-    distribution[header.header_id] = discountToApply;
-    remainingDiscount -= discountToApply;
-  }
-  
-  return distribution;
-};
-
-  // ===== Handle global discount change (NEW mode only) =====
-  const handleGlobalDiscountChange = (value) => {
-    const discountAmount = parseFloat(value) || 0;
-    setGlobalDiscount(value);
-    
-    if (discountAmount > 0) {
-      const tab6Headers = getSelectedHeadersForTab6();
-      const distribution = calculateDiscountDistribution(discountAmount, tab6Headers);
-      setDiscountDistribution(distribution);
+    // Process headers in priority order
+    for (const header of discountableHeaders) {
+      if (remainingDiscount <= 0) {
+        distribution[header.header_id] = 0;
+        continue;
+      }
       
-      const newHeaderDiscounts = { ...headerDiscounts };
-      Object.keys(distribution).forEach(headerId => {
-        newHeaderDiscounts[headerId] = distribution[headerId];
-      });
-      setHeaderDiscounts(newHeaderDiscounts);
-    } else {
-      setDiscountDistribution({});
-      const resetDiscounts = { ...headerDiscounts };
-      Object.keys(resetDiscounts).forEach(headerId => {
-        resetDiscounts[headerId] = 0;
-      });
-      setHeaderDiscounts(resetDiscounts);
+      // Calculate discount: Total Discount × (Percentage / 100)
+      let calculatedDiscount = totalDiscountAmount * (header.discountPercentage / 100);
+      
+      // Cap at unit cost
+      if (calculatedDiscount > header.unitCost) {
+        calculatedDiscount = header.unitCost;
+      }
+      
+      // Don't exceed remaining discount
+      const discountToApply = Math.min(calculatedDiscount, remainingDiscount);
+      
+      distribution[header.header_id] = discountToApply;
+      remainingDiscount -= discountToApply;
     }
+    
+    // If there's remaining discount, add it to the first Ex-Showroom header found
+    if (remainingDiscount > 0) {
+      // Find any Ex-Showroom header (case insensitive pattern matching)
+      const exShowroomHeader = headersList.find(price => {
+        const headerKey = price.header?.header_key || price.header_key || '';
+        // Match any of the three Ex-Showroom patterns
+        return /ex-showroom|ex showroom/i.test(headerKey);
+      });
+      
+      if (exShowroomHeader) {
+        const exShowroomHeaderId = exShowroomHeader.header_id || exShowroomHeader.header?._id;
+        // Add remaining discount to the existing distribution or create new entry
+        distribution[exShowroomHeaderId] = (distribution[exShowroomHeaderId] || 0) + remainingDiscount;
+      }
+    }
+    
+    return distribution;
   };
+
+  // ===== Handle global discount change (for both NEW and EDIT mode) =====
+  // ===== Handle global discount change (for both NEW and EDIT mode) =====
+const handleGlobalDiscountChange = (value) => {
+  const discountAmount = parseFloat(value) || 0;
+  setGlobalDiscount(value);
+  
+  if (discountAmount > 0) {
+    const tab6Headers = getSelectedHeadersForTab6();
+    const distribution = calculateDiscountDistribution(discountAmount, tab6Headers);
+    setDiscountDistribution(distribution);
+    
+    const newHeaderDiscounts = { ...headerDiscounts };
+    Object.keys(distribution).forEach(headerId => {
+      newHeaderDiscounts[headerId] = distribution[headerId];
+    });
+    setHeaderDiscounts(newHeaderDiscounts);
+    
+    // Recalculate discount usage for edit mode
+    if (isEditMode) {
+      setTimeout(() => {
+        const newUsage = calculateDiscountUsageByCategory(tab6Headers, newHeaderDiscounts);
+        setDiscountUsageByCategory(newUsage);
+        
+        const specialValues = extractSpecialHeaderValues(tab6Headers);
+        setSpecialHeaderValues(specialValues);
+        
+        const maxAddOnAmount = (specialValues.addOnServicesTotal * discountLimits.addOnServices) / 100;
+        const maxAccessoriesAmount = (specialValues.accessoriesTotal * discountLimits.accessories) / 100;
+        
+        const remainingAddOnAmount = Math.max(0, maxAddOnAmount - newUsage.AddONservices);
+        const remainingAddOnPercentage = specialValues.addOnServicesTotal > 0 
+          ? ((remainingAddOnAmount / specialValues.addOnServicesTotal) * 100).toFixed(1)
+          : 0;
+        
+        const remainingAccessoriesAmount = Math.max(0, maxAccessoriesAmount - newUsage.Accessories);
+        const remainingAccessoriesPercentage = specialValues.accessoriesTotal > 0 
+          ? ((remainingAccessoriesAmount / specialValues.accessoriesTotal) * 100).toFixed(1)
+          : 0;
+        
+        setRemainingDiscounts({
+          onRoadPrice: Math.max(0, discountLimits.onRoadPrice - newUsage.vehicle_price),
+          addOnServices: discountLimits.addOnServices,
+          addOnServicesAmount: remainingAddOnAmount,
+          addOnServicesPercentage: remainingAddOnPercentage,
+          accessories: discountLimits.accessories,
+          accessoriesAmount: remainingAccessoriesAmount,
+          accessoriesPercentage: remainingAccessoriesPercentage,
+          totalUsed: newUsage.vehicle_price + newUsage.AddONservices + newUsage.Accessories + newUsage.other
+        });
+      }, 100);
+    }
+  } else {
+    setDiscountDistribution({});
+    const resetDiscounts = { ...headerDiscounts };
+    Object.keys(resetDiscounts).forEach(headerId => {
+      resetDiscounts[headerId] = 0;
+    });
+    setHeaderDiscounts(resetDiscounts);
+    
+    // Reset discount usage for edit mode
+    if (isEditMode) {
+      setDiscountUsageByCategory({
+        vehicle_price: 0,
+        AddONservices: 0,
+        Accessories: 0,
+        other: 0
+      });
+      setRemainingDiscounts({
+        onRoadPrice: discountLimits.onRoadPrice || 0,
+        addOnServices: discountLimits.addOnServices || 0,
+        addOnServicesAmount: 0,
+        addOnServicesPercentage: discountLimits.addOnServices || 0,
+        accessories: discountLimits.accessories || 0,
+        accessoriesAmount: 0,
+        accessoriesPercentage: discountLimits.accessories || 0,
+        totalUsed: 0
+      });
+    }
+  }
+};
 
   // Filter financers based on branch
   useEffect(() => {
@@ -8337,85 +8408,41 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
     return usage;
   };
 
-  // ===== handleHeaderDiscountChange for EDIT mode =====
-  const handleHeaderDiscountChange = (headerId, value, headerCategory, headerPrice) => {
-    setErrors(prev => ({ ...prev, [`discount_${headerId}`]: '' }));
-    setHeaderDiscounts(prev => ({ ...prev, [headerId]: value }));
+// ===== Effect to recalculate discount usage (EDIT mode) =====
+useEffect(() => {
+  if (isEditMode && Object.keys(headerDiscounts).length > 0) {
+    const tab6Headers = getSelectedHeadersForTab6();
+    const newUsage = calculateDiscountUsageByCategory(tab6Headers, headerDiscounts);
+    setDiscountUsageByCategory(newUsage);
     
-    if (isEditMode) {
-      setTimeout(() => {
-        const tab6Headers = getSelectedHeadersForTab6();
-        const newUsage = calculateDiscountUsageByCategory(tab6Headers, {
-          ...headerDiscounts,
-          [headerId]: value
-        });
-        setDiscountUsageByCategory(newUsage);
-        
-        const specialValues = extractSpecialHeaderValues(tab6Headers);
-        setSpecialHeaderValues(specialValues);
-        
-        const maxAddOnAmount = (specialValues.addOnServicesTotal * discountLimits.addOnServices) / 100;
-        const maxAccessoriesAmount = (specialValues.accessoriesTotal * discountLimits.accessories) / 100;
-        
-        const remainingAddOnAmount = Math.max(0, maxAddOnAmount - newUsage.AddONservices);
-        const remainingAddOnPercentage = specialValues.addOnServicesTotal > 0 
-          ? ((remainingAddOnAmount / specialValues.addOnServicesTotal) * 100).toFixed(1)
-          : 0;
-        
-        const remainingAccessoriesAmount = Math.max(0, maxAccessoriesAmount - newUsage.Accessories);
-        const remainingAccessoriesPercentage = specialValues.accessoriesTotal > 0 
-          ? ((remainingAccessoriesAmount / specialValues.accessoriesTotal) * 100).toFixed(1)
-          : 0;
-        
-        setRemainingDiscounts({
-          onRoadPrice: Math.max(0, discountLimits.onRoadPrice - newUsage.vehicle_price),
-          addOnServices: discountLimits.addOnServices,
-          addOnServicesAmount: remainingAddOnAmount,
-          addOnServicesPercentage: remainingAddOnPercentage,
-          accessories: discountLimits.accessories,
-          accessoriesAmount: remainingAccessoriesAmount,
-          accessoriesPercentage: remainingAccessoriesPercentage,
-          totalUsed: newUsage.vehicle_price + newUsage.AddONservices + newUsage.Accessories + newUsage.other
-        });
-      }, 100);
-    }
-  };
-
-  // ===== Effect to recalculate discount usage (EDIT mode) =====
-  useEffect(() => {
-    if (isEditMode && Object.keys(headerDiscounts).length > 0) {
-      const tab6Headers = getSelectedHeadersForTab6();
-      const newUsage = calculateDiscountUsageByCategory(tab6Headers, headerDiscounts);
-      setDiscountUsageByCategory(newUsage);
-      
-      const specialValues = extractSpecialHeaderValues(tab6Headers);
-      setSpecialHeaderValues(specialValues);
-      
-      const maxAddOnAmount = (specialValues.addOnServicesTotal * discountLimits.addOnServices) / 100;
-      const maxAccessoriesAmount = (specialValues.accessoriesTotal * discountLimits.accessories) / 100;
-      
-      const remainingAddOnAmount = Math.max(0, maxAddOnAmount - newUsage.AddONservices);
-      const remainingAddOnPercentage = specialValues.addOnServicesTotal > 0 
-        ? ((remainingAddOnAmount / specialValues.addOnServicesTotal) * 100).toFixed(1)
-        : 0;
-      
-      const remainingAccessoriesAmount = Math.max(0, maxAccessoriesAmount - newUsage.Accessories);
-      const remainingAccessoriesPercentage = specialValues.accessoriesTotal > 0 
-        ? ((remainingAccessoriesAmount / specialValues.accessoriesTotal) * 100).toFixed(1)
-        : 0;
-      
-      setRemainingDiscounts({
-        onRoadPrice: Math.max(0, discountLimits.onRoadPrice - newUsage.vehicle_price),
-        addOnServices: discountLimits.addOnServices,
-        addOnServicesAmount: remainingAddOnAmount,
-        addOnServicesPercentage: remainingAddOnPercentage,
-        accessories: discountLimits.accessories,
-        accessoriesAmount: remainingAccessoriesAmount,
-        accessoriesPercentage: remainingAccessoriesPercentage,
-        totalUsed: newUsage.vehicle_price + newUsage.AddONservices + newUsage.Accessories + newUsage.other
-      });
-    }
-  }, [headerDiscounts, discountLimits, isEditMode, accessories, formData.selected_accessories, formData.uncheckedAccessories, formData.selfInsurance, formData.insuranceFivePlusFive]);
+    const specialValues = extractSpecialHeaderValues(tab6Headers);
+    setSpecialHeaderValues(specialValues);
+    
+    const maxAddOnAmount = (specialValues.addOnServicesTotal * discountLimits.addOnServices) / 100;
+    const maxAccessoriesAmount = (specialValues.accessoriesTotal * discountLimits.accessories) / 100;
+    
+    const remainingAddOnAmount = Math.max(0, maxAddOnAmount - newUsage.AddONservices);
+    const remainingAddOnPercentage = specialValues.addOnServicesTotal > 0 
+      ? ((remainingAddOnAmount / specialValues.addOnServicesTotal) * 100).toFixed(1)
+      : 0;
+    
+    const remainingAccessoriesAmount = Math.max(0, maxAccessoriesAmount - newUsage.Accessories);
+    const remainingAccessoriesPercentage = specialValues.accessoriesTotal > 0 
+      ? ((remainingAccessoriesAmount / specialValues.accessoriesTotal) * 100).toFixed(1)
+      : 0;
+    
+    setRemainingDiscounts({
+      onRoadPrice: Math.max(0, discountLimits.onRoadPrice - newUsage.vehicle_price),
+      addOnServices: discountLimits.addOnServices,
+      addOnServicesAmount: remainingAddOnAmount,
+      addOnServicesPercentage: remainingAddOnPercentage,
+      accessories: discountLimits.accessories,
+      accessoriesAmount: remainingAccessoriesAmount,
+      accessoriesPercentage: remainingAccessoriesPercentage,
+      totalUsed: newUsage.vehicle_price + newUsage.AddONservices + newUsage.Accessories + newUsage.other
+    });
+  }
+}, [headerDiscounts, discountLimits, isEditMode, accessories, formData.selected_accessories, formData.uncheckedAccessories, formData.selfInsurance, formData.insuranceFivePlusFive]);
 
   useEffect(() => {
     const fetchRtoCodes = async () => {
@@ -8666,166 +8693,179 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
     }
   };
 
-  const fetchBookingDetails = async (bookingId) => {
-    try {
-      const response = await axiosInstance.get(`/bookings/${bookingId}`);
-      const bookingData = response.data.data;
+ const fetchBookingDetails = async (bookingId) => {
+  try {
+    const response = await axiosInstance.get(`/bookings/${bookingId}`);
+    const bookingData = response.data.data;
 
-      const priceComponents = bookingData.priceComponents || [];
-      setBookingPriceComponents(priceComponents);
+    // Get subsidy amount and isEV
+    const isEV = bookingData.model?.type === 'EV';
+    const subsidyAmount = bookingData.subsidyAmount || bookingData.subsidy_amount || 0;
+    
+    setIsEVModel(isEV);
+    
+    // Load global discount from the correct location in the response
+    let globalDiscountAmount = 0;
+    if (bookingData.totalDiscountDetails?.globalDiscount?.applied && 
+        bookingData.totalDiscountDetails.globalDiscount.totalAmount) {
+      globalDiscountAmount = bookingData.totalDiscountDetails.globalDiscount.totalAmount;
+    } else if (bookingData.globalDiscount) {
+      // Fallback for older API structure
+      globalDiscountAmount = bookingData.globalDiscount;
+    }
+    
+    // Set the global discount state - this will make it editable
+    setGlobalDiscount(globalDiscountAmount.toString());
+    
+    const priceComponents = bookingData.priceComponents || [];
+    setBookingPriceComponents(priceComponents);
 
-      const apiDiscounts = {};
-      priceComponents.forEach(priceComponent => {
-        if (priceComponent.header && priceComponent.header._id) {
-          const headerKey = priceComponent.header.header_key || '';
-          if (headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)') {
-            apiDiscounts[priceComponent.header._id] = 0;
-          } else {
-            apiDiscounts[priceComponent.header._id] = priceComponent.discountAmount || 0;
-          }
+    // Transform price components for distribution calculation
+    const transformedPriceComponents = priceComponents.map(pc => ({
+      ...pc,
+      header_id: pc.header?._id,
+      header_key: pc.header?.header_key,
+      discount_percentage: pc.discountPercentage,
+      discount_priority: pc.discountPriority,
+      value: pc.originalValue,
+      is_mandatory: pc.isMandatory,
+      header: pc.header
+    }));
+    
+    // Calculate distribution based on global discount if it exists
+    if (globalDiscountAmount > 0 && transformedPriceComponents.length > 0) {
+      const distribution = calculateDiscountDistribution(globalDiscountAmount, transformedPriceComponents);
+      setDiscountDistribution(distribution);
+      setHeaderDiscounts(distribution);
+    } else {
+      // If no global discount, initialize empty distribution
+      setDiscountDistribution({});
+      const initialDiscounts = {};
+      transformedPriceComponents.forEach(pc => {
+        if (pc.header?._id) {
+          initialDiscounts[pc.header._id] = 0;
         }
       });
-      setHeaderDiscounts(apiDiscounts);
+      setHeaderDiscounts(initialDiscounts);
+    }
 
-      const bookedHeaderIds = priceComponents
-        .filter(pc => pc.header && pc.header._id)
-        .map(pc => pc.header._id);
+    const bookedHeaderIds = priceComponents
+      .filter(pc => pc.header && pc.header._id)
+      .map(pc => pc.header._id);
 
-      const bookingVerticle = bookingData.verticles && bookingData.verticles.length > 0 
-        ? bookingData.verticles[0]._id || bookingData.verticles[0] 
-        : '';
+    const bookingVerticle = bookingData.verticles && bookingData.verticles.length > 0 
+      ? bookingData.verticles[0]._id || bookingData.verticles[0] 
+      : '';
 
-      const isEV = bookingData.model?.type === 'EV';
-      setIsEVModel(isEV);
-      
-      const subsidyAmount = bookingData.subsidy_amount || 
-                           bookingData.subsidyAmount || 
-                           bookingData.model?.subsidy_amount || '';
+    const formDataToSet = {
+      verticle_id: bookingVerticle,
+      model_id: bookingData.model?.id || '',
+      model_color: bookingData.color?.id || '',
+      customer_type: bookingData.customerType || 'B2C',
+      rto_type: bookingData.rto || 'MH',
+      branch: bookingData.branch?._id || '',
+      optionalComponents: bookedHeaderIds,
+      sales_executive: bookingData.salesExecutive?._id || '',
+      gstin: bookingData.gstin || '',
+      rto_amount: bookingData.rtoAmount || '',
+      salutation: bookingData.customerDetails?.salutation || '',
+      name: bookingData.customerDetails?.name || '',
+      pan_no: bookingData.customerDetails?.panNo || '',
+      dob: bookingData.customerDetails?.dob?.split('T')[0] || '',
+      occupation: bookingData.customerDetails?.occupation || '',
+      address: bookingData.customerDetails?.address || '',
+      taluka: bookingData.customerDetails?.taluka || '',
+      district: bookingData.customerDetails?.district || '',
+      pincode: bookingData.customerDetails?.pincode || '',
+      mobile1: bookingData.customerDetails?.mobile1 || '',
+      mobile2: bookingData.customerDetails?.mobile2 || '',
+      aadhar_number: bookingData.customerDetails?.aadharNumber || '',
+      nomineeName: bookingData.customerDetails?.nomineeName || '',
+      nomineeRelation: bookingData.customerDetails?.nomineeRelation || '',
+      nomineeAge: bookingData.customerDetails?.nomineeAge || '',
+      type: bookingData.payment?.type?.toLowerCase() || 'cash',
+      financer_id: bookingData.payment?.financer?._id || '',
+      scheme: bookingData.payment?.scheme || '',
+      emi_plan: bookingData.payment?.emiPlan || '',
+      gc_applicable: bookingData.payment?.gcApplicable || false,
+      gc_amount: bookingData.payment?.gcAmount || 0,
+      discountType: bookingData.discounts?.[0]?.type?.toLowerCase() || 'fixed',
+      selected_accessories: bookingData.accessories?.map((a) => a.accessory?._id).filter(Boolean) || [],
+      hpa: bookingData.hpa || false,
+      selfInsurance: bookingData.selfInsurance || false,
+      insuranceFivePlusFive: bookingData.insuranceFivePlusFive || false,
+      is_exchange: bookingData.exchange ? 'true' : 'false',
+      broker_id: bookingData.exchangeDetails?.broker?._id || '',
+      exchange_price: bookingData.exchangeDetails?.price || '',
+      vehicle_number: bookingData.exchangeDetails?.vehicleNumber || '',
+      chassis_number: bookingData.exchangeDetails?.chassisNumber || '',
+      note: bookingData.note || '',
+      uncheckedHeaders: [],
+      uncheckedAccessories: [],
+      subsidy_amount: subsidyAmount,
+      rto_code: bookingData.rtoCode || bookingData.rto_code || ''
+    };
+    
+    setFormData(formDataToSet);
+    setIsEditMode(true);
+    setSelectedBranchName(bookingData.branch?.name || '');
+    setModelDetails(bookingData.model || null);
+    setAccessoriesTotal(bookingData.accessoriesTotal || 0);
 
-      const formDataToSet = {
-        verticle_id: bookingVerticle,
-        model_id: bookingData.model?.id || '',
-        model_color: bookingData.color?.id || '',
-        customer_type: bookingData.customerType || 'B2C',
-        rto_type: bookingData.rto || 'MH',
-        branch: bookingData.branch?._id || '',
-        optionalComponents: bookedHeaderIds,
-        sales_executive: bookingData.salesExecutive?._id || '',
-        gstin: bookingData.gstin || '',
-        rto_amount: bookingData.rtoAmount || '',
-        salutation: bookingData.customerDetails?.salutation || '',
-        name: bookingData.customerDetails?.name || '',
-        pan_no: bookingData.customerDetails?.panNo || '',
-        dob: bookingData.customerDetails?.dob?.split('T')[0] || '',
-        occupation: bookingData.customerDetails?.occupation || '',
-        address: bookingData.customerDetails?.address || '',
-        taluka: bookingData.customerDetails?.taluka || '',
-        district: bookingData.customerDetails?.district || '',
-        pincode: bookingData.customerDetails?.pincode || '',
-        mobile1: bookingData.customerDetails?.mobile1 || '',
-        mobile2: bookingData.customerDetails?.mobile2 || '',
-        aadhar_number: bookingData.customerDetails?.aadharNumber || '',
-        nomineeName: bookingData.customerDetails?.nomineeName || '',
-        nomineeRelation: bookingData.customerDetails?.nomineeRelation || '',
-        nomineeAge: bookingData.customerDetails?.nomineeAge || '',
-        type: bookingData.payment?.type?.toLowerCase() || 'cash',
-        financer_id: bookingData.payment?.financer?._id || '',
-        scheme: bookingData.payment?.scheme || '',
-        emi_plan: bookingData.payment?.emiPlan || '',
-        gc_applicable: bookingData.payment?.gcApplicable || false,
-        gc_amount: bookingData.payment?.gcAmount || 0,
-        discountType: bookingData.discounts?.[0]?.type?.toLowerCase() || 'fixed',
-        selected_accessories: bookingData.accessories?.map((a) => a.accessory?._id).filter(Boolean) || [],
-        hpa: bookingData.hpa || false,
-        selfInsurance: bookingData.selfInsurance || false,
-        insuranceFivePlusFive: bookingData.insuranceFivePlusFive || false,
-        is_exchange: bookingData.exchange ? 'true' : 'false',
-        broker_id: bookingData.exchangeDetails?.broker?._id || '',
-        exchange_price: bookingData.exchangeDetails?.price || '',
-        vehicle_number: bookingData.exchangeDetails?.vehicleNumber || '',
-        chassis_number: bookingData.exchangeDetails?.chassisNumber || '',
-        note: bookingData.note || '',
-        uncheckedHeaders: [],
-        uncheckedAccessories: [],
-        subsidy_amount: subsidyAmount,
-        rto_code: bookingData.rtoCode || bookingData.rto_code || ''
+    if (bookingData.model) {
+      setModelType(bookingData.model.type);
+      setSelectedModelName(bookingData.model.model_name);
+    }
+
+    await fetchModels(bookingData.customerType, bookingData.branch?._id);
+
+    if (bookingData.model?.id) {
+      const fetchModelDetails = async () => {
+        try {
+          const modelResponse = await axiosInstance.get(`/models/${bookingData.model.id}`);
+          const modelData = modelResponse.data.data.model;
+          const modelPrices = modelData.prices || [];
+          
+          const allHeaders = modelPrices
+            .filter(price => price.header && price.header._id)
+            .map(price => price.header._id);
+          
+          const mandatoryHeaders = modelPrices
+            .filter(price => price.header && price.header.is_mandatory)
+            .map(price => price.header._id);
+          
+          const nonMandatoryHeaders = allHeaders.filter(headerId => 
+            !mandatoryHeaders.includes(headerId)
+          );
+          
+          const currentOptionalComponents = formDataToSet.optionalComponents || [];
+          const uncheckedHeaders = nonMandatoryHeaders.filter(headerId => 
+            !currentOptionalComponents.includes(headerId)
+          );
+          
+          setFormData(prev => ({ ...prev, uncheckedHeaders }));
+          setSelectedModelHeaders(modelPrices);
+          setModelDetails(modelData);
+          
+          if (isEV && modelData.subsidy_amount) {
+            setFormData(prev => ({ ...prev, subsidy_amount: modelData.subsidy_amount }));
+          }
+          
+        } catch (error) {
+          console.error('Error fetching model details:', error);
+        }
       };
       
-      setFormData(formDataToSet);
-      setIsEditMode(true);
-      setSelectedBranchName(bookingData.branch?.name || '');
-      setModelDetails(bookingData.model || null);
-      setAccessoriesTotal(bookingData.accessoriesTotal || 0);
-
-      if (bookingData.model) {
-        setModelType(bookingData.model.type);
-        setSelectedModelName(bookingData.model.model_name);
-      }
-
-      await fetchModels(bookingData.customerType, bookingData.branch?._id);
-
-      if (bookingData.model?.id) {
-        const fetchModelDetails = async () => {
-          try {
-            const modelResponse = await axiosInstance.get(`/models/${bookingData.model.id}`);
-            const modelData = modelResponse.data.data.model;
-            const modelPrices = modelData.prices || [];
-            
-            const allHeaders = modelPrices
-              .filter(price => price.header && price.header._id)
-              .map(price => price.header._id);
-            
-            const mandatoryHeaders = modelPrices
-              .filter(price => price.header && price.header.is_mandatory)
-              .map(price => price.header._id);
-            
-            const nonMandatoryHeaders = allHeaders.filter(headerId => 
-              !mandatoryHeaders.includes(headerId)
-            );
-            
-            const currentOptionalComponents = formDataToSet.optionalComponents || [];
-            const uncheckedHeaders = nonMandatoryHeaders.filter(headerId => 
-              !currentOptionalComponents.includes(headerId)
-            );
-            
-            setFormData(prev => ({ ...prev, uncheckedHeaders }));
-            setSelectedModelHeaders(modelPrices);
-            setModelDetails(modelData);
-            
-            if (isEV && modelData.subsidy_amount) {
-              setFormData(prev => ({ ...prev, subsidy_amount: modelData.subsidy_amount }));
-            }
-            
-            setHeaderDiscounts(prev => {
-              const updated = { ...prev };
-              modelPrices.forEach(price => {
-                if (price.header && price.header._id) {
-                  const headerId = price.header._id;
-                  const headerKey = price.header.header_key || '';
-                  if (headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)') {
-                    updated[headerId] = 0;
-                  } else if (updated[headerId] === undefined) {
-                    updated[headerId] = 0;
-                  }
-                }
-              });
-              return updated;
-            });
-          } catch (error) {
-            console.error('Error fetching model details:', error);
-          }
-        };
-        
-        setTimeout(fetchModelDetails, 500);
-        fetchAccessories(bookingData.model.id);
-        fetchModelColors(bookingData.model.id);
-      }
-    } catch (error) {
-      console.error('Error fetching booking details:', error);
-      const message = showError(error); 
-      if (message) setError(message);
+      setTimeout(fetchModelDetails, 500);
+      fetchAccessories(bookingData.model.id);
+      fetchModelColors(bookingData.model.id);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching booking details:', error);
+    const message = showError(error); 
+    if (message) setError(message);
+  }
+};
 
   // Function to filter headers based on HPA status
   const filterHeadersByHPAStatus = (headers, hpaEnabled) => {
@@ -8954,19 +8994,8 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
 
   const validateTab6 = () => {
     const newErrors = {};
-    if (isEditMode) {
-      Object.entries(headerDiscounts).forEach(([headerId, discountValue]) => {
-        if (discountValue !== '' && discountValue !== null && discountValue !== undefined) {
-          const numValue = parseFloat(discountValue);
-          if (isNaN(numValue) || numValue < 0) {
-            newErrors[`discount_${headerId}`] = 'Discount must be a positive number';
-          }
-        }
-      });
-    } else {
-      if (globalDiscount && parseFloat(globalDiscount) < 0) {
-        newErrors.globalDiscount = 'Discount must be a positive number';
-      }
+    if (globalDiscount && parseFloat(globalDiscount) < 0) {
+      newErrors.globalDiscount = 'Discount must be a positive number';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -9015,12 +9044,6 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
       }
     } else if (activeTab === 6) {
       if (!validateTab6()) {
-        if (isEditMode) {
-          const firstErrorField = Object.keys(errors)[0];
-          if (firstErrorField) {
-            document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
         return;
       }
     }
@@ -9408,12 +9431,13 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
           'ON ROAD PRICE (A)', 'TOTAL ONROAD + ADDON SERVICES', 'TOTAL ONROAD+ADDON SERVICES',
           'ADDON SERVICES TOTAL (B)', 'ACCESSORIES TOTAL', 'ON ROAD PRICE', 'ADDON SERVICES TOTAL',
           'ADD ON SERVICES TOTAL', 'TOTAL AMOUNT', 'GRAND TOTAL', 'FINAL AMOUNT', 'TOTAL',
-          'ON-ROAD PRICE', 'FINAL PRICE', 'LESS:- CENTER SUBSIDY(FAME-II)', 'COMPLETE PRICE'
+          'ON-ROAD PRICE', 'FINAL PRICE', 'LESS:- CENTER SUBSIDY(FAME-II)', 'COMPLETE PRICE',
+          'LESS:- CENTER SUBSIDY'
         ];
         return !excludedHeaders.includes(price.header_key || '');
       });
 
-    let totalBeforeDiscount = 0;
+    let totalUnitCost = 0;
     let totalDiscount = 0;
     let subsidyAmount = parseFloat(formData.subsidy_amount) || 0;
     
@@ -9435,30 +9459,21 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
         unitPrice = parseFloat(formData.rto_amount) || 0;
       }
       
-      const gstRate = price.metadata?.gst_rate ? parseFloat(price.metadata.gst_rate) : 0;
-      const taxable = calculateTaxableAmount(unitPrice, 0, gstRate, formData.customer_type);
-      const { cgstAmount, sgstAmount } = calculateGST(taxable, gstRate, formData.customer_type);
-      totalBeforeDiscount += calculateLineTotal(taxable, cgstAmount, sgstAmount);
+      // Add unit cost to total
+      totalUnitCost += unitPrice;
+      
+      // Get discount for this header from distribution
+      const headerId = price.header_id;
+      let discountForThisHeader = discountDistribution[headerId] || 0;
+      
+      totalDiscount += discountForThisHeader;
     });
     
-    if (isEditMode) {
-      Object.values(headerDiscounts).forEach(amount => {
-        const discountAmount = amount !== '' && amount !== null && !isNaN(parseFloat(amount)) ? parseFloat(amount) : 0;
-        totalDiscount += discountAmount;
-      });
-    } else {
-      Object.values(discountDistribution).forEach(amount => { totalDiscount += amount; });
-    }
-
-    let finalTotal = totalBeforeDiscount - totalDiscount;
-    
-    const exShowroomHeader = selectedHeaders.find(price => price.header_key === 'Ex-SHOWROOM(INCLUDING 5% GST)');
-    if (exShowroomHeader && subsidyAmount > 0 && isEVModel) {
-      finalTotal -= subsidyAmount;
-    }
+    // Calculate final total: Total Unit Cost - Total Discount - Subsidy
+    let finalTotal = totalUnitCost - totalDiscount - subsidyAmount;
 
     return {
-      totalBeforeDiscount: totalBeforeDiscount.toFixed(2),
+      totalBeforeDiscount: totalUnitCost.toFixed(2),
       totalAfterDiscount: finalTotal.toFixed(2),
       totalDiscount: totalDiscount.toFixed(2),
       subsidyAmount: subsidyAmount.toFixed(2),
@@ -9504,9 +9519,10 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
       );
     }
 
+    // Prepare header discounts from distribution
     let headerDiscountsArray = [];
-    if (isEditMode) {
-      headerDiscountsArray = Object.entries(headerDiscounts)
+    if (Object.keys(discountDistribution).length > 0) {
+      headerDiscountsArray = Object.entries(discountDistribution)
         .filter(([headerId, value]) => {
           const isSelected = headersToSubmit.includes(headerId);
           const hasDiscount = value !== '' && value !== null && value !== undefined && !isNaN(parseFloat(value)) && parseFloat(value) !== 0;
@@ -9516,8 +9532,6 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
           headerId,
           discountAmount: parseFloat(value) || 0
         }));
-    } else {
-      headerDiscountsArray = [];
     }
 
     let accessoriesToSubmit = [];
@@ -9592,14 +9606,12 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
       insuranceFivePlusFive: formData.insuranceFivePlusFive === true,
       exchange: exchangeDetails,
       note: formData.note || '',
+      globalDiscount: globalDiscount ? parseFloat(globalDiscount) : 0,
       ...(formData.rto_type === 'MH' && formData.rto_code && { rto_code: formData.rto_code }),
       ...((formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && { rto_amount: formData.rto_amount ? parseFloat(formData.rto_amount) : 0 }),
       ...(isEVModel && { subsidy_amount: formData.subsidy_amount ? parseFloat(formData.subsidy_amount) : 0 })
     };
 
-    if (!isEditMode) {
-      requestBody.globalDiscount = globalDiscount ? parseFloat(globalDiscount) : 0;
-    }
     if (formData.customer_type === 'B2B') {
       requestBody.gstin = formData.gstin;
     }
@@ -9867,86 +9879,85 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
                   )}
                 </div>
 
-              {/* ===== MODEL HEADERS SECTION — shown on Tab 1 for both NEW and EDIT MODE ===== */}
-{getSelectedModelHeaders().length > 0 && (
-  <div className="model-headers-section">
-    <h5>
-      Model Options
-      {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>(HPA-related options hidden as HPA is disabled)</span>}
-      {formData.selfInsurance === true && <span style={{ color: '#28a745', fontSize: '0.9em', marginLeft: '10px' }}>(Insurance headers hidden as Self Insurance is enabled)</span>}
-      {formData.selfInsurance === false && formData.insuranceFivePlusFive === true && <span style={{ color: '#ffc107', fontSize: '0.9em', marginLeft: '10px' }}>(INSURANCE CHARGES header hidden for Insurance 5+5)</span>}
-      {formData.selfInsurance === false && formData.insuranceFivePlusFive === false && <span style={{ color: '#6c757d', fontSize: '0.9em', marginLeft: '10px' }}>(Standard insurance - INSURANCE CHARGES shown)</span>}
-    </h5>
-    <div className="headers-list">
-      {getSelectedModelHeaders()
-        .filter((price) => {
-          const headerKey = price.header?.header_key || '';
-          if (formData.selfInsurance === true) {
-            if (headerKey.includes('INSURANCE') || headerKey === 'INSURANCE' || headerKey === 'INSURANCE CHARGES' || headerKey === 'Insurance: 5 + 5 Years') return false;
-          }
-          if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
-            if (headerKey === 'INSURANCE CHARGES') return false;
-            return true;
-          }
-          if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
-            if (headerKey === 'Insurance: 5 + 5 Years') return false;
-            return true;
-          }
-          return true;
-        })
-        .filter((price) => price.header && price.header._id)
-        .map((price) => {
-          const header = price.header;
-          const isMandatory = header.is_mandatory;
-          const headerId = header._id;
-          const headerKey = header.header_key || '';
-          const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
-                              headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
-          const shouldShowHeader = formData.hpa || !isHPAHeader;
-          if (!shouldShowHeader) return null;
+                {/* ===== MODEL HEADERS SECTION — shown on Tab 1 for both NEW and EDIT MODE ===== */}
+                {getSelectedModelHeaders().length > 0 && (
+                  <div className="model-headers-section">
+                    <h5>
+                      Model Options
+                      {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>(HPA-related options hidden as HPA is disabled)</span>}
+                      {formData.selfInsurance === true && <span style={{ color: '#28a745', fontSize: '0.9em', marginLeft: '10px' }}>(Insurance headers hidden as Self Insurance is enabled)</span>}
+                      {formData.selfInsurance === false && formData.insuranceFivePlusFive === true && <span style={{ color: '#ffc107', fontSize: '0.9em', marginLeft: '10px' }}>(INSURANCE CHARGES header hidden for Insurance 5+5)</span>}
+                      {formData.selfInsurance === false && formData.insuranceFivePlusFive === false && <span style={{ color: '#6c757d', fontSize: '0.9em', marginLeft: '10px' }}>(Standard insurance - INSURANCE CHARGES shown)</span>}
+                    </h5>
+                    <div className="headers-list">
+                      {getSelectedModelHeaders()
+                        .filter((price) => {
+                          const headerKey = price.header?.header_key || '';
+                          if (formData.selfInsurance === true) {
+                            if (headerKey.includes('INSURANCE') || headerKey === 'INSURANCE' || headerKey === 'INSURANCE CHARGES' || headerKey === 'Insurance: 5 + 5 Years') return false;
+                          }
+                          if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
+                            if (headerKey === 'INSURANCE CHARGES') return false;
+                            return true;
+                          }
+                          if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
+                            if (headerKey === 'Insurance: 5 + 5 Years') return false;
+                            return true;
+                          }
+                          return true;
+                        })
+                        .filter((price) => price.header && price.header._id)
+                        .map((price) => {
+                          const header = price.header;
+                          const isMandatory = header.is_mandatory;
+                          const headerId = header._id;
+                          const headerKey = header.header_key || '';
+                          const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
+                                              headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
+                          const shouldShowHeader = formData.hpa || !isHPAHeader;
+                          if (!shouldShowHeader) return null;
 
-          // Determine if checked based on mode
-          let isChecked;
-          if (isEditMode) {
-            isChecked = isMandatory || formData.optionalComponents.includes(headerId);
-          } else {
-            const isExplicitlyUnchecked = formData.uncheckedHeaders && formData.uncheckedHeaders.includes(headerId);
-            isChecked = isMandatory || !isExplicitlyUnchecked;
-          }
+                          let isChecked;
+                          if (isEditMode) {
+                            isChecked = isMandatory || formData.optionalComponents.includes(headerId);
+                          } else {
+                            const isExplicitlyUnchecked = formData.uncheckedHeaders && formData.uncheckedHeaders.includes(headerId);
+                            isChecked = isMandatory || !isExplicitlyUnchecked;
+                          }
 
-          return (
-            <div key={headerId} className="header-item">
-              <CFormCheck
-                id={`header-${headerId}`}
-                label={`${header.header_key} (₹${price.value}) ${isMandatory ? '(Mandatory)' : '(Optional)'}${isHPAHeader ? ' (HPA-related)' : ''}`}
-                checked={isChecked}
-                onChange={(e) => {
-                  if (!isMandatory) {
-                    const isNowChecked = e.target.checked;
-                    if (!isNowChecked) {
-                      setFormData(prev => ({
-                        ...prev,
-                        uncheckedHeaders: [...(prev.uncheckedHeaders || []), headerId],
-                        optionalComponents: prev.optionalComponents.filter(id => id !== headerId)
-                      }));
-                    } else {
-                      setFormData(prev => ({
-                        ...prev,
-                        uncheckedHeaders: prev.uncheckedHeaders?.filter(id => id !== headerId) || [],
-                        optionalComponents: [...prev.optionalComponents, headerId]
-                      }));
-                    }
-                  }
-                }}
-                disabled={isMandatory}
-              />
-              {isMandatory && <input type="hidden" name={`mandatory-${headerId}`} value={headerId} />}
-            </div>
-          );
-        })}
-    </div>
-  </div>
-)}
+                          return (
+                            <div key={headerId} className="header-item">
+                              <CFormCheck
+                                id={`header-${headerId}`}
+                                label={`${header.header_key} (₹${price.value}) ${isMandatory ? '(Mandatory)' : '(Optional)'}${isHPAHeader ? ' (HPA-related)' : ''}`}
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (!isMandatory) {
+                                    const isNowChecked = e.target.checked;
+                                    if (!isNowChecked) {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        uncheckedHeaders: [...(prev.uncheckedHeaders || []), headerId],
+                                        optionalComponents: prev.optionalComponents.filter(id => id !== headerId)
+                                      }));
+                                    } else {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        uncheckedHeaders: prev.uncheckedHeaders?.filter(id => id !== headerId) || [],
+                                        optionalComponents: [...prev.optionalComponents, headerId]
+                                      }));
+                                    }
+                                  }
+                                }}
+                                disabled={isMandatory}
+                              />
+                              {isMandatory && <input type="hidden" name={`mandatory-${headerId}`} value={headerId} />}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="form-footer">
                   <button type="button" className="cancel-button" onClick={handleNextTab}>Next</button>
@@ -10455,414 +10466,395 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
               </>
             )}
 
-            {/* ===== TAB 6 ===== */}
-            {activeTab === 6 && (
-              <>
-                <div className="user-details">
-                  <div className="input-box" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-                    <div style={{ flex: '1', minWidth: '250px' }}>
-                      <span className="details">Note</span>
-                      <CInputGroup>
-                        <CInputGroupText className="input-icon"><CIcon icon={cilList} /></CInputGroupText>
-                        <CFormInput name="note" value={formData.note} onChange={handleChange} />
-                      </CInputGroup>
-                    </div>
+           {/* ===== TAB 6 ===== */}
+{activeTab === 6 && (
+  <>
+    <div className="user-details">
+      <div className="input-box" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+        <div style={{ flex: '1', minWidth: '250px' }}>
+          <span className="details">Note</span>
+          <CInputGroup>
+            <CInputGroupText className="input-icon"><CIcon icon={cilList} /></CInputGroupText>
+            <CFormInput name="note" value={formData.note} onChange={handleChange} />
+          </CInputGroup>
+        </div>
 
-                    {/* Global Discount — NEW mode only */}
-                    {!isEditMode && (
-                      <div style={{ flex: '1', minWidth: '250px' }}>
-                        <div className="details-container"><span className="details">Global Discount Amount (₹)</span></div>
-                        <CInputGroup>
-                          <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
-                          <CFormInput type="number" step="1" min="0" value={globalDiscount} onChange={(e) => handleGlobalDiscountChange(e.target.value)} placeholder="Enter total discount amount" />
-                        </CInputGroup>
-                        <small className="text-muted">Discount will be distributed based on discount priority and percentage</small>
-                        {errors.globalDiscount && <p className="error">{errors.globalDiscount}</p>}
-                      </div>
-                    )}
+       {/* Global Discount - For both NEW and EDIT mode */}
+<div style={{ flex: '1', minWidth: '250px' }}>
+  <div className="details-container">
+    <span className="details">Total Discount Amount (₹)</span>
+    {isEditMode && (
+      <small className="text-muted ms-2">(Change this value to auto-distribute discounts)</small>
+    )}
+  </div>
+  <CInputGroup>
+    <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+    <CFormInput 
+      type="number" 
+      step="1" 
+      min="0" 
+      value={globalDiscount} 
+      onChange={(e) => handleGlobalDiscountChange(e.target.value)}
+      placeholder="Enter total discount amount"
+    />
+  </CInputGroup>
+  <small className="text-muted">Discount will be distributed based on discount priority and percentage</small>
+  {errors.globalDiscount && <p className="error">{errors.globalDiscount}</p>}
+</div>
 
-                    <div style={{ flex: '1', minWidth: '250px', textAlign: 'right' }}>
-                      <div className="details" style={{ marginBottom: '5px', display: 'block' }}>Total Deal Amount</div>
-                      <div style={{ display: 'inline-block', backgroundColor: '#f8f9fa', padding: '10px 15px', borderRadius: '5px', border: '1px solid #dee2e6', minWidth: '200px', textAlign: 'left' }}>
-                        {(() => {
-                          const totals = calculateTotalDealAmount();
-                          const totalBeforeDiscount = parseFloat(totals.totalBeforeDiscount);
-                          const totalAfterDiscount = parseFloat(totals.totalAfterDiscount);
-                          const totalDiscount = parseFloat(totals.totalDiscount);
-                          const subsidyAmount = parseFloat(totals.subsidyAmount);
-                          const hasDiscount = totals.hasDiscount;
-                          const hasSubsidy = totals.hasSubsidy;
-                          return (
-                            <>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                                <small>Original Total:</small>
-                                <span>₹{totalBeforeDiscount.toLocaleString('en-IN')}</span>
-                              </div>
-                              {hasDiscount && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', fontSize: '12px' }}>
-                                  <small>Discount:</small>
-                                  <span>- ₹{totalDiscount.toLocaleString('en-IN')}</span>
-                                </div>
-                              )}
-                              {hasSubsidy && isEVModel && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', fontSize: '12px' }}>
-                                  <small>EV Subsidy:</small>
-                                  <span>- ₹{subsidyAmount.toLocaleString('en-IN')}</span>
-                                </div>
-                              )}
-                              {(hasDiscount || hasSubsidy) && <div style={{ width: '100%', height: '1px', backgroundColor: '#ccc', margin: '3px 0' }}></div>}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px', fontWeight: 'bold' }}>
-                                <span>{(hasDiscount || hasSubsidy) ? 'Final Amount:' : 'Total:'}</span>
-                                <span style={{ fontSize: '16px' }}>₹{totalAfterDiscount.toLocaleString('en-IN')}</span>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
+        <div style={{ flex: '1', minWidth: '250px', textAlign: 'right' }}>
+          <div className="details" style={{ marginBottom: '5px', display: 'block' }}>Total Deal Amount</div>
+          <div style={{ display: 'inline-block', backgroundColor: '#f8f9fa', padding: '10px 15px', borderRadius: '5px', border: '1px solid #dee2e6', minWidth: '200px', textAlign: 'left' }}>
+            {(() => {
+              const totals = calculateTotalDealAmount();
+              const totalBeforeDiscount = parseFloat(totals.totalBeforeDiscount);
+              const totalAfterDiscount = parseFloat(totals.totalAfterDiscount);
+              const totalDiscount = parseFloat(totals.totalDiscount);
+              const subsidyAmount = parseFloat(totals.subsidyAmount);
+              const hasDiscount = totals.hasDiscount;
+              const hasSubsidy = totals.hasSubsidy;
+              return (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                    <small>Original Total:</small>
+                    <span>₹{totalBeforeDiscount.toLocaleString('en-IN')}</span>
                   </div>
-                </div>
-
-                {/* Discount Limits — EDIT mode only */}
-                {isEditMode && (
-                  <div className="discount-limits-info" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px', border: '1px solid #dee2e6' }}>
-                    <h6 style={{ marginBottom: '10px', color: '#495057' }}>Available Discount Limits</h6>
-                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                      <div style={{ flex: 1, minWidth: '200px' }}>
-                        <small style={{ display: 'block', color: '#6c757d' }}>Vehicle Price Discount</small>
-                        <strong style={{ fontSize: '1.1em' }}>₹{(discountLimits.onRoadPrice || 0).toLocaleString('en-IN')}</strong>
-                        {discountUsageByCategory.vehicle_price > 0 && (
-                          <div style={{ fontSize: '0.9em', color: '#28a745' }}>
-                            Used: ₹{discountUsageByCategory.vehicle_price.toLocaleString('en-IN')}<br />
-                            Remaining: ₹{remainingDiscounts.onRoadPrice.toLocaleString('en-IN')}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: '200px' }}>
-                        <small style={{ display: 'block', color: '#6c757d' }}>Add-On Services Discount</small>
-                        <strong>{discountLimits.addOnServices || 0}%</strong>
-                        {discountUsageByCategory.AddONservices > 0 && (
-                          <div style={{ fontSize: '0.9em', color: '#28a745' }}>
-                            Used: ₹{discountUsageByCategory.AddONservices.toLocaleString('en-IN')}<br />
-                            Remaining: {remainingDiscounts.addOnServicesPercentage}% (₹{remainingDiscounts.addOnServicesAmount.toLocaleString('en-IN')})
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: '200px' }}>
-                        <small style={{ display: 'block', color: '#6c757d' }}>Accessories Discount</small>
-                        <strong>{discountLimits.accessories || 0}%</strong>
-                        {discountUsageByCategory.Accessories > 0 && (
-                          <div style={{ fontSize: '0.9em', color: '#28a745' }}>
-                            Used: ₹{discountUsageByCategory.Accessories.toLocaleString('en-IN')}<br />
-                            Remaining: {remainingDiscounts.accessoriesPercentage}% (₹{remainingDiscounts.accessoriesAmount.toLocaleString('en-IN')})
-                          </div>
-                        )}
-                      </div>
-                      {remainingDiscounts.totalUsed > 0 && (
-                        <div style={{ flex: 1, minWidth: '200px' }}>
-                          <small style={{ display: 'block', color: '#6c757d' }}>Total Discount Used</small>
-                          <strong>₹{remainingDiscounts.totalUsed.toLocaleString('en-IN')}</strong>
-                        </div>
-                      )}
+                  {hasDiscount && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', fontSize: '12px' }}>
+                      <small>Discount:</small>
+                      <span>- ₹{totalDiscount.toLocaleString('en-IN')}</span>
                     </div>
+                  )}
+                  {hasSubsidy && isEVModel && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', fontSize: '12px' }}>
+                      <small>EV Subsidy:</small>
+                      <span>- ₹{subsidyAmount.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  {(hasDiscount || hasSubsidy) && <div style={{ width: '100%', height: '1px', backgroundColor: '#ccc', margin: '3px 0' }}></div>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px', fontWeight: 'bold' }}>
+                    <span>{(hasDiscount || hasSubsidy) ? 'Final Amount:' : 'Total:'}</span>
+                    <span style={{ fontSize: '16px' }}>₹{totalAfterDiscount.toLocaleString('en-IN')}</span>
                   </div>
-                )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      </div>
+    </div>
 
-                {/* ===== Headers Table ===== */}
-                {(() => {
-                  const tab6Headers = getSelectedHeadersForTab6();
-                  if (tab6Headers.length === 0) {
-                    return <div className="alert alert-info">No headers available for this model. Please check your selection.</div>;
+    {/* Discount Limits - EDIT mode only */}
+    {isEditMode && (
+      <div className="discount-limits-info" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px', border: '1px solid #dee2e6' }}>
+        <h6 style={{ marginBottom: '10px', color: '#495057' }}>Available Discount Limits</h6>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <small style={{ display: 'block', color: '#6c757d' }}>Vehicle Price Discount</small>
+            <strong style={{ fontSize: '1.1em' }}>₹{(discountLimits.onRoadPrice || 0).toLocaleString('en-IN')}</strong>
+            {discountUsageByCategory.vehicle_price > 0 && (
+              <div style={{ fontSize: '0.9em', color: '#28a745' }}>
+                Used: ₹{discountUsageByCategory.vehicle_price.toLocaleString('en-IN')}<br />
+                Remaining: ₹{remainingDiscounts.onRoadPrice.toLocaleString('en-IN')}
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <small style={{ display: 'block', color: '#6c757d' }}>Add-On Services Discount</small>
+            <strong>{discountLimits.addOnServices || 0}%</strong>
+            {discountUsageByCategory.AddONservices > 0 && (
+              <div style={{ fontSize: '0.9em', color: '#28a745' }}>
+                Used: ₹{discountUsageByCategory.AddONservices.toLocaleString('en-IN')}<br />
+                Remaining: {remainingDiscounts.addOnServicesPercentage}% (₹{remainingDiscounts.addOnServicesAmount.toLocaleString('en-IN')})
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <small style={{ display: 'block', color: '#6c757d' }}>Accessories Discount</small>
+            <strong>{discountLimits.accessories || 0}%</strong>
+            {discountUsageByCategory.Accessories > 0 && (
+              <div style={{ fontSize: '0.9em', color: '#28a745' }}>
+                Used: ₹{discountUsageByCategory.Accessories.toLocaleString('en-IN')}<br />
+                Remaining: {remainingDiscounts.accessoriesPercentage}% (₹{remainingDiscounts.accessoriesAmount.toLocaleString('en-IN')})
+              </div>
+            )}
+          </div>
+          {remainingDiscounts.totalUsed > 0 && (
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <small style={{ display: 'block', color: '#6c757d' }}>Total Discount Used</small>
+              <strong>₹{remainingDiscounts.totalUsed.toLocaleString('en-IN')}</strong>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+
+    {/* Discount Distribution Information - For both modes */}
+   {/* {globalDiscount && parseFloat(globalDiscount) > 0 && Object.keys(discountDistribution).length > 0 && (
+      <div className="discount-limits-info" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e7f3ff', borderRadius: '5px', border: '1px solid #b8daff' }}>
+        <h6 style={{ marginBottom: '10px', color: '#004085' }}>Discount Distribution Details</h6>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <small style={{ display: 'block', color: '#6c757d' }}>Total Global Discount</small>
+            <strong style={{ fontSize: '1.1em' }}>₹{(parseFloat(globalDiscount)).toLocaleString('en-IN')}</strong>
+          </div>
+          <div style={{ flex: 1, minWidth: '200px' }}>
+            <small style={{ display: 'block', color: '#6c757d' }}>Distributed Discount</small>
+            <strong style={{ fontSize: '1.1em' }}>
+              ₹{Object.values(discountDistribution).reduce((sum, val) => sum + (parseFloat(val) || 0), 0).toLocaleString('en-IN')}
+            </strong>
+          </div>
+          <div style={{ flex: 2, minWidth: '300px' }}>
+            <small style={{ display: 'block', color: '#6c757d' }}>Distribution Breakdown</small>
+            <div style={{ fontSize: '0.9em', marginTop: '5px', maxHeight: '150px', overflowY: 'auto' }}>
+              {Object.entries(discountDistribution).map(([headerId, amount]) => {
+                const header = selectedModelHeaders.find(h => h.header_id === headerId);
+                return header && parseFloat(amount) > 0 ? (
+                  <div key={headerId} style={{ marginBottom: '2px', display: 'flex', justifyContent: 'space-between' }}>
+                    <span>{header.header_key}:</span>
+                    <span className="text-success">₹{parseFloat(amount).toLocaleString('en-IN')}</span>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}  */}
+
+    {/* ===== Headers Table ===== */}
+    {(() => {
+      const tab6Headers = getSelectedHeadersForTab6();
+      if (tab6Headers.length === 0) {
+        return <div className="alert alert-info">No headers available for this model. Please check your selection.</div>;
+      }
+
+      // For EDIT MODE: pre-calculate category discount totals for special headers
+      let totalDiscountFromVehiclePrice = 0;
+      let totalDiscountFromAddOnServices = 0;
+      let totalDiscountFromAccessories = 0;
+
+      if (isEditMode) {
+        tab6Headers.forEach((price) => {
+          const header = price.header;
+          if (!header) return;
+          const headerId = header._id || header.id;
+          const headerKey = header.header_key || '';
+          const categoryKey = header.category_key || '';
+          const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
+                              headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
+          if (!formData.hpa && isHPAHeader) return;
+
+          const isSpecialHeader = headerKey.includes('ON ROAD PRICE') ||
+                                 headerKey.includes('ADDON SERVICES TOTAL') ||
+                                 headerKey.includes('ADD ON SERVICES TOTAL') ||
+                                 headerKey === 'ACCESSORIES TOTAL';
+          if (isSpecialHeader) return;
+
+          const discountValue = discountDistribution[headerId] !== undefined
+            ? discountDistribution[headerId]
+            : 0;
+          const discountAmount = parseFloat(discountValue) || 0;
+
+          if (discountAmount > 0) {
+            if (categoryKey === 'vehicle_price') totalDiscountFromVehiclePrice += discountAmount;
+            else if (categoryKey === 'AddONservices') totalDiscountFromAddOnServices += discountAmount;
+            else if (categoryKey === 'Accesories' || categoryKey === 'Accessories') totalDiscountFromAccessories += discountAmount;
+          }
+        });
+      }
+
+      return (
+        <div className="model-headers-section" style={{ marginTop: '20px' }}>
+          <h5>
+            Model Options ({tab6Headers.length} selected)
+            {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>(HPA-related options hidden as HPA is disabled)</span>}
+            {formData.selfInsurance === true && <span style={{ color: '#28a745', fontSize: '0.9em', marginLeft: '10px' }}>(Insurance headers hidden as Self Insurance is enabled)</span>}
+            {formData.selfInsurance === false && formData.insuranceFivePlusFive === true && <span style={{ color: '#ffc107', fontSize: '0.9em', marginLeft: '10px' }}>(INSURANCE CHARGES header hidden for Insurance 5+5, Insurance: 5 + 5 Years shown)</span>}
+            {formData.selfInsurance === false && formData.insuranceFivePlusFive === false && <span style={{ color: '#6c757d', fontSize: '0.9em', marginLeft: '10px' }}>(Standard insurance - INSURANCE CHARGES shown)</span>}
+            {globalDiscount && parseFloat(globalDiscount) > 0 && (
+              <span style={{ color: '#17a2b8', fontSize: '0.9em', marginLeft: '10px' }}>(Discounts are distributed automatically based on priorities)</span>
+            )}
+          </h5>
+
+          <div className="table-responsive">
+            <CTable striped hover responsive>
+              <CTableHead>
+                <CTableRow>
+                  <CTableHeaderCell>Particulars</CTableHeaderCell>
+                  <CTableHeaderCell>HSN</CTableHeaderCell>
+                  <CTableHeaderCell>Unit Cost (₹)</CTableHeaderCell>
+                  <CTableHeaderCell>Discount Applied (₹)</CTableHeaderCell>
+                  <CTableHeaderCell>Discount Priority</CTableHeaderCell>
+                  <CTableHeaderCell>Discount % Limit</CTableHeaderCell>
+                  <CTableHeaderCell>Taxable (₹)</CTableHeaderCell>
+                  <CTableHeaderCell>CGST %</CTableHeaderCell>
+                  <CTableHeaderCell>CGST Amount (₹)</CTableHeaderCell>
+                  <CTableHeaderCell>SGST %</CTableHeaderCell>
+                  <CTableHeaderCell>SGST Amount (₹)</CTableHeaderCell>
+                  <CTableHeaderCell>LINE TOTAL (₹)</CTableHeaderCell>
+                </CTableRow>
+              </CTableHead>
+              <CTableBody>
+                {tab6Headers.map((price) => {
+                  const header = price.header;
+                  const headerId = header._id || header.id || price.header_id;
+                  const headerKey = header.header_key || price.header_key || '';
+                  const isRTOHeader = headerKey === 'RTO TAX & REGISTRATION CHARGES' ||
+                                      headerKey.includes('RTO TAX') || headerKey.includes('REGISTRATION CHARGES');
+                  const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
+                                      headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
+                  if (!formData.hpa && isHPAHeader) return null;
+
+                  const isMandatory = header.is_mandatory || price.is_mandatory;
+                  const discountPriority = price.discount_priority || 'N/A';
+                  const discountPercentage = price.discount_percentage || 'N/A';
+
+                  // Special header detection
+                  const isSpecialHeader = headerKey.includes('ON ROAD PRICE') ||
+                                          headerKey.includes('ADDON SERVICES TOTAL') ||
+                                          headerKey.includes('ADD ON SERVICES TOTAL') ||
+                                          headerKey === 'ACCESSORIES TOTAL';
+
+                  const isExShowroomHeader = headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' || 
+                                             headerKey === 'Ex-Showroom Price' || 
+                                             headerKey === 'Ex-Showroom CSD';
+
+                  const isExplicitlyUnchecked = formData.uncheckedHeaders && formData.uncheckedHeaders.includes(headerId);
+                  const isChecked = isMandatory || !isExplicitlyUnchecked;
+
+                  const selectedMatchingAccessories = accessories.filter(accessory =>
+                    accessory.categoryDetails?.header_key === headerKey &&
+                    (isEditMode ?
+                      formData.selected_accessories.includes(accessory._id) :
+                      !formData.uncheckedAccessories?.includes(accessory._id))
+                  );
+                  const accessoryPrice = selectedMatchingAccessories.reduce((sum, acc) => sum + (acc.price || 0), 0);
+                  let finalPrice = Math.max(price.value || 0, accessoryPrice);
+                  if (isRTOHeader && (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && formData.rto_amount) {
+                    finalPrice = parseFloat(formData.rto_amount) || 0;
                   }
 
-                  // For EDIT MODE: pre-calculate category discount totals for special headers
-                  let totalDiscountFromVehiclePrice = 0;
-                  let totalDiscountFromAddOnServices = 0;
-                  let totalDiscountFromAccessories = 0;
+                  const gstRate = (header.metadata?.gst_rate || price.metadata?.gst_rate)
+                    ? parseFloat(header.metadata?.gst_rate || price.metadata?.gst_rate)
+                    : 0;
+                  const hsnCode = header.metadata?.hsn_code || price.metadata?.hsn_code || 'N/A';
 
-                  if (isEditMode) {
-                    tab6Headers.forEach((price) => {
-                      const header = price.header;
-                      if (!header) return;
-                      const headerId = header._id || header.id;
-                      const headerKey = header.header_key || '';
-                      const categoryKey = header.category_key || '';
-                      const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
-                                          headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
-                      if (!formData.hpa && isHPAHeader) return;
+                  let discountAmount = 0;
+                  let adjustedPrice = finalPrice;
+                  let discountApplied = 0;
 
-                      const isSpecialHeader = headerKey.includes('ON ROAD PRICE') ||
-                                             headerKey.includes('ADDON SERVICES TOTAL') ||
-                                             headerKey.includes('ADD ON SERVICES TOTAL') ||
-                                             headerKey === 'ACCESSORIES TOTAL';
-                      if (isSpecialHeader) return;
+                  // Handle special headers (ON ROAD PRICE, ADDON SERVICES TOTAL, ACCESSORIES TOTAL)
+                  if (isSpecialHeader && isEditMode) {
+                    if (headerKey.includes('ON ROAD PRICE') || headerKey.includes('TOTAL ONROAD')) {
+                      discountApplied = totalDiscountFromVehiclePrice;
+                      adjustedPrice = Math.max(0, finalPrice - discountApplied);
+                    } else if (headerKey.includes('ADDON SERVICES TOTAL') || headerKey.includes('ADD ON SERVICES TOTAL')) {
+                      discountApplied = totalDiscountFromAddOnServices;
+                      adjustedPrice = Math.max(0, finalPrice - discountApplied);
+                    } else if (headerKey === 'ACCESSORIES TOTAL') {
+                      discountApplied = totalDiscountFromAccessories;
+                      adjustedPrice = Math.max(0, finalPrice - discountApplied);
+                    }
+                    discountAmount = discountApplied;
+                  } else {
+                    // Regular headers - get discount from distribution
+                    discountAmount = discountDistribution[headerId] || 0;
+                    discountApplied = discountAmount;
+                  }
 
-                      const discountValue = headerDiscounts[headerId] !== undefined
-                        ? (headerDiscounts[headerId] === 0 ? '0' : headerDiscounts[headerId].toString())
-                        : '';
-                      const discountAmount = discountValue !== '' ? parseFloat(discountValue) : 0;
-
-                      if (discountAmount > 0) {
-                        if (categoryKey === 'vehicle_price') totalDiscountFromVehiclePrice += discountAmount;
-                        else if (categoryKey === 'AddONservices') totalDiscountFromAddOnServices += discountAmount;
-                        else if (categoryKey === 'Accesories' || categoryKey === 'Accessories') totalDiscountFromAccessories += discountAmount;
-                      }
-                    });
+                  let taxable, cgstAmount, sgstAmount, cgstRate, sgstRate, lineTotal;
+                  
+                  if (isSpecialHeader && isEditMode) {
+                    taxable = calculateTaxableAmount(adjustedPrice, 0, gstRate, formData.customer_type);
+                    const gstCalc = calculateGST(taxable, gstRate, formData.customer_type);
+                    cgstAmount = gstCalc.cgstAmount; sgstAmount = gstCalc.sgstAmount;
+                    cgstRate = gstCalc.cgstRate; sgstRate = gstCalc.sgstRate;
+                    lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+                  } else {
+                    taxable = calculateTaxableAmount(finalPrice, discountAmount, gstRate, formData.customer_type);
+                    const gstCalc = calculateGST(taxable, gstRate, formData.customer_type);
+                    cgstAmount = gstCalc.cgstAmount; sgstAmount = gstCalc.sgstAmount;
+                    cgstRate = gstCalc.cgstRate; sgstRate = gstCalc.sgstRate;
+                    lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+                    
+                    // For Ex-Showroom, subtract subsidy from line total ONLY for EV models with subsidy
+                    if (isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0) {
+                      lineTotal = lineTotal - (parseFloat(formData.subsidy_amount) || 0);
+                    }
                   }
 
                   return (
-                    <div className="model-headers-section" style={{ marginTop: '20px' }}>
-                      <h5>
-                        Model Options ({tab6Headers.length} selected)
-                        {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>(HPA-related options hidden as HPA is disabled)</span>}
-                        {formData.selfInsurance === true && <span style={{ color: '#28a745', fontSize: '0.9em', marginLeft: '10px' }}>(Insurance headers hidden as Self Insurance is enabled)</span>}
-                        {formData.selfInsurance === false && formData.insuranceFivePlusFive === true && <span style={{ color: '#ffc107', fontSize: '0.9em', marginLeft: '10px' }}>(INSURANCE CHARGES header hidden for Insurance 5+5, Insurance: 5 + 5 Years shown)</span>}
-                        {formData.selfInsurance === false && formData.insuranceFivePlusFive === false && <span style={{ color: '#6c757d', fontSize: '0.9em', marginLeft: '10px' }}>(Standard insurance - INSURANCE CHARGES shown)</span>}
-                      </h5>
-
-                      <div className="table-responsive">
-                        <CTable striped hover responsive>
-                          <CTableHead>
-                            <CTableRow>
-                              <CTableHeaderCell>Particulars</CTableHeaderCell>
-                              <CTableHeaderCell>HSN</CTableHeaderCell>
-                              <CTableHeaderCell>Unit Cost (₹)</CTableHeaderCell>
-                              {isEditMode ? (
-                                <CTableHeaderCell>Discount (₹)</CTableHeaderCell>
-                              ) : (
-                                <>
-                                  <CTableHeaderCell>Discount Applied (₹)</CTableHeaderCell>
-                                  <CTableHeaderCell>Discount Priority</CTableHeaderCell>
-                                  <CTableHeaderCell>Discount % Limit</CTableHeaderCell>
-                                </>
+                    <CTableRow key={headerId}>
+                      <CTableDataCell>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                          <CFormCheck
+                            id={`tab6-header-${headerId}`}
+                            checked={isChecked}
+                            onChange={(e) => { if (!isMandatory) handleHeaderSelection(headerId, e.target.checked); }}
+                            disabled={isMandatory}
+                            style={{ marginRight: '10px' }}
+                          />
+                          <span>
+                            {headerKey} {isMandatory ? '(Mandatory)' : '(Optional)'}
+                            {isHPAHeader ? ' (HPA-related)' : ''}
+                            {isRTOHeader && (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && formData.rto_amount ? ' (Using entered RTO amount)' : ''}
+                            {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 ? ` (Subsidy: ₹${formData.subsidy_amount} applied separately)` : ''}
+                          </span>
+                        </div>
+                      </CTableDataCell>
+                      <CTableDataCell>{hsnCode}</CTableDataCell>
+                      <CTableDataCell>₹{finalPrice.toFixed(2)}</CTableDataCell>
+                      <CTableDataCell>
+                        <div>
+                          {isSpecialHeader && isEditMode ? (
+                            <div style={{ padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px', textAlign: 'center' }}>
+                              ₹{adjustedPrice.toFixed(2)}
+                              {discountApplied > 0 && <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>Discount: -₹{discountApplied.toFixed(2)}</div>}
+                            </div>
+                          ) : (
+                            <>
+                              <strong style={{ color: discountAmount > 0 ? '#28a745' : '#6c757d' }}>₹{discountAmount.toFixed(2)}</strong>
+                              {discountAmount > 0 && !isSpecialHeader && (
+                                <div style={{ fontSize: '11px', color: '#17a2b8', marginTop: '2px' }}>
+                                  (Auto-distributed)
+                                </div>
                               )}
-                              <CTableHeaderCell>Taxable (₹)</CTableHeaderCell>
-                              <CTableHeaderCell>CGST %</CTableHeaderCell>
-                              <CTableHeaderCell>CGST Amount (₹)</CTableHeaderCell>
-                              <CTableHeaderCell>SGST %</CTableHeaderCell>
-                              <CTableHeaderCell>SGST Amount (₹)</CTableHeaderCell>
-                              <CTableHeaderCell>LINE TOTAL (₹)</CTableHeaderCell>
-                            </CTableRow>
-                          </CTableHead>
-                          <CTableBody>
-                            {tab6Headers.map((price) => {
-                              const header = price.header;
-                              const headerId = header._id || header.id || price.header_id;
-                              const headerKey = header.header_key || price.header_key || '';
-                              const isRTOHeader = headerKey === 'RTO TAX & REGISTRATION CHARGES' ||
-                                                  headerKey.includes('RTO TAX') || headerKey.includes('REGISTRATION CHARGES');
-                              const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
-                                                  headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
-                              if (!formData.hpa && isHPAHeader) return null;
-
-                              const isMandatory = header.is_mandatory || price.is_mandatory;
-                              // EDIT MODE uses header.is_discount; NEW MODE uses price.is_discount
-                              const isDiscountAllowed = isEditMode ? (header.is_discount) : (price.is_discount === true);
-                              const discountPriority = price.discount_priority || 'N/A';
-                              const discountPercentage = price.discount_percentage || 'N/A';
-
-                              // Special header detection (for EDIT mode rendering)
-                              const isSpecialHeader = headerKey.includes('ON ROAD PRICE') ||
-                                                      headerKey.includes('ADDON SERVICES TOTAL') ||
-                                                      headerKey.includes('ADD ON SERVICES TOTAL') ||
-                                                      headerKey === 'ACCESSORIES TOTAL';
-
-                              const isExplicitlyUnchecked = formData.uncheckedHeaders && formData.uncheckedHeaders.includes(headerId);
-                              const isChecked = isMandatory || !isExplicitlyUnchecked;
-
-                              const selectedMatchingAccessories = accessories.filter(accessory =>
-                                accessory.categoryDetails?.header_key === headerKey &&
-                                (isEditMode ?
-                                  formData.selected_accessories.includes(accessory._id) :
-                                  !formData.uncheckedAccessories?.includes(accessory._id))
-                              );
-                              const accessoryPrice = selectedMatchingAccessories.reduce((sum, acc) => sum + (acc.price || 0), 0);
-                              let finalPrice = Math.max(price.value || 0, accessoryPrice);
-                              if (isRTOHeader && (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && formData.rto_amount) {
-                                finalPrice = parseFloat(formData.rto_amount) || 0;
-                              }
-
-                              const gstRate = (header.metadata?.gst_rate || price.metadata?.gst_rate)
-                                ? parseFloat(header.metadata?.gst_rate || price.metadata?.gst_rate)
-                                : 0;
-                              const hsnCode = header.metadata?.hsn_code || price.metadata?.hsn_code || 'N/A';
-
-                              // ===== EDIT MODE RENDERING =====
-                              if (isEditMode) {
-                                const discountValue = headerDiscounts[headerId] !== undefined
-                                  ? (headerDiscounts[headerId] === 0 ? '0' : headerDiscounts[headerId].toString())
-                                  : '';
-                                const discountAmount = discountValue !== '' ? parseFloat(discountValue) : 0;
-
-                                let adjustedPrice = finalPrice;
-                                let discountApplied = 0;
-
-                                if (isSpecialHeader) {
-                                  if (headerKey.includes('ON ROAD PRICE') || headerKey.includes('TOTAL ONROAD')) {
-                                    discountApplied = totalDiscountFromVehiclePrice;
-                                    adjustedPrice = Math.max(0, finalPrice - discountApplied);
-                                  } else if (headerKey.includes('ADDON SERVICES TOTAL') || headerKey.includes('ADD ON SERVICES TOTAL')) {
-                                    discountApplied = totalDiscountFromAddOnServices;
-                                    adjustedPrice = Math.max(0, finalPrice - discountApplied);
-                                  } else if (headerKey === 'ACCESSORIES TOTAL') {
-                                    discountApplied = totalDiscountFromAccessories;
-                                    adjustedPrice = Math.max(0, finalPrice - discountApplied);
-                                  }
-                                }
-
-                                let taxable, cgstAmount, sgstAmount, cgstRate, sgstRate, lineTotal;
-                                if (isSpecialHeader) {
-                                  taxable = calculateTaxableAmount(adjustedPrice, 0, gstRate, formData.customer_type);
-                                  const gstCalc = calculateGST(taxable, gstRate, formData.customer_type);
-                                  cgstAmount = gstCalc.cgstAmount; sgstAmount = gstCalc.sgstAmount;
-                                  cgstRate = gstCalc.cgstRate; sgstRate = gstCalc.sgstRate;
-                                  lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
-                                } else {
-                                  taxable = calculateTaxableAmount(finalPrice, discountAmount, gstRate, formData.customer_type);
-                                  const gstCalc = calculateGST(taxable, gstRate, formData.customer_type);
-                                  cgstAmount = gstCalc.cgstAmount; sgstAmount = gstCalc.sgstAmount;
-                                  cgstRate = gstCalc.cgstRate; sgstRate = gstCalc.sgstRate;
-                                  lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
-                                }
-
-                                if (headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' && formData.subsidy_amount && isEVModel) {
-                                  lineTotal -= parseFloat(formData.subsidy_amount) || 0;
-                                }
-
-                                return (
-                                  <CTableRow key={headerId}>
-                                    <CTableDataCell>
-                                      <div style={{ display: 'flex', alignItems: 'center' }}>
-                                        <CFormCheck
-                                          id={`tab6-header-${headerId}`}
-                                          checked={isChecked}
-                                          onChange={(e) => { if (!isMandatory) handleHeaderSelection(headerId, e.target.checked); }}
-                                          disabled={isMandatory}
-                                          style={{ marginRight: '10px' }}
-                                        />
-                                        <span>
-                                          {headerKey} {isMandatory ? '(Mandatory)' : '(Optional)'}
-                                          {isHPAHeader ? ' (HPA-related)' : ''}
-                                          {isRTOHeader && (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && formData.rto_amount ? ' (Using entered RTO amount)' : ''}
-                                        </span>
-                                      </div>
-                                    </CTableDataCell>
-                                    <CTableDataCell>{hsnCode}</CTableDataCell>
-                                    <CTableDataCell>₹{finalPrice.toFixed(2)}</CTableDataCell>
-                                    <CTableDataCell>
-                                      {isSpecialHeader ? (
-                                        <div style={{ padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px', textAlign: 'center' }}>
-                                          ₹{adjustedPrice.toFixed(2)}
-                                          {discountApplied > 0 && <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>Discount: -₹{discountApplied.toFixed(2)}</div>}
-                                        </div>
-                                      ) : (
-                                        <div>
-                                          <CFormInput
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            placeholder={isDiscountAllowed ? "Enter discount" : "Discount not allowed"}
-                                            value={headerDiscounts[headerId] !== undefined ? headerDiscounts[headerId] : ''}
-                                            onChange={(e) => {
-                                              const value = e.target.value;
-                                              if (value === '') {
-                                                handleHeaderDiscountChange(headerId, '', header.category_key || '', finalPrice);
-                                              } else {
-                                                const numValue = parseFloat(value);
-                                                if (!isNaN(numValue) && numValue >= 0) {
-                                                  handleHeaderDiscountChange(headerId, numValue, header.category_key || '', finalPrice);
-                                                }
-                                              }
-                                            }}
-                                            disabled={!isDiscountAllowed}
-                                            style={{ width: '150px' }}
-                                            onWheel={(e) => e.target.blur()}
-                                          />
-                                        </div>
-                                      )}
-                                      {errors[`discount_${headerId}`] && <small className="text-danger d-block">{errors[`discount_${headerId}`]}</small>}
-                                    </CTableDataCell>
-                                    <CTableDataCell>₹{taxable.toFixed(2)}</CTableDataCell>
-                                    <CTableDataCell>{cgstRate?.toFixed(2) || '0.00'}%</CTableDataCell>
-                                    <CTableDataCell>₹{cgstAmount.toFixed(2)}</CTableDataCell>
-                                    <CTableDataCell>{sgstRate?.toFixed(2) || '0.00'}%</CTableDataCell>
-                                    <CTableDataCell>₹{sgstAmount.toFixed(2)}</CTableDataCell>
-                                    <CTableDataCell>
-                                      <strong>₹{lineTotal.toFixed(2)}</strong>
-                                      {headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' && formData.subsidy_amount && isEVModel && (
-                                        <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>(After ₹{formData.subsidy_amount} EV subsidy)</div>
-                                      )}
-                                    </CTableDataCell>
-                                  </CTableRow>
-                                );
-                              }
-
-                              // ===== NEW MODE RENDERING =====
-                              const discountAmount = discountDistribution[headerId] || 0;
-                              const taxable = calculateTaxableAmount(finalPrice, discountAmount, gstRate, formData.customer_type);
-                              const { cgstAmount, sgstAmount, cgstRate, sgstRate } = calculateGST(taxable, gstRate, formData.customer_type);
-                              let lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
-                              if (headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' && formData.subsidy_amount && isEVModel) {
-                                lineTotal -= parseFloat(formData.subsidy_amount) || 0;
-                              }
-
-                              return (
-                                <CTableRow key={headerId}>
-                                  <CTableDataCell>
-                                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                                      <CFormCheck
-                                        id={`tab6-header-${headerId}`}
-                                        checked={isChecked}
-                                        onChange={(e) => { if (!isMandatory) handleHeaderSelection(headerId, e.target.checked); }}
-                                        disabled={isMandatory}
-                                        style={{ marginRight: '10px' }}
-                                      />
-                                      <span>
-                                        {headerKey} {isMandatory ? ' (Mandatory)' : ' (Optional)'}
-                                        {isDiscountAllowed && discountPriority !== 'N/A' ? ` (Discountable: Priority ${discountPriority})` : ' (Not Discountable)'}
-                                      </span>
-                                    </div>
-                                  </CTableDataCell>
-                                  <CTableDataCell>{hsnCode}</CTableDataCell>
-                                  <CTableDataCell>₹{finalPrice.toFixed(2)}</CTableDataCell>
-                                  <CTableDataCell>
-                                    {isDiscountAllowed ? (
-                                      <strong style={{ color: discountAmount > 0 ? '#28a745' : '#6c757d' }}>₹{discountAmount.toFixed(2)}</strong>
-                                    ) : (
-                                      <span className="text-muted">Not allowed</span>
-                                    )}
-                                  </CTableDataCell>
-                                  <CTableDataCell>{discountPriority}</CTableDataCell>
-                                  <CTableDataCell>{discountPercentage !== 'N/A' ? `${discountPercentage}%` : 'N/A'}</CTableDataCell>
-                                  <CTableDataCell>₹{taxable.toFixed(2)}</CTableDataCell>
-                                  <CTableDataCell>{cgstRate?.toFixed(2) || '0.00'}%</CTableDataCell>
-                                  <CTableDataCell>₹{cgstAmount.toFixed(2)}</CTableDataCell>
-                                  <CTableDataCell>{sgstRate?.toFixed(2) || '0.00'}%</CTableDataCell>
-                                  <CTableDataCell>₹{sgstAmount.toFixed(2)}</CTableDataCell>
-                                  <CTableDataCell>
-                                    <strong>₹{lineTotal.toFixed(2)}</strong>
-                                    {headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' && formData.subsidy_amount && isEVModel && (
-                                      <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>(After ₹{formData.subsidy_amount} EV subsidy)</div>
-                                    )}
-                                  </CTableDataCell>
-                                </CTableRow>
-                              );
-                            })}
-                          </CTableBody>
-                        </CTable>
-                      </div>
-                    </div>
+                            </>
+                          )}
+                        </div>
+                      </CTableDataCell>
+                      <CTableDataCell>{discountPriority}</CTableDataCell>
+                      <CTableDataCell>{discountPercentage !== 'N/A' ? `${discountPercentage}%` : 'N/A'}</CTableDataCell>
+                      <CTableDataCell>₹{taxable.toFixed(2)}</CTableDataCell>
+                      <CTableDataCell>{cgstRate?.toFixed(2) || '0.00'}%</CTableDataCell>
+                      <CTableDataCell>₹{cgstAmount.toFixed(2)}</CTableDataCell>
+                      <CTableDataCell>{sgstRate?.toFixed(2) || '0.00'}%</CTableDataCell>
+                      <CTableDataCell>₹{sgstAmount.toFixed(2)}</CTableDataCell>
+                      <CTableDataCell>
+                        <strong>₹{lineTotal.toFixed(2)}</strong>
+                        {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 && (
+                          <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>(After ₹{formData.subsidy_amount} EV subsidy)</div>
+                        )}
+                      </CTableDataCell>
+                    </CTableRow>
                   );
-                })()}
+                })}
+              </CTableBody>
+            </CTable>
+          </div>
+        </div>
+      );
+    })()}
 
-                <div className="form-footer">
-                  <button type="button" className="cancel-button" onClick={() => setActiveTab(5)}>Back</button>
-                  <button type="submit" className="submit-button" disabled={isSubmitting}>
-                    {isSubmitting ? 'Submitting...' : 'Apply for Approval'}
-                  </button>
-                </div>
-              </>
-            )}
+    <div className="form-footer">
+      <button type="button" className="cancel-button" onClick={() => setActiveTab(5)}>Back</button>
+      <button type="submit" className="submit-button" disabled={isSubmitting}>
+        {isSubmitting ? 'Submitting...' : 'Apply for Approval'}
+      </button>
+    </div>
+  </>
+)}
           </form>
         </div>
       </div>
@@ -10871,7 +10863,6 @@ const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
 }
 
 export default BookingForm;
-
 
 
 

@@ -1,5 +1,7 @@
 import React from 'react';
+
 const SubdealerList = React.lazy(() => import('../views/subdealer/SubdealerList'))
+const SubdealerReport = React.lazy(() => import('../views/subdealer/subdealerreport/SubdealerReport'))
 const SubdealerAuditList = React.lazy(() => import('../views/subdealer/SubdealerAuditList'))
 const StockAuditList = React.lazy(() => import('../views/subdealer/StockAuditList'))
 const AddSubdealer = React.lazy(() => import('../views/subdealer/AddSubdealer'))
@@ -25,6 +27,7 @@ const ChassisAllocation = React.lazy(() => import('../views/subdealer/booking/Ch
 
 export const subdealerRoutes = [
     { path:'/subdealer-list', name:'Subdealer List', element:SubdealerList},
+    { path:'/subdealer/subdealer-report', name:'Subdealer Report', element:SubdealerReport},
     { path:'/add-subdealer', name:'Add Subdealer', element:AddSubdealer},
     { path:'/subdealer-audit-list', name:'Subdealer Audit List', element:SubdealerAuditList},
     { path:'/stock-audit-list', name:'Subdealer Stock Audit List', element:StockAuditList},

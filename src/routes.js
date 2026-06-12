@@ -12,6 +12,8 @@ import { quotationRoutes } from './routes/quotationRoutes'
 import { insuranceRoutes } from './routes/insuranceRoutes'
 import { branchStockAuditRoutes } from './routes/branchStockAuditRoutes'
 import { stockMovementRoutes } from './routes/stockMovementRoutes'
+import { serviceManagementRoutes } from './routes/serviceManagementRoutes'
+import { hrManagementRoutes } from './routes/hrManagementRoutes'
 
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 
@@ -23,6 +25,10 @@ const routes = [
   
   //purchase
    ...purchaseRoutes,
+
+   ...hrManagementRoutes,
+
+   ...serviceManagementRoutes,
 
    ...stockMovementRoutes,
 

@@ -7,6 +7,10 @@ const config = {
 
             baseURL:'https://gandhitvs.in/dealership/api/v1'
 
+            // baseURL : 'http://192.168.1.34:3004/api/v1'
+
+            // baseURL : "http://192.168.241.113:3009/api/v1"
+
             // baseURL : "http://169.254.8.222:3009/api/v1"
 
             // baseURL : "http://192.168.241.181:3009/api/v1"

@@ -3817,29 +3817,27 @@ const getNav = (userPermissions = []) => {
     });
   }
 
+  // Stock Movement Group - Using permissions instead of SUPERADMIN only
+  const stockMovementItems = []
   
-
- // Stock Movement Group
-// Stock Movement Group - ONLY for SUPERADMIN
- const stockMovementItems = []
-  
-  // Get SUPERADMIN status from localStorage
-  const isSuperAdmin = localStorage.getItem('isSuperAdmin') === 'true';
-  
-  // Only push items if user is SUPERADMIN
-  if (isSuperAdmin) {
+  // Check each page in Stock Movement module using permissions
+  if (canViewPage(userPermissions, MODULES.STOCK_MOVEMENT, PAGES.STOCK_MOVEMENT.IDT_LIST)) {
     stockMovementItems.push({
       component: CNavItem,
       name: 'IDT List',
       to: '/stock-movement',
     });
-    
+  }
+  
+  if (canViewPage(userPermissions, MODULES.STOCK_MOVEMENT, PAGES.STOCK_MOVEMENT.IDT_HISTORY)) {
     stockMovementItems.push({
       component: CNavItem,
       name: 'IDT History',
       to: '/stock-movement-history',
     });
-    
+  }
+  
+  if (canViewPage(userPermissions, MODULES.STOCK_MOVEMENT, PAGES.STOCK_MOVEMENT.IDT_REQUESTS)) {
     stockMovementItems.push({
       component: CNavItem,
       name: 'IDT Requests',
@@ -3847,7 +3845,7 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-  // Add Stock Movement group (only shows if isSuperAdmin is true)
+  // Add Stock Movement group if there are any visible items
   if (stockMovementItems.length > 0) {
     _nav.push({
       component: CNavGroup,
@@ -3857,30 +3855,50 @@ const getNav = (userPermissions = []) => {
     });
   }
 
+  // Service Management Group
+const serviceManagementItems = []
 
-  const serviceManagementItems = []
-  
-  
-    serviceManagementItems.push({
-      component: CNavItem,
-      name: 'Parts List',
-      to: '/service-management/parts',
-    });
+if (canViewPage(userPermissions, MODULES.SERVICE_MANAGEMENT, PAGES.SERVICE_MANAGEMENT.PARTS_LIST)) {
+  serviceManagementItems.push({
+    component: CNavItem,
+    name: 'Parts List',
+    to: '/service-management/parts',
+  });
+}
 
-    serviceManagementItems.push({
-      component: CNavItem,
-      name: 'Labour List',
-      to: '/service-management/labour',
-    });
-    
-     serviceManagementItems.push({
-      component: CNavItem,
-      name: 'Invoice List',
-      to: '/service-management/invoice',
-    });
-    
+if (canViewPage(userPermissions, MODULES.SERVICE_MANAGEMENT, PAGES.SERVICE_MANAGEMENT.LABOUR_LIST)) {
+  serviceManagementItems.push({
+    component: CNavItem,
+    name: 'Labour List',
+    to: '/service-management/labour',
+  });
+}
 
-  // Add Stock Movement group (only shows if isSuperAdmin is true)
+if (canViewPage(userPermissions, MODULES.SERVICE_MANAGEMENT, PAGES.SERVICE_MANAGEMENT.INVOICE_LIST)) {
+  serviceManagementItems.push({
+    component: CNavItem,
+    name: 'Invoice List',
+    to: '/service-management/invoice',
+  });
+}
+
+if (canViewPage(userPermissions, MODULES.SERVICE_MANAGEMENT, PAGES.SERVICE_MANAGEMENT.INVOICE_DAY_BOOK)) {
+  serviceManagementItems.push({
+    component: CNavItem,
+    name: 'Invoice Day Book',
+    to: '/service-management/invoice-day-book',
+  });
+}
+
+if (canViewPage(userPermissions, MODULES.SERVICE_MANAGEMENT, PAGES.SERVICE_MANAGEMENT.INVOICE_CASH_BOOK)) {
+  serviceManagementItems.push({
+    component: CNavItem,
+    name: 'Invoice Cash Book',
+    to: '/service-management/invoice-cash-book',
+  });
+}
+
+  // Add Service Management group
   if (serviceManagementItems.length > 0) {
     _nav.push({
       component: CNavGroup,
@@ -3890,32 +3908,34 @@ const getNav = (userPermissions = []) => {
     });
   }
 
+  // HR Management Group
+  // HR Management Group
+const hrManagementItems = []
 
+if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCENTIVES_LIST)) {
+  hrManagementItems.push({
+    component: CNavItem,
+    name: 'Incentives List',
+    to: '/hr-management/incentives',
+  });
+}
 
-   const hrManagementItems = []
-  
-  
-    hrManagementItems.push({
-      component: CNavItem,
-      name: 'Incentives List',
-      to: '/hr-management/incentives',
-    });
+if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.SCHEMES_LIST)) {
+  hrManagementItems.push({
+    component: CNavItem,
+    name: 'Schemes List',
+    to: '/hr-management/schemes',
+  });
+}
 
-    hrManagementItems.push({
-      component: CNavItem,
-      name: 'Apply Incentive',
-      to: '/hr-management/incentives/apply',
-    });
+if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCENTIVE_TRANSACTIONS)) {
+  hrManagementItems.push({
+    component: CNavItem,
+    name: 'Incentive Transactions',
+    to: '/hr-management/incentives/transactions',
+  });
+}
 
-     hrManagementItems.push({
-      component: CNavItem,
-      name: 'Incentive Transactions',
-      to: '/hr-management/incentives/transactions',
-    });
-
-    
-
- 
   if (hrManagementItems.length > 0) {
     _nav.push({
       component: CNavGroup,
@@ -3925,15 +3945,10 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-
-
-
-
-
   // Purchase Group
   const purchaseItems = []
 
-   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
     purchaseItems.push({
       component: CNavItem,
       name: 'Stock Dashboard',
@@ -3965,7 +3980,6 @@ const getNav = (userPermissions = []) => {
     });
   }
   
-  // Check each page in Purchase module
   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
     purchaseItems.push({
       component: CNavItem,
@@ -3974,7 +3988,7 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
     purchaseItems.push({
       component: CNavItem,
       name: 'Stock Alert',
@@ -4014,7 +4028,6 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-  // Only add Purchase group if there are any visible items
   if (purchaseItems.length > 0) {
     _nav.push({
       component: CNavGroup,
@@ -4044,7 +4057,6 @@ const getNav = (userPermissions = []) => {
     });
   }
   
-  
   if (canViewPage(userPermissions, MODULES.SALES, PAGES.SALES.SELF_INSURANCE)) {
     salesItems.push({
       component: CNavItem,
@@ -4069,9 +4081,6 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-  
-
-  // DUMMY Invoice - Added under Sales module
   if (canViewPage(userPermissions, MODULES.SALES, PAGES.SALES.DUMMY_INVOICE)) {
     salesItems.push({
       component: CNavItem,
@@ -4125,7 +4134,7 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-    if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
+  if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
     salesReportItems.push({
       component: CNavItem,
       name: 'Sales Dashboard',
@@ -4133,7 +4142,7 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-   if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
+  if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
     salesReportItems.push({
       component: CNavItem,
       name: 'Claim Dashboard',
@@ -4141,7 +4150,7 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-   if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
+  if (canViewPage(userPermissions, MODULES.SALES_REPORT, PAGES.SALES_REPORT.SALES_PERSON_WISE)) {
     salesReportItems.push({
       component: CNavItem,
       name: 'Sales Detailed Report',
@@ -4166,8 +4175,6 @@ const getNav = (userPermissions = []) => {
       items: salesReportItems,
     });
   }
-
-
 
   // Quotation
   if (canViewPage(userPermissions, MODULES.QUOTATION, PAGES.QUOTATION.QUOTATION_LIST)) {
@@ -4262,12 +4269,11 @@ const getNav = (userPermissions = []) => {
     });
   }
   
-  // DP Receipt - Added under Account module
   if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DP_RECEIPT)) {
     accountItems.push({
       component: CNavItem,
       name: 'DP Receipt',
-      to: '/downpayment-receipt', // Updated to match the route in modulePermissions.js
+      to: '/downpayment-receipt',
     });
   }
 
@@ -4275,15 +4281,15 @@ const getNav = (userPermissions = []) => {
     accountItems.push({
       component: CNavItem,
       name: 'Receipts Dashboard',
-      to: '/finance-receipts-dashboard', // Updated to match the route in modulePermissions.js
+      to: '/finance-receipts-dashboard',
     });
   }
 
-   if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DP_RECEIPT)) {
+  if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.DP_RECEIPT)) {
     accountItems.push({
       component: CNavItem,
       name: 'Report Dashboard',
-      to: '/finance-report-dashboard', // Updated to match the route in modulePermissions.js
+      to: '/finance-report-dashboard',
     });
   }
 
@@ -4291,7 +4297,7 @@ const getNav = (userPermissions = []) => {
     accountItems.push({
       component: CNavItem,
       name: 'Report Disbursement',
-      to: '/finance-disbursement', // Updated to match the route in modulePermissions.js
+      to: '/finance-disbursement',
     });
   }
   
@@ -4353,12 +4359,12 @@ const getNav = (userPermissions = []) => {
   }
 
   if (canViewPage(userPermissions, MODULES.RTO, PAGES.RTO.RTO_INVOICE)) {
-  rtoItems.push({
-    component: CNavItem,
-    name: 'RTO Invoice',
-    to: '/rto-invoice',
-  });
-}
+    rtoItems.push({
+      component: CNavItem,
+      name: 'RTO Invoice',
+      to: '/rto-invoice',
+    });
+  }
   
   if (canViewPage(userPermissions, MODULES.RTO, PAGES.RTO.APPLICATION)) {
     rtoItems.push({
@@ -4520,7 +4526,6 @@ const getNav = (userPermissions = []) => {
     });
   }
   
-  // Add Branch Audit List here
   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.BRANCH_AUDIT_LIST)) {
     mastersItems.push({
       component: CNavItem,
@@ -4598,7 +4603,7 @@ const getNav = (userPermissions = []) => {
       component: CNavItem,
       name: 'Wallpaper',
       to: '/wallpaper/wallpaper',
-    })
+    });
   }
   
   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.TERMS_CONDITIONS)) {
@@ -4698,8 +4703,7 @@ const getNav = (userPermissions = []) => {
     });
   }
 
-  // ===== ADD BRANCH STOCK AUDIT HERE =====
-  // Branch Stock Audit (Single Menu Item)
+  // Branch Stock Audit
   if (canViewPage(userPermissions, MODULES.BRANCH_STOCK_AUDIT, PAGES.BRANCH_STOCK_AUDIT.LIST)) {
     _nav.push({
       component: CNavItem,
@@ -4880,14 +4884,6 @@ const getNav = (userPermissions = []) => {
         to: '/subdealer-all-bookings',
       });
     }
-
-    // if (canViewPage(userPermissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.ALL_BOOKING)) {
-    //   subdealerBookingItems.push({
-    //     component: CNavItem,
-    //     name: 'Subdealer Management',
-    //     to: '/subdealer-management',
-    //   });
-    // }
     
     if (canViewPage(userPermissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.DELIVERY_CHALLAN)) {
       subdealerBookingItems.push({
@@ -4999,11 +4995,9 @@ const getNav = (userPermissions = []) => {
     }
   }
 
-
-     // Subdealer Report Section
+  // Subdealer Report Section
   const subdealerReportItems = []
   
-  // Check permission for Subdealer Report using the SUBDEALER_REPORT module
   if (canViewPage(userPermissions, MODULES.SUBDEALER_REPORT, PAGES.SUBDEALER_REPORT.SUBDEALER_REPORT)) {
     subdealerReportItems.push({
       component: CNavItem,
@@ -5020,7 +5014,6 @@ const getNav = (userPermissions = []) => {
       items: subdealerReportItems,
     });
   }
-
 
   // USER MANAGEMENT Section
   const hasAnyUserManagementPermission = 

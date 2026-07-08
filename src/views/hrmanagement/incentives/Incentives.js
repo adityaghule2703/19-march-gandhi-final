@@ -32,7 +32,9 @@ import {
   CModalBody,
   CModalFooter,
   CRow,
-  CCol
+  CCol,
+  CAlert,
+  CProgress
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
@@ -42,9 +44,16 @@ import {
   cilPlus,
   cilPencil,
   cilTrash,
-  cilSearch
+  cilSearch,
+  cilChart,
+  cilChartPie,
+  cilChartLine,
+  cilMoney,
+  cilUser,
+  cilCheckCircle,
+  cilWarning,
+  cilWallet
 } from '@coreui/icons';
-import AddIncentive from './AddIncentive';
 import EditIncentive from './EditIncentive';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -73,11 +82,22 @@ const Incentives = () => {
   const searchInputRef = useRef(null);
   
   // Modal states
-  const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  
+  // Summary data state
+  const [summaryData, setSummaryData] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
+
+  // Check Pool state
+  const [poolModalVisible, setPoolModalVisible] = useState(false);
+  const [poolData, setPoolData] = useState(null);
+  const [poolLoading, setPoolLoading] = useState(false);
+  const [poolError, setPoolError] = useState(null);
 
   // Fetch incentives when page or limit changes
   useEffect(() => {
@@ -111,11 +131,11 @@ const Incentives = () => {
       const response = await axiosInstance.get(url);
       
       if (response.data.status === 'success') {
-        setPlans(response.data.data.plans || []);
+        setPlans(response.data.data?.plans || []);
         setPagination({
           page: response.data.page || page,
           limit: limit,
-          totalCount: response.data.total || response.data.data.plans?.length || 0,
+          totalCount: response.data.total || response.data.data?.plans?.length || 0,
           totalPages: response.data.totalPages || 1
         });
       }
@@ -127,6 +147,60 @@ const Incentives = () => {
       showError(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    try {
+      const response = await axiosInstance.get('/incentives/summary');
+      if (response.data.status === 'success') {
+        setSummaryData(response.data.data);
+        setSummaryModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Error fetching summary:', error);
+      setSummaryError(error.response?.data?.message || 'Failed to fetch summary');
+      showError(error);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  // Fetch pool details
+  const fetchPoolDetails = async (plan) => {
+    setPoolLoading(true);
+    setPoolError(null);
+    setPoolData(null);
+    
+    try {
+      // Extract modelId and colorId from the plan
+      const modelId = plan.model?._id || plan.modelId;
+      const colorId = plan.color?.id?._id || plan.color?._id || plan.colorId;
+      
+      if (!modelId || !colorId) {
+        setPoolError('Model ID or Color ID not available for this plan');
+        setPoolLoading(false);
+        setPoolModalVisible(true);
+        return;
+      }
+
+      const response = await axiosInstance.get(`/incentives/check-pool?modelId=${modelId}&colorId=${colorId}`);
+      
+      if (response.data.status === 'success') {
+        setPoolData(response.data.data);
+        setPoolModalVisible(true);
+      } else {
+        setPoolError('Failed to fetch pool details');
+        setPoolModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Error fetching pool details:', error);
+      setPoolError(error.response?.data?.message || 'Failed to fetch pool details');
+      setPoolModalVisible(true);
+    } finally {
+      setPoolLoading(false);
     }
   };
 
@@ -159,19 +233,9 @@ const Incentives = () => {
     setMenuId(null);
   };
 
-  const handleAddClick = () => {
-    setAddModalVisible(true);
-  };
-
   const handleViewClick = (plan) => {
     setSelectedPlan(plan);
     setViewModalVisible(true);
-    handleClose();
-  };
-
-  const handleEditClick = (plan) => {
-    setSelectedPlan(plan);
-    setEditModalVisible(true);
     handleClose();
   };
 
@@ -179,6 +243,13 @@ const Incentives = () => {
     setSelectedPlan(plan);
     setDeleteModalVisible(true);
     handleClose();
+  };
+
+  // New handler for Check Pool
+  const handleCheckPoolClick = (plan) => {
+    setSelectedPlan(plan);
+    handleClose();
+    fetchPoolDetails(plan);
   };
 
   const handleDeleteConfirm = async () => {
@@ -218,8 +289,10 @@ const Incentives = () => {
   const getStatusBadge = (status) => {
     if (status === 'active') {
       return <CBadge color="success">Active</CBadge>;
-    } else {
+    } else if (status === 'inactive') {
       return <CBadge color="danger">Inactive</CBadge>;
+    } else {
+      return <CBadge color="secondary">{status || 'Unknown'}</CBadge>;
     }
   };
 
@@ -306,8 +379,8 @@ const Incentives = () => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            <CButton size="sm" className="action-btn me-1" onClick={handleAddClick}>
-              <CIcon icon={cilPlus} className='icon' /> Add Incentive Plan
+            <CButton size="sm" className="action-btn me-1" onClick={fetchSummary}>
+              <CIcon icon={cilChartPie} className='icon' /> Summary
             </CButton>
           </div>
         </CCardHeader>
@@ -377,7 +450,7 @@ const Incentives = () => {
                     return (
                       <CTableRow key={plan._id}>
                         <CTableDataCell>{globalIndex}</CTableDataCell>
-                        <CTableDataCell>{plan.modelName || plan.model?.model_name || '-'}</CTableDataCell>
+                        <CTableDataCell>{plan.model?.model_name || plan.modelName || '-'}</CTableDataCell>
                         <CTableDataCell>{plan.color?.name || plan.color?.id?.name || '-'}</CTableDataCell>
                         <CTableDataCell>{formatCurrency(plan.incentivePerVehicle)}</CTableDataCell>
                         <CTableDataCell>{formatCurrency(plan.totalIncentivePool)}</CTableDataCell>
@@ -408,8 +481,8 @@ const Incentives = () => {
                             <MenuItem onClick={() => handleViewClick(plan)}>
                               <CIcon icon={cilSearch} className="me-2" /> View Details
                             </MenuItem>
-                            <MenuItem onClick={() => handleEditClick(plan)}>
-                              <CIcon icon={cilPencil} className="me-2" /> Edit
+                            <MenuItem onClick={() => handleCheckPoolClick(plan)}>
+                              <CIcon icon={cilWallet} className="me-2" /> Check Pool
                             </MenuItem>
                             <MenuItem onClick={() => handleDeleteClick(plan)}>
                               <CIcon icon={cilTrash} className="me-2" /> Delete
@@ -429,26 +502,18 @@ const Incentives = () => {
         </CCardBody>
       </CCard>
 
-      {/* Add Modal */}
-      <AddIncentive 
-        visible={addModalVisible}
-        onClose={() => setAddModalVisible(false)}
+      {/* Edit Modal */}
+      <EditIncentive 
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
         onSuccess={() => {
-          fetchIncentives(1, pagination.limit, searchTerm);
+          fetchIncentives(pagination.page, pagination.limit, searchTerm);
         }}
+        planId={selectedPlan?._id}
       />
 
-     <EditIncentive 
-  visible={editModalVisible}
-  onClose={() => setEditModalVisible(false)}
-  onSuccess={() => {
-    fetchIncentives(pagination.page, pagination.limit, searchTerm);
-  }}
-  planId={selectedPlan?._id}
-/>
-
       {/* View Incentive Modal */}
-      <CModal size="lg" visible={viewModalVisible} onClose={() => setViewModalVisible(false)} alignment="center">
+      <CModal size="lg" visible={viewModalVisible} onClose={() => setViewModalVisible(false)} alignment="center" scrollable>
         <CModalHeader>
           <CModalTitle>
             <CIcon icon={cilSearch} className="me-2" />
@@ -458,17 +523,36 @@ const Incentives = () => {
         <CModalBody>
           {selectedPlan && (
             <div>
+              {/* Basic Information */}
+              <div className="border-bottom pb-2 mb-3">
+                <h6>Basic Information</h6>
+              </div>
               <CRow className="mb-3">
                 <CCol md={6}>
                   <small className="text-muted">Model</small>
-                  <div><strong>{selectedPlan.modelName || selectedPlan.model?.model_name}</strong></div>
+                  <div><strong>{selectedPlan.model?.model_name || selectedPlan.modelName || '-'}</strong></div>
                 </CCol>
                 <CCol md={6}>
-                  <small className="text-muted">Color</small>
-                  <div><strong>{selectedPlan.color?.name || selectedPlan.color?.id?.name}</strong></div>
+                  <small className="text-muted">Model Type</small>
+                  <div><strong>{selectedPlan.model?.type || '-'}</strong></div>
                 </CCol>
               </CRow>
 
+              <CRow className="mb-3">
+                <CCol md={6}>
+                  <small className="text-muted">Color</small>
+                  <div><strong>{selectedPlan.color?.name || selectedPlan.color?.id?.name || '-'}</strong></div>
+                </CCol>
+                <CCol md={6}>
+                  <small className="text-muted">Status</small>
+                  <div>{getStatusBadge(selectedPlan.status)}</div>
+                </CCol>
+              </CRow>
+
+              {/* Financial Details */}
+              <div className="border-bottom pb-2 mb-3">
+                <h6>Financial Details</h6>
+              </div>
               <CRow className="mb-3">
                 <CCol md={6}>
                   <small className="text-muted">Incentive per Vehicle</small>
@@ -483,18 +567,22 @@ const Incentives = () => {
               <CRow className="mb-3">
                 <CCol md={6}>
                   <small className="text-muted">Utilized Amount</small>
-                  <div><strong>{formatCurrency(selectedPlan.utilizedAmount)}</strong></div>
+                  <div><strong>{formatCurrency(selectedPlan.utilizedAmount || 0)}</strong></div>
                 </CCol>
                 <CCol md={6}>
                   <small className="text-muted">Remaining Pool</small>
-                  <div><strong>{formatCurrency(selectedPlan.remainingPool || selectedPlan.totalIncentivePool - selectedPlan.utilizedAmount)}</strong></div>
+                  <div><strong>{formatCurrency(selectedPlan.remainingPool || selectedPlan.totalIncentivePool - (selectedPlan.utilizedAmount || 0))}</strong></div>
                 </CCol>
               </CRow>
 
               <CRow className="mb-3">
                 <CCol md={6}>
                   <small className="text-muted">Utilization Percentage</small>
-                  <div><strong>{selectedPlan.utilizationPercentage || '0'}%</strong></div>
+                  <div>
+                    <CBadge color={selectedPlan.utilizationPercentage && parseFloat(selectedPlan.utilizationPercentage) > 80 ? 'warning' : 'info'}>
+                      {selectedPlan.utilizationPercentage || '0'}%
+                    </CBadge>
+                  </div>
                 </CCol>
                 <CCol md={6}>
                   <small className="text-muted">Max Vehicles Coverable</small>
@@ -502,6 +590,10 @@ const Incentives = () => {
                 </CCol>
               </CRow>
 
+              {/* Validity Period */}
+              <div className="border-bottom pb-2 mb-3">
+                <h6>Validity Period</h6>
+              </div>
               <CRow className="mb-3">
                 <CCol md={6}>
                   <small className="text-muted">Valid From</small>
@@ -513,14 +605,18 @@ const Incentives = () => {
                 </CCol>
               </CRow>
 
+              {/* Additional Information */}
+              <div className="border-bottom pb-2 mb-3">
+                <h6>Additional Information</h6>
+              </div>
               <CRow className="mb-3">
                 <CCol md={6}>
-                  <small className="text-muted">Status</small>
-                  <div>{getStatusBadge(selectedPlan.status)}</div>
+                  <small className="text-muted">Created By</small>
+                  <div><strong>{selectedPlan.createdBy?.name || '-'}</strong></div>
                 </CCol>
                 <CCol md={6}>
-                  <small className="text-muted">Created By</small>
-                  <div><strong>{selectedPlan.createdBy?.name}</strong></div>
+                  <small className="text-muted">Created At</small>
+                  <div><strong>{formatDate(selectedPlan.createdAt)}</strong></div>
                 </CCol>
               </CRow>
 
@@ -533,15 +629,291 @@ const Incentives = () => {
 
               <CRow className="mb-3">
                 <CCol md={12}>
-                  <small className="text-muted">Created At</small>
-                  <div>{formatDate(selectedPlan.createdAt)}</div>
+                  <small className="text-muted">Last Updated</small>
+                  <div>{formatDate(selectedPlan.updatedAt)}</div>
                 </CCol>
               </CRow>
+
+              {/* Utilization Progress Bar */}
+              {selectedPlan.utilizationPercentage && (
+                <div className="border-bottom pb-2 mb-3">
+                  <h6>Utilization Progress</h6>
+                </div>
+              )}
+              {selectedPlan.utilizationPercentage && (
+                <CRow className="mb-3">
+                  <CCol md={12}>
+                    <div className="d-flex align-items-center mt-1">
+                      <CProgress 
+                        value={parseFloat(selectedPlan.utilizationPercentage)} 
+                        color={parseFloat(selectedPlan.utilizationPercentage) > 80 ? 'warning' : 'info'}
+                        className="flex-grow-1"
+                        style={{ height: '20px' }}
+                      />
+                      <span className="ms-2 fw-bold">{selectedPlan.utilizationPercentage}%</span>
+                    </div>
+                  </CCol>
+                </CRow>
+              )}
             </div>
           )}
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" onClick={() => setViewModalVisible(false)}>Close</CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* Check Pool Modal */}
+      <CModal size="lg" visible={poolModalVisible} onClose={() => {
+        setPoolModalVisible(false);
+        setPoolData(null);
+        setPoolError(null);
+      }} alignment="center">
+        <CModalHeader>
+          <CModalTitle>
+            <CIcon icon={cilWallet} className="me-2" />
+            Incentive Pool Details
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {poolLoading ? (
+            <div className="d-flex justify-content-center align-items-center py-5">
+              <CSpinner color="primary" size="lg" />
+              <span className="ms-3">Loading pool details...</span>
+            </div>
+          ) : poolError ? (
+            <CAlert color="danger">
+              <CIcon icon={cilWarning} className="me-2" />
+              {poolError}
+            </CAlert>
+          ) : poolData ? (
+            <div>
+              {/* Status Banner */}
+              <CAlert color={poolData.hasActivePlan ? 'success' : 'warning'} className="mb-4">
+                <CIcon icon={poolData.hasActivePlan ? cilCheckCircle : cilWarning} className="me-2" />
+                {poolData.hasActivePlan 
+                  ? 'Active incentive plan exists for this model and color combination'
+                  : 'No active incentive plan found for this model and color combination'
+                }
+              </CAlert>
+
+              {poolData.hasActivePlan && (
+                <>
+                  <CRow className="mb-3">
+                    <CCol md={6}>
+                      <small className="text-muted">Model</small>
+                      <div><strong>{poolData.model}</strong></div>
+                    </CCol>
+                    <CCol md={6}>
+                      <small className="text-muted">Color</small>
+                      <div><strong>{poolData.color}</strong></div>
+                    </CCol>
+                  </CRow>
+
+                  <CRow className="mb-3">
+                    <CCol md={6}>
+                      <small className="text-muted">Incentive per Vehicle</small>
+                      <div><strong>{formatCurrency(poolData.incentivePerVehicle)}</strong></div>
+                    </CCol>
+                    <CCol md={6}>
+                      <small className="text-muted">Total Pool</small>
+                      <div><strong>{formatCurrency(poolData.totalPool)}</strong></div>
+                    </CCol>
+                  </CRow>
+
+                  <CRow className="mb-3">
+                    <CCol md={6}>
+                      <small className="text-muted">Utilized Amount</small>
+                      <div><strong>{formatCurrency(poolData.utilizedAmount)}</strong></div>
+                    </CCol>
+                    <CCol md={6}>
+                      <small className="text-muted">Remaining Pool</small>
+                      <div><strong>{formatCurrency(poolData.remainingPool)}</strong></div>
+                    </CCol>
+                  </CRow>
+
+                  <CRow className="mb-3">
+                    <CCol md={6}>
+                      <small className="text-muted">Max Vehicles Coverable</small>
+                      <div><strong>{poolData.maxVehiclesCoverable}</strong></div>
+                    </CCol>
+                    <CCol md={6}>
+                      <small className="text-muted">Can Apply Next</small>
+                      <div>
+                        <CBadge color={poolData.canApplyNext ? 'success' : 'danger'}>
+                          {poolData.canApplyNext ? 'Yes' : 'No'}
+                        </CBadge>
+                      </div>
+                    </CCol>
+                  </CRow>
+
+                  <CRow className="mb-3">
+                    <CCol md={6}>
+                      <small className="text-muted">Valid From</small>
+                      <div><strong>{formatDate(poolData.validFrom)}</strong></div>
+                    </CCol>
+                    <CCol md={6}>
+                      <small className="text-muted">Valid To</small>
+                      <div><strong>{formatDate(poolData.validTo)}</strong></div>
+                    </CCol>
+                  </CRow>
+
+                  {/* Utilization Progress */}
+                  <CRow className="mb-3">
+                    <CCol md={12}>
+                      <small className="text-muted">Utilization Progress</small>
+                      <div className="d-flex align-items-center mt-1">
+                        <CProgress 
+                          value={parseFloat(poolData.utilizationPercentage)} 
+                          color={parseFloat(poolData.utilizationPercentage) > 80 ? 'warning' : 'info'}
+                          className="flex-grow-1"
+                          style={{ height: '20px' }}
+                        />
+                        <span className="ms-2 fw-bold">{poolData.utilizationPercentage}%</span>
+                      </div>
+                    </CCol>
+                  </CRow>
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="text-muted">No pool data available</p>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => {
+            setPoolModalVisible(false);
+            setPoolData(null);
+            setPoolError(null);
+          }}>Close</CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* Summary Modal */}
+      <CModal size="lg" visible={summaryModalVisible} onClose={() => {
+        setSummaryModalVisible(false);
+        setSummaryData(null);
+        setSummaryError(null);
+      }} alignment="center" scrollable>
+        <CModalHeader>
+          <CModalTitle>
+            <CIcon icon={cilChartPie} className="me-2" />
+            Incentive Summary
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {summaryLoading ? (
+            <div className="d-flex justify-content-center align-items-center py-5">
+              <CSpinner color="primary" size="lg" />
+              <span className="ms-3">Loading summary data...</span>
+            </div>
+          ) : summaryError ? (
+            <CAlert color="danger">
+              <CIcon icon={cilWarning} className="me-2" />
+              {summaryError}
+            </CAlert>
+          ) : summaryData ? (
+            <div>
+              {/* Plans Summary */}
+              <h6 className="mb-3">Plan Summary</h6>
+              {summaryData.plans && summaryData.plans.length > 0 ? (
+                <CTable striped bordered hover size="sm" className="mb-4">
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell>Status</CTableHeaderCell>
+                      <CTableHeaderCell className="text-center">No. of Plans</CTableHeaderCell>
+                      <CTableHeaderCell className="text-end">Total Pool (₹)</CTableHeaderCell>
+                      <CTableHeaderCell className="text-end">Total Utilized (₹)</CTableHeaderCell>
+                    </CTableRow>
+                  </CTableHead>
+                  <CTableBody>
+                    {summaryData.plans.map((item, index) => (
+                      <CTableRow key={index}>
+                        <CTableDataCell>
+                          <CBadge color={item._id === 'active' ? 'success' : 'secondary'}>
+                            {item._id.charAt(0).toUpperCase() + item._id.slice(1)}
+                          </CBadge>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">{item.count}</CTableDataCell>
+                        <CTableDataCell className="text-end">{formatCurrency(item.totalPool)}</CTableDataCell>
+                        <CTableDataCell className="text-end">{formatCurrency(item.totalUtilized)}</CTableDataCell>
+                      </CTableRow>
+                    ))}
+                  </CTableBody>
+                </CTable>
+              ) : (
+                <p className="text-muted">No plan data available</p>
+              )}
+
+              {/* Transactions Summary */}
+              <h6 className="mb-3">Transaction Summary</h6>
+              {summaryData.transactions && summaryData.transactions.length > 0 ? (
+                <CTable striped bordered hover size="sm" className="mb-4">
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell>Status</CTableHeaderCell>
+                      <CTableHeaderCell className="text-center">Count</CTableHeaderCell>
+                      <CTableHeaderCell className="text-end">Total Amount (₹)</CTableHeaderCell>
+                    </CTableRow>
+                  </CTableHead>
+                  <CTableBody>
+                    {summaryData.transactions.map((item, index) => (
+                      <CTableRow key={index}>
+                        <CTableDataCell>
+                          <CBadge color={item._id === 'paid' ? 'success' : 'warning'}>
+                            {item._id.charAt(0).toUpperCase() + item._id.slice(1)}
+                          </CBadge>
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">{item.count}</CTableDataCell>
+                        <CTableDataCell className="text-end">{formatCurrency(item.totalAmount)}</CTableDataCell>
+                      </CTableRow>
+                    ))}
+                  </CTableBody>
+                </CTable>
+              ) : (
+                <p className="text-muted">No transaction data available</p>
+              )}
+
+              {/* Top Earning Executives */}
+              <h6 className="mb-3">Top Earning Executives</h6>
+              {summaryData.topEarningExecutives && summaryData.topEarningExecutives.length > 0 ? (
+                <CTable striped bordered hover size="sm">
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell>#</CTableHeaderCell>
+                      <CTableHeaderCell>Executive Name</CTableHeaderCell>
+                      <CTableHeaderCell className="text-center">Vehicles Count</CTableHeaderCell>
+                      <CTableHeaderCell className="text-end">Total Earned (₹)</CTableHeaderCell>
+                    </CTableRow>
+                  </CTableHead>
+                  <CTableBody>
+                    {summaryData.topEarningExecutives.map((item, index) => (
+                      <CTableRow key={item._id}>
+                        <CTableDataCell>{index + 1}</CTableDataCell>
+                        <CTableDataCell>
+                          <CIcon icon={cilUser} className="me-2" />
+                          {item.name || 'Unknown'}
+                        </CTableDataCell>
+                        <CTableDataCell className="text-center">{item.vehicleCount}</CTableDataCell>
+                        <CTableDataCell className="text-end">{formatCurrency(item.totalEarned)}</CTableDataCell>
+                      </CTableRow>
+                    ))}
+                  </CTableBody>
+                </CTable>
+              ) : (
+                <p className="text-muted">No executive data available</p>
+              )}
+            </div>
+          ) : (
+            <p className="text-muted">No summary data available</p>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={() => {
+            setSummaryModalVisible(false);
+            setSummaryData(null);
+            setSummaryError(null);
+          }}>Close</CButton>
         </CModalFooter>
       </CModal>
 
@@ -552,8 +924,8 @@ const Incentives = () => {
         </CModalHeader>
         <CModalBody>
           <p>Are you sure you want to delete this incentive plan?</p>
-          <p><strong>Model:</strong> {selectedPlan?.modelName || selectedPlan?.model?.model_name}</p>
-          <p><strong>Color:</strong> {selectedPlan?.color?.name || selectedPlan?.color?.id?.name}</p>
+          <p><strong>Model:</strong> {selectedPlan?.model?.model_name || selectedPlan?.modelName || '-'}</p>
+          <p><strong>Color:</strong> {selectedPlan?.color?.name || selectedPlan?.color?.id?.name || '-'}</p>
           <p><strong>Incentive:</strong> {formatCurrency(selectedPlan?.incentivePerVehicle)} per vehicle</p>
           <p className="text-muted small">This action cannot be undone.</p>
         </CModalBody>

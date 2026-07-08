@@ -179,7 +179,8 @@ const ApplyIncentive = () => {
         bookingId: bookingId
       };
 
-      const response = await axiosInstance.post('/incentives/apply', payload);
+      // Updated API endpoint
+      const response = await axiosInstance.post('/incentives/apply-on-sale', payload);
       
       if (response.data.status === 'success') {
         showSuccess('Incentive applied successfully!');

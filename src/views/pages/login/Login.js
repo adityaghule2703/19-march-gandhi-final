@@ -1521,7 +1521,7 @@ export default Login
 //   const [imageLoading, setImageLoading] = useState(true)
 
 //   const navigate = useNavigate()
-//   const baseURL = 'https://gmplmis.com/dealership-api/api/v1'
+//   const baseURL = 'https://gandhitvs.in/dealership/api/v1'
 
 //   // Fetch active wallpaper on component mount
 //   useEffect(() => {

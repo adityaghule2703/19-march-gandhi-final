@@ -2215,11 +2215,15 @@ import '../../../css/table.css';
 import AddInsurance from './AddInsurance';
 import ViewInsuranceModal from './ViewInsurance';
 import ViewPendingBookingModal from './ViewPendingBookingModal';
+import ViewRenewalModal from './ViewRenewalModal';
 import CIcon from '@coreui/icons-react';
-import { cilPlus, cilZoom, cilPencil, cilChevronLeft, cilChevronRight } from '@coreui/icons';
+import { cilPlus, cilZoom, cilPencil, cilChevronLeft, cilChevronRight, cilReload, cilUserPlus, cilPrint } from '@coreui/icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileExcel } from '@fortawesome/free-solid-svg-icons';
 import { useAuth } from '../../../context/AuthContext';
+import Select from 'react-select';
+import { numberToWords } from '../../../utils/numberToWords';
+import tvsLogo from '../../../assets/images/logo.png';
 
 // Import the permission utilities
 import { 
@@ -2234,7 +2238,8 @@ import {
 const TAB = {
   PENDING_INSURANCE: 0,
   COMPLETE_INSURANCE: 1,
-  UPDATE_LATER: 2
+  UPDATE_LATER: 2,
+  INSURANCE_RENEWAL: 3
 };
 
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
@@ -2251,21 +2256,102 @@ const emptyTab = () => ({
   search: '',
 });
 
+// Custom styles for react-select
+const customSelectStyles = {
+  control: (base, state) => ({
+    ...base,
+    minHeight: '38px',
+    borderColor: state.isFocused ? '#86b7fe' : '#ced4da',
+    boxShadow: state.isFocused ? '0 0 0 0.25rem rgba(13, 110, 253, 0.25)' : 'none',
+    '&:hover': {
+      borderColor: '#86b7fe'
+    }
+  }),
+  menu: (base) => ({
+    ...base,
+    zIndex: 9999
+  }),
+  option: (base, state) => ({
+    ...base,
+    backgroundColor: state.isSelected ? '#0d6efd' : state.isFocused ? '#e9ecef' : 'white',
+    color: state.isSelected ? 'white' : '#212529',
+    '&:active': {
+      backgroundColor: '#0d6efd'
+    }
+  })
+};
+
 function InsuranceReport() {
   const [activeTab, setActiveTab] = useState(TAB.PENDING_INSURANCE);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showViewBookingModal, setShowViewBookingModal] = useState(false);
+  const [showViewRenewalModal, setShowViewRenewalModal] = useState(false);
   const [selectedInsurance, setSelectedInsurance] = useState(null);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [selectedBookingForView, setSelectedBookingForView] = useState(null);
+  const [selectedRenewal, setSelectedRenewal] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Models state for dropdown
+  const [models, setModels] = useState([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  
+  // Insurance Providers state for dropdown
+  const [insuranceProviders, setInsuranceProviders] = useState([]);
+  const [loadingProviders, setLoadingProviders] = useState(false);
+  
+  // Bank Sub Payment Modes state
+  const [bankSubPaymentModes, setBankSubPaymentModes] = useState([]);
+  const [loadingBankSubPaymentModes, setLoadingBankSubPaymentModes] = useState(false);
+  
+  // Banks state
+  const [banks, setBanks] = useState([]);
+  const [loadingBanks, setLoadingBanks] = useState(false);
+  
+  // Insurance Renewal Modal states (for existing customer - from Complete Insurance tab)
+  const [showRenewalModal, setShowRenewalModal] = useState(false);
+  const [renewalFormData, setRenewalFormData] = useState({
+    originalInsurance: '',
+    customerName: '',
+    newPolicyNumber: '',
+    newInsuranceCompany: '',
+    newPremium: '',
+    newStartDate: '',
+    newExpiryDate: '',
+    paymentMode: '',
+    paymentSubMode: '',
+    bankLocation: '',
+    paymentReference: '',
+    remarks: ''
+  });
+  const [renewalLoading, setRenewalLoading] = useState(false);
+  const [renewalError, setRenewalError] = useState('');
+
+  // New Customer Insurance Renewal Modal states
+  const [showNewCustomerRenewalModal, setShowNewCustomerRenewalModal] = useState(false);
+  const [newCustomerRenewalFormData, setNewCustomerRenewalFormData] = useState({
+    customerName: '',
+    newPolicyNumber: '',
+    newInsuranceCompany: '',
+    newPremium: '',
+    newStartDate: '',
+    newExpiryDate: '',
+    paymentMode: '',
+    paymentSubMode: '',
+    bankLocation: '',
+    paymentReference: '',
+    remarks: ''
+  });
+  const [newCustomerRenewalLoading, setNewCustomerRenewalLoading] = useState(false);
+  const [newCustomerRenewalError, setNewCustomerRenewalError] = useState('');
   
   // Per-tab independent state
   const [tabData, setTabData] = useState(() => ({
     [TAB.PENDING_INSURANCE]: emptyTab(),
     [TAB.COMPLETE_INSURANCE]: emptyTab(),
-    [TAB.UPDATE_LATER]: emptyTab()
+    [TAB.UPDATE_LATER]: emptyTab(),
+    [TAB.INSURANCE_RENEWAL]: emptyTab()
   }));
   
   // LOCAL search state (display only — input is UNCONTROLLED)
@@ -2288,6 +2374,7 @@ function InsuranceReport() {
   const { permissions = [], user } = useAuth();
   const hasAllBranchAccess = user?.branchAccess === "ALL";
   
+  // ===== PERMISSION CHECKS =====
   // Page-level VIEW permission check
   const canViewInsuranceDetails = hasSafePagePermission(
     permissions, 
@@ -2321,7 +2408,14 @@ function InsuranceReport() {
     TABS.INSURANCE_DETAILS.UPDATE_LATER
   );
   
-  const canViewAnyTab = canViewPendingInsuranceTab || canViewCompleteInsuranceTab || canViewUpdateLaterTab;
+  // Insurance Renewal tab VIEW permission
+  const canViewRenewalTab = hasSafePagePermission(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS, 
+    ACTIONS.VIEW,
+    TABS.INSURANCE_DETAILS.INSURANCE_RENEWAL
+  );
   
   // Tab-level CREATE permission for PENDING INSURANCE tab (for Add button)
   const canCreatePendingInsurance = hasSafePagePermission(
@@ -2340,163 +2434,344 @@ function InsuranceReport() {
     ACTIONS.CREATE,
     TABS.INSURANCE_DETAILS.UPDATE_LATER
   );
+  
+  // Insurance Renewal tab CREATE permission
+  const canCreateRenewalTab = hasSafePagePermission(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS, 
+    ACTIONS.CREATE,
+    TABS.INSURANCE_DETAILS.INSURANCE_RENEWAL
+  );
+  
+  // Insurance Renewal tab UPDATE permission
+  const canUpdateRenewalTab = hasSafePagePermission(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS, 
+    ACTIONS.UPDATE,
+    TABS.INSURANCE_DETAILS.INSURANCE_RENEWAL
+  );
+  
+  // Insurance Renewal tab DELETE permission
+  const canDeleteRenewalTab = hasSafePagePermission(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS, 
+    ACTIONS.DELETE,
+    TABS.INSURANCE_DETAILS.INSURANCE_RENEWAL
+  );
+  
+  // Check if user can view any tab
+  const canViewAnyTab = canViewPendingInsuranceTab || 
+    canViewCompleteInsuranceTab || 
+    canViewUpdateLaterTab || 
+    canViewRenewalTab;
+  
+  // Check if user has any renewal-related permission (for buttons)
+  const canManageRenewals = canViewRenewalTab || 
+    canCreateRenewalTab || 
+    canUpdateRenewalTab || 
+    canDeleteRenewalTab;
 
   // Helper: update a single tab's slice
   const setTab = useCallback((tabIndex, updates) =>
     setTabData(prev => ({ ...prev, [tabIndex]: { ...prev[tabIndex], ...updates } })),
   []);
 
-  // Fetch functions with server-side pagination and search
-// Update the fetch functions to handle your exact API response structure
-const fetchCompleteInsurance = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
-  if (!canViewCompleteInsuranceTab) return;
-  setTab(tabIndex, { loading: true });
-  try {
-    const params = { page, limit };
-    if (search) params.search = search;
-    const response = await axiosInstance.get(`/insurance/status/COMPLETED`, { params });
-    
-    // Handle your API response structure
-    let docs = [];
-    let total = 0;
-    let pages = 1;
-    
-    if (response.data) {
-      // Your API returns: { success, count, totalCount, data, pagination }
-      docs = response.data.data || [];
-      total = response.data.totalCount || response.data.count || docs.length;
+  // Fetch models
+  const fetchModels = useCallback(async () => {
+    setLoadingModels(true);
+    try {
+      const response = await axiosInstance.get('/models/list/names');
       
-      // Get pagination info from your API
-      if (response.data.pagination) {
-        pages = response.data.pagination.totalPages || 1;
-        total = response.data.pagination.total || docs.length;
+      if (response.data.status === 'success') {
+        const modelOptions = (response.data.data.models || []).map(model => ({
+          value: model.id,
+          label: model.name
+        }));
+        setModels(modelOptions);
       } else {
-        pages = Math.ceil(total / limit);
+        showError(response.data.message || 'Failed to load models');
       }
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      if (error.response?.data?.message) {
+        showError(error.response.data.message);
+      } else {
+        showError('Failed to load models');
+      }
+    } finally {
+      setLoadingModels(false);
     }
-    
-    console.log(`Complete Insurance Tab - Page: ${page}, Total: ${total}, Pages: ${pages}, Docs Length: ${docs.length}`);
-    
-    setTab(tabIndex, {
-      docs,
-      total,
-      pages,
-      currentPage: page,
-      limit,
-      loading: false,
-      search
-    });
-  } catch (error) {
-    console.error('Error fetching complete insurance:', error);
-    showError(error);
-    setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
-  }
-}, [canViewCompleteInsuranceTab, setTab]);
+  }, []);
 
-// Similarly for fetchPendingInsurance
-const fetchPendingInsurance = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
-  if (!canViewPendingInsuranceTab) return;
-  setTab(tabIndex, { loading: true });
-  try {
-    const params = { page, limit };
-    if (search) params.search = search;
-    const response = await axiosInstance.get(`/bookings/insurance-status/AWAITING`, { params });
-    
-    let docs = [];
-    let total = 0;
-    let pages = 1;
-    
-    if (response.data) {
-      // Handle different possible response structures
-      if (response.data.data) {
-        if (response.data.data.docs) {
-          docs = response.data.data.docs;
-          total = response.data.data.totalDocs || response.data.data.total || docs.length;
-          pages = response.data.data.totalPages || Math.ceil(total / limit);
-        } else if (Array.isArray(response.data.data)) {
-          docs = response.data.data;
-          total = response.data.totalCount || response.data.count || docs.length;
-          if (response.data.pagination) {
-            pages = response.data.pagination.totalPages || 1;
-          } else {
-            pages = Math.ceil(total / limit);
-          }
+  // Fetch Insurance Providers - Updated
+  const fetchInsuranceProviders = useCallback(async () => {
+    setLoadingProviders(true);
+    try {
+      const response = await axiosInstance.get('/insurance-providers');
+      
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        const providerOptions = response.data.data.map(provider => ({
+          value: provider._id,
+          label: provider.provider_name
+        }));
+        setInsuranceProviders(providerOptions);
+      } else if (response.data && Array.isArray(response.data)) {
+        const providerOptions = response.data.map(provider => ({
+          value: provider._id,
+          label: provider.provider_name
+        }));
+        setInsuranceProviders(providerOptions);
+      } else {
+        console.error('Unexpected response structure:', response.data);
+        showError('Failed to load insurance providers');
+      }
+    } catch (error) {
+      console.error('Error fetching insurance providers:', error);
+      if (error.response?.data?.message) {
+        showError(error.response.data.message);
+      } else {
+        showError('Failed to load insurance providers');
+      }
+    } finally {
+      setLoadingProviders(false);
+    }
+  }, []);
+
+  // Fetch Bank Sub Payment Modes
+  const fetchBankSubPaymentModes = useCallback(async () => {
+    setLoadingBankSubPaymentModes(true);
+    try {
+      const response = await axiosInstance.get('/banksubpaymentmodes');
+      
+      if (response.data && response.data.success && Array.isArray(response.data.data)) {
+        const options = response.data.data.map(mode => ({
+          value: mode._id,
+          label: mode.payment_mode
+        }));
+        setBankSubPaymentModes(options);
+      } else {
+        console.error('Unexpected response structure:', response.data);
+        showError('Failed to load bank sub payment modes');
+      }
+    } catch (error) {
+      console.error('Error fetching bank sub payment modes:', error);
+      if (error.response?.data?.message) {
+        showError(error.response.data.message);
+      } else {
+        showError('Failed to load bank sub payment modes');
+      }
+    } finally {
+      setLoadingBankSubPaymentModes(false);
+    }
+  }, []);
+
+  // Fetch Banks
+  const fetchBanks = useCallback(async () => {
+    setLoadingBanks(true);
+    try {
+      const response = await axiosInstance.get('/banks');
+      
+      if (response.data && response.data.status === 'success' && response.data.data && response.data.data.banks) {
+        const options = response.data.data.banks.map(bank => ({
+          value: bank._id,
+          label: bank.name
+        }));
+        setBanks(options);
+      } else {
+        console.error('Unexpected response structure:', response.data);
+        showError('Failed to load banks');
+      }
+    } catch (error) {
+      console.error('Error fetching banks:', error);
+      if (error.response?.data?.message) {
+        showError(error.response.data.message);
+      } else {
+        showError('Failed to load banks');
+      }
+    } finally {
+      setLoadingBanks(false);
+    }
+  }, []);
+
+  // Fetch functions with server-side pagination and search
+  const fetchCompleteInsurance = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+    if (!canViewCompleteInsuranceTab) return;
+    setTab(tabIndex, { loading: true });
+    try {
+      const params = { page, limit };
+      if (search) params.search = search;
+      const response = await axiosInstance.get(`/insurance/status/COMPLETED`, { params });
+      
+      let docs = [];
+      let total = 0;
+      let pages = 1;
+      
+      if (response.data) {
+        docs = response.data.data || [];
+        total = response.data.totalCount || response.data.count || docs.length;
+        
+        if (response.data.pagination) {
+          pages = response.data.pagination.totalPages || 1;
+          total = response.data.pagination.total || docs.length;
         } else {
-          docs = response.data.data;
-          total = docs.length;
           pages = Math.ceil(total / limit);
         }
-      } else if (Array.isArray(response.data)) {
-        docs = response.data;
-        total = docs.length;
-        pages = Math.ceil(total / limit);
-      } else {
-        docs = response.data?.docs || [];
-        total = response.data?.totalDocs || docs.length;
-        pages = response.data?.totalPages || Math.ceil(total / limit);
       }
-    }
-    
-    console.log(`Pending Insurance Tab - Page: ${page}, Total: ${total}, Pages: ${pages}, Docs Length: ${docs.length}`);
-    
-    setTab(tabIndex, {
-      docs,
-      total,
-      pages,
-      currentPage: page,
-      limit,
-      loading: false,
-      search
-    });
-  } catch (error) {
-    console.error('Error fetching pending insurance:', error);
-    showError(error);
-    setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
-  }
-}, [canViewPendingInsuranceTab, setTab]);
-
-// For Update Later tab
-const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
-  if (!canViewUpdateLaterTab) return;
-  setTab(tabIndex, { loading: true });
-  try {
-    const params = { page, limit };
-    if (search) params.search = search;
-    const response = await axiosInstance.get(`/insurance/status/LATER`, { params });
-    
-    let docs = [];
-    let total = 0;
-    let pages = 1;
-    
-    if (response.data) {
-      docs = response.data.data || [];
-      total = response.data.totalCount || response.data.count || docs.length;
       
-      if (response.data.pagination) {
-        pages = response.data.pagination.totalPages || 1;
-        total = response.data.pagination.total || docs.length;
-      } else {
-        pages = Math.ceil(total / limit);
-      }
+      setTab(tabIndex, {
+        docs,
+        total,
+        pages,
+        currentPage: page,
+        limit,
+        loading: false,
+        search
+      });
+    } catch (error) {
+      console.error('Error fetching complete insurance:', error);
+      showError(error);
+      setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
     }
-    
-    console.log(`Update Later Tab - Page: ${page}, Total: ${total}, Pages: ${pages}, Docs Length: ${docs.length}`);
-    
-    setTab(tabIndex, {
-      docs,
-      total,
-      pages,
-      currentPage: page,
-      limit,
-      loading: false,
-      search
-    });
-  } catch (error) {
-    console.error('Error fetching update later:', error);
-    showError(error);
-    setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
-  }
-}, [canViewUpdateLaterTab, setTab]);
+  }, [canViewCompleteInsuranceTab, setTab]);
+
+  const fetchPendingInsurance = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+    if (!canViewPendingInsuranceTab) return;
+    setTab(tabIndex, { loading: true });
+    try {
+      const params = { page, limit };
+      if (search) params.search = search;
+      const response = await axiosInstance.get(`/bookings/insurance-status/AWAITING`, { params });
+      
+      let docs = [];
+      let total = 0;
+      let pages = 1;
+      
+      if (response.data) {
+        if (response.data.data) {
+          if (response.data.data.docs) {
+            docs = response.data.data.docs;
+            total = response.data.data.totalDocs || response.data.data.total || docs.length;
+            pages = response.data.data.totalPages || Math.ceil(total / limit);
+          } else if (Array.isArray(response.data.data)) {
+            docs = response.data.data;
+            total = response.data.totalCount || response.data.count || docs.length;
+            if (response.data.pagination) {
+              pages = response.data.pagination.totalPages || 1;
+            } else {
+              pages = Math.ceil(total / limit);
+            }
+          } else {
+            docs = response.data.data;
+            total = docs.length;
+            pages = Math.ceil(total / limit);
+          }
+        } else if (Array.isArray(response.data)) {
+          docs = response.data;
+          total = docs.length;
+          pages = Math.ceil(total / limit);
+        } else {
+          docs = response.data?.docs || [];
+          total = response.data?.totalDocs || docs.length;
+          pages = response.data?.totalPages || Math.ceil(total / limit);
+        }
+      }
+      
+      setTab(tabIndex, {
+        docs,
+        total,
+        pages,
+        currentPage: page,
+        limit,
+        loading: false,
+        search
+      });
+    } catch (error) {
+      console.error('Error fetching pending insurance:', error);
+      showError(error);
+      setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
+    }
+  }, [canViewPendingInsuranceTab, setTab]);
+
+  const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+    if (!canViewUpdateLaterTab) return;
+    setTab(tabIndex, { loading: true });
+    try {
+      const params = { page, limit };
+      if (search) params.search = search;
+      const response = await axiosInstance.get(`/insurance/status/LATER`, { params });
+      
+      let docs = [];
+      let total = 0;
+      let pages = 1;
+      
+      if (response.data) {
+        docs = response.data.data || [];
+        total = response.data.totalCount || response.data.count || docs.length;
+        
+        if (response.data.pagination) {
+          pages = response.data.pagination.totalPages || 1;
+          total = response.data.pagination.total || docs.length;
+        } else {
+          pages = Math.ceil(total / limit);
+        }
+      }
+      
+      setTab(tabIndex, {
+        docs,
+        total,
+        pages,
+        currentPage: page,
+        limit,
+        loading: false,
+        search
+      });
+    } catch (error) {
+      console.error('Error fetching update later:', error);
+      showError(error);
+      setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
+    }
+  }, [canViewUpdateLaterTab, setTab]);
+
+  // Fetch Insurance Renewals - with permission check
+  const fetchInsuranceRenewals = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+    if (!canViewRenewalTab) {
+      console.warn('User does not have permission to view Insurance Renewals');
+      return;
+    }
+    setTab(tabIndex, { loading: true });
+    try {
+      const params = { page, limit };
+      if (search) params.search = search;
+      const response = await axiosInstance.get(`/insurance-renewals`, { params });
+      
+      let docs = [];
+      let total = 0;
+      let pages = 1;
+      
+      if (response.data) {
+        docs = response.data.data || [];
+        total = response.data.total || response.data.count || docs.length;
+        pages = response.data.pages || Math.ceil(total / limit);
+      }
+      
+      setTab(tabIndex, {
+        docs,
+        total,
+        pages,
+        currentPage: page,
+        limit,
+        loading: false,
+        search
+      });
+    } catch (error) {
+      console.error('Error fetching insurance renewals:', error);
+      showError(error);
+      setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
+    }
+  }, [canViewRenewalTab, setTab]);
 
   // Central dispatcher for fetching
   const fetchTab = useCallback((tabIndex, page, limit, search) => {
@@ -2516,12 +2791,15 @@ const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_
         case TAB.UPDATE_LATER:
           fetchUpdateLater(tabIndex, p, l, s);
           break;
+        case TAB.INSURANCE_RENEWAL:
+          fetchInsuranceRenewals(tabIndex, p, l, s);
+          break;
         default:
           break;
       }
       return prev;
     });
-  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater]);
+  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater, fetchInsuranceRenewals]);
 
   // Fetch branches
   const fetchBranches = useCallback(async () => {
@@ -2541,6 +2819,10 @@ const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_
     }
     
     fetchBranches();
+    fetchModels();
+    fetchInsuranceProviders();
+    fetchBankSubPaymentModes();
+    fetchBanks();
     
     if (canViewPendingInsuranceTab) {
       fetchPendingInsurance(TAB.PENDING_INSURANCE, 1, DEFAULT_LIMIT, '');
@@ -2551,7 +2833,13 @@ const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_
     if (canViewUpdateLaterTab) {
       fetchUpdateLater(TAB.UPDATE_LATER, 1, DEFAULT_LIMIT, '');
     }
-  }, [canViewInsuranceDetails, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, canViewUpdateLaterTab, fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater, fetchBranches]);
+    if (canViewRenewalTab) {
+      fetchInsuranceRenewals(TAB.INSURANCE_RENEWAL, 1, DEFAULT_LIMIT, '');
+    }
+  }, [canViewInsuranceDetails, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, 
+      canViewUpdateLaterTab, canViewRenewalTab, fetchPendingInsurance, fetchCompleteInsurance, 
+      fetchUpdateLater, fetchInsuranceRenewals, fetchBranches, fetchModels, 
+      fetchInsuranceProviders, fetchBankSubPaymentModes, fetchBanks]);
 
   // Refresh on refreshKey change
   useEffect(() => {
@@ -2570,11 +2858,13 @@ const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_
     if (canViewPendingInsuranceTab) visibleTabs.push(TAB.PENDING_INSURANCE);
     if (canViewCompleteInsuranceTab) visibleTabs.push(TAB.COMPLETE_INSURANCE);
     if (canViewUpdateLaterTab) visibleTabs.push(TAB.UPDATE_LATER);
+    if (canViewRenewalTab) visibleTabs.push(TAB.INSURANCE_RENEWAL);
     
     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
       setActiveTab(visibleTabs[0]);
     }
-  }, [canViewAnyTab, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, canViewUpdateLaterTab, activeTab]);
+  }, [canViewAnyTab, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, 
+      canViewUpdateLaterTab, canViewRenewalTab, activeTab]);
 
   // Pagination handlers
   const handlePageChange = useCallback((tabIndex, newPage) => {
@@ -2592,13 +2882,16 @@ const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_
         case TAB.UPDATE_LATER:
           fetchUpdateLater(tabIndex, newPage, td.limit, td.search);
           break;
+        case TAB.INSURANCE_RENEWAL:
+          fetchInsuranceRenewals(tabIndex, newPage, td.limit, td.search);
+          break;
         default:
           break;
       }
       return prev;
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater]);
+  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater, fetchInsuranceRenewals]);
 
   const handleLimitChange = useCallback((tabIndex, newLimit) => {
     const limit = parseInt(newLimit, 10);
@@ -2614,12 +2907,15 @@ const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_
         case TAB.UPDATE_LATER:
           fetchUpdateLater(tabIndex, 1, limit, td.search);
           break;
+        case TAB.INSURANCE_RENEWAL:
+          fetchInsuranceRenewals(tabIndex, 1, limit, td.search);
+          break;
         default:
           break;
       }
       return prev;
     });
-  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater]);
+  }, [fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater, fetchInsuranceRenewals]);
 
   // Search handler with debounce
   const handleSearch = useCallback((value) => {
@@ -2652,47 +2948,653 @@ const fetchUpdateLater = useCallback(async (tabIndex, page = 1, limit = DEFAULT_
   }, [tabData, fetchTab]);
 
   // Refresh helper
-// Replace the refreshTab function
-const refreshTab = useCallback((tabIndex) => {
-  const td = tabData[tabIndex];
-  const limit = td?.limit || DEFAULT_LIMIT;
-  const search = td?.search || '';
-  
-  // Clear search input for the current tab if needed
-  if (tabIndex === activeTab) {
-    setLocalSearch('');
-    if (searchInputRef.current) searchInputRef.current.value = '';
-  }
-  
-  // Fetch fresh data
-  switch (tabIndex) {
-    case TAB.PENDING_INSURANCE:
-      fetchPendingInsurance(tabIndex, 1, limit, '');
-      break;
-    case TAB.COMPLETE_INSURANCE:
-      fetchCompleteInsurance(tabIndex, 1, limit, search);
-      break;
-    case TAB.UPDATE_LATER:
-      fetchUpdateLater(tabIndex, 1, limit, search);
-      break;
-    default:
-      break;
-  }
-}, [activeTab, tabData, fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater]);
+  const refreshTab = useCallback((tabIndex) => {
+    const td = tabData[tabIndex];
+    const limit = td?.limit || DEFAULT_LIMIT;
+    const search = td?.search || '';
+    
+    if (tabIndex === activeTab) {
+      setLocalSearch('');
+      if (searchInputRef.current) searchInputRef.current.value = '';
+    }
+    
+    switch (tabIndex) {
+      case TAB.PENDING_INSURANCE:
+        fetchPendingInsurance(tabIndex, 1, limit, '');
+        break;
+      case TAB.COMPLETE_INSURANCE:
+        fetchCompleteInsurance(tabIndex, 1, limit, search);
+        break;
+      case TAB.UPDATE_LATER:
+        fetchUpdateLater(tabIndex, 1, limit, search);
+        break;
+      case TAB.INSURANCE_RENEWAL:
+        if (canViewRenewalTab) {
+          fetchInsuranceRenewals(tabIndex, 1, limit, search);
+        }
+        break;
+      default:
+        break;
+    }
+  }, [activeTab, tabData, fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater, 
+      fetchInsuranceRenewals, canViewRenewalTab]);
 
-// Simplify handleRefresh - remove the refreshKey dependency
-const handleRefresh = useCallback(() => {
-  refreshTab(activeTab);
-}, [activeTab, refreshTab]);
+  const handleRefresh = useCallback(() => {
+    refreshTab(activeTab);
+  }, [activeTab, refreshTab]);
 
-// Update handleModalClose
-const handleModalClose = useCallback(() => {
-  setShowModal(false);
-  setSelectedInsurance(null);
-  setSelectedBooking(null);
-  // Refresh the current tab after modal closes
-  refreshTab(activeTab);
-}, [activeTab, refreshTab]);
+  const handleModalClose = useCallback(() => {
+    setShowModal(false);
+    setSelectedInsurance(null);
+    setSelectedBooking(null);
+    refreshTab(activeTab);
+  }, [activeTab, refreshTab]);
+
+  // Insurance Renewal Handlers (for existing customer - from Complete Insurance tab)
+  const handleOpenRenewalModal = (insuranceItem) => {
+    if (!canCreateRenewalTab && !canCreatePendingInsurance && !canCreateUpdateLater) {
+      showError('You do not have permission to renew insurance');
+      return;
+    }
+    
+    // Pre-fill form with data from the insurance item
+    setRenewalFormData({
+      originalInsurance: insuranceItem.id || '',
+      customerName: insuranceItem.customerName || '',
+      newPolicyNumber: '',
+      newInsuranceCompany: insuranceItem.originalInsurance?.InsuranceCompany || '',
+      newPremium: insuranceItem.originalInsurance?.PremiumAmount?.toString() || '',
+      newStartDate: '',
+      newExpiryDate: '',
+      paymentMode: '',
+      paymentSubMode: '',
+      bankLocation: '',
+      paymentReference: '',
+      remarks: ''
+    });
+    
+    setRenewalError('');
+    setShowRenewalModal(true);
+  };
+
+  const handleCloseRenewalModal = () => {
+    setShowRenewalModal(false);
+    setRenewalFormData({
+      originalInsurance: '',
+      customerName: '',
+      newPolicyNumber: '',
+      newInsuranceCompany: '',
+      newPremium: '',
+      newStartDate: '',
+      newExpiryDate: '',
+      paymentMode: '',
+      paymentSubMode: '',
+      bankLocation: '',
+      paymentReference: '',
+      remarks: ''
+    });
+    setRenewalError('');
+  };
+
+  const handleRenewalFormChange = (e) => {
+    const { name, value } = e.target;
+    setRenewalFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setRenewalError('');
+  };
+
+  // Handle payment mode change for renewal form
+  const handleRenewalPaymentModeChange = (e) => {
+    const { value } = e.target;
+    setRenewalFormData(prev => ({
+      ...prev,
+      paymentMode: value,
+      paymentSubMode: '',
+      bankLocation: '',
+      paymentReference: ''
+    }));
+    setRenewalError('');
+  };
+
+  // Handle payment sub mode change for renewal form
+  const handleRenewalSubModeChange = (selectedOption) => {
+    setRenewalFormData(prev => ({
+      ...prev,
+      paymentSubMode: selectedOption ? selectedOption.label : ''
+    }));
+    setRenewalError('');
+  };
+
+  // Handle bank location change for renewal form
+  const handleRenewalBankChange = (selectedOption) => {
+    setRenewalFormData(prev => ({
+      ...prev,
+      bankLocation: selectedOption ? selectedOption.label : ''
+    }));
+    setRenewalError('');
+  };
+
+  const handleSubmitRenewal = async () => {
+    // Validate required fields
+    const requiredFields = ['customerName', 'newPolicyNumber', 'newInsuranceCompany', 'newPremium', 'newStartDate', 'newExpiryDate', 'paymentMode'];
+    const missingFields = requiredFields.filter(field => !renewalFormData[field]);
+    
+    if (missingFields.length > 0) {
+      setRenewalError('Please fill in all required fields');
+      return;
+    }
+
+    // If payment mode is Bank, validate additional fields
+    if (renewalFormData.paymentMode === 'Bank') {
+      if (!renewalFormData.paymentSubMode) {
+        setRenewalError('Please select Payment Sub Mode for Bank payment');
+        return;
+      }
+      if (!renewalFormData.bankLocation) {
+        setRenewalError('Please select Bank Location for Bank payment');
+        return;
+      }
+      if (!renewalFormData.paymentReference) {
+        setRenewalError('Please enter Payment Reference for Bank payment');
+        return;
+      }
+    }
+
+    try {
+      setRenewalLoading(true);
+      
+      const payload = {
+        originalInsurance: renewalFormData.originalInsurance || '',
+        customerName: renewalFormData.customerName,
+        newPolicyNumber: renewalFormData.newPolicyNumber,
+        newInsuranceCompany: renewalFormData.newInsuranceCompany,
+        newPremium: parseFloat(renewalFormData.newPremium),
+        newStartDate: renewalFormData.newStartDate,
+        newExpiryDate: renewalFormData.newExpiryDate,
+        paymentMode: renewalFormData.paymentMode,
+        paymentSubMode: renewalFormData.paymentSubMode || '',
+        bankLocation: renewalFormData.bankLocation || '',
+        paymentReference: renewalFormData.paymentReference || '',
+        remarks: renewalFormData.remarks || ''
+      };
+      
+      await axiosInstance.post('/insurance-renewals', payload);
+      
+      showError('Insurance renewed successfully!');
+      handleCloseRenewalModal();
+      refreshTab(TAB.INSURANCE_RENEWAL);
+      
+    } catch (error) {
+      console.error('Error renewing insurance:', error);
+      setRenewalError(error.response?.data?.message || 'Failed to renew insurance');
+    } finally {
+      setRenewalLoading(false);
+    }
+  };
+
+  // New Customer Insurance Renewal Handlers
+  const handleOpenNewCustomerRenewalModal = () => {
+    if (!canCreateRenewalTab && !canCreatePendingInsurance && !canCreateUpdateLater) {
+      showError('You do not have permission to create insurance renewal');
+      return;
+    }
+    setNewCustomerRenewalFormData({
+      customerName: '',
+      newPolicyNumber: '',
+      newInsuranceCompany: '',
+      newPremium: '',
+      newStartDate: '',
+      newExpiryDate: '',
+      paymentMode: '',
+      paymentSubMode: '',
+      bankLocation: '',
+      paymentReference: '',
+      remarks: ''
+    });
+    setNewCustomerRenewalError('');
+    setShowNewCustomerRenewalModal(true);
+  };
+
+  const handleCloseNewCustomerRenewalModal = () => {
+    setShowNewCustomerRenewalModal(false);
+    setNewCustomerRenewalFormData({
+      customerName: '',
+      newPolicyNumber: '',
+      newInsuranceCompany: '',
+      newPremium: '',
+      newStartDate: '',
+      newExpiryDate: '',
+      paymentMode: '',
+      paymentSubMode: '',
+      bankLocation: '',
+      paymentReference: '',
+      remarks: ''
+    });
+    setNewCustomerRenewalError('');
+  };
+
+  const handleNewCustomerRenewalFormChange = (e) => {
+    const { name, value } = e.target;
+    setNewCustomerRenewalFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    setNewCustomerRenewalError('');
+  };
+
+  // Handle payment mode change for new customer renewal form
+  const handleNewCustomerPaymentModeChange = (e) => {
+    const { value } = e.target;
+    setNewCustomerRenewalFormData(prev => ({
+      ...prev,
+      paymentMode: value,
+      paymentSubMode: '',
+      bankLocation: '',
+      paymentReference: ''
+    }));
+    setNewCustomerRenewalError('');
+  };
+
+  // Handle payment sub mode change for new customer renewal form
+  const handleNewCustomerSubModeChange = (selectedOption) => {
+    setNewCustomerRenewalFormData(prev => ({
+      ...prev,
+      paymentSubMode: selectedOption ? selectedOption.label : ''
+    }));
+    setNewCustomerRenewalError('');
+  };
+
+  // Handle bank location change for new customer renewal form
+  const handleNewCustomerBankChange = (selectedOption) => {
+    setNewCustomerRenewalFormData(prev => ({
+      ...prev,
+      bankLocation: selectedOption ? selectedOption.label : ''
+    }));
+    setNewCustomerRenewalError('');
+  };
+
+  // Handle insurance provider change for new customer renewal
+  const handleNewCustomerProviderChange = (selectedOption) => {
+    const providerName = selectedOption ? selectedOption.label : '';
+    setNewCustomerRenewalFormData(prev => ({
+      ...prev,
+      newInsuranceCompany: providerName
+    }));
+    setNewCustomerRenewalError('');
+  };
+
+  const handleSubmitNewCustomerRenewal = async () => {
+    // Validate required fields
+    const requiredFields = ['customerName', 'newPolicyNumber', 'newInsuranceCompany', 'newPremium', 'newStartDate', 'newExpiryDate', 'paymentMode'];
+    const missingFields = requiredFields.filter(field => !newCustomerRenewalFormData[field]);
+    
+    if (missingFields.length > 0) {
+      setNewCustomerRenewalError('Please fill in all required fields');
+      return;
+    }
+
+    // If payment mode is Bank, validate additional fields
+    if (newCustomerRenewalFormData.paymentMode === 'Bank') {
+      if (!newCustomerRenewalFormData.paymentSubMode) {
+        setNewCustomerRenewalError('Please select Payment Sub Mode for Bank payment');
+        return;
+      }
+      if (!newCustomerRenewalFormData.bankLocation) {
+        setNewCustomerRenewalError('Please select Bank Location for Bank payment');
+        return;
+      }
+      if (!newCustomerRenewalFormData.paymentReference) {
+        setNewCustomerRenewalError('Please enter Payment Reference for Bank payment');
+        return;
+      }
+    }
+
+    try {
+      setNewCustomerRenewalLoading(true);
+      
+      const payload = {
+        customerName: newCustomerRenewalFormData.customerName,
+        newPolicyNumber: newCustomerRenewalFormData.newPolicyNumber,
+        newInsuranceCompany: newCustomerRenewalFormData.newInsuranceCompany,
+        newPremium: parseFloat(newCustomerRenewalFormData.newPremium),
+        newStartDate: newCustomerRenewalFormData.newStartDate,
+        newExpiryDate: newCustomerRenewalFormData.newExpiryDate,
+        paymentMode: newCustomerRenewalFormData.paymentMode,
+        paymentSubMode: newCustomerRenewalFormData.paymentSubMode || '',
+        bankLocation: newCustomerRenewalFormData.bankLocation || '',
+        paymentReference: newCustomerRenewalFormData.paymentReference || '',
+        remarks: newCustomerRenewalFormData.remarks || ''
+      };
+      
+      await axiosInstance.post('/insurance-renewals', payload);
+      
+      showError('New customer insurance renewal created successfully!');
+      handleCloseNewCustomerRenewalModal();
+      refreshTab(TAB.INSURANCE_RENEWAL);
+      
+    } catch (error) {
+      console.error('Error creating new customer insurance renewal:', error);
+      setNewCustomerRenewalError(error.response?.data?.message || 'Failed to create insurance renewal');
+    } finally {
+      setNewCustomerRenewalLoading(false);
+    }
+  };
+
+  // View Renewal Handler
+  const handleViewRenewalClick = async (item) => {
+    if (!canViewRenewalTab) {
+      showError('You do not have permission to view renewal details');
+      return;
+    }
+    try {
+      const response = await axiosInstance.get(`/insurance-renewals/${item.id}`);
+      if (response.data.success) {
+        setSelectedRenewal(response.data.data);
+        setShowViewRenewalModal(true);
+      } else {
+        showError('Failed to fetch renewal details');
+      }
+    } catch (error) {
+      console.error('Error fetching renewal details:', error);
+      showError(error);
+    }
+  };
+
+  // Print Renewal Receipt Handler
+  const handlePrintRenewalReceipt = (renewalItem) => {
+    if (!canViewRenewalTab && !canCreateRenewalTab) {
+      showError('You do not have permission to print renewal receipt');
+      return;
+    }
+    try {
+      const receiptHTML = generateRenewalReceiptHTML(renewalItem);
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(receiptHTML);
+      printWindow.document.close();
+      printWindow.onload = function() {
+        printWindow.focus();
+        printWindow.print();
+      };
+    } catch (error) {
+      console.error('Error printing renewal receipt:', error);
+      showError('Failed to print renewal receipt');
+    }
+  };
+
+  // Generate Renewal Receipt HTML - Black & White only, with Logo
+  const generateRenewalReceiptHTML = (renewalData) => {
+    const {
+      customerName = '',
+      newPolicyNumber = '',
+      newInsuranceCompany = '',
+      newPremium = 0,
+      newStartDate = '',
+      newExpiryDate = '',
+      paymentMode = '',
+      paymentSubMode = '',
+      bankLocation = '',
+      paymentReference = '',
+      remarks = '',
+      createdAt = new Date().toISOString(),
+      createdBy = { name: 'N/A' },
+      branch = {},
+      paymentDate = new Date().toISOString()
+    } = renewalData;
+
+    const premiumInWords = numberToWords(newPremium);
+    const receiptDate = new Date(paymentDate).toLocaleDateString('en-GB');
+    const receiptNumber = `REN-${new Date(createdAt).getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    const status = renewalData.status || 'PENDING';
+    const daysUntilExpiry = renewalData.daysUntilExpiry || 0;
+    const isExpired = renewalData.isExpired || false;
+    
+    // Use branch data from API response
+    const branchName = branch?.name || 'GANDHI TVS';
+    const branchAddress = branch?.address || '';
+    const branchCity = branch?.city || '';
+    const branchState = branch?.state || '';
+    const branchPincode = branch?.pincode || '';
+    const branchPhone = branch?.phone || '7498903672';
+    const branchGST = branch?.gst_number || '';
+
+    // Build full address
+    const fullAddress = [branchAddress, branchCity, branchState, branchPincode].filter(Boolean).join(', ');
+
+    // Create a single receipt block
+    const receiptBlock = (isDuplicate) => `
+      <div class="receipt-copy">
+        <div class="header-container">
+          <div class="header-left">
+            <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+            <div class="header-text">${branchName}</div>
+            <div class="dealer-info">
+              Authorised Main Dealer: TVS Motor Company Ltd.<br>
+              ${fullAddress || 'N/A'}<br>
+              Phone: ${branchPhone}${branchGST ? ` | GSTIN: ${branchGST}` : ''}
+            </div>
+          </div>
+          <div class="header-right">
+            <div class="receipt-title">INSURANCE RENEWAL RECEIPT</div>
+            <div><strong>Date:</strong> ${receiptDate}</div>
+            <div><strong>Receipt No:</strong> ${receiptNumber}</div>
+            <div><strong>Status:</strong> ${status}</div>
+            <div><strong>Expiry:</strong> ${isExpired ? 'EXPIRED' : daysUntilExpiry > 0 ? `${daysUntilExpiry} days remaining` : 'N/A'}</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="customer-info-container">
+          <div class="customer-info-left">
+            <div class="customer-info-row"><strong>Customer Name:</strong> ${customerName || 'N/A'}</div>
+            <div class="customer-info-row"><strong>Created By:</strong> ${createdBy?.name || 'N/A'}</div>
+          </div>
+          <div class="customer-info-right">
+            <div class="customer-info-row"><strong>New Policy Number:</strong> ${newPolicyNumber || 'N/A'}</div>
+            <div class="customer-info-row"><strong>New Insurance Company:</strong> ${newInsuranceCompany || 'N/A'}</div>
+            <div class="customer-info-row"><strong>Start Date:</strong> ${newStartDate ? new Date(newStartDate).toLocaleDateString('en-GB') : 'N/A'}</div>
+            <div class="customer-info-row"><strong>Expiry Date:</strong> ${newExpiryDate ? new Date(newExpiryDate).toLocaleDateString('en-GB') : 'N/A'}</div>
+            <div class="customer-info-row"><strong>Payment Mode:</strong> ${paymentMode || 'N/A'}${paymentSubMode ? ` (${paymentSubMode})` : ''}${bankLocation ? ` - ${bankLocation}` : ''}</div>
+            ${paymentReference ? `<div class="customer-info-row"><strong>Payment Reference:</strong> ${paymentReference}</div>` : ''}
+          </div>
+        </div>
+        <div class="amount-box">
+          <div class="amount-label">Premium Amount</div>
+          <div class="amount">₹${(newPremium || 0).toFixed(2)}</div>
+          <div class="amount-in-words">${premiumInWords || 'Zero'} Only</div>
+        </div>
+        ${remarks ? `
+          <div class="remarks">
+            <strong>Remarks:</strong> ${remarks}
+          </div>
+        ` : ''}
+        <div class="divider"></div>
+        <div class="signature-box">
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+            <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
+            <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Insurance Executive</div></div>
+            <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Branch Manager</div></div>
+            <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
+          </div>
+        </div>
+        <div class="footer-text">Thank you for choosing ${branchName}</div>
+      </div>
+    `;
+
+    return `<!DOCTYPE html>
+    <html>
+      <head>
+        <title>Insurance Renewal Receipt - ${receiptNumber}</title>
+        <style>
+          @page { size: A4; margin: 10mm 12mm; }
+          body { 
+            font-family: Arial; 
+            width: 100%; 
+            margin: 0; 
+            padding: 0; 
+            font-size: 13px; 
+            line-height: 1.3; 
+            color: #333; 
+          }
+          .page { 
+            width: 100%; 
+            max-width: 190mm; 
+            margin: 0 auto; 
+          }
+          .receipt-copy { 
+            page-break-inside: avoid; 
+            margin-bottom: 3mm;
+            border: 1px solid #ddd;
+            padding: 4mm;
+          }
+          .header-container { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-bottom: 3mm; 
+            align-items: flex-start; 
+          }
+          .header-left { 
+            width: 55%; 
+          }
+          .header-right { 
+            width: 45%; 
+            text-align: right; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: flex-end; 
+          }
+          .logo { 
+            width: 25mm; 
+            height: auto; 
+            margin-bottom: 2px; 
+          }
+          .header-text { 
+            font-size: 16px; 
+            font-weight: bold; 
+            margin: 2px 0;
+          }
+          .dealer-info { 
+            text-align: left; 
+            font-size: 10px; 
+            line-height: 1.2; 
+            color: #555;
+          }
+          .receipt-title { 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin-bottom: 3px;
+          }
+          .divider { 
+            border-top: 1px solid #AAAAAA; 
+            margin: 2mm 0; 
+          }
+          .customer-info-container { 
+            display: flex; 
+            font-size: 12px; 
+            margin: 3px 0;
+          }
+          .customer-info-left { 
+            width: 50%; 
+            padding-right: 5px;
+          }
+          .customer-info-right { 
+            width: 50%; 
+            padding-left: 5px;
+          }
+          .customer-info-row { 
+            margin: 1.5px 0; 
+            line-height: 1.3; 
+          }
+          .customer-info-row strong { 
+            font-weight: 600; 
+            display: inline-block;
+            min-width: 100px;
+          }
+          .amount-box {
+            text-align: center;
+            padding: 8px;
+            margin: 5px 0;
+            border: 2px solid #333;
+          }
+          .amount-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #666;
+          }
+          .amount {
+            font-size: 24px;
+            font-weight: 700;
+          }
+          .amount-in-words {
+            font-size: 13px;
+            margin-top: 3px;
+            font-style: italic;
+            color: #555;
+          }
+          .remarks {
+            padding: 4px 8px;
+            margin: 4px 0;
+            background-color: #f8f9fa;
+            border-left: 3px solid #333;
+            font-size: 12px;
+          }
+          .signature-box { 
+            margin-top: 3mm; 
+            font-size: 9pt; 
+          }
+          .signature-line { 
+            border-top: 1px dashed #000; 
+            width: 36mm; 
+            display: inline-block; 
+            margin: 0 3mm; 
+          }
+          .footer-text {
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            margin-top: 3mm;
+            font-style: italic;
+          }
+          .cutting-line { 
+            border-top: 2px dashed #333; 
+            margin: 6mm 0 4mm 0; 
+            text-align: center; 
+            position: relative; 
+          }
+          .cutting-line::before { 
+            content: "✂ Cut Here ✂"; 
+            position: absolute; 
+            top: -11px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: white; 
+            padding: 0 12px; 
+            font-size: 11px; 
+            color: #666; 
+            font-weight: bold;
+          }
+          @media print { 
+            body { width: 100%; } 
+            .no-print { display: none; } 
+          }
+          .receipt-copy { 
+            page-break-inside: avoid; 
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          ${receiptBlock(false)}
+          <div class="cutting-line"></div>
+          ${receiptBlock(true)}
+        </div>
+        <script>
+          window.onload = function() { setTimeout(function() { window.print(); }, 500); };
+        </script>
+      </body>
+    </html>`;
+  };
 
   // Export handlers
   const handleOpenExportModal = () => {
@@ -2705,6 +3607,10 @@ const handleModalClose = useCallback(() => {
       return;
     }
     if (activeTab === TAB.UPDATE_LATER && !canCreateUpdateLater) {
+      showError('You do not have permission to export from this tab');
+      return;
+    }
+    if (activeTab === TAB.INSURANCE_RENEWAL && !canViewRenewalTab) {
       showError('You do not have permission to export from this tab');
       return;
     }
@@ -2731,6 +3637,10 @@ const handleModalClose = useCallback(() => {
       showError('You do not have permission to export from this tab');
       return;
     }
+    if (activeTab === TAB.INSURANCE_RENEWAL && !canViewRenewalTab) {
+      showError('You do not have permission to export from this tab');
+      return;
+    }
 
     setExportError('');
     
@@ -2749,6 +3659,8 @@ const handleModalClose = useCallback(() => {
         apiEndpoint = '/reports/insurance/complete';
       } else if (activeTab === TAB.UPDATE_LATER) {
         apiEndpoint = '/reports/insurance/later';
+      } else if (activeTab === TAB.INSURANCE_RENEWAL) {
+        apiEndpoint = '/reports/insurance/renewals';
       }
 
       const params = new URLSearchParams({
@@ -2793,6 +3705,7 @@ const handleModalClose = useCallback(() => {
       if (activeTab === TAB.PENDING_INSURANCE) tabName = 'Pending_Insurance';
       else if (activeTab === TAB.COMPLETE_INSURANCE) tabName = 'Complete_Insurance';
       else if (activeTab === TAB.UPDATE_LATER) tabName = 'Update_Later';
+      else if (activeTab === TAB.INSURANCE_RENEWAL) tabName = 'Insurance_Renewals';
       
       const fileName = `${tabName}_${branchName}.xlsx`;
       link.setAttribute('download', fileName);
@@ -3113,14 +4026,42 @@ const handleModalClose = useCallback(() => {
                       </CBadge>
                     </CTableDataCell>
                     <CTableDataCell>
-                      <CButton 
-                        size="sm" 
-                        className="action-btn"
-                        onClick={() => handleViewClick(item)}
-                      >
-                        <CIcon icon={cilZoom} className="me-1" />
-                        View
-                      </CButton>
+                      <div className="d-flex gap-1">
+                        <CButton 
+                          size="sm" 
+                          className="action-btn"
+                          onClick={() => handleViewClick(item)}
+                          title="View Details"
+                        >
+                          <CIcon icon={cilZoom} className="me-1" />
+                          View
+                        </CButton>
+                        {(canCreateRenewalTab || canCreatePendingInsurance || canCreateUpdateLater) && (
+                          <CButton 
+                            size="sm" 
+                            className="action-btn"
+                            onClick={() => handleOpenRenewalModal({
+                              id: item._id,
+                              customerName: item.booking?.customerName || '',
+                              customerMobile: item.booking?.customerMobile || '',
+                              vehicleNumber: item.booking?.vehicleNumber || '',
+                              chassisNumber: item.booking?.chassisNumber || '',
+                              model: item.booking?.model?.model_name || '',
+                              originalInsurance: {
+                                PolicyNo: item.policyNumber || '',
+                                PremiumAmount: item.premiumAmount || 0,
+                                validUpto: item.validUpto || '',
+                                InsuranceCompany: item.insuranceProviderDetails?.provider_name || ''
+                              }
+                            })}
+                            title="Insurance Renewal"
+                            color="info"
+                          >
+                            <CIcon icon={cilReload} className="me-1" />
+                            Insurance Renewal
+                          </CButton>
+                        )}
+                      </div>
                     </CTableDataCell>
                   </CTableRow>
                 ))
@@ -3214,6 +4155,99 @@ const handleModalClose = useCallback(() => {
     );
   };
 
+  const renderRenewalTable = () => {
+    // Check VIEW permission for Renewal tab
+    if (!canViewRenewalTab) {
+      return (
+        <div className="text-center py-4">
+          <CAlert color="warning">
+            You do not have permission to view the Insurance Renewal tab.
+          </CAlert>
+        </div>
+      );
+    }
+    
+    const { docs: currentRecords, loading, currentPage, limit, search } = tabData[TAB.INSURANCE_RENEWAL];
+    const startRecord = (currentPage - 1) * limit + 1;
+    
+    return (
+      <>
+        {loading && (
+          <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}>
+            <CSpinner size="sm" color="primary" className="me-2" /> Loading records…
+          </div>
+        )}
+        <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+          <CTable striped bordered hover className='responsive-table'>
+            <CTableHead>
+              <CTableRow>
+                <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Customer Name</CTableHeaderCell>
+                <CTableHeaderCell scope="col">New Policy Number</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Insurance Company</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Premium Amount</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Start Date</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Expiry Date</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Payment Mode</CTableHeaderCell>
+                <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+              </CTableRow>
+            </CTableHead>
+            <CTableBody>
+              {currentRecords.length === 0 && !loading ? (
+                <CTableRow>
+                  <CTableDataCell colSpan="9" style={{ color: 'red', textAlign: 'center' }}>
+                    {search ? `No results found for "${search}"` : 'No data available'}
+                  </CTableDataCell>
+                </CTableRow>
+              ) : (
+                currentRecords.map((item, index) => (
+                  <CTableRow key={item.id || item._id || index}>
+                    <CTableDataCell>{startRecord + index}</CTableDataCell>
+                    <CTableDataCell>{item.customerName || ''}</CTableDataCell>
+                    <CTableDataCell>{item.newPolicyNumber || ''}</CTableDataCell>
+                    <CTableDataCell>{item.newInsuranceCompany || ''}</CTableDataCell>
+                    <CTableDataCell>{item.newPremium || ''}</CTableDataCell>
+                    <CTableDataCell>{item.newStartDate ? new Date(item.newStartDate).toLocaleDateString('en-GB') : ''}</CTableDataCell>
+                    <CTableDataCell>{item.newExpiryDate ? new Date(item.newExpiryDate).toLocaleDateString('en-GB') : ''}</CTableDataCell>
+                    <CTableDataCell>{item.paymentMode || ''}</CTableDataCell>
+                    <CTableDataCell>
+                      <div className="d-flex gap-1">
+                        {canViewRenewalTab && (
+                          <CButton 
+                            size="sm" 
+                            className="action-btn"
+                            onClick={() => handleViewRenewalClick(item)}
+                            title="View Details"
+                          >
+                            <CIcon icon={cilZoom} className="me-1" />
+                            View
+                          </CButton>
+                        )}
+                        {(canViewRenewalTab || canCreateRenewalTab) && (
+                          <CButton 
+                            size="sm" 
+                            className="action-btn"
+                            onClick={() => handlePrintRenewalReceipt(item)}
+                            title="Print Receipt"
+                            color="success"
+                          >
+                            <CIcon icon={cilPrint} className="me-1" />
+                            Print Receipt
+                          </CButton>
+                        )}
+                      </div>
+                    </CTableDataCell>
+                  </CTableRow>
+                ))
+              )}
+            </CTableBody>
+          </CTable>
+        </div>
+        {renderPagination(TAB.INSURANCE_RENEWAL)}
+      </>
+    );
+  };
+
   if (!canViewInsuranceDetails) {
     return (
       <div className="alert alert-danger m-3" role="alert">
@@ -3225,7 +4259,8 @@ const handleModalClose = useCallback(() => {
   // Check if any tab is loading for initial loading state
   const isAnyTabLoading = tabData[TAB.PENDING_INSURANCE].loading && 
     tabData[TAB.COMPLETE_INSURANCE].loading && 
-    tabData[TAB.UPDATE_LATER].loading;
+    tabData[TAB.UPDATE_LATER].loading &&
+    tabData[TAB.INSURANCE_RENEWAL].loading;
 
   if (isAnyTabLoading && !tabData[activeTab].docs.length) {
     return (
@@ -3241,7 +4276,7 @@ const handleModalClose = useCallback(() => {
       
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-          <div>
+          <div className="d-flex gap-2">
             <CButton 
               size="sm" 
               className="action-btn me-1"
@@ -3251,6 +4286,18 @@ const handleModalClose = useCallback(() => {
               <FontAwesomeIcon icon={faFileExcel} className='me-1' />
               Export Excel
             </CButton>
+            {(canCreateRenewalTab || canCreatePendingInsurance || canCreateUpdateLater) && (
+              <CButton 
+                size="sm" 
+                className="action-btn"
+                onClick={handleOpenNewCustomerRenewalModal}
+                title="New Customer Insurance Renewal"
+                color="success"
+              >
+                <CIcon icon={cilUserPlus} className="me-1" />
+                New Customer Insurance Renewal
+              </CButton>
+            )}
           </div>
         </CCardHeader>
         
@@ -3312,6 +4359,25 @@ const handleModalClose = useCallback(() => {
                     </CNavLink>
                   </CNavItem>
                 )}
+                {canViewRenewalTab && (
+                  <CNavItem>
+                    <CNavLink
+                      active={activeTab === TAB.INSURANCE_RENEWAL}
+                      onClick={() => handleTabChange(TAB.INSURANCE_RENEWAL)}
+                      style={{ 
+                        cursor: 'pointer',
+                        borderTop: activeTab === TAB.INSURANCE_RENEWAL ? '4px solid #2759a2' : '3px solid transparent',
+                        borderBottom: 'none',
+                        color: 'black'
+                      }}
+                    >
+                      Insurance Renewal
+                      {!canCreateRenewalTab && (
+                        <span className="ms-1 text-muted small">(View Only)</span>
+                      )}
+                    </CNavLink>
+                  </CNavItem>
+                )}
               </CNav>
 
               {/* Search bar - UNCONTROLLED input */}
@@ -3357,6 +4423,11 @@ const handleModalClose = useCallback(() => {
                     {renderLaterTable()}
                   </CTabPane>
                 )}
+                {canViewRenewalTab && (
+                  <CTabPane visible={activeTab === TAB.INSURANCE_RENEWAL}>
+                    {renderRenewalTable()}
+                  </CTabPane>
+                )}
               </CTabContent>
             </>
           ) : (
@@ -3392,6 +4463,414 @@ const handleModalClose = useCallback(() => {
         }}
         bookingData={selectedBookingForView}
       />
+
+      {/* View Renewal Modal */}
+      <ViewRenewalModal
+        show={showViewRenewalModal}
+        onClose={() => {
+          setShowViewRenewalModal(false);
+          setSelectedRenewal(null);
+        }}
+        renewalData={selectedRenewal}
+      />
+
+      {/* Insurance Renewal Modal (Existing Customer) */}
+      <CModal alignment="center" visible={showRenewalModal} onClose={handleCloseRenewalModal} size="lg">
+        <CModalHeader>
+          <CModalTitle>
+            <CIcon icon={cilReload} className="me-2" />
+            Insurance Renewal
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {renewalError && (
+            <CAlert color="danger" className="mb-3">
+              {renewalError}
+            </CAlert>
+          )}
+          
+          <div className="row">
+            {/* Original Insurance ID - Hidden field */}
+            <input
+              type="hidden"
+              name="originalInsurance"
+              value={renewalFormData.originalInsurance}
+            />
+            
+            <div className="col-md-6 mb-3">
+              <CFormLabel>Customer Name <span className="text-danger">*</span></CFormLabel>
+              <CFormInput
+                type="text"
+                name="customerName"
+                value={renewalFormData.customerName}
+                onChange={handleRenewalFormChange}
+                placeholder="Enter customer name"
+                required
+                readOnly
+                style={{ backgroundColor: '#e9ecef' }}
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <CFormLabel>New Policy Number <span className="text-danger">*</span></CFormLabel>
+              <CFormInput
+                type="text"
+                name="newPolicyNumber"
+                value={renewalFormData.newPolicyNumber}
+                onChange={handleRenewalFormChange}
+                placeholder="Enter new policy number"
+                required
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <CFormLabel>New Insurance Company <span className="text-danger">*</span></CFormLabel>
+              <CFormInput
+                type="text"
+                name="newInsuranceCompany"
+                value={renewalFormData.newInsuranceCompany}
+                onChange={handleRenewalFormChange}
+                placeholder="Enter new insurance company"
+                required
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <CFormLabel>New Premium Amount <span className="text-danger">*</span></CFormLabel>
+              <CFormInput
+                type="number"
+                name="newPremium"
+                value={renewalFormData.newPremium}
+                onChange={handleRenewalFormChange}
+                placeholder="Enter new premium amount"
+                required
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <CFormLabel>New Start Date <span className="text-danger">*</span></CFormLabel>
+              <CFormInput
+                type="date"
+                name="newStartDate"
+                value={renewalFormData.newStartDate}
+                onChange={handleRenewalFormChange}
+                required
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <CFormLabel>New Expiry Date <span className="text-danger">*</span></CFormLabel>
+              <CFormInput
+                type="date"
+                name="newExpiryDate"
+                value={renewalFormData.newExpiryDate}
+                onChange={handleRenewalFormChange}
+                required
+              />
+            </div>
+            <div className="col-md-6 mb-3">
+              <CFormLabel>Payment Mode <span className="text-danger">*</span></CFormLabel>
+              <CFormSelect
+                name="paymentMode"
+                value={renewalFormData.paymentMode}
+                onChange={handleRenewalPaymentModeChange}
+                required
+              >
+                <option value="">Select Payment Mode</option>
+                <option value="Cash">Cash</option>
+                <option value="Bank">Bank</option>
+                <option value="Cheque">Cheque</option>
+              </CFormSelect>
+            </div>
+
+            {/* Bank Sub Payment Mode - Only shown when paymentMode is Bank */}
+            {renewalFormData.paymentMode === 'Bank' && (
+              <>
+                <div className="col-md-6 mb-3">
+                  <CFormLabel>Payment Sub Mode <span className="text-danger">*</span></CFormLabel>
+                  <Select
+                    classNamePrefix="react-select"
+                    placeholder="-- Select Payment Sub Mode --"
+                    isClearable
+                    options={bankSubPaymentModes}
+                    value={renewalFormData.paymentSubMode ? { value: renewalFormData.paymentSubMode, label: renewalFormData.paymentSubMode } : null}
+                    onChange={handleRenewalSubModeChange}
+                    styles={customSelectStyles}
+                    isDisabled={loadingBankSubPaymentModes}
+                    isLoading={loadingBankSubPaymentModes}
+                    noOptionsMessage={() => "No payment sub modes available"}
+                  />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <CFormLabel>Bank Location <span className="text-danger">*</span></CFormLabel>
+                  <Select
+                    classNamePrefix="react-select"
+                    placeholder="-- Select Bank Location --"
+                    isClearable
+                    options={banks}
+                    value={renewalFormData.bankLocation ? { value: renewalFormData.bankLocation, label: renewalFormData.bankLocation } : null}
+                    onChange={handleRenewalBankChange}
+                    styles={customSelectStyles}
+                    isDisabled={loadingBanks}
+                    isLoading={loadingBanks}
+                    noOptionsMessage={() => "No banks available"}
+                  />
+                </div>
+                <div className="col-md-6 mb-3">
+                  <CFormLabel>Payment Reference <span className="text-danger">*</span></CFormLabel>
+                  <CFormInput
+                    type="text"
+                    name="paymentReference"
+                    value={renewalFormData.paymentReference}
+                    onChange={handleRenewalFormChange}
+                    placeholder="Enter payment reference"
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Payment Reference for Cash and Cheque - optional */}
+            {renewalFormData.paymentMode !== 'Bank' && renewalFormData.paymentMode !== '' && (
+              <div className="col-md-6 mb-3">
+                <CFormLabel>Payment Reference</CFormLabel>
+                <CFormInput
+                  type="text"
+                  name="paymentReference"
+                  value={renewalFormData.paymentReference}
+                  onChange={handleRenewalFormChange}
+                  placeholder="Enter payment reference (optional)"
+                />
+              </div>
+            )}
+            
+            <div className="col-md-12 mb-3">
+              <CFormLabel>Remarks</CFormLabel>
+              <CFormInput
+                type="text"
+                name="remarks"
+                value={renewalFormData.remarks}
+                onChange={handleRenewalFormChange}
+                placeholder="Enter any remarks"
+              />
+            </div>
+          </div>
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={handleCloseRenewalModal}>
+            Cancel
+          </CButton>
+          <CButton 
+            className="submit-button"
+            onClick={handleSubmitRenewal}
+            disabled={renewalLoading}
+          >
+            {renewalLoading ? (
+              <>
+                <CSpinner size="sm" className="me-2" />
+                Submitting...
+              </>
+            ) : 'Renew Insurance'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* New Customer Insurance Renewal Modal */}
+      <CModal alignment="center" visible={showNewCustomerRenewalModal} onClose={handleCloseNewCustomerRenewalModal} size="lg">
+        <CModalHeader>
+          <CModalTitle>
+            <CIcon icon={cilUserPlus} className="me-2" />
+            New Customer Insurance Renewal
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {newCustomerRenewalError && (
+            <CAlert color="danger" className="mb-3">
+              {newCustomerRenewalError}
+            </CAlert>
+          )}
+          
+          {loadingModels || loadingProviders ? (
+            <div className="text-center py-5">
+              <CSpinner color="primary" />
+              <p className="mt-3">Loading data...</p>
+            </div>
+          ) : (
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <CFormLabel>Customer Name <span className="text-danger">*</span></CFormLabel>
+                <CFormInput
+                  type="text"
+                  name="customerName"
+                  value={newCustomerRenewalFormData.customerName}
+                  onChange={handleNewCustomerRenewalFormChange}
+                  placeholder="Enter customer name"
+                  required
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <CFormLabel>New Policy Number <span className="text-danger">*</span></CFormLabel>
+                <CFormInput
+                  type="text"
+                  name="newPolicyNumber"
+                  value={newCustomerRenewalFormData.newPolicyNumber}
+                  onChange={handleNewCustomerRenewalFormChange}
+                  placeholder="Enter new policy number"
+                  required
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <CFormLabel>New Insurance Company <span className="text-danger">*</span></CFormLabel>
+                <Select
+                  classNamePrefix="react-select"
+                  placeholder="-- Select Insurance Provider --"
+                  isClearable
+                  options={insuranceProviders}
+                  value={newCustomerRenewalFormData.newInsuranceCompany ? { value: newCustomerRenewalFormData.newInsuranceCompany, label: newCustomerRenewalFormData.newInsuranceCompany } : null}
+                  onChange={handleNewCustomerProviderChange}
+                  styles={customSelectStyles}
+                  isDisabled={loadingProviders}
+                  isLoading={loadingProviders}
+                  noOptionsMessage={() => "No insurance providers available"}
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <CFormLabel>New Premium Amount <span className="text-danger">*</span></CFormLabel>
+                <CFormInput
+                  type="number"
+                  name="newPremium"
+                  value={newCustomerRenewalFormData.newPremium}
+                  onChange={handleNewCustomerRenewalFormChange}
+                  placeholder="Enter new premium amount"
+                  required
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <CFormLabel>New Start Date <span className="text-danger">*</span></CFormLabel>
+                <CFormInput
+                  type="date"
+                  name="newStartDate"
+                  value={newCustomerRenewalFormData.newStartDate}
+                  onChange={handleNewCustomerRenewalFormChange}
+                  required
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <CFormLabel>New Expiry Date <span className="text-danger">*</span></CFormLabel>
+                <CFormInput
+                  type="date"
+                  name="newExpiryDate"
+                  value={newCustomerRenewalFormData.newExpiryDate}
+                  onChange={handleNewCustomerRenewalFormChange}
+                  required
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <CFormLabel>Payment Mode <span className="text-danger">*</span></CFormLabel>
+                <CFormSelect
+                  name="paymentMode"
+                  value={newCustomerRenewalFormData.paymentMode}
+                  onChange={handleNewCustomerPaymentModeChange}
+                  required
+                >
+                  <option value="">Select Payment Mode</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Bank">Bank</option>
+                  <option value="Cheque">Cheque</option>
+                </CFormSelect>
+              </div>
+
+              {/* Bank Sub Payment Mode - Only shown when paymentMode is Bank */}
+              {newCustomerRenewalFormData.paymentMode === 'Bank' && (
+                <>
+                  <div className="col-md-6 mb-3">
+                    <CFormLabel>Payment Sub Mode <span className="text-danger">*</span></CFormLabel>
+                    <Select
+                      classNamePrefix="react-select"
+                      placeholder="-- Select Payment Sub Mode --"
+                      isClearable
+                      options={bankSubPaymentModes}
+                      value={newCustomerRenewalFormData.paymentSubMode ? { value: newCustomerRenewalFormData.paymentSubMode, label: newCustomerRenewalFormData.paymentSubMode } : null}
+                      onChange={handleNewCustomerSubModeChange}
+                      styles={customSelectStyles}
+                      isDisabled={loadingBankSubPaymentModes}
+                      isLoading={loadingBankSubPaymentModes}
+                      noOptionsMessage={() => "No payment sub modes available"}
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <CFormLabel>Bank Location <span className="text-danger">*</span></CFormLabel>
+                    <Select
+                      classNamePrefix="react-select"
+                      placeholder="-- Select Bank Location --"
+                      isClearable
+                      options={banks}
+                      value={newCustomerRenewalFormData.bankLocation ? { value: newCustomerRenewalFormData.bankLocation, label: newCustomerRenewalFormData.bankLocation } : null}
+                      onChange={handleNewCustomerBankChange}
+                      styles={customSelectStyles}
+                      isDisabled={loadingBanks}
+                      isLoading={loadingBanks}
+                      noOptionsMessage={() => "No banks available"}
+                    />
+                  </div>
+                  <div className="col-md-6 mb-3">
+                    <CFormLabel>Payment Reference <span className="text-danger">*</span></CFormLabel>
+                    <CFormInput
+                      type="text"
+                      name="paymentReference"
+                      value={newCustomerRenewalFormData.paymentReference}
+                      onChange={handleNewCustomerRenewalFormChange}
+                      placeholder="Enter payment reference"
+                      required
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Payment Reference for Cash and Cheque - optional */}
+              {newCustomerRenewalFormData.paymentMode !== 'Bank' && newCustomerRenewalFormData.paymentMode !== '' && (
+                <div className="col-md-6 mb-3">
+                  <CFormLabel>Payment Reference</CFormLabel>
+                  <CFormInput
+                    type="text"
+                    name="paymentReference"
+                    value={newCustomerRenewalFormData.paymentReference}
+                    onChange={handleNewCustomerRenewalFormChange}
+                    placeholder="Enter payment reference (optional)"
+                  />
+                </div>
+              )}
+              
+              <div className="col-md-12 mb-3">
+                <CFormLabel>Remarks</CFormLabel>
+                <CFormInput
+                  type="text"
+                  name="remarks"
+                  value={newCustomerRenewalFormData.remarks}
+                  onChange={handleNewCustomerRenewalFormChange}
+                  placeholder="Enter any remarks"
+                />
+              </div>
+            </div>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton color="secondary" onClick={handleCloseNewCustomerRenewalModal}>
+            Cancel
+          </CButton>
+          <CButton 
+            className="submit-button"
+            onClick={handleSubmitNewCustomerRenewal}
+            disabled={newCustomerRenewalLoading || loadingModels || loadingProviders}
+          >
+            {newCustomerRenewalLoading ? (
+              <>
+                <CSpinner size="sm" className="me-2" />
+                Submitting...
+              </>
+            ) : 'Create Renewal'}
+          </CButton>
+        </CModalFooter>
+      </CModal>
 
       {/* Export Excel Modal */}
       <CModal alignment="center" visible={showExportModal} onClose={handleCloseExportModal}>

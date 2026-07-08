@@ -993,7 +993,7 @@
 //   const [imageLoading, setImageLoading] = useState(true);
 //   const navigate = useNavigate();
 //   const { login } = useAuth();
-//   const baseURL = 'https://sgm.gmplmis.com/api-dealership/api/v1';
+//   const baseURL = 'https://gandhitvs.in/dealership/api/v1';
 
 //   // Fetch active wallpaper on component mount
 //   useEffect(() => {
@@ -1770,7 +1770,7 @@ export default VerifyOTP
 //   const [imageLoading, setImageLoading] = useState(true);
 //   const navigate = useNavigate();
 //   const { login } = useAuth();
-//   const baseURL = 'https://gmplmis.com/dealership-api/api/v1';
+//   const baseURL = 'https://gandhitvs.in/dealership/api/v1';
 
 //   // Fetch active wallpaper on component mount
 //   useEffect(() => {

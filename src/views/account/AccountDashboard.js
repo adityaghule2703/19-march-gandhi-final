@@ -1466,7 +1466,9 @@ const OutstandingDashboard = () => {
         const [error, setError] = useState(null);
         const [filters, setFilters] = useState({
             modelType: 'EV',
-            branchId: ''
+            branchId: '',
+            fromDate: '',
+            toDate: ''
         });
         const [availableBranches, setAvailableBranches] = useState([]);
 
@@ -1506,6 +1508,8 @@ const OutstandingDashboard = () => {
                     const params = new URLSearchParams();
                     if (filters.modelType && filters.modelType !== 'ALL') params.append('modelType', filters.modelType);
                     if (filters.branchId && filters.branchId !== 'all') params.append('branchId', filters.branchId);
+                    if (filters.fromDate) params.append('fromDate', filters.fromDate);
+                    if (filters.toDate) params.append('toDate', filters.toDate);
 
                     const url = `/finance/outstanding-dashboard${params.toString() ? `?${params.toString()}` : ''}`;
                     const response = await axiosInstance.get(url);
@@ -1533,8 +1537,9 @@ const OutstandingDashboard = () => {
 
   // Fetch data when filters change
   useEffect(() => {
+    // Fetch data if at least modelType is selected (dates are optional)
     fetchDashboardData();
-  }, [filters.modelType, filters.branchId]);
+  }, [filters.modelType, filters.branchId, filters.fromDate, filters.toDate]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -1624,10 +1629,39 @@ const PAYMENT_COLORS = {
                   <span className="ms-2 text-primary">• {userAccessInfo.userBranch.name}</span>
                 )}
               </p>
+              {filters.fromDate && filters.toDate && (
+                <small className="text-muted d-block mt-1">
+                  <FiCalendar className="me-1" /> 
+                  {new Date(filters.fromDate).toLocaleDateString()} - {new Date(filters.toDate).toLocaleDateString()}
+                </small>
+              )}
             </div>
             
             {/* Filters */}
-            <div className="d-flex gap-3 align-items-center">
+            <div className="d-flex gap-3 align-items-center flex-wrap">
+              {/* Date Range Filters */}
+              <div className="d-flex align-items-center gap-2">
+                <FiCalendar className="text-muted" />
+                <input
+                  type="date"
+                  className="form-control form-control-sm"
+                  value={filters.fromDate}
+                  onChange={(e) => handleFilterChange('fromDate', e.target.value)}
+                  style={{ width: '140px' }}
+                  placeholder="From Date"
+                />
+                <span className="text-muted">to</span>
+                <input
+                  type="date"
+                  className="form-control form-control-sm"
+                  value={filters.toDate}
+                  onChange={(e) => handleFilterChange('toDate', e.target.value)}
+                  style={{ width: '140px' }}
+                  placeholder="To Date"
+                />
+              </div>
+
+              {/* Model Type Filter */}
               <div className="d-flex align-items-center gap-2">
                 <FiFilter className="text-muted" />
                 <select 
@@ -1642,6 +1676,7 @@ const PAYMENT_COLORS = {
                 </select>
               </div>
               
+              {/* Branch Filter - Only for Super Admin */}
               {isSuperAdmin && (
                 <select 
                   className="form-select form-select-sm"

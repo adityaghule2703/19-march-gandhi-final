@@ -61,8 +61,21 @@ import {
   cilList,
   cilReload,
   cilGift,
-  cilBuilding
+  cilBuilding,
+  cilPeople,
+  cilWarning,
+  cilHome,
+  cilBank,
+  cilCalendar,
+  cilQrCode
 } from '@coreui/icons';
+import {
+  hasSafePagePermission,
+  MODULES,
+  PAGES,
+  ACTIONS,
+} from '../../../utils/modulePermissions';
+import { useAuth } from '../../../context/AuthContext';
 
 // API Base URL - update this based on your environment
 const API_BASE_URL = 'https://gandhitvs.in/dealership/api/v1';
@@ -78,12 +91,19 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelled', color: 'danger' }
 ];
 
-// Payment Method options based on enum
+// Payment Method options - Only Cash and Bank
 const PAYMENT_METHOD_OPTIONS = [
   { value: 'cash', label: 'Cash', color: 'success' },
-  { value: 'card', label: 'Card', color: 'primary' },
-  { value: 'upi', label: 'UPI', color: 'info' },
-  { value: 'bank_transfer', label: 'Bank Transfer', color: 'warning' }
+  { value: 'bank', label: 'Bank Transfer', color: 'warning' }
+];
+
+// Job Type options
+const JOB_TYPE_OPTIONS = [
+  { value: 'paid_service', label: 'Paid Service' },
+  { value: 'free_service', label: 'Free Service' },
+  { value: 'warranty', label: 'Warranty' },
+  { value: 'insurance', label: 'Insurance' },
+  { value: 'other', label: 'Other' }
 ];
 
 // Payment Status options based on enum
@@ -91,12 +111,6 @@ const PAYMENT_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending', color: 'warning' },
   { value: 'partial', label: 'Partial', color: 'info' },
   { value: 'paid', label: 'Paid', color: 'success' }
-];
-
-// Discount Type options based on enum
-const DISCOUNT_TYPE_OPTIONS = [
-  { value: 'percentage', label: 'Percentage (%)' },
-  { value: 'fixed', label: 'Fixed (₹)' }
 ];
 
 // Helper function to get full image URL
@@ -111,6 +125,37 @@ const getFullImageUrl = (path) => {
 };
 
 const Invoice = () => {
+  const { permissions = [], user } = useAuth();
+  
+  // Permission checks using the modulePermissions utility
+  const canViewInvoices = hasSafePagePermission(
+    permissions, 
+    MODULES.SERVICE_MANAGEMENT, 
+    PAGES.SERVICE_MANAGEMENT.INVOICE_LIST, 
+    ACTIONS.VIEW
+  );
+  
+  const canCreateInvoices = hasSafePagePermission(
+    permissions, 
+    MODULES.SERVICE_MANAGEMENT, 
+    PAGES.SERVICE_MANAGEMENT.INVOICE_LIST, 
+    ACTIONS.CREATE
+  );
+  
+  const canUpdateInvoices = hasSafePagePermission(
+    permissions, 
+    MODULES.SERVICE_MANAGEMENT, 
+    PAGES.SERVICE_MANAGEMENT.INVOICE_LIST, 
+    ACTIONS.UPDATE
+  );
+  
+  const canDeleteInvoices = hasSafePagePermission(
+    permissions, 
+    MODULES.SERVICE_MANAGEMENT, 
+    PAGES.SERVICE_MANAGEMENT.INVOICE_LIST, 
+    ACTIONS.DELETE
+  );
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
@@ -140,32 +185,57 @@ const Invoice = () => {
   
   // Modal states
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   
-  // Form state
+  // Customer states
+  const [customers, setCustomers] = useState([]);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+  const [customerPage, setCustomerPage] = useState(1);
+  const [hasMoreCustomers, setHasMoreCustomers] = useState(true);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const customerDropdownRef = useRef(null);
+  const customerSearchTimer = useRef(null);
+  
+  // Form state - Updated to match new schema
   const [formData, setFormData] = useState({
     branchId: '',
+    jobType: 'paid_service',
+    nextDueDate: '',
     customerName: '',
     customerMobile: '',
     customerEmail: '',
+    customerAddress: '',
     vehicleNo: '',
     vehicleModel: '',
+    vehicleMake: '',
     odoMeter: '',
     items: [],
-    discount: '',
+    gstRate: 18,
+    discount: 0,
     discountType: 'fixed',
-    paymentMethod: 'cash',
-    paymentStatus: 'pending',
+    notes: '',
+    paymentMode: 'cash',
+    cashAccountId: '',
+    bankId: '',
+    bankTransactionId: '',
+    bankPaymentDate: '',
     amountPaid: '',
     serviceAdvisor: '',
-    notes: ''
+    mechanic: '',
+    status: 'confirmed'
   });
   
   const [formErrors, setFormErrors] = useState({});
+  const [apiError, setApiError] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editInvoiceId, setEditInvoiceId] = useState(null);
   
   // Parts and Labour data for dropdowns
   const [parts, setParts] = useState([]);
@@ -179,6 +249,11 @@ const Invoice = () => {
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const modelDropdownRef = useRef(null);
 
+  // Cash Locations and Banks state
+  const [cashLocations, setCashLocations] = useState([]);
+  const [banks, setBanks] = useState([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+
   // Fetch branches on component mount
   useEffect(() => {
     fetchBranches();
@@ -186,31 +261,65 @@ const Invoice = () => {
 
   // Fetch invoices when branch, page, limit, or search changes
   useEffect(() => {
-    if (selectedBranchId) {
+    if (selectedBranchId && canViewInvoices) {
       fetchInvoices();
     }
-  }, [selectedBranchId, pagination.page, pagination.limit]);
+  }, [selectedBranchId, pagination.page, pagination.limit, canViewInvoices]);
 
   // Debounced search
   useEffect(() => {
     clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
-      if (selectedBranchId) {
+      if (selectedBranchId && canViewInvoices) {
         setPagination(prev => ({ ...prev, page: 1 }));
         fetchInvoices(1, pagination.limit, searchTerm);
       }
     }, 400);
     
     return () => clearTimeout(searchTimer.current);
-  }, [searchTerm]);
+  }, [searchTerm, canViewInvoices]);
 
-  // Fetch parts, labour, and vehicle models when modal opens
+  // Debounced customer search
   useEffect(() => {
-    if (addModalVisible && selectedBranchId) {
+    clearTimeout(customerSearchTimer.current);
+    customerSearchTimer.current = setTimeout(() => {
+      const branchId = formData.branchId || selectedBranchId;
+      if (customerSearchTerm.length >= 2 && branchId && canCreateInvoices) {
+        setCustomerPage(1);
+        fetchCustomers(1, customerSearchTerm);
+      } else if (customerSearchTerm.length === 0) {
+        setCustomers([]);
+        setHasMoreCustomers(true);
+        setTotalCustomers(0);
+      }
+    }, 300);
+    
+    return () => clearTimeout(customerSearchTimer.current);
+  }, [customerSearchTerm, formData.branchId, canCreateInvoices]);
+
+  // Fetch parts, labour, vehicle models, and accounts when modal opens
+  useEffect(() => {
+    if ((addModalVisible || editModalVisible) && selectedBranchId && canCreateInvoices) {
       fetchPartsAndLabour();
       fetchVehicleModels();
+      fetchCashLocationsAndBanks();
+      // Reset customer search when modal opens
+      setCustomerSearchTerm('');
+      setCustomers([]);
+      setShowCustomerDropdown(false);
     }
-  }, [addModalVisible, selectedBranchId]);
+  }, [addModalVisible, editModalVisible, selectedBranchId, canCreateInvoices]);
+
+  // Click outside handler for customer dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+        setShowCustomerDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Click outside handler for model dropdown
   useEffect(() => {
@@ -231,13 +340,11 @@ const Invoice = () => {
         setUserRoles(response.data.userRoles || []);
         setIsSuperAdmin(response.data.isSuperAdmin || false);
         
-        // Set selected branch
         if (response.data.isSuperAdmin) {
-          // For super admin, no branch pre-selected
           setSelectedBranchId('');
         } else if (response.data.userBranch && response.data.userBranch._id) {
-          // For non-super admin, set their branch
           setSelectedBranchId(response.data.userBranch._id);
+          setFormData(prev => ({ ...prev, branchId: response.data.userBranch._id }));
         }
       }
     } catch (error) {
@@ -247,7 +354,7 @@ const Invoice = () => {
   };
 
   const fetchInvoices = async (page = pagination.page, limit = pagination.limit, search = searchTerm) => {
-    if (!selectedBranchId) {
+    if (!selectedBranchId || !canViewInvoices) {
       setInvoices([]);
       setLoading(false);
       return;
@@ -288,8 +395,103 @@ const Invoice = () => {
     }
   };
 
+  const fetchCustomers = async (page = 1, search = '') => {
+    // Use formData.branchId or selectedBranchId
+    const branchId = formData.branchId || selectedBranchId;
+    
+    if (!branchId || !canCreateInvoices) {
+      setCustomers([]);
+      setLoadingCustomers(false);
+      return;
+    }
+    
+    setLoadingCustomers(true);
+    try {
+      const params = new URLSearchParams();
+      params.append('page', page);
+      params.append('limit', 50);
+      if (search && search.trim()) {
+        params.append('search', search.trim());
+      }
+      
+      const url = `/customers-invoice?branchId=${branchId}&${params.toString()}`;
+      const response = await axiosInstance.get(url);
+      
+      if (response.data.success) {
+        const newCustomers = response.data.data || [];
+        if (page === 1) {
+          setCustomers(newCustomers);
+        } else {
+          setCustomers(prev => [...prev, ...newCustomers]);
+        }
+        setTotalCustomers(response.data.count || 0);
+        setHasMoreCustomers(newCustomers.length === 50);
+        setCustomerPage(page);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      showError('Failed to load customers');
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  const loadMoreCustomers = () => {
+    if (!loadingCustomers && hasMoreCustomers && canCreateInvoices) {
+      fetchCustomers(customerPage + 1, customerSearchTerm);
+    }
+  };
+
+  const handleCustomerSelect = (customer) => {
+    setFormData({
+      ...formData,
+      customerName: customer.customer.name,
+      customerMobile: customer.customer.mobile,
+      customerAddress: customer.customer.address || ''
+    });
+    setCustomerSearchTerm(customer.displayText);
+    setShowCustomerDropdown(false);
+    setCustomers([]);
+    // Clear any customer-related errors
+    if (formErrors.customerName) {
+      setFormErrors({ ...formErrors, customerName: '' });
+    }
+    if (formErrors.customerMobile) {
+      setFormErrors({ ...formErrors, customerMobile: '' });
+    }
+  };
+
+  const handleCustomerInputChange = (e) => {
+    const value = e.target.value;
+    setCustomerSearchTerm(value);
+    setFormData({
+      ...formData,
+      customerName: value,
+      customerMobile: '',
+      customerAddress: ''
+    });
+    setShowCustomerDropdown(true);
+    
+    // Check if branch is selected
+    const branchId = formData.branchId || selectedBranchId;
+    if (!branchId || !canCreateInvoices) {
+      setCustomers([]);
+      setHasMoreCustomers(true);
+      setTotalCustomers(0);
+      return;
+    }
+    
+    if (value.length >= 2) {
+      // Fetch will be triggered by debounce
+    } else if (value.length === 0) {
+      setCustomers([]);
+      setHasMoreCustomers(true);
+      setTotalCustomers(0);
+    }
+  };
+
   const fetchPartsAndLabour = async () => {
-    if (!selectedBranchId) return;
+    if (!selectedBranchId || !canCreateInvoices) return;
     
     setLoadingItems(true);
     try {
@@ -313,6 +515,7 @@ const Invoice = () => {
   };
 
   const fetchVehicleModels = async () => {
+    if (!canCreateInvoices) return;
     setLoadingModels(true);
     try {
       const response = await axiosInstance.get('/models/all/status');
@@ -327,6 +530,37 @@ const Invoice = () => {
     }
   };
 
+  const fetchCashLocationsAndBanks = async () => {
+    if (!selectedBranchId || !canCreateInvoices) return;
+    
+    setLoadingAccounts(true);
+    try {
+      const [cashRes, bankRes] = await Promise.all([
+        axiosInstance.get(`/cash-locations?branchId=${selectedBranchId}`),
+        axiosInstance.get(`/banks?branchId=${selectedBranchId}`)
+      ]);
+      
+      // Handle cash locations response
+      if (cashRes.data.status === 'success' && cashRes.data.data?.cashLocations) {
+        setCashLocations(cashRes.data.data.cashLocations);
+      } else {
+        setCashLocations([]);
+      }
+      
+      // Handle banks response
+      if (bankRes.data.status === 'success' && bankRes.data.data?.banks) {
+        setBanks(bankRes.data.data.banks);
+      } else {
+        setBanks([]);
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      showError('Failed to load payment accounts');
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
   const handleBranchChange = (branchId) => {
     setSelectedBranchId(branchId);
     setPagination(prev => ({ ...prev, page: 1 }));
@@ -336,7 +570,6 @@ const Invoice = () => {
     }
   };
 
-  // Filtered models based on search
   const filteredModels = vehicleModels.filter(model =>
     model.model_name.toLowerCase().includes(modelSearchTerm.toLowerCase())
   );
@@ -359,7 +592,6 @@ const Invoice = () => {
     setSearchTerm(value);
   };
 
-  // Menu handlers
   const handleClick = (event, id) => {
     setAnchorEl(event.currentTarget);
     setMenuId(id);
@@ -371,21 +603,76 @@ const Invoice = () => {
   };
 
   const handleAddClick = () => {
-    if (!selectedBranchId && isSuperAdmin) {
-      showError('Please select a branch first');
+    if (!canCreateInvoices) {
+      showError('You do not have permission to create invoices');
       return;
     }
+    setIsEditMode(false);
     resetForm();
     setAddModalVisible(true);
   };
 
+  const handleEditClick = (invoice) => {
+    if (!canUpdateInvoices) {
+      showError('You do not have permission to edit invoices');
+      return;
+    }
+    setIsEditMode(true);
+    setEditInvoiceId(invoice._id);
+    populateFormForEdit(invoice);
+    setEditModalVisible(true);
+    handleClose();
+  };
+
+  const populateFormForEdit = (invoice) => {
+    setFormData({
+      branchId: invoice.branchId?._id || invoice.branchId || '',
+      jobType: invoice.jobType || 'paid_service',
+      nextDueDate: invoice.nextDueDate ? invoice.nextDueDate.split('T')[0] : '',
+      customerName: invoice.customerName || '',
+      customerMobile: invoice.customerMobile || '',
+      customerEmail: invoice.customerEmail || '',
+      customerAddress: invoice.customerAddress || '',
+      vehicleNo: invoice.vehicleNo || '',
+      vehicleModel: invoice.vehicleModel || '',
+      vehicleMake: invoice.vehicleMake || '',
+      odoMeter: invoice.odoMeter || '',
+      items: invoice.items || [],
+      gstRate: invoice.gstRate || 18,
+      discount: invoice.discount || 0,
+      discountType: invoice.discountType || 'fixed',
+      notes: invoice.notes || '',
+      paymentMode: invoice.paymentMode || 'cash',
+      cashAccountId: invoice.cashAccountId || '',
+      bankId: invoice.bankId || '',
+      bankTransactionId: invoice.bankTransactionId || '',
+      bankPaymentDate: invoice.bankPaymentDate ? invoice.bankPaymentDate.split('T')[0] : '',
+      amountPaid: invoice.amountPaid || '',
+      serviceAdvisor: invoice.serviceAdvisor || '',
+      mechanic: invoice.mechanic || '',
+      status: invoice.status || 'confirmed'
+    });
+    setFormErrors({});
+    setApiError(null);
+    // Set customer search term for display
+    setCustomerSearchTerm(invoice.customerName || '');
+  };
+
   const handleViewClick = (invoice) => {
+    if (!canViewInvoices) {
+      showError('You do not have permission to view invoices');
+      return;
+    }
     setSelectedInvoice(invoice);
     setViewModalVisible(true);
     handleClose();
   };
 
   const handleDeleteClick = (invoice) => {
+    if (!canDeleteInvoices) {
+      showError('You do not have permission to delete invoices');
+      return;
+    }
     setInvoiceToDelete(invoice);
     setDeleteModalVisible(true);
     handleClose();
@@ -396,30 +683,44 @@ const Invoice = () => {
     
     setFormData({
       branchId: defaultBranchId,
+      jobType: 'paid_service',
+      nextDueDate: '',
       customerName: '',
       customerMobile: '',
       customerEmail: '',
+      customerAddress: '',
       vehicleNo: '',
       vehicleModel: '',
+      vehicleMake: '',
       odoMeter: '',
       items: [],
-      discount: '',
+      gstRate: 18,
+      discount: 0,
       discountType: 'fixed',
-      paymentMethod: 'cash',
-      paymentStatus: 'pending',
+      notes: '',
+      paymentMode: 'cash',
+      cashAccountId: '',
+      bankId: '',
+      bankTransactionId: '',
+      bankPaymentDate: '',
       amountPaid: '',
       serviceAdvisor: '',
-      notes: ''
+      mechanic: '',
+      status: 'confirmed'
     });
     setFormErrors({});
+    setApiError(null);
     setModelSearchTerm('');
     setShowModelDropdown(false);
+    setCustomerSearchTerm('');
+    setCustomers([]);
+    setShowCustomerDropdown(false);
   };
 
   const addItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { itemType: 'part', itemId: '', quantity: 1 }]
+      items: [...prev.items, { itemType: 'part', itemId: '', unitPrice: '', quantity: 1 }]
     }));
   };
 
@@ -449,6 +750,15 @@ const Invoice = () => {
     }
   };
 
+  const handleItemSelect = (index, itemId) => {
+    const item = formData.items[index];
+    const details = getItemDetails(item.itemType, itemId);
+    if (details) {
+      updateItem(index, 'itemId', itemId);
+      updateItem(index, 'unitPrice', details.unitPrice);
+    }
+  };
+
   const validateForm = () => {
     const errors = {};
     
@@ -456,90 +766,167 @@ const Invoice = () => {
     if (!formData.customerName) errors.customerName = 'Customer name is required';
     if (!formData.customerMobile) errors.customerMobile = 'Customer mobile is required';
     if (!formData.vehicleNo) errors.vehicleNo = 'Vehicle number is required';
-    if (!formData.vehicleModel) errors.vehicleModel = 'Vehicle model is required';
     if (formData.items.length === 0) errors.items = 'At least one item is required';
+    
+    if (formData.paymentMode === 'cash') {
+      if (!formData.cashAccountId) errors.cashAccountId = 'Cash account is required';
+    } else if (formData.paymentMode === 'bank') {
+      if (!formData.bankId) errors.bankId = 'Bank is required';
+      if (!formData.bankTransactionId) errors.bankTransactionId = 'Bank transaction ID is required';
+      if (!formData.bankPaymentDate) errors.bankPaymentDate = 'Bank payment date is required';
+    }
     
     for (let i = 0; i < formData.items.length; i++) {
       if (!formData.items[i].itemId) {
         errors[`item_${i}`] = 'Please select an item';
       }
+      if (!formData.items[i].unitPrice || formData.items[i].unitPrice <= 0) {
+        errors[`item_price_${i}`] = 'Please enter a valid unit price';
+      }
     }
     
     setFormErrors(errors);
+    setApiError(null);
     return Object.keys(errors).length === 0;
   };
 
+  const extractErrorMessage = (error) => {
+    if (error.response?.data?.message) {
+      return error.response.data.message;
+    }
+    if (error.response?.data?.error) {
+      return error.response.data.error;
+    }
+    if (error.message) {
+      return error.message;
+    }
+    return 'An unexpected error occurred';
+  };
+
   const calculateTotal = () => {
-    let subtotal = 0;
+    let total = 0;
     
     formData.items.forEach(item => {
-      const itemDetails = getItemDetails(item.itemType, item.itemId);
-      if (itemDetails) {
-        subtotal += itemDetails.unitPrice * item.quantity;
-      }
+      const unitPrice = parseFloat(item.unitPrice) || 0;
+      const quantity = parseInt(item.quantity) || 0;
+      total += unitPrice * quantity;
     });
     
-    let discountAmount = 0;
-    if (formData.discount && formData.discountType === 'percentage') {
-      discountAmount = (subtotal * parseFloat(formData.discount)) / 100;
-    } else if (formData.discount && formData.discountType === 'fixed') {
-      discountAmount = parseFloat(formData.discount);
-    }
-    
-    const grandTotal = subtotal - discountAmount;
-    
-    return { subtotal, discountAmount, grandTotal };
+    return total;
   };
 
   const handleAddSubmit = async () => {
+    if (!canCreateInvoices) {
+      showError('You do not have permission to create invoices');
+      return;
+    }
     if (!validateForm()) return;
     
     setFormLoading(true);
+    setApiError(null);
+    
     try {
       const items = formData.items.map(item => ({
         itemType: item.itemType,
         itemId: item.itemId,
+        unitPrice: parseFloat(item.unitPrice),
         quantity: parseInt(item.quantity)
       }));
       
       const payload = {
         branchId: formData.branchId,
+        jobType: formData.jobType || 'paid_service',
         customerName: formData.customerName,
         customerMobile: formData.customerMobile,
-        customerEmail: formData.customerEmail,
-        vehicleNo: formData.vehicleNo,
-        vehicleModel: formData.vehicleModel,
-        odoMeter: formData.odoMeter ? parseInt(formData.odoMeter) : undefined,
+        paymentMode: formData.paymentMode,
         items: items,
-        discount: formData.discount ? parseFloat(formData.discount) : 0,
-        discountType: formData.discountType,
-        paymentMethod: formData.paymentMethod,
-        paymentStatus: formData.paymentStatus,
-        amountPaid: formData.amountPaid ? parseFloat(formData.amountPaid) : 0,
-        serviceAdvisor: formData.serviceAdvisor,
-        notes: formData.notes
+        status: 'confirmed'
       };
+
+      // Add optional fields
+      if (formData.nextDueDate) payload.nextDueDate = formData.nextDueDate;
+      if (formData.customerEmail) payload.customerEmail = formData.customerEmail;
+      if (formData.customerAddress) payload.customerAddress = formData.customerAddress;
+      if (formData.vehicleNo) payload.vehicleNo = formData.vehicleNo;
+      if (formData.vehicleModel) payload.vehicleModel = formData.vehicleModel;
+      if (formData.vehicleMake) payload.vehicleMake = formData.vehicleMake;
+      if (formData.odoMeter) payload.odoMeter = parseInt(formData.odoMeter);
+      if (formData.gstRate) payload.gstRate = parseFloat(formData.gstRate);
+      if (formData.discount) payload.discount = parseFloat(formData.discount);
+      if (formData.discountType) payload.discountType = formData.discountType;
+      if (formData.notes) payload.notes = formData.notes;
+      if (formData.serviceAdvisor) payload.serviceAdvisor = formData.serviceAdvisor;
+      if (formData.mechanic) payload.mechanic = formData.mechanic;
+
+      // Add payment mode specific fields
+      if (formData.paymentMode === 'cash') {
+        payload.cashAccountId = formData.cashAccountId;
+        payload.bankId = null;
+        payload.bankTransactionId = null;
+        payload.bankPaymentDate = null;
+      } else if (formData.paymentMode === 'bank') {
+        payload.bankId = formData.bankId;
+        payload.bankTransactionId = formData.bankTransactionId;
+        payload.bankPaymentDate = formData.bankPaymentDate;
+        payload.cashAccountId = null;
+      }
       
-      const response = await axiosInstance.post('/invoices', payload);
-      if (response.data.success) {
-        showSuccess('Invoice created successfully!');
-        setAddModalVisible(false);
-        resetForm();
-        
-        // If the created invoice belongs to the currently selected branch, refresh the list
-        if (formData.branchId === selectedBranchId) {
-          fetchInvoices(1, pagination.limit, searchTerm);
+      let response;
+      let createdInvoice = null;
+      
+      if (isEditMode && editInvoiceId) {
+        response = await axiosInstance.put(`/invoices/${editInvoiceId}`, payload);
+        if (response.data.success) {
+          showSuccess('Invoice updated successfully!');
+          setAddModalVisible(false);
+          setEditModalVisible(false);
+          resetForm();
+          
+          if (formData.branchId === selectedBranchId) {
+            fetchInvoices(1, pagination.limit, searchTerm);
+          }
+        }
+      } else {
+        response = await axiosInstance.post('/invoices', payload);
+        if (response.data.success) {
+          createdInvoice = response.data.data;
+          showSuccess('Invoice created successfully!');
+          setAddModalVisible(false);
+          resetForm();
+          
+          if (formData.branchId === selectedBranchId) {
+            await fetchInvoices(1, pagination.limit, searchTerm);
+          }
+          
+          // Auto-print the created invoice
+          if (createdInvoice) {
+            // Fetch the complete invoice data with all details
+            const invoiceResponse = await axiosInstance.get(`/invoices/${createdInvoice._id}`);
+            if (invoiceResponse.data.success) {
+              const fullInvoice = invoiceResponse.data.data;
+              // Auto-print after a short delay to ensure everything is loaded
+              setTimeout(() => {
+                handlePrintInvoice(fullInvoice);
+              }, 500);
+            }
+          }
         }
       }
     } catch (error) {
-      console.error('Error creating invoice:', error);
-      showError(error.response?.data?.message || 'Failed to create invoice');
+      console.error('Error saving invoice:', error);
+      const errorMessage = extractErrorMessage(error);
+      setApiError(errorMessage);
+      showError(errorMessage);
     } finally {
       setFormLoading(false);
     }
   };
 
   const handleDeleteConfirm = async () => {
+    if (!canDeleteInvoices) {
+      showError('You do not have permission to delete invoices');
+      return;
+    }
     if (!invoiceToDelete) return;
     
     try {
@@ -587,326 +974,453 @@ const Invoice = () => {
     return <CBadge color={option?.color || 'secondary'}>{option?.label || status}</CBadge>;
   };
 
-  // Generate Invoice HTML for printing
-const generateInvoiceHTML = (invoice) => {
-  const currentDate = new Date().toLocaleDateString('en-GB');
-  const branch = invoice.branchId || {};
-  
-  // Get logo URL using the helper function
-  const logoUrl = getFullImageUrl(branch.logo1);
-  
-  return `
-  <!DOCTYPE html>
+  const getJobTypeLabel = (jobType) => {
+    const option = JOB_TYPE_OPTIONS.find(j => j.value === jobType);
+    return option ? option.label : jobType;
+  };
+
+  const generateInvoiceHTML = (invoice) => {
+    const branch = invoice.branchId || {};
+    const logoUrl = getFullImageUrl(branch.logo2 || branch.logo1);
+
+    const partItems   = (invoice.items || []).filter(i => i.itemType === 'part');
+    const labourItems2 = (invoice.items || []).filter(i => i.itemType === 'labour');
+    const allItems    = [...partItems, ...labourItems2];
+
+    const partsQty      = partItems.reduce((s, i) => s + (i.quantity || 0), 0);
+    const partsTaxable  = partItems.reduce((s, i) => s + (i.basicAmount || 0), 0);
+    const partsSgst     = partItems.reduce((s, i) => s + (i.sgst || 0), 0);
+    const partsCgst     = partItems.reduce((s, i) => s + (i.cgst || 0), 0);
+
+    const labQty        = labourItems2.reduce((s, i) => s + (i.quantity || 0), 0);
+    const labTaxable    = labourItems2.reduce((s, i) => s + (i.basicAmount || 0), 0);
+    const labSgst       = labourItems2.reduce((s, i) => s + (i.sgst || 0), 0);
+    const labCgst       = labourItems2.reduce((s, i) => s + (i.cgst || 0), 0);
+
+    const subTotalQty     = partsQty + labQty;
+    const subTotalTaxable = partsTaxable + labTaxable;
+    const subTotalSgst    = partsSgst + labSgst;
+    const subTotalCgst    = partsCgst + labCgst;
+
+    const grandTotal  = invoice.grandTotal  || 0;
+    const discount    = invoice.discount    || 0;
+    const netAmount   = invoice.netAmount   || invoice.netPayable || grandTotal - discount;
+    const roundOff    = parseFloat((Math.round(netAmount) - netAmount).toFixed(2));
+    const netTotal    = Math.round(netAmount);
+
+    const numToWords = (n) => {
+      const a = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine',
+        'Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen',
+        'Seventeen','Eighteen','Nineteen'];
+      const b = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+      if (n === 0) return 'Zero';
+      const inWords = (num) => {
+        if (num < 20) return a[num];
+        if (num < 100) return b[Math.floor(num/10)] + (num%10 ? ' ' + a[num%10] : '');
+        if (num < 1000) return a[Math.floor(num/100)] + ' Hundred' + (num%100 ? ' ' + inWords(num%100) : '');
+        if (num < 100000) return inWords(Math.floor(num/1000)) + ' Thousand' + (num%1000 ? ' ' + inWords(num%1000) : '');
+        if (num < 10000000) return inWords(Math.floor(num/100000)) + ' Lakh' + (num%100000 ? ' ' + inWords(num%100000) : '');
+        return inWords(Math.floor(num/10000000)) + ' Crore' + (num%10000000 ? ' ' + inWords(num%10000000) : '');
+      };
+      return inWords(n);
+    };
+
+    const amountInWords = `( Rupees ${numToWords(netTotal)} Only )`;
+
+    const fmtDate = (d) => {
+      if (!d) return '-';
+      const dt = new Date(d);
+      return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()}`;
+    };
+    const fmtDateTime = (d) => {
+      if (!d) return '-';
+      const dt = new Date(d);
+      return `${fmtDate(d)} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    };
+    const fmt2 = (n) => (parseFloat(n) || 0).toFixed(2);
+
+    const itemRow = (item) => {
+      const basicAmt = item.basicAmount || (item.unitPrice * item.quantity);
+      const sgstRate = basicAmt > 0 ? ((item.sgst || 0) / basicAmt * 100) : 9;
+      const cgstRate = basicAmt > 0 ? ((item.cgst || 0) / basicAmt * 100) : 9;
+      return `<tr>
+        <td style="font-size:8px">${item.partNo || ''}</td>
+        <td>${item.description || '-'}</td>
+        <td style="text-align:center">${(item.quantity || 0).toFixed(2)}</td>
+        <td style="text-align:right">${fmt2(item.unitPrice)}</td>
+        <td style="text-align:right">${fmt2(item.discount || 0)}</td>
+        <td style="text-align:right">${fmt2(basicAmt)}</td>
+        <td style="text-align:center;font-size:8px">${item.hsnCode || ''}</td>
+        <td style="text-align:center">${fmt2(sgstRate)}</td>
+        <td style="text-align:right">${fmt2(item.sgst || 0)}</td>
+        <td style="text-align:center">${fmt2(cgstRate)}</td>
+        <td style="text-align:right">${fmt2(item.cgst || 0)}</td>
+
+        <td style="text-align:right">${fmt2(item.totalAmount || basicAmt)}</td>
+      </tr>`;
+    };
+
+    return `<!DOCTYPE html>
   <html>
   <head>
-    <title>TAX Invoice - ${invoice.invoiceNo}</title>
+    <title>Service Invoice - ${invoice.invoiceNo || ''}</title>
+    <meta charset="UTF-8">
     <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
       body {
-        font-family: "Courier New", Courier, monospace;
-        margin: 0;
-        padding: 8mm;
-        font-size: 15px;
-        color: #555555;
-      }
-      .page {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9.5px;
+        color: #111;
+        background: #fff;
+        padding: 6mm 7mm 10mm 7mm;
         width: 210mm;
-        height: 297mm;
-        margin: 0 auto;
       }
-      .invoice-title {
-        text-align: center;
-        font-size: 26px;
-        font-weight: bold;
-        margin-bottom: 5mm;
-      }
-      .header {
+
+      /* ── HEADER ── */
+      .hdr {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 3mm;
-      }
-      .header-left {
-        width: 60%;
-      }
-      .header-right {
-        width: 40%;
-        text-align: right;
-      }
-      .logo-container {
+        align-items: flex-start;
+        border-bottom: 1.5px solid #333;
+        padding-bottom: 3mm;
         margin-bottom: 2mm;
-        text-align: right;
       }
-      .logo {
-        max-height: 120px;
-        max-width: 250px;
-        width: auto;
-        height: auto;
-        object-fit: contain;
-      }
-      .dealer-info {
-        text-align: left;
-        font-size: 15px;
-        line-height: 1.3;
-      }
-      .dealer-name {
-        font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 2mm;
-        color: #333;
-      }
-      .divider {
-        border-top: 2px solid #AAAAAA;
-        margin: 2mm 0;
-      }
-      .customer-info-container {
+      .hdr-meta { font-size: 9px; color: #555; }
+      .hdr-title { text-align: center; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; }
+      .hdr-logo img { height: 55px; width: auto; display: block; }
+
+      /* ── INV NUMBER ROW ── */
+      .inv-row {
         display: flex;
-        font-size: 15px;
-        line-height: 1.4;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2mm;
+        font-size: 10px;
       }
-      .customer-info-left, .customer-info-right {
+      .inv-row .inv-no { font-weight: bold; font-size: 11px; }
+      .inv-row .inv-title { font-weight: bold; font-size: 13px; }
+      .inv-row .inv-date { font-size: 10px; }
+
+      /* ── TWO COL INFO ── */
+      .two-col {
+        display: flex;
+        border: 1px solid #bbb;
+        margin-bottom: 1.5mm;
+      }
+      .two-col > div {
         width: 50%;
+        padding: 2mm 3mm;
+        font-size: 9.5px;
+        line-height: 1.55;
       }
-      .customer-info-row {
-        margin: 1.5mm 0;
-        line-height: 1.4;
+      .two-col > div:first-child { border-right: 1px solid #bbb; }
+      .biz-name { font-size: 12px; font-weight: bold; margin-bottom: 1mm; }
+
+      /* ── JOB STRIP — 2 rows ── */
+      .job-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border: 1px solid #bbb;
+        border-bottom: none;
+        margin-bottom: 2mm;
+        font-size: 9px;
       }
-      table {
+      .job-cell {
+        padding: 1.5mm 2mm;
+        border-right: 1px solid #bbb;
+        border-bottom: 1px solid #bbb;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .job-cell:nth-child(4n) { border-right: none; }
+      .job-cell b { font-weight: bold; margin-right: 2px; }
+
+      /* ── ITEMS TABLE ── */
+      table.items {
         width: 100%;
         border-collapse: collapse;
-        font-size: 10pt;
-        margin: 3mm 0;
+        font-size: 8.5px;
+        margin-bottom: 1mm;
+        table-layout: fixed;
       }
-      th, td {
-        padding: 1.5mm;
-        border: 1px solid #000;
-        vertical-align: top;
-      }
-      th {
-        font-size: 10.5pt;
-        font-weight: bold;
-        background-color: #f5f5f5;
-      }
-      .no-border {
-        border: none !important;
-        font-size: 15px;
-      }
-      .text-right {
-        text-align: right;
-      }
-      .text-center {
+      table.items colgroup col:nth-child(1)  { width: 8%; }
+      table.items colgroup col:nth-child(2)  { width: 20%; }
+      table.items colgroup col:nth-child(3)  { width: 6%; }
+      table.items colgroup col:nth-child(4)  { width: 7%; }
+      table.items colgroup col:nth-child(5)  { width: 6%; }
+      table.items colgroup col:nth-child(6)  { width: 8%; }
+      table.items colgroup col:nth-child(7)  { width: 7%; }
+      table.items colgroup col:nth-child(8)  { width: 7%; }
+      table.items colgroup col:nth-child(9)  { width: 5%; }
+      table.items colgroup col:nth-child(10) { width: 7%; }
+      table.items colgroup col:nth-child(11) { width: 5%; }
+      table.items colgroup col:nth-child(12) { width: 9%; }
+
+      table.items th {
+        background: #f0f0f0;
+        border: 1px solid #aaa;
+        padding: 1.5mm 1mm;
         text-align: center;
+        font-size: 8.5px;
+        white-space: nowrap;
+        overflow: hidden;
       }
-      .bold, .customer-info-row strong {
+      table.items td {
+        border: 1px solid #ccc;
+        padding: 1.2mm 1mm;
+        vertical-align: top;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .sub-row td {
+        background: #f5f5f5;
         font-weight: bold;
+        border: 1px solid #aaa;
+        padding: 1.2mm 1mm;
       }
-      .section-title {
-        font-weight: bold;
-        margin: 2mm 0;
-        font-size: 16px;
-      }
-      .signature-box {
-        margin-top: 12mm;
+
+      /* ── TOTALS ── */
+      .totals-wrap {
         display: flex;
         justify-content: flex-end;
-        font-size: 10pt;
-      }
-      .signature-line {
-        border-top: 1px dashed #000;
-        width: 50mm;
-        display: inline-block;
-        margin-bottom: 2px;
-      }
-      .signature-item {
-        text-align: center;
-        width: 60mm;
-      }
-      .footer {
-        font-size: 9pt;
-        text-align: justify;
-        line-height: 1.3;
-        margin-top: 4mm;
-      }
-      .totals-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 3mm 0;
-        font-size: 15px;
-      }
-      .totals-table td {
-        border: none;
-        padding: 1.5mm;
-      }
-      .total-divider {
-        border-top: 2px solid #AAAAAA;
-        height: 1px;
-        margin: 3px 0;
-      }
-      .branch-details {
-        font-size: 12px;
         margin-top: 1mm;
       }
-      @page {
-        size: A4;
-        margin: 0;
+      .totals-box {
+        width: 190px;
+        font-size: 9.5px;
+        border-collapse: collapse;
       }
+      .totals-box td { padding: 1mm 2mm; }
+      .totals-box .tdivider td { border-top: 1px dashed #aaa; padding-top: 1.5mm; }
+      .totals-box .net td {
+        font-weight: bold;
+        font-size: 11px;
+        border-top: 1.5px solid #333;
+        padding-top: 2mm;
+      }
+
+      /* ── AMOUNT WORDS ── */
+      .words {
+        font-size: 9px;
+        font-style: italic;
+        border: 1px dashed #bbb;
+        padding: 1.5mm 3mm;
+        margin: 2mm 0;
+        background: #fafafa;
+      }
+
+      /* ── PAY STRIP ── */
+      .pay-row {
+        display: flex;
+        flex-wrap: wrap;
+        border: 1px solid #bbb;
+        margin: 2mm 0;
+        font-size: 9px;
+      }
+      .pay-cell {
+        padding: 1.5mm 3mm;
+        border-right: 1px solid #bbb;
+      }
+      .pay-cell:last-child { border-right: none; }
+
+      /* ── NOTES ── */
+      .note { font-size: 8.5px; color: #444; line-height: 1.45; margin: 2mm 0; }
+
+      /* ── SIGNATURE ── */
+      .sig {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 7mm;
+        font-size: 9px;
+        text-align: right;
+      }
+      .sig-line {
+        border-top: 1px solid #333;
+        width: 45mm;
+        display: block;
+        margin-bottom: 1.5mm;
+      }
+
+      @page { size: A4 portrait; margin: 0; }
       @media print {
-        body {
-          padding: 5mm;
-        }
-        .logo {
-          print-color-adjust: exact;
-          -webkit-print-color-adjust: exact;
-        }
+        body { padding: 5mm 6mm 8mm 6mm; }
       }
     </style>
   </head>
   <body>
-    <div class="page">
-      <div class="invoice-title">TAX INVOICE</div>
-      <div class="header">
-        <div class="header-left">
-          <div class="dealer-name">${branch.name || 'N/A'}</div>
-          <div class="dealer-info">
-            ${branch.address ? branch.address.replace(/'/g, '') : 'N/A'}<br>
-            ${branch.city ? `${branch.city}, ${branch.state || ''} - ${branch.pincode || ''}` : 'N/A'}<br>
-            Phone: ${branch.phone || 'N/A'}<br>
-            Email: ${branch.email || 'N/A'}<br>
-            GSTIN: ${branch.gst_number || 'N/A'}
-          </div>
-        </div>
-        <div class="header-right">
-          ${logoUrl ? `
-          <div class="logo-container">
-            <img src="${logoUrl}" class="logo" alt="Branch Logo" onerror="this.style.display='none'">
-          </div>
-          ` : ''}
-          <div><strong>Invoice No:</strong> ${invoice.invoiceNo}</div>
-          <div><strong>Date:</strong> ${currentDate}</div>
+
+    <!-- HEADER -->
+    <div class="hdr">
+      <div>
+        <div class="hdr-meta">${fmtDateTime(new Date())}</div>
+        <div style="margin-top:3mm">
+          <div class="hdr-title">Service Labour Invoice</div>
         </div>
       </div>
-      <div class="divider"></div>
-
-      <!-- Customer Information -->
-      <div class="customer-info-container">
-        <div class="customer-info-left">
-          <div class="customer-info-row"><strong>Customer Name:</strong> ${invoice.customerName || 'N/A'}</div>
-          <div class="customer-info-row"><strong>Mobile No.:</strong> ${invoice.customerMobile || 'N/A'}</div>
-          ${invoice.customerEmail ? `<div class="customer-info-row"><strong>Email:</strong> ${invoice.customerEmail}</div>` : ''}
-        </div>
-        <div class="customer-info-right">
-          <div class="customer-info-row"><strong>Vehicle No:</strong> ${invoice.vehicleNo || 'N/A'}</div>
-          <div class="customer-info-row"><strong>Vehicle Model:</strong> ${invoice.vehicleModel || 'N/A'}</div>
-          ${invoice.odoMeter ? `<div class="customer-info-row"><strong>Odometer:</strong> ${invoice.odoMeter} km</div>` : ''}
-        </div>
-      </div>
-      <div class="divider"></div>
-
-      <!-- Items Table -->
-      <div class="section-title">Items Details:</div>
-      <table>
-        <thead>
-          <tr>
-            <th style="width:5%">#</th>
-            <th style="width:45%">Description</th>
-            <th style="width:10%">Qty</th>
-            <th style="width:15%">Unit Price</th>
-            <th style="width:25%">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${invoice.items && invoice.items.length > 0 ? invoice.items.map((item, idx) => `
-            <tr>
-              <td class="text-center">${idx + 1}</td>
-              <td>${item.description || 'N/A'}</td>
-              <td class="text-center">${item.quantity || 0}</td>
-              <td class="text-right">${formatCurrency(item.unitPrice)}</td>
-              <td class="text-right">${formatCurrency(item.totalAmount)}</td>
-            </tr>
-          `).join('') : `
-            <tr>
-              <td colspan="5" class="text-center">No items found</td>
-            </tr>
-          `}
-        </tbody>
-      </table>
-
-      <!-- Totals Section -->
-      <table class="totals-table">
-        <tr>
-          <td class="no-border" style="width:80%"><strong>Subtotal</strong></td>
-          <td class="no-border text-right"><strong>${formatCurrency(invoice.subtotal)}</strong></td>
-        </tr>
-        ${invoice.discount && invoice.discount > 0 ? `
-        <tr>
-          <td class="no-border"><strong>Discount (${invoice.discountType === 'percentage' ? invoice.discount + '%' : 'Fixed'})</strong></td>
-          <td class="no-border text-right text-danger">-${formatCurrency(invoice.discountAmount || invoice.discount)}</td>
-        </tr>
-        ` : ''}
-        <tr>
-          <td colspan="2" class="no-border"><div class="total-divider"></div></td>
-        </tr>
-        ${invoice.totalCgst && invoice.totalCgst > 0 ? `
-        <tr>
-          <td class="no-border"><strong>CGST (${invoice.cgstRate || 9}%)</strong></td>
-          <td class="no-border text-right">${formatCurrency(invoice.totalCgst)}</td>
-        </tr>
-        <tr>
-          <td class="no-border"><strong>SGST (${invoice.sgstRate || 9}%)</strong></td>
-          <td class="no-border text-right">${formatCurrency(invoice.totalSgst)}</td>
-        </tr>
-        ` : ''}
-        ${invoice.totalIgst && invoice.totalIgst > 0 ? `
-        <tr>
-          <td class="no-border"><strong>IGST (${invoice.igstRate || 18}%)</strong></td>
-          <td class="no-border text-right">${formatCurrency(invoice.totalIgst)}</td>
-        </tr>
-        ` : ''}
-        <tr>
-          <td colspan="2" class="no-border"><div class="total-divider"></div></td>
-        </tr>
-        <tr>
-          <td class="no-border"><strong>GRAND TOTAL</strong></td>
-          <td class="no-border text-right"><strong>${formatCurrency(invoice.netAmount || invoice.grandTotal)}</strong></td>
-        </tr>
-      </table>
-
-      <!-- Payment Details -->
-      <div class="divider"></div>
-      <div class="customer-info-container">
-        <div class="customer-info-left">
-          <div class="customer-info-row"><strong>Payment Method:</strong> ${invoice.paymentMethod ? invoice.paymentMethod.toUpperCase() : 'N/A'}</div>
-          ${invoice.amountPaid && invoice.amountPaid > 0 ? `<div class="customer-info-row"><strong>Amount Paid:</strong> ${formatCurrency(invoice.amountPaid)}</div>` : ''}
-        </div>
-        <div class="customer-info-right">
-          <div class="customer-info-row"><strong>Payment Status:</strong> ${invoice.paymentStatus ? invoice.paymentStatus.toUpperCase() : 'N/A'}</div>
-          ${invoice.amountDue && invoice.amountDue > 0 ? `<div class="customer-info-row"><strong>Amount Due:</strong> ${formatCurrency(invoice.amountDue)}</div>` : ''}
-        </div>
-      </div>
-      ${invoice.serviceAdvisor ? `
-      <div class="customer-info-row"><strong>Service Advisor:</strong> ${invoice.serviceAdvisor}</div>
-      ` : ''}
-      ${invoice.notes ? `
-      <div class="divider"></div>
-      <div class="customer-info-row"><strong>Notes:</strong> ${invoice.notes}</div>
-      ` : ''}
-      <div class="divider"></div>
-
-    
-
-      <!-- Signature Section -->
-      <div class="signature-box">
-        <div class="signature-item">
-          <div class="signature-line"></div>
-          <div><strong>AUTHORIZED SIGNATORY</strong></div>
-        </div>
+      <div class="hdr-logo">
+        ${logoUrl ? `<img src="${logoUrl}" alt="logo" onerror="this.style.display='none'">` : ''}
       </div>
     </div>
-  </body>
-  </html>
-  `;
-};
 
-  // Print function
+    <!-- INVOICE NUMBER ROW -->
+    <div class="inv-row">
+      <div class="inv-no">Invoice No &nbsp;:&nbsp; ${invoice.invoiceNo || '-'}</div>
+      <div class="inv-title">SERVICE INVOICE</div>
+      <div class="inv-date">Invoice Date: ${fmtDateTime(invoice.invoiceDate)}</div>
+    </div>
+
+    <!-- DEALER + CUSTOMER -->
+    <div class="two-col">
+      <div>
+        <div class="biz-name">${branch.name || 'GANDHI MOTORS PVT LTD'}</div>
+        ${branch.address ? branch.address.replace(/'/g,'') + '<br>' : ''}
+        ${branch.city ? branch.city + ' - ' + (branch.pincode || '') + '<br>' : ''}
+        Ph: ${branch.phone || ''}<br>
+        GST IN No.: ${branch.gst_number || ''}
+      </div>
+      <div>
+        <b>${invoice.customerName || 'N/A'}</b><br>
+        ${invoice.customerAddress ? invoice.customerAddress + '<br>' : ''}
+        ${invoice.customerAddress && branch.city ? branch.city + ' - ' + (branch.pincode || '') + '<br>' : ''}
+        Mob: ${invoice.customerMobile || ''}
+        ${invoice.customerEmail ? '<br>' + invoice.customerEmail : ''}
+      </div>
+    </div>
+
+    <!-- JOB STRIP: 3 columns × 2 rows -->
+    <div class="job-grid" style="grid-template-columns: repeat(3, 1fr)">
+      <div class="job-cell"><b>BillType:</b> ${invoice.paymentMode === 'bank' ? 'Bank' : 'Cash'}</div>
+      <div class="job-cell"><b>JobType:</b> ${getJobTypeLabel(invoice.jobType || 'paid_service').toUpperCase()}</div>
+      <div class="job-cell"><b>NxtDue:</b> ${invoice.nextDueDate ? fmtDate(invoice.nextDueDate) : '-'}</div>
+
+      <div class="job-cell"><b>KMs:</b> ${invoice.odoMeter || '-'}</div>
+      <div class="job-cell"><b>RegnNo.:</b> ${invoice.vehicleNo || '-'}</div>
+      <div class="job-cell"><b>Model:</b> ${invoice.vehicleModel || '-'}</div>
+    </div>
+
+    <!-- ITEMS TABLE -->
+    <table class="items">
+      <colgroup>
+        <col><col><col><col><col><col><col><col><col><col><col><col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Item No</th>
+          <th style="text-align:left">Particulars</th>
+          <th>Qty</th>
+          <th>Rate</th>
+          <th>Disc</th>
+          <th>Taxable</th>
+          <th>HSN</th>
+          <th>SGST Rate</th>
+          <th>SGST</th>
+          <th>CGST Rate</th>
+          <th>CGST</th>
+          <th>MRP</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${allItems.map(item => itemRow(item)).join('')}
+
+        ${partItems.length > 0 ? `
+        <tr class="sub-row">
+          <td colspan="2">Parts Total</td>
+          <td style="text-align:center">${partsQty.toFixed(2)}</td>
+          <td></td>
+          <td style="text-align:right">0.00</td>
+          <td style="text-align:right">${fmt2(partsTaxable)}</td>
+          <td></td>
+          <td style="text-align:center"></td>
+          <td style="text-align:right">${fmt2(partsSgst)}</td>
+          <td style="text-align:center"></td>
+          <td style="text-align:right">${fmt2(partsCgst)}</td>
+          <td></td>
+        </tr>` : ''}
+
+        ${labourItems2.length > 0 ? `
+        <tr class="sub-row">
+          <td colspan="2">Labour Total</td>
+          <td style="text-align:center">${labQty.toFixed(2)}</td>
+          <td></td>
+          <td style="text-align:right">0.00</td>
+          <td style="text-align:right">${fmt2(labTaxable)}</td>
+          <td></td>
+          <td style="text-align:center"></td>
+          <td style="text-align:right">${fmt2(labSgst)}</td>
+          <td style="text-align:center"></td>
+          <td style="text-align:right">${fmt2(labCgst)}</td>
+          <td></td>
+        </tr>` : ''}
+
+        <tr class="sub-row">
+          <td colspan="2">Sub Total</td>
+          <td style="text-align:center">${subTotalQty.toFixed(2)}</td>
+          <td></td>
+          <td style="text-align:right">0.00</td>
+          <td style="text-align:right">${fmt2(subTotalTaxable)}</td>
+          <td></td>
+          <td style="text-align:center"></td>
+          <td style="text-align:right">${fmt2(subTotalSgst)}</td>
+          <td style="text-align:center"></td>
+          <td style="text-align:right">${fmt2(subTotalCgst)}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- GRAND TOTAL RIGHT-ALIGNED -->
+    <div class="totals-wrap">
+      <table class="totals-box">
+        <tr>
+          <td>Grand Total</td>
+          <td style="text-align:right">${fmt2(grandTotal)}</td>
+        </tr>
+        ${discount > 0 ? `<tr><td>Discount</td><td style="text-align:right">${fmt2(discount)}</td></tr>` : ''}
+        ${roundOff !== 0 ? `<tr><td>Round Off</td><td style="text-align:right">${fmt2(roundOff)}</td></tr>` : ''}
+        <tr class="tdivider"><td colspan="2"></td></tr>
+        <tr class="net">
+          <td>Net Total</td>
+          <td style="text-align:right">&#8377;${netTotal.toLocaleString('en-IN')}</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- AMOUNT IN WORDS -->
+    <div class="words">${amountInWords}</div>
+
+    <!-- PAYMENT STRIP -->
+    <div class="pay-row">
+      <div class="pay-cell"><b>Payment:</b> ${invoice.paymentMode === 'bank' ? 'Bank Transfer' : 'Cash'}</div>
+      ${invoice.paymentMode === 'bank' && invoice.bankTransactionId ? `<div class="pay-cell"><b>Txn ID:</b> ${invoice.bankTransactionId}</div>` : ''}
+      ${invoice.paymentMode === 'bank' && invoice.bankPaymentDate ? `<div class="pay-cell"><b>Pay Date:</b> ${fmtDate(invoice.bankPaymentDate)}</div>` : ''}
+      ${invoice.serviceAdvisor ? `<div class="pay-cell"><b>Advisor:</b> ${invoice.serviceAdvisor}</div>` : ''}
+      ${invoice.mechanic ? `<div class="pay-cell"><b>Mechanic:</b> ${invoice.mechanic}</div>` : ''}
+    </div>
+
+    <!-- NOTES -->
+    ${invoice.notes ? `<div class="note">Note: ${invoice.notes}</div>` : ''}
+    <div class="note">Note: Take Care of Your Vehicle with Regular Service</div>
+
+    <!-- SIGNATURE -->
+    <div class="sig">
+      <div>
+        For <b>${branch.name || 'GANDHI MOTORS PVT LTD'}</b><br><br><br>
+        <span class="sig-line"></span><br>
+        <b>Authorised Signatory</b>
+      </div>
+    </div>
+
+  </body>
+  </html>`;
+  };
+
   const handlePrintInvoice = (invoice) => {
+    if (!canViewInvoices) {
+      showError('You do not have permission to print invoices');
+      return;
+    }
     const printContent = generateInvoiceHTML(invoice);
     const printWindow = window.open('', '_blank');
     
@@ -955,7 +1469,6 @@ const generateInvoiceHTML = (invoice) => {
   const displayedPages = [];
   for (let i = startPage; i <= endPage; i++) displayedPages.push(i);
 
-  // Render pagination component
   const renderPagination = () => {
     if (!pagination.totalCount || pagination.totalPages <= 1) return null;
 
@@ -1015,11 +1528,735 @@ const generateInvoiceHTML = (invoice) => {
     );
   };
 
+  // Check if user has permission to view invoices
+  if (!canViewInvoices) {
+    return (
+      <div className="text-center py-5">
+        <CIcon icon={cilWarning} style={{ fontSize: '48px' }} className="text-warning mb-3" />
+        <h5 className="text-warning">Access Denied</h5>
+        <p className="text-muted">You don't have permission to view invoices.</p>
+      </div>
+    );
+  }
+
   if (error && invoices.length === 0) {
     return <div className="alert alert-danger m-3">{error}</div>;
   }
 
-  const totals = calculateTotal();
+  const totalAmount = calculateTotal();
+
+  // Render Invoice Form
+  const renderInvoiceForm = () => {
+    const isCash = formData.paymentMode === 'cash';
+    const isBank = formData.paymentMode === 'bank';
+
+    return (
+      <>
+        {/* API Error Alert */}
+        {apiError && (
+          <CAlert color="danger" className="mb-3" onClose={() => setApiError(null)} dismissible>
+            <div className="d-flex align-items-start">
+              <CIcon icon={cilWarning} className="me-2 mt-1" style={{ fontSize: '1.2rem' }} />
+              <div>
+                <strong>Error!</strong>
+                <p className="mb-0 mt-1">{apiError}</p>
+              </div>
+            </div>
+          </CAlert>
+        )}
+        
+        {/* Form Validation Errors */}
+        {Object.keys(formErrors).length > 0 && (
+          <CAlert color="danger" className="mb-3">
+            <strong>Please fix the following errors:</strong>
+            <ul className="mb-0 mt-1">
+              {Object.values(formErrors).map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </CAlert>
+        )}
+        
+        {/* Branch Selection - Only show for Super Admin */}
+        {isSuperAdmin && (
+          <div className="mb-3">
+            <label className="form-label">Branch <span className="required">*</span></label>
+            <CFormSelect
+              value={formData.branchId}
+              onChange={(e) => {
+                setFormData({ ...formData, branchId: e.target.value });
+                if (formErrors.branchId) {
+                  setFormErrors({ ...formErrors, branchId: '' });
+                }
+                setApiError(null);
+              }}
+              className={formErrors.branchId ? 'is-invalid' : ''}
+            >
+              <option value="">-- Select Branch --</option>
+              {branches.map(branch => (
+                <option key={branch._id} value={branch._id}>
+                  {branch.name} - {branch.city}
+                </option>
+              ))}
+            </CFormSelect>
+            {formErrors.branchId && <small className="text-danger">{formErrors.branchId}</small>}
+          </div>
+        )}
+        
+        {/* Customer Details with Search */}
+        <h6 className="mb-3">Customer Details</h6>
+        <CRow className="mb-3">
+          <CCol md={6}>
+            <label className="form-label">Customer Name <span className="required">*</span></label>
+            <div ref={customerDropdownRef} style={{ position: 'relative' }}>
+              <CInputGroup>
+                <CInputGroupText><CIcon icon={cilUser} /></CInputGroupText>
+                <CFormInput
+                  value={customerSearchTerm}
+                  onChange={handleCustomerInputChange}
+                  onFocus={() => {
+                    const branchId = formData.branchId || selectedBranchId;
+                    if (customerSearchTerm.length >= 2 && branchId && canCreateInvoices) {
+                      setShowCustomerDropdown(true);
+                    } else if (!branchId) {
+                      setShowCustomerDropdown(true);
+                    }
+                  }}
+                  placeholder="Search existing customer or type new name"
+                  className={formErrors.customerName ? 'is-invalid' : ''}
+                  autoComplete="off"
+                />
+              </CInputGroup>
+              {showCustomerDropdown && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  maxHeight: '250px',
+                  overflowY: 'auto',
+                  backgroundColor: 'white',
+                  border: '1px solid #ced4da',
+                  borderRadius: '4px',
+                  zIndex: 1000,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                  {!formData.branchId && !selectedBranchId ? (
+                    <div className="p-2 text-center text-danger">
+                      Please select a branch first to search customers
+                    </div>
+                  ) : loadingCustomers ? (
+                    <div className="p-2 text-center">
+                      <CSpinner size="sm" /> Loading customers...
+                    </div>
+                  ) : customers.length > 0 ? (
+                    <>
+                      {customers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid #eee'
+                          }}
+                          onClick={() => handleCustomerSelect(customer)}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                        >
+                          <div><strong>{customer.customer.name}</strong></div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            {customer.customer.mobile} {customer.customer.address ? `- ${customer.customer.address}` : ''}
+                          </div>
+                        </div>
+                      ))}
+                      {hasMoreCustomers && (
+                        <div
+                          style={{
+                            padding: '8px 12px',
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            borderTop: '1px solid #eee',
+                            color: '#007bff'
+                          }}
+                          onClick={loadMoreCustomers}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                        >
+                          {loadingCustomers ? 'Loading...' : 'Load More...'}
+                        </div>
+                      )}
+                      {totalCustomers > 0 && (
+                        <div style={{
+                          padding: '6px 12px',
+                          fontSize: '11px',
+                          color: '#999',
+                          borderTop: '1px solid #eee',
+                          textAlign: 'center'
+                        }}>
+                          Total: {totalCustomers} customers
+                        </div>
+                      )}
+                    </>
+                  ) : customerSearchTerm.length >= 2 ? (
+                    <div className="p-2 text-center text-muted">
+                      No customers found. Type to add new customer.
+                    </div>
+                  ) : (
+                    <div className="p-2 text-center text-muted">
+                      Type at least 2 characters to search
+                    </div>
+                  )}
+                </div>
+              )}
+              {formErrors.customerName && <small className="text-danger">{formErrors.customerName}</small>}
+            </div>
+          </CCol>
+          <CCol md={6}>
+            <label className="form-label">Customer Mobile <span className="required">*</span></label>
+            <CInputGroup>
+              <CInputGroupText><CIcon icon={cilPhone} /></CInputGroupText>
+              <CFormInput
+                value={formData.customerMobile}
+                onChange={(e) => {
+                  setFormData({ ...formData, customerMobile: e.target.value });
+                  if (formErrors.customerMobile) {
+                    setFormErrors({ ...formErrors, customerMobile: '' });
+                  }
+                  setApiError(null);
+                }}
+                placeholder="Enter mobile number"
+                className={formErrors.customerMobile ? 'is-invalid' : ''}
+              />
+            </CInputGroup>
+            {formErrors.customerMobile && <small className="text-danger">{formErrors.customerMobile}</small>}
+          </CCol>
+        </CRow>
+
+        <CRow className="mb-3">
+          <CCol md={6}>
+            <label className="form-label">Customer Email</label>
+            <CInputGroup>
+              <CInputGroupText><CIcon icon={cilEnvelopeClosed} /></CInputGroupText>
+              <CFormInput
+                type="email"
+                value={formData.customerEmail}
+                onChange={(e) => {
+                  setFormData({ ...formData, customerEmail: e.target.value });
+                  setApiError(null);
+                }}
+                placeholder="Enter email address"
+              />
+            </CInputGroup>
+          </CCol>
+          <CCol md={6}>
+            <label className="form-label">Customer Address</label>
+            <CInputGroup>
+              <CInputGroupText><CIcon icon={cilHome} /></CInputGroupText>
+              <CFormInput
+                value={formData.customerAddress}
+                onChange={(e) => {
+                  setFormData({ ...formData, customerAddress: e.target.value });
+                  setApiError(null);
+                }}
+                placeholder="Enter customer address"
+              />
+            </CInputGroup>
+          </CCol>
+        </CRow>
+
+        {/* Vehicle Details with Searchable Dropdown */}
+        <h6 className="mb-3 mt-3">Vehicle Details</h6>
+        <CRow className="mb-3">
+          <CCol md={6}>
+            <label className="form-label">Vehicle Number <span className="required">*</span></label>
+            <CInputGroup>
+              <CInputGroupText><CIcon icon={cilCarAlt} /></CInputGroupText>
+              <CFormInput
+                value={formData.vehicleNo}
+                onChange={(e) => {
+                  setFormData({ ...formData, vehicleNo: e.target.value.toUpperCase() });
+                  if (formErrors.vehicleNo) {
+                    setFormErrors({ ...formErrors, vehicleNo: '' });
+                  }
+                  setApiError(null);
+                }}
+                placeholder="Enter vehicle number"
+                className={formErrors.vehicleNo ? 'is-invalid' : ''}
+              />
+            </CInputGroup>
+            {formErrors.vehicleNo && <small className="text-danger">{formErrors.vehicleNo}</small>}
+          </CCol>
+          <CCol md={6}>
+            <label className="form-label">Vehicle Model</label>
+            <div ref={modelDropdownRef} style={{ position: 'relative' }}>
+              <CInputGroup>
+                <CInputGroupText><CIcon icon={cilCarAlt} /></CInputGroupText>
+                <CFormInput
+                  value={formData.vehicleModel}
+                  onFocus={() => setShowModelDropdown(true)}
+                  onChange={(e) => {
+                    setFormData({ ...formData, vehicleModel: e.target.value });
+                    setModelSearchTerm(e.target.value);
+                    setShowModelDropdown(true);
+                    if (formErrors.vehicleModel) {
+                      setFormErrors({ ...formErrors, vehicleModel: '' });
+                    }
+                    setApiError(null);
+                  }}
+                  placeholder="Search or select vehicle model"
+                  autoComplete="off"
+                  className={formErrors.vehicleModel ? 'is-invalid' : ''}
+                />
+              </CInputGroup>
+              {showModelDropdown && (filteredModels.length > 0 || loadingModels) && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  maxHeight: '250px',
+                  overflowY: 'auto',
+                  backgroundColor: 'white',
+                  border: '1px solid #ced4da',
+                  borderRadius: '4px',
+                  zIndex: 1000,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                  {loadingModels ? (
+                    <div className="p-2 text-center">
+                      <CSpinner size="sm" /> Loading models...
+                    </div>
+                  ) : (
+                    filteredModels.map(model => (
+                      <div
+                        key={model._id}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #eee'
+                        }}
+                        onClick={() => {
+                          setFormData({ ...formData, vehicleModel: model.model_name, vehicleMake: model.type || '' });
+                          setModelSearchTerm(model.model_name);
+                          setShowModelDropdown(false);
+                          if (formErrors.vehicleModel) {
+                            setFormErrors({ ...formErrors, vehicleModel: '' });
+                          }
+                          setApiError(null);
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                      >
+                        <div><strong>{model.model_name}</strong></div>
+                        {model.type && <small className="text-muted">Type: {model.type}</small>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            {formErrors.vehicleModel && <small className="text-danger">{formErrors.vehicleModel}</small>}
+          </CCol>
+        </CRow>
+
+        <CRow className="mb-3">
+          <CCol md={6}>
+            <label className="form-label">Vehicle Make</label>
+            <CFormInput
+              value={formData.vehicleMake}
+              onChange={(e) => {
+                setFormData({ ...formData, vehicleMake: e.target.value });
+                setApiError(null);
+              }}
+              placeholder="Enter vehicle make (e.g., TVS)"
+            />
+          </CCol>
+          <CCol md={6}>
+            <label className="form-label">Odometer Reading (km)</label>
+            <CInputGroup>
+              <CInputGroupText><CIcon icon={cilSpeedometer} /></CInputGroupText>
+              <CFormInput
+                type="number"
+                value={formData.odoMeter}
+                onChange={(e) => {
+                  setFormData({ ...formData, odoMeter: e.target.value });
+                  setApiError(null);
+                }}
+                placeholder="Enter odometer reading"
+              />
+            </CInputGroup>
+          </CCol>
+        </CRow>
+
+        {/* Job Type and Next Due Date */}
+        <h6 className="mb-3 mt-3">Service Details</h6>
+        <CRow className="mb-3">
+          <CCol md={6}>
+            <label className="form-label">Job Type</label>
+            <CFormSelect
+              value={formData.jobType}
+              onChange={(e) => {
+                setFormData({ ...formData, jobType: e.target.value });
+                setApiError(null);
+              }}
+            >
+              {JOB_TYPE_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </CFormSelect>
+          </CCol>
+          <CCol md={6}>
+            <label className="form-label">Next Due Date</label>
+            <CInputGroup>
+              <CInputGroupText><CIcon icon={cilCalendar} /></CInputGroupText>
+              <CFormInput
+                type="date"
+                value={formData.nextDueDate}
+                onChange={(e) => {
+                  setFormData({ ...formData, nextDueDate: e.target.value });
+                  setApiError(null);
+                }}
+              />
+            </CInputGroup>
+          </CCol>
+        </CRow>
+
+        <CRow className="mb-3">
+          <CCol md={6}>
+            <label className="form-label">Service Advisor</label>
+            <CInputGroup>
+              <CInputGroupText><CIcon icon={cilPeople} /></CInputGroupText>
+              <CFormInput
+                value={formData.serviceAdvisor}
+                onChange={(e) => {
+                  setFormData({ ...formData, serviceAdvisor: e.target.value });
+                  setApiError(null);
+                }}
+                placeholder="Enter service advisor name"
+              />
+            </CInputGroup>
+          </CCol>
+          <CCol md={6}>
+            <label className="form-label">Mechanic</label>
+            <CInputGroup>
+              <CInputGroupText><CIcon icon={cilPeople} /></CInputGroupText>
+              <CFormInput
+                value={formData.mechanic}
+                onChange={(e) => {
+                  setFormData({ ...formData, mechanic: e.target.value });
+                  setApiError(null);
+                }}
+                placeholder="Enter mechanic name"
+              />
+            </CInputGroup>
+          </CCol>
+        </CRow>
+
+        {/* Items Section */}
+        <h6 className="mb-3 mt-3">Invoice Items</h6>
+        {formErrors.items && <small className="text-danger d-block mb-2">{formErrors.items}</small>}
+        
+        {formData.items.map((item, index) => {
+          const itemDetails = getItemDetails(item.itemType, item.itemId);
+          return (
+            <div key={index} className="border rounded p-3 mb-3">
+              <CRow className="align-items-end">
+                <CCol md={3}>
+                  <label className="form-label">PARTICULARS type <span className="required">*</span></label>
+                  <CFormSelect
+                    value={item.itemType}
+                    onChange={(e) => {
+                      updateItem(index, 'itemType', e.target.value);
+                      updateItem(index, 'itemId', '');
+                      updateItem(index, 'unitPrice', '');
+                      setApiError(null);
+                    }}
+                  >
+                    <option value="part">Part</option>
+                    <option value="labour">Labour</option>
+                  </CFormSelect>
+                </CCol>
+                <CCol md={4}>
+                  <label className="form-label">Select Item <span className="required">*</span></label>
+                  <CFormSelect
+                    value={item.itemId}
+                    onChange={(e) => {
+                      handleItemSelect(index, e.target.value);
+                      if (formErrors[`item_${index}`]) {
+                        const newErrors = { ...formErrors };
+                        delete newErrors[`item_${index}`];
+                        setFormErrors(newErrors);
+                      }
+                      setApiError(null);
+                    }}
+                    className={formErrors[`item_${index}`] ? 'is-invalid' : ''}
+                  >
+                    <option value="">-- Select --</option>
+                    {item.itemType === 'part' && parts.map(part => (
+                      <option key={part._id} value={part._id}>
+                        {part.partNo} - {part.partName} (₹{part.mrp})
+                      </option>
+                    ))}
+                    {item.itemType === 'labour' && labourItems.map(labour => (
+                      <option key={labour._id} value={labour._id}>
+                        {labour.labourCode} - {labour.description} (₹{labour.charges})
+                      </option>
+                    ))}
+                  </CFormSelect>
+                  {formErrors[`item_${index}`] && <small className="text-danger">{formErrors[`item_${index}`]}</small>}
+                </CCol>
+                <CCol md={2}>
+                  <label className="form-label">Unit Price (₹) <span className="required">*</span></label>
+                  <CFormInput
+                    type="number"
+                    step="1"
+                    value={item.unitPrice}
+                    onChange={(e) => {
+                      updateItem(index, 'unitPrice', e.target.value);
+                      if (formErrors[`item_price_${index}`]) {
+                        const newErrors = { ...formErrors };
+                        delete newErrors[`item_price_${index}`];
+                        setFormErrors(newErrors);
+                      }
+                      setApiError(null);
+                    }}
+                    placeholder="0"
+                    className={formErrors[`item_price_${index}`] ? 'is-invalid' : ''}
+                  />
+                  {formErrors[`item_price_${index}`] && <small className="text-danger">{formErrors[`item_price_${index}`]}</small>}
+                </CCol>
+                <CCol md={2}>
+                  <label className="form-label">Quantity <span className="required">*</span></label>
+                  <CFormInput
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={(e) => {
+                      updateItem(index, 'quantity', parseInt(e.target.value) || 1);
+                      setApiError(null);
+                    }}
+                  />
+                </CCol>
+                <CCol md={1} className="text-end">
+                  <CButton color="danger" size="sm" onClick={() => removeItem(index)}>
+                    <CIcon icon={cilTrash} />
+                  </CButton>
+                </CCol>
+              </CRow>
+              {itemDetails && (
+                <CRow className="mt-2">
+                  <CCol md={12}>
+                    <small className="text-muted">Description: {itemDetails.description}</small>
+                  </CCol>
+                </CRow>
+              )}
+            </div>
+          );
+        })}
+        
+        <CButton color="info" size="sm" onClick={() => {
+          addItem();
+          setApiError(null);
+        }} className="mb-3">
+          <CIcon icon={cilPlus} className="me-1" /> Add Item
+        </CButton>
+
+        {/* GST and Discount */}
+        <h6 className="mb-3 mt-3">Tax & Discount</h6>
+        <CRow className="mb-3">
+          <CCol md={6}>
+            <label className="form-label">GST Rate (%)</label>
+            <CFormInput
+              type="number"
+              step="1"
+              value={formData.gstRate}
+              onChange={(e) => {
+                setFormData({ ...formData, gstRate: e.target.value });
+                setApiError(null);
+              }}
+              placeholder="18"
+            />
+          </CCol>
+          <CCol md={6}>
+            <label className="form-label">Discount (₹)</label>
+            <CFormInput
+              type="number"
+              step="1"
+              value={formData.discount}
+              onChange={(e) => {
+                setFormData({ ...formData, discount: e.target.value });
+                setApiError(null);
+              }}
+              placeholder="0"
+            />
+          </CCol>
+        </CRow>
+
+        {/* Payment Details */}
+        <h6 className="mb-3 mt-3">Payment Details</h6>
+        
+        <CRow className="mb-3">
+          <CCol md={6}>
+            <label className="form-label">Payment Mode <span className="required">*</span></label>
+            <CFormSelect
+              value={formData.paymentMode}
+              onChange={(e) => {
+                const newPaymentMode = e.target.value;
+                setFormData({ 
+                  ...formData, 
+                  paymentMode: newPaymentMode,
+                  // Reset payment-specific fields when switching modes
+                  cashAccountId: '',
+                  bankId: '',
+                  bankTransactionId: '',
+                  bankPaymentDate: ''
+                });
+                setApiError(null);
+              }}
+            >
+              {PAYMENT_METHOD_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </CFormSelect>
+          </CCol>
+          <CCol md={6}>
+            <label className="form-label">Total Amount</label>
+            <CFormInput
+              type="text"
+              value={formatCurrency(totalAmount)}
+              readOnly
+              disabled
+              style={{ backgroundColor: '#f8f9fa' }}
+            />
+          </CCol>
+        </CRow>
+
+        {/* Cash Payment Fields - Show only when payment mode is cash */}
+        {isCash && (
+          <CRow className="mb-3">
+            <CCol md={12}>
+              <label className="form-label">Cash Account <span className="required">*</span></label>
+              <CFormSelect
+                value={formData.cashAccountId}
+                onChange={(e) => {
+                  setFormData({ ...formData, cashAccountId: e.target.value });
+                  if (formErrors.cashAccountId) {
+                    setFormErrors({ ...formErrors, cashAccountId: '' });
+                  }
+                  setApiError(null);
+                }}
+                className={formErrors.cashAccountId ? 'is-invalid' : ''}
+                disabled={loadingAccounts}
+              >
+                <option value="">-- Select Cash Account --</option>
+                {loadingAccounts ? (
+                  <option value="">Loading cash accounts...</option>
+                ) : (
+                  cashLocations.map(location => (
+                    <option key={location._id} value={location._id}>
+                      {location.name} {location.branchDetails?.name ? `(${location.branchDetails.name})` : ''}
+                    </option>
+                  ))
+                )}
+              </CFormSelect>
+              {formErrors.cashAccountId && <small className="text-danger">{formErrors.cashAccountId}</small>}
+              {loadingAccounts && <small className="text-muted d-block mt-1">Loading cash accounts...</small>}
+            </CCol>
+          </CRow>
+        )}
+
+        {/* Bank Payment Fields - Show only when payment mode is bank */}
+        {isBank && (
+          <>
+            <CRow className="mb-3">
+              <CCol md={6}>
+                <label className="form-label">Bank <span className="required">*</span></label>
+                <CFormSelect
+                  value={formData.bankId}
+                  onChange={(e) => {
+                    setFormData({ ...formData, bankId: e.target.value });
+                    if (formErrors.bankId) {
+                      setFormErrors({ ...formErrors, bankId: '' });
+                    }
+                    setApiError(null);
+                  }}
+                  className={formErrors.bankId ? 'is-invalid' : ''}
+                  disabled={loadingAccounts}
+                >
+                  <option value="">-- Select Bank --</option>
+                  {loadingAccounts ? (
+                    <option value="">Loading banks...</option>
+                  ) : (
+                    banks.map(bank => (
+                      <option key={bank._id} value={bank._id}>
+                        {bank.name}
+                      </option>
+                    ))
+                  )}
+                </CFormSelect>
+                {formErrors.bankId && <small className="text-danger">{formErrors.bankId}</small>}
+              </CCol>
+              <CCol md={6}>
+                <label className="form-label">Transaction ID <span className="required">*</span></label>
+                <CInputGroup>
+                  <CInputGroupText><CIcon icon={cilQrCode} /></CInputGroupText>
+                  <CFormInput
+                    value={formData.bankTransactionId}
+                    onChange={(e) => {
+                      setFormData({ ...formData, bankTransactionId: e.target.value });
+                      if (formErrors.bankTransactionId) {
+                        setFormErrors({ ...formErrors, bankTransactionId: '' });
+                      }
+                      setApiError(null);
+                    }}
+                    placeholder="Enter bank transaction ID"
+                    className={formErrors.bankTransactionId ? 'is-invalid' : ''}
+                  />
+                </CInputGroup>
+                {formErrors.bankTransactionId && <small className="text-danger">{formErrors.bankTransactionId}</small>}
+              </CCol>
+            </CRow>
+            <CRow className="mb-3">
+              <CCol md={6}>
+                <label className="form-label">Payment Date <span className="required">*</span></label>
+                <CInputGroup>
+                  <CInputGroupText><CIcon icon={cilCalendar} /></CInputGroupText>
+                  <CFormInput
+                    type="date"
+                    value={formData.bankPaymentDate}
+                    onChange={(e) => {
+                      setFormData({ ...formData, bankPaymentDate: e.target.value });
+                      if (formErrors.bankPaymentDate) {
+                        setFormErrors({ ...formErrors, bankPaymentDate: '' });
+                      }
+                      setApiError(null);
+                    }}
+                    className={formErrors.bankPaymentDate ? 'is-invalid' : ''}
+                  />
+                </CInputGroup>
+                {formErrors.bankPaymentDate && <small className="text-danger">{formErrors.bankPaymentDate}</small>}
+              </CCol>
+            </CRow>
+          </>
+        )}
+
+        {/* Notes */}
+        <CRow className="mb-3">
+          <CCol md={12}>
+            <label className="form-label">Notes</label>
+            <CFormInput
+              value={formData.notes}
+              onChange={(e) => {
+                setFormData({ ...formData, notes: e.target.value });
+                setApiError(null);
+              }}
+              placeholder="Additional notes"
+            />
+          </CCol>
+        </CRow>
+      </>
+    );
+  };
 
   return (
     <div>
@@ -1028,9 +2265,12 @@ const generateInvoiceHTML = (invoice) => {
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
           <div>
-            <CButton size="sm" className="action-btn me-1" onClick={handleAddClick}>
-              <CIcon icon={cilPlus} className='icon' /> Create Invoice
-            </CButton>
+            {/* Only show Create Invoice button if user has CREATE permission */}
+            {canCreateInvoices && (
+              <CButton size="sm" className="action-btn me-1" onClick={handleAddClick}>
+                <CIcon icon={cilPlus} className='icon' /> Create Invoice
+              </CButton>
+            )}
           </div>
         </CCardHeader>
         <CCardBody>
@@ -1066,8 +2306,8 @@ const generateInvoiceHTML = (invoice) => {
             </div>
           )}
 
-          {/* Search Bar - Only show when branch is selected */}
-          {selectedBranchId && (
+          {/* Search Bar - Only show when branch is selected and user has VIEW permission */}
+          {selectedBranchId && canViewInvoices && (
             <div className="d-flex justify-content-between mb-3">
               <div></div>
               <div className='d-flex'>
@@ -1110,8 +2350,8 @@ const generateInvoiceHTML = (invoice) => {
             </div>
           )}
 
-          {/* Invoices Table */}
-          {selectedBranchId && (
+          {/* Invoices Table - Only show if user has VIEW permission */}
+          {selectedBranchId && canViewInvoices && (
             <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
               <CTable striped bordered hover className='responsive-table'>
                 <CTableHead>
@@ -1122,7 +2362,7 @@ const generateInvoiceHTML = (invoice) => {
                     <CTableHeaderCell>Vehicle No</CTableHeaderCell>
                     <CTableHeaderCell>Vehicle Model</CTableHeaderCell>
                     <CTableHeaderCell>Grand Total</CTableHeaderCell>
-                    <CTableHeaderCell>Payment Status</CTableHeaderCell>
+                    <CTableHeaderCell>Payment Mode</CTableHeaderCell>
                     <CTableHeaderCell>Invoice Status</CTableHeaderCell>
                     <CTableHeaderCell>Invoice Date</CTableHeaderCell>
                     <CTableHeaderCell>Action</CTableHeaderCell>
@@ -1146,33 +2386,51 @@ const generateInvoiceHTML = (invoice) => {
                           <CTableDataCell>{invoice.vehicleNo}</CTableDataCell>
                           <CTableDataCell>{invoice.vehicleModel}</CTableDataCell>
                           <CTableDataCell>{formatCurrency(invoice.netAmount || invoice.grandTotal)}</CTableDataCell>
-                          <CTableDataCell>{getPaymentStatusBadge(invoice.paymentStatus)}</CTableDataCell>
+                          <CTableDataCell>{getPaymentMethodBadge(invoice.paymentMode)}</CTableDataCell>
                           <CTableDataCell>{getStatusBadge(invoice.status)}</CTableDataCell>
                           <CTableDataCell>{formatDate(invoice.invoiceDate)}</CTableDataCell>
                           <CTableDataCell>
-                            <CButton
-                              size="sm"
-                              className="option-button btn-sm"
-                              onClick={(event) => handleClick(event, invoice._id)}
-                            >
-                              <CIcon icon={cilOptions} /> Options
-                            </CButton>
-                            <Menu 
-                              id={`action-menu-${invoice._id}`} 
-                              anchorEl={anchorEl} 
-                              open={menuId === invoice._id} 
-                              onClose={handleClose}
-                            >
-                              <MenuItem onClick={() => handleViewClick(invoice)}>
-                                <CIcon icon={cilInfo} className="me-2" /> View Details
-                              </MenuItem>
-                              <MenuItem onClick={() => handlePrintInvoice(invoice)}>
-                                <CIcon icon={cilPrint} className="me-2" /> Print Invoice
-                              </MenuItem>
-                              <MenuItem onClick={() => handleDeleteClick(invoice)}>
-                                <CIcon icon={cilTrash} className="me-2" /> Delete
-                              </MenuItem>
-                            </Menu>
+                            {/* Show action buttons based on permissions */}
+                            {(canUpdateInvoices || canDeleteInvoices || canViewInvoices) ? (
+                              <>
+                                <CButton
+                                  size="sm"
+                                  className="option-button btn-sm"
+                                  onClick={(event) => handleClick(event, invoice._id)}
+                                >
+                                  <CIcon icon={cilOptions} /> Options
+                                </CButton>
+                                <Menu 
+                                  id={`action-menu-${invoice._id}`} 
+                                  anchorEl={anchorEl} 
+                                  open={menuId === invoice._id} 
+                                  onClose={handleClose}
+                                >
+                                  {canViewInvoices && (
+                                    <MenuItem onClick={() => handleViewClick(invoice)}>
+                                      <CIcon icon={cilInfo} className="me-2" /> View Details
+                                    </MenuItem>
+                                  )}
+                                  {canViewInvoices && (
+                                    <MenuItem onClick={() => handlePrintInvoice(invoice)}>
+                                      <CIcon icon={cilPrint} className="me-2" /> Print Invoice
+                                    </MenuItem>
+                                  )}
+                                  {/* {canUpdateInvoices && (
+                                    <MenuItem onClick={() => handleEditClick(invoice)}>
+                                      <CIcon icon={cilPencil} className="me-2" /> Edit
+                                    </MenuItem>
+                                  )} */}
+                                  {canDeleteInvoices && (
+                                    <MenuItem onClick={() => handleDeleteClick(invoice)}>
+                                      <CIcon icon={cilTrash} className="me-2" /> Delete
+                                    </MenuItem>
+                                  )}
+                                </Menu>
+                              </>
+                            ) : (
+                              <span className="text-muted">No actions</span>
+                            )}
                           </CTableDataCell>
                         </CTableRow>
                       );
@@ -1184,583 +2442,297 @@ const generateInvoiceHTML = (invoice) => {
           )}
 
           {/* Pagination */}
-          {selectedBranchId && renderPagination()}
+          {selectedBranchId && canViewInvoices && renderPagination()}
         </CCardBody>
       </CCard>
 
-      {/* Create Invoice Modal */}
-      <CModal size="xl" visible={addModalVisible} onClose={() => setAddModalVisible(false)} alignment="center" scrollable>
-        <CModalHeader>
-          <CModalTitle>
-            <CIcon icon={cilPlus} className="me-2" />
-            Create New Invoice
-          </CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {formErrors.general && <CAlert color="danger">{formErrors.general}</CAlert>}
-          
-          {/* Branch Selection in Add Form - Only show for Super Admin */}
-          {isSuperAdmin && (
-            <div className="mb-3">
-              <label className="form-label">Branch <span className="required">*</span></label>
-              <CFormSelect
-                value={formData.branchId}
-                onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-              >
-                <option value="">-- Select Branch --</option>
-                {branches.map(branch => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.name} - {branch.city}
-                  </option>
-                ))}
-              </CFormSelect>
-              {formErrors.branchId && <small className="text-danger">{formErrors.branchId}</small>}
-            </div>
-          )}
-          
-          {/* Customer Details */}
-          <h6 className="mb-3">Customer Details</h6>
-          <CRow className="mb-3">
-            <CCol md={6}>
-              <label className="form-label">Customer Name <span className="required">*</span></label>
-              <CInputGroup>
-                <CInputGroupText><CIcon icon={cilUser} /></CInputGroupText>
-                <CFormInput
-                  value={formData.customerName}
-                  onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                  placeholder="Enter customer name"
-                />
-              </CInputGroup>
-              {formErrors.customerName && <small className="text-danger">{formErrors.customerName}</small>}
-            </CCol>
-            <CCol md={6}>
-              <label className="form-label">Customer Mobile <span className="required">*</span></label>
-              <CInputGroup>
-                <CInputGroupText><CIcon icon={cilPhone} /></CInputGroupText>
-                <CFormInput
-                  value={formData.customerMobile}
-                  onChange={(e) => setFormData({ ...formData, customerMobile: e.target.value })}
-                  placeholder="Enter mobile number"
-                />
-              </CInputGroup>
-              {formErrors.customerMobile && <small className="text-danger">{formErrors.customerMobile}</small>}
-            </CCol>
-          </CRow>
+      {/* Create/Edit Invoice Modal - Only show if user has CREATE or UPDATE permission */}
+      {(canCreateInvoices || canUpdateInvoices) && (
+        <CModal 
+          size="xl" 
+          visible={addModalVisible || editModalVisible} 
+          onClose={() => {
+            setAddModalVisible(false);
+            setEditModalVisible(false);
+            setApiError(null);
+            setFormErrors({});
+            setCustomerSearchTerm('');
+            setCustomers([]);
+            setShowCustomerDropdown(false);
+          }} 
+          alignment="center" 
+          scrollable
+        >
+          <CModalHeader>
+            <CModalTitle>
+              <CIcon icon={isEditMode ? cilPencil : cilPlus} className="me-2" />
+              {isEditMode ? 'Edit Invoice' : 'Create New Invoice'}
+            </CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            {renderInvoiceForm()}
+          </CModalBody>
+          <CModalFooter>
+            <CButton 
+              color="secondary" 
+              onClick={() => {
+                setAddModalVisible(false);
+                setEditModalVisible(false);
+                setApiError(null);
+                setFormErrors({});
+                setCustomerSearchTerm('');
+                setCustomers([]);
+                setShowCustomerDropdown(false);
+              }}
+            >
+              Cancel
+            </CButton>
+            <CButton color="primary" onClick={handleAddSubmit} disabled={formLoading}>
+              {formLoading ? (
+                <><CSpinner size="sm" className="me-2" />{isEditMode ? 'Updating...' : 'Creating...'}</>
+              ) : (
+                isEditMode ? 'Update Invoice' : 'Create Invoice'
+              )}
+            </CButton>
+          </CModalFooter>
+        </CModal>
+      )}
 
-          <CRow className="mb-3">
-            <CCol md={12}>
-              <label className="form-label">Customer Email</label>
-              <CInputGroup>
-                <CInputGroupText><CIcon icon={cilEnvelopeClosed} /></CInputGroupText>
-                <CFormInput
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                  placeholder="Enter email address"
-                />
-              </CInputGroup>
-            </CCol>
-          </CRow>
-
-          {/* Vehicle Details with Searchable Dropdown */}
-          <h6 className="mb-3 mt-3">Vehicle Details</h6>
-          <CRow className="mb-3">
-            <CCol md={6}>
-              <label className="form-label">Vehicle Number <span className="required">*</span></label>
-              <CInputGroup>
-                <CInputGroupText><CIcon icon={cilCarAlt} /></CInputGroupText>
-                <CFormInput
-                  value={formData.vehicleNo}
-                  onChange={(e) => setFormData({ ...formData, vehicleNo: e.target.value.toUpperCase() })}
-                  placeholder="Enter vehicle number"
-                />
-              </CInputGroup>
-              {formErrors.vehicleNo && <small className="text-danger">{formErrors.vehicleNo}</small>}
-            </CCol>
-            <CCol md={6}>
-              <label className="form-label">Vehicle Model <span className="required">*</span></label>
-              <div ref={modelDropdownRef} style={{ position: 'relative' }}>
-                <CInputGroup>
-                  <CInputGroupText><CIcon icon={cilCarAlt} /></CInputGroupText>
-                  <CFormInput
-                    value={formData.vehicleModel}
-                    onFocus={() => setShowModelDropdown(true)}
-                    onChange={(e) => {
-                      setFormData({ ...formData, vehicleModel: e.target.value });
-                      setModelSearchTerm(e.target.value);
-                      setShowModelDropdown(true);
-                    }}
-                    placeholder="Search or select vehicle model"
-                    autoComplete="off"
-                  />
-                </CInputGroup>
-                {showModelDropdown && (filteredModels.length > 0 || loadingModels) && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    maxHeight: '250px',
-                    overflowY: 'auto',
-                    backgroundColor: 'white',
-                    border: '1px solid #ced4da',
-                    borderRadius: '4px',
-                    zIndex: 1000,
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}>
-                    {loadingModels ? (
-                      <div className="p-2 text-center">
-                        <CSpinner size="sm" /> Loading models...
-                      </div>
-                    ) : (
-                      filteredModels.map(model => (
-                        <div
-                          key={model._id}
-                          style={{
-                            padding: '8px 12px',
-                            cursor: 'pointer',
-                            borderBottom: '1px solid #eee'
-                          }}
-                          onClick={() => {
-                            setFormData({ ...formData, vehicleModel: model.model_name });
-                            setModelSearchTerm(model.model_name);
-                            setShowModelDropdown(false);
-                          }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
-                        >
-                          <div><strong>{model.model_name}</strong></div>
-                          {model.type && <small className="text-muted">Type: {model.type}</small>}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
-              {formErrors.vehicleModel && <small className="text-danger">{formErrors.vehicleModel}</small>}
-            </CCol>
-          </CRow>
-
-          <CRow className="mb-3">
-            <CCol md={6}>
-              <label className="form-label">Odometer Reading (km)</label>
-              <CInputGroup>
-                <CInputGroupText><CIcon icon={cilSpeedometer} /></CInputGroupText>
-                <CFormInput
-                  type="number"
-                  value={formData.odoMeter}
-                  onChange={(e) => setFormData({ ...formData, odoMeter: e.target.value })}
-                  placeholder="Enter odometer reading"
-                />
-              </CInputGroup>
-            </CCol>
-            <CCol md={6}>
-              <label className="form-label">Service Advisor</label>
-              <CInputGroup>
-                <CInputGroupText><CIcon icon={cilUser} /></CInputGroupText>
-                <CFormInput
-                  value={formData.serviceAdvisor}
-                  onChange={(e) => setFormData({ ...formData, serviceAdvisor: e.target.value })}
-                  placeholder="Enter service advisor name"
-                />
-              </CInputGroup>
-            </CCol>
-          </CRow>
-
-          {/* Items Section */}
-          <h6 className="mb-3 mt-3">Invoice Items</h6>
-          {formErrors.items && <small className="text-danger d-block mb-2">{formErrors.items}</small>}
-          
-          {formData.items.map((item, index) => {
-            const itemDetails = getItemDetails(item.itemType, item.itemId);
-            return (
-              <div key={index} className="border rounded p-3 mb-3">
-                <CRow className="align-items-end">
-                  <CCol md={3}>
-                    <label className="form-label">Item Type</label>
-                    <CFormSelect
-                      value={item.itemType}
-                      onChange={(e) => updateItem(index, 'itemType', e.target.value)}
-                    >
-                      <option value="part">Part</option>
-                      <option value="labour">Labour</option>
-                    </CFormSelect>
-                  </CCol>
-                  <CCol md={4}>
-                    <label className="form-label">Select Item</label>
-                    <CFormSelect
-                      value={item.itemId}
-                      onChange={(e) => updateItem(index, 'itemId', e.target.value)}
-                    >
-                      <option value="">-- Select --</option>
-                      {item.itemType === 'part' && parts.map(part => (
-                        <option key={part._id} value={part._id}>
-                          {part.partNo} - {part.partName} (₹{part.mrp})
-                        </option>
-                      ))}
-                      {item.itemType === 'labour' && labourItems.map(labour => (
-                        <option key={labour._id} value={labour._id}>
-                          {labour.labourCode} - {labour.description} (₹{labour.charges})
-                        </option>
-                      ))}
-                    </CFormSelect>
-                    {formErrors[`item_${index}`] && <small className="text-danger">{formErrors[`item_${index}`]}</small>}
-                  </CCol>
-                  <CCol md={2}>
-                    <label className="form-label">Quantity</label>
-                    <CFormInput
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value))}
-                    />
-                  </CCol>
-                  <CCol md={2}>
-                    <label className="form-label">Unit Price</label>
-                    <CFormInput
-                      type="text"
-                      value={itemDetails ? formatCurrency(itemDetails.unitPrice) : '-'}
-                      readOnly
-                      disabled
-                    />
-                  </CCol>
-                  <CCol md={1} className="text-end">
-                    <CButton color="danger" size="sm" onClick={() => removeItem(index)}>
-                      <CIcon icon={cilTrash} />
-                    </CButton>
-                  </CCol>
-                </CRow>
-                {itemDetails && (
-                  <CRow className="mt-2">
-                    <CCol md={12}>
-                      <small className="text-muted">Description: {itemDetails.description}</small>
+      {/* View Invoice Modal - Only show if user has VIEW permission */}
+      {canViewInvoices && (
+        <CModal size="lg" visible={viewModalVisible} onClose={() => setViewModalVisible(false)} alignment="center" scrollable>
+          <CModalHeader>
+            <CModalTitle>
+              <CIcon icon={cilFile} className="me-2" />
+              Invoice Details - {selectedInvoice?.invoiceNo}
+            </CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            {selectedInvoice && (
+              <div>
+                {/* Invoice Header */}
+                <div className="border-bottom pb-3 mb-3">
+                  <CRow>
+                    <CCol md={6}>
+                      <h5>{selectedInvoice.branchId?.name || 'GANDHI MOTORS PVT LTD'}</h5>
+                      <p className="text-muted small mb-0">{selectedInvoice.branchId?.address || 'Authorized Main Dealer: TVS Motor Company Ltd.'}</p>
+                      <p className="text-muted small">
+                        {selectedInvoice.branchId?.city ? `${selectedInvoice.branchId.city}, ${selectedInvoice.branchId.state} - ${selectedInvoice.branchId.pincode}` : 'Nashik Road, Nashik - 422101'}
+                      </p>
+                      <p className="text-muted small">GSTIN: {selectedInvoice.branchId?.gst_number || '27AAACG1234A1Z'}</p>
+                    </CCol>
+                    <CCol md={6} className="text-end">
+                      <h6>Invoice No: {selectedInvoice.invoiceNo}</h6>
+                      <p className="mb-0">Date: {formatDate(selectedInvoice.invoiceDate)}</p>
                     </CCol>
                   </CRow>
-                )}
-              </div>
-            );
-          })}
-          
-          <CButton color="info" size="sm" onClick={addItem} className="mb-3">
-            <CIcon icon={cilPlus} className="me-1" /> Add Item
-          </CButton>
+                </div>
 
-          {/* Discount and Payment Details */}
-          <h6 className="mb-3 mt-3">Discount & Payment</h6>
-          <CRow className="mb-3">
-            <CCol md={4}>
-              <label className="form-label">Discount Type</label>
-              <CFormSelect
-                value={formData.discountType}
-                onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
-              >
-                {DISCOUNT_TYPE_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </CFormSelect>
-            </CCol>
-            <CCol md={4}>
-              <label className="form-label">
-                {formData.discountType === 'percentage' ? 'Discount (%)' : 'Discount (₹)'}
-              </label>
-              <CFormInput
-                type="number"
-                step="0.01"
-                value={formData.discount}
-                onChange={(e) => setFormData({ ...formData, discount: e.target.value})}
-                placeholder={formData.discountType === 'percentage' ? 'Enter discount percentage' : 'Enter discount amount'}
-              />
-            </CCol>
-          </CRow>
-
-          <CRow className="mb-3">
-            <CCol md={4}>
-              <label className="form-label">Payment Method</label>
-              <CFormSelect
-                value={formData.paymentMethod}
-                onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-              >
-                {PAYMENT_METHOD_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </CFormSelect>
-            </CCol>
-            <CCol md={4}>
-              <label className="form-label">Payment Status</label>
-              <CFormSelect
-                value={formData.paymentStatus}
-                onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
-              >
-                {PAYMENT_STATUS_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </CFormSelect>
-            </CCol>
-            <CCol md={4}>
-              <label className="form-label">Amount Paid (₹)</label>
-              <CFormInput
-                type="number"
-                step="1"
-                value={formData.amountPaid}
-                onChange={(e) => setFormData({ ...formData, amountPaid: e.target.value })}
-                placeholder="Enter amount paid"
-              />
-            </CCol>
-          </CRow>
-
-          <CRow className="mb-3">
-            <CCol md={12}>
-              <label className="form-label">Notes</label>
-              <CFormInput
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Additional notes"
-              />
-            </CCol>
-          </CRow>
-
-          {/* Totals Summary */}
-          {formData.items.length > 0 && (
-            <div className="border-top pt-3 mt-3">
-              <CRow>
-                <CCol md={{ span: 6, offset: 6 }}>
-                  <table className="table table-sm table-borderless">
-                    <tbody>
-                      <tr>
-                        <td className="text-end"><strong>Subtotal:</strong></td>
-                        <td className="text-end">{formatCurrency(totals.subtotal)}</td>
-                      </tr>
-                      {totals.discountAmount > 0 && (
-                        <tr>
-                          <td className="text-end"><strong>Discount:</strong></td>
-                          <td className="text-end text-danger">-{formatCurrency(totals.discountAmount)}</td>
-                        </tr>
-                      )}
-                      <tr className="border-top">
-                        <td className="text-end"><strong>Grand Total:</strong></td>
-                        <td className="text-end"><strong>{formatCurrency(totals.grandTotal)}</strong></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </CCol>
-              </CRow>
-            </div>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setAddModalVisible(false)}>Cancel</CButton>
-          <CButton color="primary" onClick={handleAddSubmit} disabled={formLoading}>
-            {formLoading ? <><CSpinner size="sm" className="me-2" />Creating...</> : 'Create Invoice'}
-          </CButton>
-        </CModalFooter>
-      </CModal>
-
-      {/* View Invoice Modal */}
-      <CModal size="lg" visible={viewModalVisible} onClose={() => setViewModalVisible(false)} alignment="center" scrollable>
-        <CModalHeader>
-          <CModalTitle>
-            <CIcon icon={cilFile} className="me-2" />
-            Invoice Details - {selectedInvoice?.invoiceNo}
-          </CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          {selectedInvoice && (
-            <div>
-              {/* Invoice Header */}
-              <div className="border-bottom pb-3 mb-3">
-                <CRow>
+                {/* Customer Details */}
+                <h6 className="mb-2">Customer Details</h6>
+                <CRow className="mb-3">
                   <CCol md={6}>
-                    <h5>{selectedInvoice.branchId?.name || 'GANDHI MOTORS PVT LTD'}</h5>
-                    <p className="text-muted small mb-0">{selectedInvoice.branchId?.address || 'Authorized Main Dealer: TVS Motor Company Ltd.'}</p>
-                    <p className="text-muted small">
-                      {selectedInvoice.branchId?.city ? `${selectedInvoice.branchId.city}, ${selectedInvoice.branchId.state} - ${selectedInvoice.branchId.pincode}` : 'Nashik Road, Nashik - 422101'}
-                    </p>
-                    <p className="text-muted small">GSTIN: {selectedInvoice.branchId?.gst_number || '27AAACG1234A1Z'}</p>
+                    <small className="text-muted">Name:</small>
+                    <div><strong>{selectedInvoice.customerName}</strong></div>
                   </CCol>
-                  <CCol md={6} className="text-end">
-                    <h6>Invoice No: {selectedInvoice.invoiceNo}</h6>
-                    <p className="mb-0">Date: {formatDate(selectedInvoice.invoiceDate)}</p>
+                  <CCol md={6}>
+                    <small className="text-muted">Mobile:</small>
+                    <div><strong>{selectedInvoice.customerMobile}</strong></div>
                   </CCol>
+                  {selectedInvoice.customerEmail && (
+                    <CCol md={6} className="mt-2">
+                      <small className="text-muted">Email:</small>
+                      <div><strong>{selectedInvoice.customerEmail}</strong></div>
+                    </CCol>
+                  )}
+                  {selectedInvoice.customerAddress && (
+                    <CCol md={6} className="mt-2">
+                      <small className="text-muted">Address:</small>
+                      <div><strong>{selectedInvoice.customerAddress}</strong></div>
+                    </CCol>
+                  )}
                 </CRow>
-              </div>
 
-              {/* Customer Details */}
-              <h6 className="mb-2">Customer Details</h6>
-              <CRow className="mb-3">
-                <CCol md={6}>
-                  <small className="text-muted">Name:</small>
-                  <div><strong>{selectedInvoice.customerName}</strong></div>
-                </CCol>
-                <CCol md={6}>
-                  <small className="text-muted">Mobile:</small>
-                  <div><strong>{selectedInvoice.customerMobile}</strong></div>
-                </CCol>
-                {selectedInvoice.customerEmail && (
-                  <CCol md={12} className="mt-2">
-                    <small className="text-muted">Email:</small>
-                    <div><strong>{selectedInvoice.customerEmail}</strong></div>
+                {/* Vehicle Details */}
+                <h6 className="mb-2">Vehicle Details</h6>
+                <CRow className="mb-3">
+                  <CCol md={6}>
+                    <small className="text-muted">Vehicle No:</small>
+                    <div><strong>{selectedInvoice.vehicleNo}</strong></div>
                   </CCol>
-                )}
-              </CRow>
+                  <CCol md={6}>
+                    <small className="text-muted">Vehicle Model:</small>
+                    <div><strong>{selectedInvoice.vehicleModel}</strong></div>
+                  </CCol>
+                  {selectedInvoice.vehicleMake && (
+                    <CCol md={6} className="mt-2">
+                      <small className="text-muted">Vehicle Make:</small>
+                      <div><strong>{selectedInvoice.vehicleMake}</strong></div>
+                    </CCol>
+                  )}
+                  {selectedInvoice.odoMeter && (
+                    <CCol md={6} className="mt-2">
+                      <small className="text-muted">Odometer:</small>
+                      <div><strong>{selectedInvoice.odoMeter} km</strong></div>
+                    </CCol>
+                  )}
+                  {selectedInvoice.jobType && (
+                    <CCol md={6} className="mt-2">
+                      <small className="text-muted">Job Type:</small>
+                      <div><strong>{getJobTypeLabel(selectedInvoice.jobType)}</strong></div>
+                    </CCol>
+                  )}
+                  {selectedInvoice.nextDueDate && (
+                    <CCol md={6} className="mt-2">
+                      <small className="text-muted">Next Due Date:</small>
+                      <div><strong>{formatDate(selectedInvoice.nextDueDate)}</strong></div>
+                    </CCol>
+                  )}
+                </CRow>
 
-              {/* Vehicle Details */}
-              <h6 className="mb-2">Vehicle Details</h6>
-              <CRow className="mb-3">
-                <CCol md={6}>
-                  <small className="text-muted">Vehicle No:</small>
-                  <div><strong>{selectedInvoice.vehicleNo}</strong></div>
-                </CCol>
-                <CCol md={6}>
-                  <small className="text-muted">Vehicle Model:</small>
-                  <div><strong>{selectedInvoice.vehicleModel}</strong></div>
-                </CCol>
-                {selectedInvoice.odoMeter && (
-                  <CCol md={6} className="mt-2">
-                    <small className="text-muted">Odometer:</small>
-                    <div><strong>{selectedInvoice.odoMeter} km</strong></div>
-                  </CCol>
-                )}
-                {selectedInvoice.serviceAdvisor && (
-                  <CCol md={6} className="mt-2">
-                    <small className="text-muted">Service Advisor:</small>
-                    <div><strong>{selectedInvoice.serviceAdvisor}</strong></div>
-                  </CCol>
-                )}
-              </CRow>
+                <CRow className="mb-3">
+                  {selectedInvoice.serviceAdvisor && (
+                    <CCol md={6}>
+                      <small className="text-muted">Service Advisor:</small>
+                      <div><strong>{selectedInvoice.serviceAdvisor}</strong></div>
+                    </CCol>
+                  )}
+                  {selectedInvoice.mechanic && (
+                    <CCol md={6}>
+                      <small className="text-muted">Mechanic:</small>
+                      <div><strong>{selectedInvoice.mechanic}</strong></div>
+                    </CCol>
+                  )}
+                </CRow>
 
-              {/* Items Table */}
-              <h6 className="mb-2">Items</h6>
-              <CTable striped bordered size="sm">
-                <CTableHead>
-                  <CTableRow>
-                    <CTableHeaderCell>#</CTableHeaderCell>
-                    <CTableHeaderCell>Description</CTableHeaderCell>
-                    <CTableHeaderCell>Qty</CTableHeaderCell>
-                    <CTableHeaderCell>Unit Price</CTableHeaderCell>
-                    <CTableHeaderCell>Amount</CTableHeaderCell>
-                  </CTableRow>
-                </CTableHead>
-                <CTableBody>
-                  {selectedInvoice.items.map((item, idx) => (
-                    <CTableRow key={idx}>
-                      <CTableDataCell>{idx + 1}</CTableDataCell>
-                      <CTableDataCell>{item.description}</CTableDataCell>
-                      <CTableDataCell>{item.quantity}</CTableDataCell>
-                      <CTableDataCell>{formatCurrency(item.unitPrice)}</CTableDataCell>
-                      <CTableDataCell>{formatCurrency(item.totalAmount)}</CTableDataCell>
+                {/* Items Table */}
+                <h6 className="mb-2">Items</h6>
+                <CTable striped bordered size="sm">
+                  <CTableHead>
+                    <CTableRow>
+                      <CTableHeaderCell>#</CTableHeaderCell>
+                      <CTableHeaderCell>Description</CTableHeaderCell>
+                      <CTableHeaderCell>Qty</CTableHeaderCell>
+                      <CTableHeaderCell>Unit Price</CTableHeaderCell>
+                      <CTableHeaderCell>Basic Amount</CTableHeaderCell>
+                      <CTableHeaderCell>CGST</CTableHeaderCell>
+                      <CTableHeaderCell>SGST</CTableHeaderCell>
+                      <CTableHeaderCell>Total Amount</CTableHeaderCell>
                     </CTableRow>
-                  ))}
-                </CTableBody>
-              </CTable>
+                  </CTableHead>
+                  <CTableBody>
+                    {selectedInvoice.items.map((item, idx) => (
+                      <CTableRow key={idx}>
+                        <CTableDataCell>{idx + 1}</CTableDataCell>
+                        <CTableDataCell>{item.description}</CTableDataCell>
+                        <CTableDataCell>{item.quantity}</CTableDataCell>
+                        <CTableDataCell>{formatCurrency(item.unitPrice)}</CTableDataCell>
+                        <CTableDataCell>{formatCurrency(item.basicAmount || item.unitPrice * item.quantity)}</CTableDataCell>
+                        <CTableDataCell>{item.cgst ? formatCurrency(item.cgst) : '-'}</CTableDataCell>
+                        <CTableDataCell>{item.sgst ? formatCurrency(item.sgst) : '-'}</CTableDataCell>
+                        <CTableDataCell><strong>{formatCurrency(item.totalAmount || item.unitPrice * item.quantity)}</strong></CTableDataCell>
+                      </CTableRow>
+                    ))}
+                  </CTableBody>
+                </CTable>
 
-              {/* Totals */}
-              <div className="border-top pt-3 mt-3">
-                <CRow>
-                  <CCol md={{ span: 6, offset: 6 }}>
-                    <table className="table table-sm table-borderless">
-                      <tbody>
-                        <tr>
-                          <td className="text-end"><strong>Subtotal:</strong></td>
-                          <td className="text-end">{formatCurrency(selectedInvoice.subtotal)}</td>
-                        </tr>
-                        {selectedInvoice.discount > 0 && (
+                {/* Totals */}
+                <div className="border-top pt-3 mt-3">
+                  <CRow>
+                    <CCol md={{ span: 6, offset: 6 }}>
+                      <table className="table table-sm table-borderless">
+                        <tbody>
                           <tr>
-                            <td className="text-end"><strong>Discount:</strong></td>
-                            <td className="text-end text-danger">-{formatCurrency(selectedInvoice.discountAmount || selectedInvoice.discount)}</td>
+                            <td className="text-end"><strong>Subtotal:</strong></td>
+                            <td className="text-end">{formatCurrency(selectedInvoice.subtotal || 0)}</td>
                           </tr>
-                        )}
-                        {selectedInvoice.totalCgst > 0 && (
-                          <>
+                          {selectedInvoice.totalCgst > 0 && (
                             <tr>
                               <td className="text-end"><strong>CGST:</strong></td>
                               <td className="text-end">{formatCurrency(selectedInvoice.totalCgst)}</td>
                             </tr>
+                          )}
+                          {selectedInvoice.totalSgst > 0 && (
                             <tr>
                               <td className="text-end"><strong>SGST:</strong></td>
                               <td className="text-end">{formatCurrency(selectedInvoice.totalSgst)}</td>
                             </tr>
-                          </>
-                        )}
-                        {selectedInvoice.totalIgst > 0 && (
-                          <tr>
-                            <td className="text-end"><strong>IGST:</strong></td>
-                            <td className="text-end">{formatCurrency(selectedInvoice.totalIgst)}</td>
+                          )}
+                          {selectedInvoice.discount && selectedInvoice.discount > 0 && (
+                            <tr>
+                              <td className="text-end"><strong>Discount:</strong></td>
+                              <td className="text-end">- {formatCurrency(selectedInvoice.discount)}</td>
+                            </tr>
+                          )}
+                          <tr className="border-top">
+                            <td className="text-end"><strong>Grand Total:</strong></td>
+                            <td className="text-end"><strong>{formatCurrency(selectedInvoice.netAmount || selectedInvoice.grandTotal)}</strong></td>
                           </tr>
-                        )}
-                        <tr className="border-top">
-                          <td className="text-end"><strong>Grand Total:</strong></td>
-                          <td className="text-end"><strong>{formatCurrency(selectedInvoice.netAmount || selectedInvoice.grandTotal)}</strong></td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </CCol>
-                </CRow>
-              </div>
+                        </tbody>
+                      </table>
+                    </CCol>
+                  </CRow>
+                </div>
 
-              {/* Payment Details */}
-              <div className="border-top pt-3 mt-3">
-                <CRow>
-                  <CCol md={6}>
-                    <small className="text-muted">Payment Method:</small>
-                    <div>{getPaymentMethodBadge(selectedInvoice.paymentMethod)}</div>
-                  </CCol>
-                  <CCol md={6}>
-                    <small className="text-muted">Payment Status:</small>
-                    <div>{getPaymentStatusBadge(selectedInvoice.paymentStatus)}</div>
-                  </CCol>
-                  {selectedInvoice.amountPaid > 0 && (
-                    <CCol md={6} className="mt-2">
-                      <small className="text-muted">Amount Paid:</small>
-                      <div><strong>{formatCurrency(selectedInvoice.amountPaid)}</strong></div>
+                {/* Payment Details */}
+                <div className="border-top pt-3 mt-3">
+                  <CRow>
+                    <CCol md={6}>
+                      <small className="text-muted">Payment Mode:</small>
+                      <div>{getPaymentMethodBadge(selectedInvoice.paymentMode)}</div>
                     </CCol>
-                  )}
-                  {selectedInvoice.amountDue > 0 && (
-                    <CCol md={6} className="mt-2">
-                      <small className="text-muted">Amount Due:</small>
-                      <div><strong>{formatCurrency(selectedInvoice.amountDue)}</strong></div>
-                    </CCol>
-                  )}
-                  <CCol md={12} className="mt-2">
-                    <small className="text-muted">Invoice Status:</small>
-                    <div>{getStatusBadge(selectedInvoice.status)}</div>
-                  </CCol>
-                  {selectedInvoice.notes && (
-                    <CCol md={12} className="mt-2">
-                      <small className="text-muted">Notes:</small>
-                      <div><strong>{selectedInvoice.notes}</strong></div>
-                    </CCol>
-                  )}
-                </CRow>
+                    {selectedInvoice.paymentMode === 'bank' && selectedInvoice.bankTransactionId && (
+                      <CCol md={6} className="mt-2">
+                        <small className="text-muted">Transaction ID:</small>
+                        <div><strong>{selectedInvoice.bankTransactionId}</strong></div>
+                      </CCol>
+                    )}
+                    {selectedInvoice.paymentMode === 'bank' && selectedInvoice.bankPaymentDate && (
+                      <CCol md={6} className="mt-2">
+                        <small className="text-muted">Payment Date:</small>
+                        <div><strong>{formatDate(selectedInvoice.bankPaymentDate)}</strong></div>
+                      </CCol>
+                    )}
+                    {selectedInvoice.notes && (
+                      <CCol md={12} className="mt-2">
+                        <small className="text-muted">Notes:</small>
+                        <div><strong>{selectedInvoice.notes}</strong></div>
+                      </CCol>
+                    )}
+                  </CRow>
+                </div>
               </div>
-            </div>
-          )}
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setViewModalVisible(false)}>Close</CButton>
-          <CButton color="primary" onClick={() => selectedInvoice && handlePrintInvoice(selectedInvoice)}>
-            <CIcon icon={cilPrint} className="me-1" /> Print
-          </CButton>
-        </CModalFooter>
-      </CModal>
+            )}
+          </CModalBody>
+          <CModalFooter>
+            <CButton color="secondary" onClick={() => setViewModalVisible(false)}>Close</CButton>
+            <CButton color="primary" onClick={() => selectedInvoice && handlePrintInvoice(selectedInvoice)}>
+              <CIcon icon={cilPrint} className="me-1" /> Print
+            </CButton>
+          </CModalFooter>
+        </CModal>
+      )}
 
-      {/* Delete Confirmation Modal */}
-      <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center">
-        <CModalHeader>
-          <CModalTitle>Confirm Delete</CModalTitle>
-        </CModalHeader>
-        <CModalBody>
-          <p>Are you sure you want to delete this invoice?</p>
-          <p><strong>Invoice No:</strong> {invoiceToDelete?.invoiceNo}</p>
-          <p><strong>Customer:</strong> {invoiceToDelete?.customerName}</p>
-          <p className="text-muted small">This action cannot be undone.</p>
-        </CModalBody>
-        <CModalFooter>
-          <CButton color="secondary" onClick={() => setDeleteModalVisible(false)}>Cancel</CButton>
-          <CButton color="danger" onClick={handleDeleteConfirm}>
-            <CIcon icon={cilTrash} className="me-1" /> Delete
-          </CButton>
-        </CModalFooter>
-      </CModal>
+      {/* Delete Confirmation Modal - Only show if user has DELETE permission */}
+      {canDeleteInvoices && (
+        <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center">
+          <CModalHeader>
+            <CModalTitle>Confirm Delete</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <p>Are you sure you want to delete this invoice?</p>
+            <p><strong>Invoice No:</strong> {invoiceToDelete?.invoiceNo}</p>
+            <p><strong>Customer:</strong> {invoiceToDelete?.customerName}</p>
+            <p className="text-muted small">This action cannot be undone.</p>
+          </CModalBody>
+          <CModalFooter>
+            <CButton color="secondary" onClick={() => setDeleteModalVisible(false)}>Cancel</CButton>
+            <CButton color="danger" onClick={handleDeleteConfirm}>
+              <CIcon icon={cilTrash} className="me-1" /> Delete
+            </CButton>
+          </CModalFooter>
+        </CModal>
+      )}
     </div>
   );
 };

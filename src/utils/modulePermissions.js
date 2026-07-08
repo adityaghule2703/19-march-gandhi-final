@@ -6225,7 +6225,8 @@ export const TABS = {
   INSURANCE_DETAILS: {
     PENDING_INSURANCE: 'PENDING INSURANCE',
     COMPLETE_INSURANCE: 'COMPLETE INSURANCE',
-    UPDATE_LATER: 'UPDATE LATER'
+    UPDATE_LATER: 'UPDATE LATER',
+    INSURANCE_RENEWAL: 'INSURANCE RENEWAL'
   },
   
   // Application tabs
@@ -7545,7 +7546,7 @@ export default {
   SafeTabAccessGuard,
   SafePagePermissionGuard,
   SafeRoutePermissionGuard,
-  useSafePagePermissions,
+  useSafePagePermissions, 
   withSafeTabPermission,
   withSafeTabAccess,
   withSafePagePermission,

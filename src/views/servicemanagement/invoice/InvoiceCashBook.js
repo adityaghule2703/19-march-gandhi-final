@@ -1,0 +1,357 @@
+import React, { useState, useEffect } from 'react';
+import '../../../css/form.css';
+import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CButton } from '@coreui/react';
+import tvsLogo from '../../../assets/images/logo.png';
+import tvssangamner from '../../../assets/images/tvssangamner.png';
+import CIcon from '@coreui/icons-react';
+import { cilLocationPin, cilSearch } from '@coreui/icons';
+import { showFormSubmitError, showFormSubmitToast } from '../../../utils/sweetAlerts';
+import axiosInstance from '../../../axiosInstance';
+import { useAuth } from '../../../context/AuthContext';
+import { canViewPage, MODULES, PAGES } from '../../../utils/modulePermissions';
+
+const InvoiceCashBook = () => {
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const hasBranch = !!storedUser.branch?._id;
+  const [formData, setFormData] = useState({
+    branchId: hasBranch ? storedUser.branch?._id : '',
+    date: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [branches, setBranches] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { permissions } = useAuth();
+  
+  // Page-level permission check for Cash Book page under Fund Management module
+  const canViewCashBook = canViewPage(permissions, MODULES.FUND_MANAGEMENT, PAGES.FUND_MANAGEMENT.CASH_BOOK);
+
+  useEffect(() => {
+    if (!canViewCashBook) {
+      showFormSubmitError('You do not have permission to view Cash Book');
+      return;
+    }
+    
+    const fetchBranches = async () => {
+      try {
+        const response = await axiosInstance.get('/branches');
+        setBranches(response.data.data || []);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+        showFormSubmitError(error);
+      }
+    };
+
+    fetchBranches();
+  }, [canViewCashBook]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
+  };
+
+ const generateCashBook = async () => {
+  try {
+    setIsLoading(true);
+    const response = await axiosInstance.get(
+      `/invoices/reports/cash-book?branchId=${formData.branchId}&date=${formData.date}`
+    );
+
+    if (response.data.success) {
+      const cashBookData = response.data.data;
+      const selectedBranch = branches.find((b) => b._id === formData.branchId) || {};
+      
+      // Get totals from response
+      const totalCredit = cashBookData.totalCredit || 0;
+      const totalDebit = cashBookData.totalDebit || 0;
+      const openingBalance = cashBookData.openingBalance || 0;
+      const closingBalance = cashBookData.closingBalance || 0;
+
+      // Process entries
+      const entries = cashBookData.entries || [];
+      let runningBalance = openingBalance;
+      
+      const transactions = entries.map((entry) => {
+        // Calculate running balance
+        if (entry.isOpening) {
+          return { ...entry, balance: runningBalance };
+        } else if (entry.isClosing) {
+          return { ...entry, balance: closingBalance };
+        } else {
+          // Update running balance for regular entries
+          if (entry.debit && entry.debit > 0) {
+            runningBalance += entry.debit;
+          } else if (entry.credit && entry.credit > 0) {
+            runningBalance += entry.credit;
+          }
+          return { ...entry, balance: runningBalance };
+        }
+      });
+
+      const cashBookWindow = window.open('', '_blank');
+
+      const cashBookHTML = `
+        <html>
+          <head>
+            <title>Cash Book - ${selectedBranch.name || ''} - ${formData.date}</title>
+            <style>
+              @page {
+                size: A4;
+                margin: 10mm;
+              }
+              body {
+                font-family: Courier New;
+                width: 210mm;
+                margin: 0 auto;
+                padding: 10mm;
+              }
+              .header-container {
+                margin-bottom: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              }
+              .logo-left {
+                width: 30mm;
+                height: auto;
+              }
+              .logo-right {
+                width: 30mm;
+                height: auto;
+              }
+              .header-text {
+                flex-grow: 1;
+              }
+              .header-text h1 {
+                margin: 0;
+                font-size: 24px;
+              }
+              .header-text p {
+                margin: 2px 0;
+                font-size: 14px;
+              }
+              .header2 {
+                display: flex;
+                justify-content: space-between;
+                border-top: 2px solid #AAAAAA;
+                padding-top: 5px;
+                margin: 5px 0 15px 0;
+              }
+              .header2 div {
+                margin: 0;
+              }
+              .header2 h4 {
+                margin: 0 0 5px 0;
+              }
+              .header2 p {
+                margin: 0;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+                font-size: 14px;
+              }
+              th, td {
+                border: 1px solid #000;
+                padding: 6px;
+                text-align: left;
+              }
+              th {
+                background-color: #f2f2f2;
+                text-align: center;
+              }
+              .total-row {
+                font-weight: bold;
+              }
+              .signature {
+                text-align: right;
+                margin-top: 10px;
+              }
+              .balance {
+                font-weight: bold;
+                color: red;
+              }
+              .text-right {
+                text-align: right;
+              }
+              .opening-row {
+                background-color: #f0f8ff;
+              }
+              .closing-row {
+                background-color: #f0f8ff;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header-container">
+              <div>
+                <img src="${tvsLogo}" class="logo-left" alt="TVS Logo">
+                <div class="header-text">
+                  <h1>GANDHI TVS</h1>
+                  <p>Authorised Main Dealer: TVS Motor Company Ltd.</p>
+                  <p>Registered office:</p>
+                </div>
+              </div>
+              <div>
+                <img src="${tvssangamner}" class="logo-right" alt="TVS Logo">
+              </div>
+            </div>
+
+            <div class="header2">
+              <div>
+                <h4>CASH BOOK</h4>
+                <p>Location: ${selectedBranch.name || ''}</p>
+              </div>
+              <div>
+                <p>Date: ${new Date(formData.date).toLocaleDateString('en-IN')}</p>
+                <p class="balance">OPENING BALANCE: ${openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Invoice No</th>
+                  <th>Account Head</th>
+                  <th>Customer</th>
+                  <th>Vehicle No</th>
+                  <th>Debit</th>
+                  <th>Credit</th>
+                  <th>Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${transactions
+                  .map(
+                    (entry) => {
+                      let rowClass = '';
+                      if (entry.isOpening) rowClass = 'opening-row';
+                      else if (entry.isClosing) rowClass = 'closing-row';
+                      
+                      return `
+                      <tr class="${rowClass}">
+                        <td>${entry.invoiceNo || '-'}</td>
+                        <td>${entry.accountHead || '-'}</td>
+                        <td>${entry.customerName || '-'}</td>
+                        <td>${entry.vehicleNo || '-'}</td>
+                        <td class="text-right">${entry.debit ? entry.debit.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0'}</td>
+                        <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0'}</td>
+                        <td class="text-right">${entry.balance !== undefined ? entry.balance.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0'}</td>
+                      </tr>
+                    `;
+                    }
+                  )
+                  .join('')}
+                <tr class="total-row">
+                  <td colspan="4">Total</td>
+                  <td class="text-right">${totalDebit.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
+                  <td class="text-right">${totalCredit.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="balance">
+              CLOSING BALANCE: ${closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+            </div>
+
+            <div class="signature">
+              <p>For, Gandhi TVS</p>
+              <p>Authorised Signatory</p>
+            </div>
+          </body>
+        </html>
+      `;
+
+      cashBookWindow.document.open();
+      cashBookWindow.document.write(cashBookHTML);
+      cashBookWindow.document.close();
+    } else {
+      showFormSubmitToast('No data found for the selected branch and date');
+    }
+  } catch (error) {
+    console.error('Error generating cash book:', error);
+    showFormSubmitError(error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    let formErrors = {};
+
+    if (!formData.branchId) formErrors.branchId = 'This field is required';
+    if (!formData.date) formErrors.date = 'This field is required';
+
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      return;
+    }
+
+    await generateCashBook();
+  };
+
+  if (!canViewCashBook) {
+    return (
+      <div className="alert alert-danger m-3" role="alert">
+        You do not have permission to view Cash Book.
+      </div>
+    );
+  }
+
+  return (
+    <div className="form-container">
+      <div className="title">Invoice Cash Book</div>
+      <div className="form-card">
+        <div className="form-body">
+          <form onSubmit={handleSubmit}>
+            <div className="user-details">
+              <div className="input-box">
+                <div className="details-container">
+                  <span className="details">Location</span>
+                  <span className="required">*</span>
+                </div>
+                <CInputGroup>
+                  <CInputGroupText className="input-icon">
+                    <CIcon icon={cilLocationPin} />
+                  </CInputGroupText>
+                  <CFormSelect name="branchId" value={formData.branchId} onChange={handleChange} disabled={isLoading}>
+                    <option value="">-Select-</option>
+                    {branches.map((branch) => (
+                      <option key={branch._id} value={branch._id}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </CFormSelect>
+                </CInputGroup>
+                {errors.branchId && <p className="error">{errors.branchId}</p>}
+              </div>
+              <div className="input-box">
+                <div className="details-container">
+                  <span className="details">Date</span>
+                  <span className="required">*</span>
+                </div>
+                <CInputGroup>
+                  <CInputGroupText className="input-icon">
+                    <CIcon icon={cilSearch} />
+                  </CInputGroupText>
+                  <CFormInput type="date" name="date" value={formData.date} onChange={handleChange} disabled={isLoading} />
+                </CInputGroup>
+                {errors.date && <p className="error">{errors.date}</p>}
+              </div>
+              <div className="button-container">
+                <CButton className='submit-button' type="submit" disabled={isLoading}>
+                  {isLoading ? 'Searching...' : 'Search'}
+                </CButton>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default InvoiceCashBook;

@@ -6341,7 +6341,7 @@ const sidebarStructure = {
       { name: "Dashboard", tabs: null },
       { 
         name: "Insurance Details", 
-        tabs: ["PENDING INSURANCE", "COMPLETE INSURANCE", "UPDATE LATER"]
+        tabs: ["PENDING INSURANCE", "COMPLETE INSURANCE", "UPDATE LATER", "INSURANCE RENEWAL"]
       }
     ],
     availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
@@ -8061,28 +8061,43 @@ const CreateRoleWithHierarchy = () => {
   };
 
   // Get all tab permissions that exist in API for a page
-  const getAvailableTabsForPage = (mainHeader, page) => {
-    try {
-      const apiModuleNames = moduleNameMap[mainHeader];
-      if (!apiModuleNames || !apiModuleNames.length) return [];
-      
-      const tabs = new Set();
-      permissionsList.forEach(perm => {
-        if (apiModuleNames.some(apiModuleName => 
-          perm.module.toUpperCase() === apiModuleName.toUpperCase()
-        ) && 
-        perm.page === page && 
-        perm.tab) {
-          tabs.add(perm.tab);
+const getAvailableTabsForPage = (mainHeader, page) => {
+  try {
+    const apiModuleNames = moduleNameMap[mainHeader];
+    if (!apiModuleNames || !apiModuleNames.length) return [];
+    
+    const tabs = new Set();
+    
+    // First, check permissionsList for tabs
+    permissionsList.forEach(perm => {
+      if (apiModuleNames.some(apiModuleName => 
+        perm.module.toUpperCase() === apiModuleName.toUpperCase()
+      ) && 
+      perm.page === page && 
+      perm.tab) {
+        tabs.add(perm.tab);
+      }
+    });
+    
+    // Also check sidebarStructure for tabs defined there
+    // This ensures tabs like "INSURANCE RENEWAL" show up even if not in API yet
+    const pageConfig = sidebarStructure[mainHeader]?.pages?.find(p => p.name === page);
+    if (pageConfig?.tabs) {
+      pageConfig.tabs.forEach(tab => {
+        // For Insurance Renewal, always show it if it's defined in sidebar
+        if (mainHeader === "Insurance" && page === "Insurance Details" && 
+            (tab === "INSURANCE RENEWAL" || tab === "INSURANCE_RENEWAL")) {
+          tabs.add(tab);
         }
       });
-      
-      return Array.from(tabs);
-    } catch (error) {
-      console.error('Error getting available tabs:', error);
-      return [];
     }
-  };
+    
+    return Array.from(tabs);
+  } catch (error) {
+    console.error('Error getting available tabs:', error);
+    return [];
+  }
+};
 
   // Render permission guide modal
   const renderPermissionGuideModal = () => {

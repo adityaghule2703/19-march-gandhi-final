@@ -68,7 +68,7 @@ const Wallpaper = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
-  const baseURL = 'https://gandhitvs.in/dealership';
+  const baseURL = 'https://gmplmis.com/dealership-api';
 
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
   const { permissions } = useAuth();

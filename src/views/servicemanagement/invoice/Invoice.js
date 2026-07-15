@@ -78,7 +78,7 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 
 // API Base URL - update this based on your environment
-const API_BASE_URL = 'https://gandhitvs.in/dealership/api/v1';
+const API_BASE_URL = 'https://gmplmis.com/dealership-api/api/v1';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const DEFAULT_LIMIT = 10;

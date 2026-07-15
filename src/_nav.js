@@ -4228,6 +4228,14 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
       to: '/claims',
     });
   }
+
+  if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.REFUND)) {
+    accountItems.push({
+      component: CNavItem,
+      name: 'HSRP Bracket Sales Invoice',
+      to: '/hsrpbracketsalesinvoice',
+    });
+  }
   
   if (canViewPage(userPermissions, MODULES.ACCOUNT, PAGES.ACCOUNT.CANCELLED_BOOKING)) {
     accountItems.push({

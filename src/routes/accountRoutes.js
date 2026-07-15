@@ -2,6 +2,7 @@ import React from 'react';
 
 
 
+
 const AccountDashboard = React.lazy(() => import('../views/account/AccountDashboard'))
 const FinanceReceiptsDashboard = React.lazy(() => import('../views/account/FinanceReceiptsDashboard'))
 const FinanceReportDashboard = React.lazy(() => import('../views/account/FinanceReportDashboard'))
@@ -10,6 +11,7 @@ const Receipts = React.lazy(() => import('../views/account/Receipt'))
 const DebitNote = React.lazy(() => import('../views/account/debit-note/DebitNote'))
 const CustomerRefund = React.lazy(() => import('../views/account/Refund'))
 const Claims = React.lazy(() => import('../views/account/Claims'))
+const HSRPBracketSalesInvoice = React.lazy(() => import('../views/account/HSRPBracketSalesInvoice'))
 const CancelledBooking = React.lazy(() => import('../views/account/CancelledBooking'))
 const AllReceipts = React.lazy(() => import('../views/account/AllReceipt'))
 const CustomerLedger = React.lazy(() => import('../views/account/ViewLedger'))
@@ -26,6 +28,7 @@ export const accountRoutes = [
     { path:'/debit-note', name:'Debit Note', element:DebitNote},
     { path:'/refund', name:'Customer Refund', element:CustomerRefund},
     { path:'/claims', name:'Claims', element:Claims},
+    { path:'/hsrpbracketsalesinvoice', name:'HSRPBracketSalesInvoice', element:HSRPBracketSalesInvoice},
     {path:'/cancelled-booking', name:'Cancelled Booking', element:CancelledBooking},
     { path:'/account/all-receipt', name:'All Receipt', element:AllReceipts},
     { path:'/view-ledgers', name:'View Ledger', element:CustomerLedger},

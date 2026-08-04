@@ -26038,6 +26038,4215 @@
 
 
 
+// import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+// import { 
+//   CBadge, 
+//   CNav, 
+//   CNavItem, 
+//   CNavLink, 
+//   CTabContent, 
+//   CTabPane,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CCard,
+//   CCardBody,
+//   CButton,
+//   CFormInput,
+//   CSpinner,
+//   CFormLabel,
+//   CAlert,
+//   CDropdown,
+//   CDropdownToggle,
+//   CDropdownMenu,
+//   CDropdownItem,
+//   CModal,
+//   CModalHeader,
+//   CModalTitle,
+//   CModalBody,
+//   CModalFooter,
+//   CPagination,
+//   CPaginationItem,
+//   CFormSelect
+// } from '@coreui/react';
+// import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../utils/tableImports';
+// import '../../css/invoice.css';
+// import '../../css/table.css';
+// import ReceiptModal from './ReceiptModal';
+// import { confirmVerify } from '../../utils/sweetAlerts';
+// import CIcon from '@coreui/icons-react';
+// import { cilCheckCircle, cilPrint, cilSettings, cilPlus, cilChevronLeft, cilChevronRight, cilCloudDownload, cilXCircle } from '@coreui/icons';
+// import { numberToWords } from '../../utils/numberToWords';
+// import { Menu, MenuItem } from '@mui/material';
+// import { useAuth } from '../../context/AuthContext';
+// import QRCode from 'qrcode';
+// import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import Swal from 'sweetalert2';
+// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// import TextField from '@mui/material/TextField';
+// import { enIN } from 'date-fns/locale';
+// import tvsLogo from '../../assets/images/logo.png';
+// import config from '../../config';
+
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS
+// } from '../../utils/modulePermissions';
+
+// // ─── Tab constants ──────────────────────────────────────────────────────────────
+// const TAB = {
+//   CUSTOMER: 0,
+//   PAYMENT_VERIFICATION: 1,
+//   COMPLETE_PAYMENT: 2,
+//   PENDING_LIST: 3,
+//   VERIFIED_LIST: 4,
+//   REJECTED_LIST: 5
+// };
+
+// const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
+// const DEFAULT_LIMIT = 50;
+
+// // Each tab gets its own fully independent state slice
+// const emptyTab = () => ({
+//   docs: [],
+//   total: 0,
+//   pages: 0,
+//   currentPage: 1,
+//   limit: DEFAULT_LIMIT,
+//   loading: false,
+//   search: '',
+// });
+
+// function Receipt() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [showModal, setShowModal] = useState(false);
+//   const [selectedBooking, setSelectedBooking] = useState(null);
+
+//   // ── Per-tab independent state ──────────────────────────────────────────────
+//   const [tabData, setTabData] = useState(() =>
+//     Object.values(TAB).reduce((acc, i) => { acc[i] = emptyTab(); return acc; }, {})
+//   );
+
+//   // ── LOCAL search state (display only — input is UNCONTROLLED) ──────────────
+//   const [localSearch, setLocalSearch] = useState('');
+
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [anchorEl, setAnchorEl] = useState(null);
+//   const [menuBookingId, setMenuBookingId] = useState(null);
+//   const [successMessage, setSuccessMessage] = useState('');
+//   const [cashOtherFilter, setCashOtherFilter] = useState('');
+
+//   // ── Reject modal ───────────────────────────────────────────────────────────
+//   const [showRejectModal, setShowRejectModal] = useState(false);
+//   const [selectedRejectEntry, setSelectedRejectEntry] = useState(null);
+//   const [rejectionReason, setRejectionReason] = useState('');
+//   const [rejectLoading, setRejectLoading] = useState(false);
+
+//   // ── On-demand receipts ─────────────────────────────────────────────────────
+//   const [bookingReceipts, setBookingReceipts] = useState({});
+//   const [loadingReceipts, setLoadingReceipts] = useState({});
+//   const [receiptsFetched, setReceiptsFetched] = useState({});
+
+//   const [cashLocations, setCashLocations] = useState([]);
+
+//   // ── Export modals ──────────────────────────────────────────────────────────
+//   const [openExportModal, setOpenExportModal] = useState(false);
+//   const [startDate, setStartDate] = useState(null);
+//   const [endDate, setEndDate] = useState(null);
+//   const [selectedBranchId, setSelectedBranchId] = useState('');
+//   const [exportLoading, setExportLoading] = useState(false);
+//   const [exportError, setExportError] = useState('');
+
+//   const [openVerifiedOutstandingModal, setOpenVerifiedOutstandingModal] = useState(false);
+//   const [verifiedOutstandingStartDate, setVerifiedOutstandingStartDate] = useState(null);
+//   const [verifiedOutstandingEndDate, setVerifiedOutstandingEndDate] = useState(null);
+//   const [verifiedOutstandingBranchId, setVerifiedOutstandingBranchId] = useState('');
+//   const [verifiedOutstandingExportLoading, setVerifiedOutstandingExportLoading] = useState(false);
+//   const [verifiedOutstandingExportError, setVerifiedOutstandingExportError] = useState('');
+
+//   const [openPendingVerificationModal, setOpenPendingVerificationModal] = useState(false);
+//   const [pendingVerificationStartDate, setPendingVerificationStartDate] = useState(null);
+//   const [pendingVerificationEndDate, setPendingVerificationEndDate] = useState(null);
+//   const [pendingVerificationBranchId, setPendingVerificationBranchId] = useState('');
+//   const [pendingVerificationExportLoading, setPendingVerificationExportLoading] = useState(false);
+//   const [pendingVerificationExportError, setPendingVerificationExportError] = useState('');
+
+//   const [branches, setBranches] = useState([]);
+
+//   // ── Refs ───────────────────────────────────────────────────────────────────
+//   // Debounce timer for search
+//   const searchTimer = useRef(null);
+//   // Uncontrolled search input ref — React NEVER writes back to this DOM node,
+//   // so it cannot lose focus regardless of how many re-renders happen.
+//   const searchInputRef = useRef(null);
+//   // Keep activeTab in a ref so the debounced closure always reads the latest value
+//   const activeTabRef = useRef(activeTab);
+//   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
+//   const { permissions = [], user } = useAuth();
+//   const hasAllBranchAccess = user?.branchAccess === "ALL";
+
+//   // ── Permissions ────────────────────────────────────────────────────────────
+//   const canViewReceipts = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW);
+//   const canCreateReceipts = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE);
+//   const canViewCustomerTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.CUSTOMER);
+//   const canViewPaymentVerificationTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.PAYMENT_VERIFICATION);
+//   const canViewCompletePaymentTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.COMPLETE_PAYMENT);
+//   const canViewPendingListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.PENDING_LIST);
+//   const canViewVerifiedListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.VERIFIED_LIST);
+//   const canViewRejectedListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.REJECTED_LIST);
+//   const canCreateInCustomerTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.CUSTOMER);
+//   const canCreateInPaymentVerificationTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.PAYMENT_VERIFICATION);
+//   const canCreateInCompletePaymentTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.COMPLETE_PAYMENT);
+//   const canCreateInPendingListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.PENDING_LIST);
+//   const canCreateInVerifiedListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.VERIFIED_LIST);
+//   const canUpdateInPaymentVerificationTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.UPDATE, TABS.RECEIPTS.PAYMENT_VERIFICATION);
+//   const canPrintInCustomerTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.CUSTOMER) || canViewCustomerTab;
+//   const canRejectPayments = canUpdateInPaymentVerificationTab;
+//   const canViewAnyTab = canViewCustomerTab || canViewPaymentVerificationTab || canViewCompletePaymentTab || canViewPendingListTab || canViewVerifiedListTab || canViewRejectedListTab;
+
+//   // ── Helper: update a single tab's slice ───────────────────────────────────
+//   const setTab = useCallback((tabIndex, updates) =>
+//     setTabData(prev => ({ ...prev, [tabIndex]: { ...prev[tabIndex], ...updates } })),
+//   []);
+
+//   // ── Ledger view ────────────────────────────────────────────────────────────
+//   const openLedgerInNewTab = async (bookingId, bookingNumber) => {
+//     try {
+//       const res = await axiosInstance.get(`/ledger/report/${bookingId}`);
+//       const ledgerData = res.data.data;
+//       const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${bookingId}`;
+
+//       let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
+//       let filteredEntries = approvedEntries;
+//       if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
+//         filteredEntries = approvedEntries.filter((entry) => entry.debit !== undefined && entry.debit !== null);
+//       }
+
+//       const totals = {
+//         totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
+//         totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
+//         finalBalance: filteredEntries.reduce((sum, entry) => {
+//           const credit = entry.credit || 0;
+//           const debit = entry.debit || 0;
+//           return sum + (debit - credit);
+//         }, 0)
+//       };
+
+//       const win = window.open('', '_blank');
+//       win.document.write(`
+//         <!DOCTYPE html>
+//         <html>
+//           <head>
+//             <title>Customer Ledger - ${bookingNumber}</title>
+//             <style>
+//               @page { size: A4; margin: 15mm 10mm; }
+//               body { font-family: Arial; width: 100%; margin: 0; padding: 0; font-size: 14px; line-height: 1.3; font-family: Courier New; }
+//               .container { width: 190mm; margin: 0 auto; padding: 5mm; }
+//               .header-container { display: flex; justify-content:space-between; margin-bottom: 3mm; }
+//               .header-text{ font-size:20px; font-weight:bold; }
+//               .logo { width: 30mm; height: auto; margin-right: 5mm; } 
+//               .header { text-align: left; }
+//               .divider { border-top: 2px solid #AAAAAA; margin: 3mm 0; }
+//               .header h2 { margin: 2mm 0; font-size: 12pt; font-weight: bold; }
+//               .header div { font-size: 14px; }
+//               .customer-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm; margin-bottom: 5mm; font-size: 14px; }
+//               .customer-info div { display: flex; }
+//               .customer-info strong { min-width: 30mm; display: inline-block; }
+//               table { width: 100%; border-collapse: collapse; margin-bottom: 5mm; font-size: 14px; page-break-inside: avoid; }
+//               th, td { border: 1px solid #000; padding: 2mm; text-align: left; }
+//               th { background-color: #f0f0f0; font-weight: bold; }
+//               .footer { margin-top: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 14px; }
+//               .qr-code { width: 35mm; height: 35mm; }
+//               .text-right { text-align: right; }
+//               .text-center { text-align: center; }
+//               @media print { body { width: 190mm; height: 277mm; } .no-print { display: none; } }
+//             </style>
+//           </head>
+//           <body>
+//             <div class="container">
+//               <div class="header-container">
+//                 <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+//                 <div class="header-text"> GANDHI TVS</div>
+//               </div>
+//               <div class="header">
+//                 <div>
+//                   Authorised Main Dealer: TVS Motor Company Ltd.<br>
+//                   Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//                   Upnagar, Nashik Road, Nashik - 422101<br>
+//                   Phone: 7498903672
+//                 </div>
+//               </div>
+//               <div class="divider"></div>
+//               <div class="customer-info">
+//                 <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
+//                 <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+//                 <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
+//                 <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
+//                 <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? (ledgerData.vehicleDetails?.chassisNo || 'N/A') : '-'}</div>
+//                 <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || 'N/A'}</div>
+//                 <div><strong>Chassis Allocated:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? 'Yes' : 'No'}</div>
+//                 <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || 'N/A'}</div>
+//                 <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || 'N/A'}</div>
+//               </div>
+//               <table>
+//                 <thead>
+//                   <tr>
+//                     <th width="15%">Date</th>
+//                     <th width="35%">Description</th>
+//                     <th width="15%">Receipt/VC No</th>
+//                     <th width="10%" class="text-right">Credit (₹)</th>
+//                     <th width="10%" class="text-right">Debit (₹)</th>
+//                     <th width="15%" class="text-right">Balance (₹)</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   ${filteredEntries.length > 0
+//                     ? filteredEntries.map((entry) => `
+//                         <tr>
+//                           <td>${entry.date || 'N/A'}</td>
+//                           <td>${entry.description || 'N/A'}</td>
+//                           <td>${entry.receiptNo || 'N/A'}</td>
+//                           <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN') : '-'}</td>
+//                           <td class="text-right">${entry.debit !== undefined ? entry.debit.toLocaleString('en-IN') : '-'}</td>
+//                           <td class="text-right">${entry.balance ? entry.balance.toLocaleString('en-IN') : '-'}</td>
+//                         </tr>`).join('')
+//                     : `<tr><td colspan="6" class="text-center">No approved entries found</td></tr>`
+//                   }
+//                   ${filteredEntries.length > 0
+//                     ? `<tr>
+//                         <td colspan="3" class="text-left"><strong>Total</strong></td>
+//                         <td class="text-right"><strong>${totals.totalCredit.toLocaleString('en-IN')}</strong></td>
+//                         <td class="text-right"><strong>${totals.totalDebit.toLocaleString('en-IN')}</strong></td>
+//                         <td class="text-right"><strong>${totals.finalBalance.toLocaleString('en-IN')}</strong></td>
+//                       </tr>`
+//                     : ''
+//                   }
+//                 </tbody>
+//               </table>
+//               <div class="footer">
+//                 <div>
+//                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" class="qr-code" alt="QR Code" />
+//                 </div>
+//                 <div style="text-align:right">
+//                   <p>For, Gandhi TVS</p>
+//                   <p>Authorised Signatory</p>
+//                 </div>
+//               </div>
+//             </div>
+//             <script>
+//               window.onload = function() { setTimeout(() => { window.print(); }, 300); };
+//             </script>
+//           </body>
+//         </html>
+//       `);
+//       win.document.close();
+//     } catch (err) {
+//       console.error('Error fetching ledger:', err);
+//       const message = showError(err);
+//       if (message) setError(message);
+//     }
+//   };
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  CORE FETCH FUNCTIONS
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   // TAB 0 — Customer
+//   const fetchCustomerTab = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { bookingType: 'BRANCH', page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const data = response.data.data;
+//       const docs = data.bookings || [];
+
+//       setTab(tabIndex, {
+//         docs,
+//         total: data.total || 0,
+//         pages: data.pages || 1,
+//         currentPage: page,
+//         limit,
+//         loading: false,
+//         search
+//       });
+
+//       // Sync receipt-fetched state for new booking IDs
+//       setReceiptsFetched(prev => {
+//         const next = { ...prev };
+//         docs.forEach(b => { if (!(b._id in next)) next[b._id] = false; });
+//         // Clean up IDs no longer in docs
+//         Object.keys(next).forEach(id => { if (!docs.some(b => b._id === id)) delete next[id]; });
+//         return next;
+//       });
+//       setLoadingReceipts(prev => {
+//         const next = { ...prev };
+//         docs.forEach(b => { if (!(b._id in next)) next[b._id] = false; });
+//         Object.keys(next).forEach(id => { if (!docs.some(b => b._id === id)) delete next[id]; });
+//         return next;
+//       });
+
+//     } catch (error) {
+//       console.error('Error fetching customer tab:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [setTab]);
+
+//   // TAB 1 — Payment Verification
+//   const fetchPendingPayments = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewPaymentVerificationTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const fetchLimit = search ? 1000 : limit;
+//       const params = { page: search ? 1 : page, limit: fetchLimit };
+
+//       const response = await axiosInstance.get(`/ledger/pending`, { params });
+
+//       let docs = [], total = 0, pages = 1;
+//       if (response.data.data?.ledgerEntries) {
+//         docs  = response.data.data.ledgerEntries;
+//         total = response.data.pagination?.totalRecords || docs.length;
+//         pages = response.data.pagination?.totalPages   || 1;
+//       } else if (Array.isArray(response.data.data)) {
+//         docs  = response.data.data;
+//         total = docs.length;
+//         pages = Math.ceil(total / limit);
+//       }
+
+//       // Client-side filter when search is active
+//       if (search) {
+//         const term = search.toLowerCase();
+//         docs = docs.filter(entry => {
+//           const fields = [
+//             entry.bookingDetails?.bookingNumber,
+//             entry.bookingDetails?.customerDetails?.name,
+//             entry.paymentMode,
+//             entry.transactionReference,
+//             entry.amount?.toString(),
+//             entry.booking
+//           ];
+//           return fields.some(f => f && f.toString().toLowerCase().includes(term));
+//         });
+//         total = docs.length;
+//         pages = Math.max(1, Math.ceil(total / limit));
+//         const start = (page - 1) * limit;
+//         docs = docs.slice(start, start + limit);
+//       }
+
+//       setTab(tabIndex, { docs, total, pages, currentPage: page, limit, loading: false, search });
+//     } catch (error) {
+//       console.error('Error fetching pending payments:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewPaymentVerificationTab, setTab]);
+
+//   // TAB 2 — Complete Payment
+//   const fetchCompletePayments = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewCompletePaymentTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { bookingType: 'BRANCH', balanceStatus: 'complete', page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const data = response.data.data;
+//       setTab(tabIndex, {
+//         docs: data.bookings || [],
+//         total: data.total || 0,
+//         pages: data.pages || 1,
+//         currentPage: page,
+//         limit,
+//         loading: false,
+//         search
+//       });
+//     } catch (error) {
+//       console.error('Error fetching complete payments:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewCompletePaymentTab, setTab]);
+
+//   // TAB 3 — Pending List
+//   const fetchPendingList = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewPendingListTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { bookingType: 'BRANCH', balanceStatus: 'pending', page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const data = response.data.data;
+//       setTab(tabIndex, {
+//         docs: data.bookings || [],
+//         total: data.total || 0,
+//         pages: data.pages || 1,
+//         currentPage: page,
+//         limit,
+//         loading: false,
+//         search
+//       });
+//     } catch (error) {
+//       console.error('Error fetching pending list:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewPendingListTab, setTab]);
+
+//   // TAB 4 — Verified List
+//   const fetchVerifiedPayments = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewVerifiedListTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/payment/verified/bank/ledger`, { params });
+
+//       let docs = [], total = 0, pages = 1;
+//       if (response.data.data?.ledgerEntries) {
+//         docs  = response.data.data.ledgerEntries;
+//         total = response.data.pagination?.totalRecords || docs.length;
+//         pages = response.data.pagination?.totalPages   || 1;
+//       } else if (Array.isArray(response.data.data)) {
+//         docs  = response.data.data;
+//         total = docs.length;
+//         pages = Math.ceil(total / limit);
+//       }
+
+//       setTab(tabIndex, { docs, total, pages, currentPage: page, limit, loading: false, search });
+//     } catch (error) {
+//       console.error('Error fetching verified payments:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewVerifiedListTab, setTab]);
+
+//   // TAB 5 — Rejected List
+//   const fetchRejectedPayments = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewRejectedListTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/ledger/rejected`, { params });
+
+//       let docs = [], total = 0, pages = 1;
+//       if (response.data.data?.docs) {
+//         docs  = response.data.data.docs;
+//         total = response.data.data.totalDocs  || docs.length;
+//         pages = response.data.data.totalPages || 1;
+//       } else if (Array.isArray(response.data.data)) {
+//         docs  = response.data.data;
+//         total = docs.length;
+//         pages = Math.ceil(total / limit);
+//       }
+
+//       setTab(tabIndex, { docs, total, pages, currentPage: page, limit, loading: false, search });
+//     } catch (error) {
+//       console.error('Error fetching rejected payments:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewRejectedListTab, setTab]);
+
+//   // ── Central dispatcher ────────────────────────────────────────────────────
+//   const fetchTab = useCallback((tabIndex, page, limit, search) => {
+//     setTabData(prev => {
+//       const td = prev[tabIndex];
+//       const p = page   !== undefined ? page   : td.currentPage;
+//       const l = limit  !== undefined ? limit  : td.limit;
+//       const s = search !== undefined ? search : td.search;
+
+//       switch (tabIndex) {
+//         case TAB.CUSTOMER:             fetchCustomerTab(tabIndex, p, l, s);             break;
+//         case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tabIndex, p, l, s);         break;
+//         case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tabIndex, p, l, s);        break;
+//         case TAB.PENDING_LIST:         fetchPendingList(tabIndex, p, l, s);             break;
+//         case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tabIndex, p, l, s);        break;
+//         case TAB.REJECTED_LIST:        fetchRejectedPayments(tabIndex, p, l, s);        break;
+//         default: break;
+//       }
+//       return prev; // state unchanged here; fetch functions will update via setTab
+//     });
+//   }, [fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  EFFECTS
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   // Set first visible tab as active
+//   useEffect(() => {
+//     if (!canViewAnyTab) return;
+//     const visibleTabs = [
+//       canViewCustomerTab             && TAB.CUSTOMER,
+//       canViewPaymentVerificationTab  && TAB.PAYMENT_VERIFICATION,
+//       canViewCompletePaymentTab      && TAB.COMPLETE_PAYMENT,
+//       canViewPendingListTab          && TAB.PENDING_LIST,
+//       canViewVerifiedListTab         && TAB.VERIFIED_LIST,
+//       canViewRejectedListTab         && TAB.REJECTED_LIST,
+//     ].filter(t => t !== false);
+
+//     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+//       setActiveTab(visibleTabs[0]);
+//     }
+//   }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab,
+//       canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab,
+//       canViewRejectedListTab, activeTab]);
+
+//   // Initial load — fetch ALL tabs once on mount
+//   useEffect(() => {
+//     if (!canViewReceipts) {
+//       showError('You do not have permission to view Receipts');
+//       setLoading(false);
+//       return;
+//     }
+//     if (!canViewAnyTab) {
+//       showError('You do not have permission to view any Receipt tabs');
+//       setLoading(false);
+//       return;
+//     }
+
+//     if (canViewCustomerTab)            fetchCustomerTab(TAB.CUSTOMER, 1, DEFAULT_LIMIT, '');
+//     if (canViewPaymentVerificationTab) fetchPendingPayments(TAB.PAYMENT_VERIFICATION, 1, DEFAULT_LIMIT, '');
+//     if (canViewCompletePaymentTab)     fetchCompletePayments(TAB.COMPLETE_PAYMENT, 1, DEFAULT_LIMIT, '');
+//     if (canViewPendingListTab)         fetchPendingList(TAB.PENDING_LIST, 1, DEFAULT_LIMIT, '');
+//     if (canViewVerifiedListTab)        fetchVerifiedPayments(TAB.VERIFIED_LIST, 1, DEFAULT_LIMIT, '');
+//     if (canViewRejectedListTab)        fetchRejectedPayments(TAB.REJECTED_LIST, 1, DEFAULT_LIMIT, '');
+
+//     fetchCashLocations();
+//     fetchBranches();
+//     setLoading(false);
+//   // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [canViewReceipts, canViewAnyTab]);
+
+//   useEffect(() => {
+//     window.printReceiptCallback = printReceiptInvoice;
+//     return () => { delete window.printReceiptCallback; };
+//   }, []);
+
+//   // Pre-fetch receipts for visible Customer tab rows
+//   useEffect(() => {
+//     if (activeTab === TAB.CUSTOMER && tabData[TAB.CUSTOMER].docs.length > 0) {
+//       const timeoutId = setTimeout(() => {
+//         tabData[TAB.CUSTOMER].docs.forEach(booking => {
+//           if (!receiptsFetched[booking._id] && !loadingReceipts[booking._id]) {
+//             fetchReceiptsForBooking(booking._id);
+//           }
+//         });
+//       }, 100);
+//       return () => clearTimeout(timeoutId);
+//     }
+//   // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [activeTab, tabData[TAB.CUSTOMER].docs]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  PAGINATION — fully independent per tab
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   const handlePageChange = useCallback((tabIndex, newPage) => {
+//     setTabData(prev => {
+//       const td = prev[tabIndex];
+//       if (newPage < 1 || newPage > td.pages) return prev;
+//       // Dispatch fetch using current search of that tab
+//       switch (tabIndex) {
+//         case TAB.CUSTOMER:             fetchCustomerTab(tabIndex, newPage, td.limit, td.search);         break;
+//         case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tabIndex, newPage, td.limit, td.search);     break;
+//         case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tabIndex, newPage, td.limit, td.search);    break;
+//         case TAB.PENDING_LIST:         fetchPendingList(tabIndex, newPage, td.limit, td.search);         break;
+//         case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tabIndex, newPage, td.limit, td.search);    break;
+//         case TAB.REJECTED_LIST:        fetchRejectedPayments(tabIndex, newPage, td.limit, td.search);    break;
+//         default: break;
+//       }
+//       return prev;
+//     });
+//     window.scrollTo({ top: 0, behavior: 'smooth' });
+//   }, [fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   const handleLimitChange = useCallback((tabIndex, newLimit) => {
+//     const limit = parseInt(newLimit, 10);
+//     setTabData(prev => {
+//       const td = prev[tabIndex];
+//       switch (tabIndex) {
+//         case TAB.CUSTOMER:             fetchCustomerTab(tabIndex, 1, limit, td.search);         break;
+//         case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tabIndex, 1, limit, td.search);     break;
+//         case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tabIndex, 1, limit, td.search);    break;
+//         case TAB.PENDING_LIST:         fetchPendingList(tabIndex, 1, limit, td.search);         break;
+//         case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tabIndex, 1, limit, td.search);    break;
+//         case TAB.REJECTED_LIST:        fetchRejectedPayments(tabIndex, 1, limit, td.search);    break;
+//         default: break;
+//       }
+//       return prev;
+//     });
+//   }, [fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  SEARCH
+//   //  KEY DESIGN:
+//   //  • The <input> is UNCONTROLLED (no value= prop). React never writes to it,
+//   //    so it can NEVER lose focus due to re-renders.
+//   //  • localSearch is updated synchronously so "No results for X" label
+//   //    always reflects the latest typed value without waiting for the API.
+//   //  • The API call is debounced 400 ms so we don't hammer the server on
+//   //    every keystroke.
+//   //  • activeTabRef always holds the current tab, so the debounced closure
+//   //    never fires against a stale tab.
+//   // ══════════════════════════════════════════════════════════════════════════
+//   const handleSearch = useCallback((value) => {
+//     // Update display label immediately
+//     setLocalSearch(value);
+
+//     // Debounce the actual API call
+//     clearTimeout(searchTimer.current);
+//     searchTimer.current = setTimeout(() => {
+//       const tab = activeTabRef.current;
+//       setTabData(prev => {
+//         const limit = prev[tab]?.limit || DEFAULT_LIMIT;
+//         switch (tab) {
+//           case TAB.CUSTOMER:             fetchCustomerTab(tab, 1, limit, value);         break;
+//           case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tab, 1, limit, value);     break;
+//           case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tab, 1, limit, value);    break;
+//           case TAB.PENDING_LIST:         fetchPendingList(tab, 1, limit, value);         break;
+//           case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tab, 1, limit, value);    break;
+//           case TAB.REJECTED_LIST:        fetchRejectedPayments(tab, 1, limit, value);    break;
+//           default: break;
+//         }
+//         return prev;
+//       });
+//     }, 400);
+//   }, [fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  TAB CHANGE
+//   //  FIX: Always re-fetch fresh data with EMPTY search on every tab switch.
+//   //  Previously stale search results persisted when revisiting a tab because
+//   //  the fetch was skipped if docs.length > 0.
+//   // ══════════════════════════════════════════════════════════════════════════
+//   const handleTabChange = useCallback((tab) => {
+//     // Cancel any pending debounced search for the tab being left
+//     clearTimeout(searchTimer.current);
+
+//     setActiveTab(tab);
+
+//     // Clear local search display state
+//     setLocalSearch('');
+
+//     // Clear the uncontrolled DOM input value so the box visually empties
+//     if (searchInputRef.current) searchInputRef.current.value = '';
+
+//     // Reset this tab's search string in tabData immediately (prevents stale
+//     // "No results for X" flash when the tab content re-renders before the API returns)
+//     setTabData(prev => ({
+//       ...prev,
+//       [tab]: { ...prev[tab], search: '' }
+//     }));
+
+//     // Always re-fetch with empty search so returning to a previously-searched
+//     // tab always shows the full unfiltered list
+//     const limit = tabData[tab]?.limit || DEFAULT_LIMIT;
+//     switch (tab) {
+//       case TAB.CUSTOMER:             fetchCustomerTab(tab, 1, limit, '');         break;
+//       case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tab, 1, limit, '');     break;
+//       case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tab, 1, limit, '');    break;
+//       case TAB.PENDING_LIST:         fetchPendingList(tab, 1, limit, '');         break;
+//       case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tab, 1, limit, '');    break;
+//       case TAB.REJECTED_LIST:        fetchRejectedPayments(tab, 1, limit, '');    break;
+//       default: break;
+//     }
+//   }, [tabData, fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  REFRESH helper (used after mutations like verify / reject)
+//   // ══════════════════════════════════════════════════════════════════════════
+//   const refreshTab = useCallback((tabIndex) => {
+//     const td = tabData[tabIndex];
+//     const limit = td?.limit || DEFAULT_LIMIT;
+//     // Reset search for the refreshed tab
+//     setTabData(prev => ({ ...prev, [tabIndex]: { ...prev[tabIndex], search: '' } }));
+//     if (tabIndex === activeTab) {
+//       setLocalSearch('');
+//       if (searchInputRef.current) searchInputRef.current.value = '';
+//     }
+//     switch (tabIndex) {
+//       case TAB.CUSTOMER:             fetchCustomerTab(tabIndex, 1, limit, '');         break;
+//       case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tabIndex, 1, limit, '');     break;
+//       case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tabIndex, 1, limit, '');    break;
+//       case TAB.PENDING_LIST:         fetchPendingList(tabIndex, 1, limit, '');         break;
+//       case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tabIndex, 1, limit, '');    break;
+//       case TAB.REJECTED_LIST:        fetchRejectedPayments(tabIndex, 1, limit, '');    break;
+//       default: break;
+//     }
+//   }, [activeTab, tabData, fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  PAGINATION RENDERER
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   const renderPagination = (tabIndex) => {
+//     const { currentPage, pages, total, limit, loading } = tabData[tabIndex];
+//     if (!total || pages <= 1) return null;
+
+//     const start = (currentPage - 1) * limit + 1;
+//     const end   = Math.min(currentPage * limit, total);
+
+//     let startPage = Math.max(1, currentPage - 2);
+//     let endPage   = Math.min(pages, currentPage + 2);
+//     if (currentPage <= 3)         endPage   = Math.min(5, pages);
+//     if (currentPage >= pages - 2) startPage = Math.max(1, pages - 4);
+
+//     const pageNums = [];
+//     for (let i = startPage; i <= endPage; i++) pageNums.push(i);
+
+//     return (
+//       <div className="mt-3 border-top pt-3">
+//         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+//           <div className="d-flex align-items-center gap-2">
+//             <CFormLabel className="mb-0 text-muted" style={{ fontSize: '13px' }}>Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={limit}
+//               onChange={e => handleLimitChange(tabIndex, e.target.value)}
+//               style={{ width: '80px', height: '32px', fontSize: '13px' }}
+//               size="sm"
+//               disabled={loading}
+//             >
+//               {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+//             </CFormSelect>
+//           </div>
+//           <span className="text-muted" style={{ fontSize: '13px' }}>
+//             {loading ? 'Loading…' : `Showing ${start}–${end} of ${total} entries`}
+//           </span>
+//         </div>
+//         {pages > 1 && (
+//           <CPagination align="center" size="sm">
+//             <CPaginationItem onClick={() => handlePageChange(tabIndex, 1)} disabled={currentPage === 1 || loading}>«</CPaginationItem>
+//             <CPaginationItem onClick={() => handlePageChange(tabIndex, currentPage - 1)} disabled={currentPage === 1 || loading}>
+//               <CIcon icon={cilChevronLeft} />
+//             </CPaginationItem>
+
+//             {startPage > 1 && (
+//               <>
+//                 <CPaginationItem onClick={() => handlePageChange(tabIndex, 1)} disabled={loading}>1</CPaginationItem>
+//                 {startPage > 2 && <CPaginationItem disabled>…</CPaginationItem>}
+//               </>
+//             )}
+
+//             {pageNums.map(p => (
+//               <CPaginationItem key={p} active={p === currentPage} onClick={() => handlePageChange(tabIndex, p)} disabled={loading}>
+//                 {p}
+//               </CPaginationItem>
+//             ))}
+
+//             {endPage < pages && (
+//               <>
+//                 {endPage < pages - 1 && <CPaginationItem disabled>…</CPaginationItem>}
+//                 <CPaginationItem onClick={() => handlePageChange(tabIndex, pages)} disabled={loading}>{pages}</CPaginationItem>
+//               </>
+//             )}
+
+//             <CPaginationItem onClick={() => handlePageChange(tabIndex, currentPage + 1)} disabled={currentPage === pages || loading}>
+//               <CIcon icon={cilChevronRight} />
+//             </CPaginationItem>
+//             <CPaginationItem onClick={() => handlePageChange(tabIndex, pages)} disabled={currentPage === pages || loading}>»</CPaginationItem>
+//           </CPagination>
+//         )}
+//       </div>
+//     );
+//   };
+
+//   // ── On-demand receipts fetching ───────────────────────────────────────────
+//   const fetchReceiptsForBooking = useCallback(async (bookingId) => {
+//     if (receiptsFetched[bookingId] || loadingReceipts[bookingId]) return;
+//     try {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: true }));
+//       const receiptsResponse = await axiosInstance.get(`/ledger/booking/${bookingId}`);
+//       const receipts = receiptsResponse.data.data.allReceipts || [];
+//       setBookingReceipts(prev => ({ ...prev, [bookingId]: receipts }));
+//       setReceiptsFetched(prev => ({ ...prev, [bookingId]: true }));
+//     } catch (error) {
+//       console.error(`Error fetching receipts for booking ${bookingId}:`, error);
+//       setBookingReceipts(prev => ({ ...prev, [bookingId]: [] }));
+//       setReceiptsFetched(prev => ({ ...prev, [bookingId]: true }));
+//     } finally {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: false }));
+//     }
+//   }, [receiptsFetched, loadingReceipts]);
+
+//   const fetchCashLocations = async () => {
+//     try {
+//       for (const endpoint of ['/settings/cash-locations', '/master/cash-locations']) {
+//         try {
+//           const response = await axiosInstance.get(endpoint);
+//           if (response.data.success && response.data.data) { setCashLocations(response.data.data); return; }
+//         } catch (err) { console.log(`Endpoint ${endpoint} not available`); }
+//       }
+//       setCashLocations([]);
+//     } catch (error) { setCashLocations([]); }
+//   };
+
+//   const fetchBranches = async () => {
+//     try {
+//       const response = await axiosInstance.get('/branches');
+//       setBranches(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) setError(message);
+//     }
+//   };
+
+//   const formatDateDDMMYYYY = (date) => {
+//     if (!date) return '';
+//     return `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
+//   };
+
+//   const formatDateForAPI = (date) => {
+//     if (!date) return '';
+//     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+//   };
+
+//   // ── Event handlers ────────────────────────────────────────────────────────
+//   const handleMenuClick  = (event, bookingId) => { setAnchorEl(event.currentTarget); setMenuBookingId(bookingId); };
+//   const handleMenuClose  = () => { setAnchorEl(null); setMenuBookingId(null); };
+
+//   const handleAddClick = (booking) => {
+//     if (!canCreateInCustomerTab) { showError('You do not have permission to add payments'); return; }
+//     setSelectedBooking(booking);
+//     setShowModal(true);
+//     handleMenuClose();
+//   };
+
+//   const handleVerifyPayment = async (entry) => {
+//     if (!canCreateInPaymentVerificationTab) { showError('You do not have permission to verify payments'); return; }
+//     try {
+//       const result = await confirmVerify({
+//         title: 'Confirm Payment Verification',
+//         text: `Are you sure you want to verify the payment of ₹${entry.amount} for booking ${entry.bookingDetails?.bookingNumber || entry.booking}?`,
+//         confirmButtonText: 'Yes, verify it!'
+//       });
+//       if (result.isConfirmed) {
+//         await axiosInstance.patch(`/ledger/approve/${entry._id}`, { remark: '' });
+//         setSuccessMessage('Payment verified successfully!');
+//         const bookingId     = entry.bookingDetails?._id  || entry.booking;
+//         const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+//         refreshTab(TAB.PAYMENT_VERIFICATION);
+//         refreshTab(TAB.VERIFIED_LIST);
+//         await openLedgerInNewTab(bookingId, bookingNumber);
+//         setTimeout(() => setSuccessMessage(''), 3000);
+//       }
+//     } catch (error) {
+//       console.error('Error verifying payment:', error);
+//       showError(error, 'Failed to verify payment');
+//     }
+//   };
+
+//   const handleRejectPayment = (entry) => {
+//     if (!canRejectPayments) { showError('You do not have permission to reject payments'); return; }
+//     setSelectedRejectEntry(entry);
+//     setRejectionReason('');
+//     setShowRejectModal(true);
+//   };
+
+//   const confirmRejectPayment = async () => {
+//     if (!rejectionReason.trim()) { showError('Please provide a rejection reason'); return; }
+//     try {
+//       setRejectLoading(true);
+//       await axiosInstance.patch(`/ledger/${selectedRejectEntry._id}/reject`, { rejectionReason: rejectionReason.trim() });
+//       setSuccessMessage('Payment rejected successfully!');
+//       setTimeout(() => setSuccessMessage(''), 3000);
+//       setShowRejectModal(false);
+//       setSelectedRejectEntry(null);
+//       setRejectionReason('');
+//       refreshTab(TAB.PAYMENT_VERIFICATION);
+//       refreshTab(TAB.REJECTED_LIST);
+//     } catch (error) {
+//       console.error('Error rejecting payment:', error);
+//       showError(error, 'Failed to reject payment');
+//     } finally {
+//       setRejectLoading(false);
+//     }
+//   };
+
+//   // ── Export handlers ───────────────────────────────────────────────────────
+//   const handleOpenExportModal = () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     setOpenExportModal(true); setExportError('');
+//   };
+//   const handleCloseExportModal = () => {
+//     setOpenExportModal(false); setStartDate(null); setEndDate(null);
+//     setSelectedBranchId(''); setCashOtherFilter(''); setExportError('');
+//   };
+//   const handleOpenVerifiedOutstandingModal = () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     setOpenVerifiedOutstandingModal(true); setVerifiedOutstandingExportError('');
+//   };
+//   const handleCloseVerifiedOutstandingModal = () => {
+//     setOpenVerifiedOutstandingModal(false); setVerifiedOutstandingStartDate(null);
+//     setVerifiedOutstandingEndDate(null); setVerifiedOutstandingBranchId(''); setVerifiedOutstandingExportError('');
+//   };
+//   const handleOpenPendingVerificationModal = () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     setOpenPendingVerificationModal(true); setPendingVerificationExportError('');
+//   };
+//   const handleClosePendingVerificationModal = () => {
+//     setOpenPendingVerificationModal(false); setPendingVerificationStartDate(null);
+//     setPendingVerificationEndDate(null); setPendingVerificationBranchId(''); setPendingVerificationExportError('');
+//   };
+
+//   // Generic blob export helper
+//   const doExport = async ({ url, params, fileName, onLoading, onError, onClose }) => {
+//     onLoading(true); onError('');
+//     try {
+//       const response = await axiosInstance.get(`${url}?${params.toString()}`, { responseType: 'blob' });
+//       const ct = response.headers['content-type'];
+//       if (ct && ct.includes('application/json')) {
+//         const text = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(response.data); });
+//         const err = JSON.parse(text);
+//         if (!err.success && err.message) { onError(err.message); Swal.fire({ icon: 'error', title: 'Export Failed', text: err.message }); return; }
+//       }
+//       const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+//       const link = Object.assign(document.createElement('a'), { href: window.URL.createObjectURL(blob) });
+//       link.setAttribute('download', fileName);
+//       document.body.appendChild(link); link.click(); link.remove();
+//       window.URL.revokeObjectURL(link.href);
+//       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Exported successfully!', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+//       onClose();
+//     } catch (error) {
+//       const msg = error.response?.data?.message || error.message || 'Failed to export report';
+//       onError(msg); Swal.fire({ icon: 'error', title: 'Export Failed', text: msg });
+//     } finally { onLoading(false); }
+//   };
+
+//   const handleExcelExport = async () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     if (!selectedBranchId) { setExportError('Please select a branch'); return; }
+//     if (!startDate || !endDate) { setExportError('Please select both start and end dates'); return; }
+//     if (startDate > endDate) { setExportError('Start date cannot be after end date'); return; }
+//     if (!cashOtherFilter) { setExportError('Please select Cash/Other filter'); return; }
+//     const branchName = branches.find(b => b._id === selectedBranchId)?.name || 'Branch';
+//     const filterType = cashOtherFilter === 'cash' ? 'Cash' : 'Other';
+//     await doExport({
+//       url: '/reports/receipts',
+//       params: new URLSearchParams({ branchId: selectedBranchId, startDate: formatDateForAPI(startDate), endDate: formatDateForAPI(endDate), format: 'excel', cashOtherFilter }),
+//       fileName: `Receipts_${branchName}_${filterType}_${formatDateDDMMYYYY(startDate)}_to_${formatDateDDMMYYYY(endDate)}.xlsx`,
+//       onLoading: setExportLoading, onError: setExportError, onClose: handleCloseExportModal
+//     });
+//   };
+
+//   const handleVerifiedOutstandingExport = async () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     if (!verifiedOutstandingBranchId) { setVerifiedOutstandingExportError('Please select a branch'); return; }
+//     if (!verifiedOutstandingStartDate || !verifiedOutstandingEndDate) { setVerifiedOutstandingExportError('Please select both start and end dates'); return; }
+//     if (verifiedOutstandingStartDate > verifiedOutstandingEndDate) { setVerifiedOutstandingExportError('Start date cannot be after end date'); return; }
+//     const branchName = branches.find(b => b._id === verifiedOutstandingBranchId)?.name || 'Branch';
+//     await doExport({
+//       url: '/reports/outstanding/verified',
+//       params: new URLSearchParams({ branchId: verifiedOutstandingBranchId, startDate: formatDateForAPI(verifiedOutstandingStartDate), endDate: formatDateForAPI(verifiedOutstandingEndDate), format: 'excel' }),
+//       fileName: `Verified_Receipts_${branchName}_${formatDateDDMMYYYY(verifiedOutstandingStartDate)}_to_${formatDateDDMMYYYY(verifiedOutstandingEndDate)}.xlsx`,
+//       onLoading: setVerifiedOutstandingExportLoading, onError: setVerifiedOutstandingExportError, onClose: handleCloseVerifiedOutstandingModal
+//     });
+//   };
+
+//   const handlePendingVerificationExport = async () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     if (!pendingVerificationBranchId) { setPendingVerificationExportError('Please select a branch'); return; }
+//     if (!pendingVerificationStartDate || !pendingVerificationEndDate) { setPendingVerificationExportError('Please select both start and end dates'); return; }
+//     if (pendingVerificationStartDate > pendingVerificationEndDate) { setPendingVerificationExportError('Start date cannot be after end date'); return; }
+//     const branchName = branches.find(b => b._id === pendingVerificationBranchId)?.name || 'Branch';
+//     await doExport({
+//       url: '/reports/outstanding/pending-verification',
+//       params: new URLSearchParams({ branchId: pendingVerificationBranchId, startDate: formatDateForAPI(pendingVerificationStartDate), endDate: formatDateForAPI(pendingVerificationEndDate), format: 'excel' }),
+//       fileName: `Pending_Verification_${branchName}_${formatDateDDMMYYYY(pendingVerificationStartDate)}_to_${formatDateDDMMYYYY(pendingVerificationEndDate)}.xlsx`,
+//       onLoading: setPendingVerificationExportLoading, onError: setPendingVerificationExportError, onClose: handleClosePendingVerificationModal
+//     });
+//   };
+
+//   const handlePaymentSuccess = () => {
+//     refreshTab(TAB.CUSTOMER);
+//     if (selectedBooking) {
+//       setReceiptsFetched(prev => ({ ...prev, [selectedBooking._id]: false }));
+//       setBookingReceipts(prev => ({ ...prev, [selectedBooking._id]: [] }));
+//     }
+//   };
+
+//   const handleLoadReceipts = (bookingId) => { fetchReceiptsForBooking(bookingId); };
+
+//   // ── Print functions ───────────────────────────────────────────────────────
+//   const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
+//     if (!canPrintInCustomerTab) { showError('You do not have permission to print invoices'); return; }
+//     try {
+//       const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
+//       const receiptData = receiptResponse.data.data.receipt;
+//       const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
+//       const bookingData = bookingResponse.data.data.bookingDetails;
+//       const finalStatus = bookingResponse.data.data.finalStatus || '';
+//       const qrCodeData  = receiptData.qrCodeData || {};
+//       const subsidyAmount = bookingData.subsidyAmount || 0;
+//       const isEV = bookingData.model?.type === 'EV';
+
+//       const priceComponents = bookingData.priceComponents || [];
+//       const filteredPriceComponents = priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         return !(/INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey) ||
+//                  /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey) ||
+//                  /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey));
+//       });
+//       const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+
+//       const findComp = (kws) => priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
+//       const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
+//       const rtoCharges = findComp(['RTO','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
+//       const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || bookingData.hypothecationCharges || 0;
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       const qrText = `GANDHI MOTORS PVT LTD\nBooking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}\nCustomer: ${qrCodeData.customerName || bookingData.customerDetails?.name}\nMobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}\nModel: ${qrCodeData.modelName || bookingData.model?.model_name}\nType: ${bookingData.model?.type || 'N/A'}\nChassis: ${qrCodeData.chassisNo || bookingData.chassisNumber || 'Not allocated'}\nPayment Type: ${qrCodeData.paymentType || bookingData.payment?.type}\nTotal Amount: ₹${grandTotal.toFixed(2)}\n${isEV && subsidyAmount > 0 ? `Subsidy: -₹${subsidyAmount.toFixed(2)}` : ''}\nReceipt: ${receiptData.receiptNumber || 'N/A'}\nAmount: ${receiptData.display?.amount || `₹${receiptData.amount?.toFixed(2) || '0'}`}\nPayment Mode: ${receiptData.paymentMode || 'Cash'}\nReference: ${receiptData.transactionReference || 'N/A'}\nDate: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
+
+//       let qrCodeImage = '';
+//       try {
+//         qrCodeImage = await QRCode.toDataURL(qrText, { width: 250, margin: 3, color: { dark: '#000000', light: '#FFFFFF' }, errorCorrectionLevel: 'H' });
+//       } catch (e) { console.error('QR error', e); }
+
+//       const transformedData = {
+//         bookingNumber: bookingData.bookingNumber, bookingType: bookingData.bookingType,
+//         rto: bookingData.rto, hpa: bookingData.hpa,
+//         hypothecationCharges: bookingData.hypothecationCharges || 0, gstin: bookingData.gstin || '',
+//         model: { model_name: bookingData.model?.model_name || 'N/A', type: bookingData.model?.type || 'N/A' },
+//         chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
+//         engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
+//         batteryNumber: bookingData.vehicle?.batteryNumber || '', keyNumber: bookingData.vehicle?.keyNumber || '',
+//         color: { name: bookingData.color?.name || '' },
+//         customerDetails: {
+//           name: bookingData.customerDetails?.name || 'N/A', address: bookingData.customerDetails?.address || '',
+//           taluka: bookingData.customerDetails?.taluka || '', district: bookingData.customerDetails?.district || '',
+//           pincode: bookingData.customerDetails?.pincode || '', mobile1: bookingData.customerDetails?.mobile1 || '',
+//           dob: bookingData.customerDetails?.dob || '', aadharNumber: bookingData.customerDetails?.aadharNumber || ''
+//         },
+//         exchange: bookingData.exchange, exchangeDetails: bookingData.exchangeDetails,
+//         payment: { type: bookingData.payment?.type || 'CASH', financer: bookingData.payment?.financer },
+//         salesExecutive: bookingData.salesExecutive,
+//         branch: { gst_number: bookingData.branch?.gst_number || '', name: bookingData.branch?.name || '' },
+//         accessories: bookingData.accessories || [], priceComponents: bookingData.priceComponents || [],
+//         subdealer: bookingData.subdealer || '', receivedAmount: bookingData.receivedAmount || 0,
+//         finalStatus: finalStatus || '', recentPayment: receiptData, qrCodeData, qrCodeImage, qrCodeText: qrText,
+//         recentPaymentAmount: receiptData.amount || 0, bookingDetails: bookingData, subsidyAmount,
+//         calculatedTotals: { totalA, totalB, grandTotal, insuranceCharges, rtoCharges, hpCharges, subsidyDisplay }
+//       };
+
+//       const invoiceHTML = generateReceiptInvoiceHTML(transformedData, receiptIndex === 0);
+//       const printWindow = window.open('', '_blank');
+//       printWindow.document.write(invoiceHTML);
+//       printWindow.document.close();
+//       printWindow.onload = function() { printWindow.focus(); printWindow.print(); };
+//     } catch (error) {
+//       console.error('Error generating receipt invoice:', error);
+//       showError(error, 'Failed to generate receipt invoice');
+//     }
+//   };
+
+//  const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+//   const exchangeBrokerName    = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+//   const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
+//   const currentDate           = new Date().toLocaleDateString('en-GB');
+//   const receiptDate           = data.recentPayment?.receiptDate ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB') : currentDate;
+//   const recentPaymentAmount   = data.recentPaymentAmount || 0;
+//   const recentPaymentAmountRef  = data.recentPayment?.transactionReference || "-";
+//   const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+//   const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+//   const receiptNumber = data.recentPayment?.receiptNumber || "-";
+//   const qrCodeImage   = data.qrCodeImage || '';
+//   const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+//   const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
+//   const branchName = data.branch?.name || data.bookingDetails?.branch?.name || 'GANDHI TVS';
+//   const customerType = data.bookingDetails?.customerType || data.customerType || 'N/A';
+
+//   if (isFirstReceipt) {
+//     const filteredPriceComponents = data.priceComponents.filter((comp) => {
+//       const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//       return !(/INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey) ||
+//                /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey) ||
+//                /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey));
+//     });
+//     const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+//       const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+//       const unitCost    = component.originalValue;
+//       const lineTotal   = component.originalValue;
+//       const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+//       const totalGST    = lineTotal - taxableValue;
+//       const cgstAmount  = totalGST / 2;
+//       const sgstAmount  = totalGST / 2;
+//       return { ...component, unitCost, taxableValue, cgstAmount, sgstAmount, gstAmount: totalGST, gstRatePercentage, discount: 0, lineTotal };
+//     });
+//     const findComp = (kws) => data.priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
+//     const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
+//     const rtoCharges = findComp(['RTO','ROAD TAX','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
+//     const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || data.hypothecationCharges || 0;
+//     const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+//     const totalB = insuranceCharges + rtoCharges + hpCharges;
+//     const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//     const grandTotal = totalA + totalB - subsidyDisplay;
+
+//     return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
+//     <style>
+//       body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
+//       .page { width: 210mm; height: 297mm; margin: 0 auto; }
+//       .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
+//       .header-left { width: 60%; }
+//       .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+//       .logo-qr-container { display: flex; align-items: center; gap: 20px; justify-content: flex-end; margin-bottom: 10px; width: 100%; }
+//       .logo { height: 81px; }
+//       .qr-code-extra-big { width: 151px; height: 151px; border: 1px solid #ccc; }
+//       .dealer-info { text-align: left; font-size: 15px; line-height: 1.2; }
+//       .customer-info-container { display: flex; font-size: 15px; }
+//       .customer-info-left { width: 50%; }
+//       .customer-info-right { width: 50%; }
+//       .customer-info-row { margin: 1mm 0; line-height: 1.2; }
+//       .customer-info-row .value { font-weight: 700; }
+//       table { width: 100%; border-collapse: collapse; font-size: 10pt; margin: 2mm 0; }
+//       th, td { padding: 1mm; border: 1px solid #000; vertical-align: top; }
+//       .no-border { border: none !important; font-size: 15px; }
+//       .text-right { text-align: right; }
+//       .text-center { text-align: center; }
+//       .bold { font-weight: bold; }
+//       .divider { border-top: 2px solid #AAAAAA; }
+//       .totals-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
+//       .totals-table td { border: none; padding: 1mm; }
+//       .total-divider { border-top: 2px solid #AAAAAA; height: 1px; margin: 2px 0; }
+//       .broker-info { display:flex; justify-content:space-between; padding:2px; }
+//       .status-box { background-color: #e8f5e8; border: 2px solid #c3e6c3; border-radius: 4px; padding: 16px; margin: 11px 0; text-align: center; font-weight: bold; font-size: 21px; color: #495057; }
+//       .amount-in-words { font-style: italic; margin-top: 6px; color: #333; padding: 6px; }
+//       .amount-in-words .value { font-weight: 700; font-style: normal; }
+//       .note { padding:2px; margin:3px; }
+//       .note .value { font-weight: 700; }
+//       .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 11px; margin: 11px 0; }
+//       .receipt-info-row { margin: 2px 0; }
+//       .receipt-info-row .value { font-weight: 700; }
+//       .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 14px; }
+//       .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+//       .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 105px; display: inline-block; }
+//       .payment-grid-item .value { font-weight: 700; }
+//       .signature-box { margin-top: 6mm; font-size: 10pt; }
+//       .signature-line { border-top: 1px dashed #000; width: 41mm; display: inline-block; margin: 0 5mm; }
+//       @page { size: A4; margin: 0; }
+//       @media print { body { padding: 5mm; } }
+//     </style></head><body><div class="page">
+//       <div class="header-container">
+//         <div class="header-left">
+//           <h2 style="margin:3;font-size:16pt;">GANDHI MOTORS PVT LTD</h2>
+//           <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik, 7498993672<br>GSTIN: ${data.branch?.gst_number || ''}<br>${branchName}</div>
+//         </div>
+//         <div class="header-right">
+//           <div class="logo-qr-container">
+//             <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//             ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />` : ''}
+//           </div>
+//           <div style="margin-top: 6px; font-size: 14px;">Date: ${receiptDate}</div>
+//           <div style="margin-top: 6px; font-size: 14px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+//           ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 13px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 12px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+//       <div class="receipt-info" style="padding: 8px;">
+//         <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
+//         <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+//         <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+//         <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+//       </div>
+//       <div class="customer-info-container">
+//         <div class="customer-info-left">
+//           <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+//           <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+//           <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+//           <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</span></div>
+//           <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+//           <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
+//         </div>
+//         <div class="customer-info-right">
+//           <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+//           <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+//           <div class="customer-info-row">
+//             <strong>Payment Type:</strong> 
+//             <span class="value">
+//               ${data.payment?.type === 'FINANCE' && !data.hpa 
+//                 ? `${data.payment?.type || 'CASH'} (NO HPA SCHEME APPLICABLE)`
+//                 : data.payment?.type || 'CASH'
+//               }
+//             </span>
+//           </div>
+//           ${data.hpa && data.payment?.type === 'FINANCE' && data.payment?.financer?.name ? `
+//             <div class="customer-info-row">
+//               <strong>Financer:</strong> <span class="value">${data.payment.financer.name}</span>
+//             </div>
+//           ` : ''}
+//           <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
+//         </div>
+//       </div>
+//       <div class="payment-info-box">
+//         <div class="receipt-info" style="padding: 4px;">
+//           <div class="payment-grid-2col">
+//             <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${recentPaymentAmount.toFixed(2)}</span></div>
+//             <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+//             <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+//             <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+//             <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+//           </div>
+//         </div>
+//         <div class="amount-in-words"><strong>(In Words):</strong> <span class="value">${recentPaymentAmountInWords} Only</span></div>
+//       </div>
+//       <table>
+//         <thead>
+//           <tr>
+//             <th style="width:25%">Particulars</th><th style="width:8%">HSN CODE</th><th style="width:8%">Unit Cost</th>
+//             <th style="width:8%">Taxable</th><th style="width:5%">CGST</th><th style="width:8%">CGST AMOUNT</th>
+//             <th style="width:5%">SGST</th><th style="width:8%">SGST AMOUNT</th><th style="width:7%">DISCOUNT</th><th style="width:10%">LINE TOTAL</th>
+//           </tr>
+//         </thead>
+//         <tbody>
+//           ${priceComponentsWithGST.map(c => `
+//             <tr>
+//               <td>${c.header?.header_key || ''}</td>
+//               <td>${c.header?.metadata?.hsn_code || ''}</td>
+//               <td>${c.unitCost.toFixed(2)}</td>
+//               <td>${c.taxableValue.toFixed(2)}</td>
+//               <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
+//               <td>${c.cgstAmount.toFixed(2)}</td>
+//               <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
+//               <td>${c.sgstAmount.toFixed(2)}</td>
+//               <td>${c.discount.toFixed(2)}</td>
+//               <td>${c.lineTotal.toFixed(2)}</td>
+//             </tr>
+//           `).join('')}
+//         </tbody>
+//       </table>
+//       <table class="totals-table">
+//         <tr><td class="no-border" style="width:80%"><strong>Total(A)</strong></td><td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td></tr>
+//         <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
+//         <tr><td class="no-border"><strong>INSURANCE CHARGES</strong></td><td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td></tr>
+//         <tr><td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td><td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td></tr>
+//         <tr><td class="no-border"><strong>HP CHARGES</strong></td><td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td></tr>
+//         ${isEV && subsidyAmount > 0 ? `<tr><td class="no-border"><strong>SUBSIDY AMOUNT</strong></td><td class="no-border text-right" style="color:green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td></tr>` : ''}
+//         <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
+//         <tr><td class="no-border"><strong>TOTAL(B)</strong></td><td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td></tr>
+//         <tr><td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td><td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td></tr>
+//       </table>
+//       <div class="broker-info">
+//         <div><strong>Ex. Broker/ Sub Dealer:</strong> <span>${exchangeBrokerName}</span></div>
+//         <div><strong>Ex. Veh No:</strong> <span>${exchangeVehicleNumber}</span></div>
+//       </div>
+//       <div class="note"><strong>Notes:</strong> <span class="value">Booking Awaiting approval as discount exceed</span></div>
+//       <div class="divider"></div>
+//       <div style="margin-top:2mm;"><div><strong>Booking Status: </strong></div><div class="status-box"><span>${data.finalStatus || 'Status: Not Available'}</span></div></div>
+//       <div class="divider"></div>
+//       <div class="divider" style="margin-top: 5mm;"></div>
+//       <div class="signature-box">
+//         <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//           <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
+//           <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Sales Executive</div></div>
+//           <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Manager</div></div>
+//           <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
+//         </div>
+//       </div>
+//     </div></body></html>`;
+//   } else {
+//     const copyBlock = (isDuplicate) => `
+//       <div class="receipt-copy">
+//         <div class="header-container">
+//           <div class="header-left">
+//             <h2 style="margin:2;font-size:13pt;">GANDHI MOTORS PVT LTD</h2>
+//             <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik, 7498993672<br>GSTIN: ${data.branch?.gst_number || ''}<br>${branchName}</div>
+//           </div>
+//           <div class="header-right">
+//             <div class="logo-qr-container">
+//               <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//               ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+//             </div>
+//             <div style="margin-top: 4px; font-size: 12px;">Date: ${receiptDate}</div>
+//             <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+//             ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 11px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 10px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
+//           </div>
+//         </div>
+//         <div class="divider"></div>
+//         <div class="receipt-info" style="padding: 6px;">
+//           <div class="receipt-info-row"><strong>Payment Receipt${isDuplicate ? ' (DUPLICATE)' : ''}</strong></div>
+//           <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+//           <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+//           <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+//         </div>
+//         <div class="customer-info-container">
+//           <div class="customer-info-left">
+//             <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+//             <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+//             <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+//             <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
+//             <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+//             <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
+//           </div>
+//           <div class="customer-info-right">
+//             <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+//             <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+//             <div class="customer-info-row">
+//               <strong>Payment Type:</strong> 
+//               <span class="value">
+//                 ${data.payment?.type === 'FINANCE' && !data.hpa 
+//                   ? `${data.payment?.type || 'CASH'} (NO HPA SCHEME APPLICABLE)`
+//                   : data.payment?.type || 'CASH'
+//                 }
+//               </span>
+//             </div>
+//             ${data.hpa && data.payment?.type === 'FINANCE' && data.payment?.financer?.name ? `
+//               <div class="customer-info-row">
+//                 <strong>Financer:</strong> <span class="value">${data.payment.financer.name}</span>
+//               </div>
+//             ` : ''}
+//             <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
+//           </div>
+//         </div>
+//         <div class="payment-info-box">
+//           <div class="receipt-info" style="padding: 4px;">
+//             <div class="payment-grid-2col">
+//               <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${recentPaymentAmount.toFixed(2)}</span></div>
+//               <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+//               <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+//               <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+//               <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+//             </div>
+//           </div>
+//         </div>
+//         <div class="note"><strong>Notes:</strong> <span class="value"></span></div>
+//         <div class="divider"></div>
+//         <div class="signature-box">
+//           <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
+//             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Sales Executive</div></div>
+//             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Manager</div></div>
+//             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
+//           </div>
+//         </div>
+//       </div>`;
+
+//     return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
+//     <style>
+//       body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
+//       .page { width: 210mm; height: 297mm; margin: 0 auto; }
+//       .receipt-copy { height: 138mm; page-break-inside: avoid; }
+//       .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
+//       .header-left { width: 60%; }
+//       .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+//       .logo-qr-container { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-bottom: 5px; width: 100%; }
+//       .logo { height: 61px; }
+//       .qr-code-small { width: 101px; height: 101px; border: 1px solid #ccc; }
+//       .dealer-info { text-align: left; font-size: 13px; line-height: 1.1; }
+//       .customer-info-container { display: flex; font-size: 13px; }
+//       .customer-info-left { width: 50%; }
+//       .customer-info-right { width: 50%; }
+//       .customer-info-row { margin: 0.5mm 0; line-height: 1.1; }
+//       .customer-info-row .value { font-weight: 700; }
+//       .divider { border-top: 1px solid #AAAAAA; margin: 2mm 0; }
+//       .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 9px; margin: 9px 0; font-size: 13px; }
+//       .receipt-info-row { margin: 2px 0; }
+//       .receipt-info-row .value { font-weight: 700; }
+//       .payment-info-box { margin: 6px 0; }
+//       .signature-box { margin-top: 4mm; font-size: 9pt; }
+//       .signature-line { border-top: 1px dashed #000; width: 36mm; display: inline-block; margin: 0 3mm; }
+//       .cutting-line { border-top: 2px dashed #333; margin: 11mm 0; text-align: center; position: relative; }
+//       .cutting-line::before { content: "✂ Cut Here ✂"; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: white; padding: 0 11px; font-size: 11px; color: #666; }
+//       .note { padding:2px; margin:3px; font-size: 12px; }
+//       .note .value { font-weight: 700; }
+//       .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 13px; }
+//       .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+//       .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 100px; display: inline-block; }
+//       .payment-grid-item .value { font-weight: 700; }
+//       @page { size: A4; margin: 0; }
+//       @media print { body { padding: 5mm; } .receipt-copy { page-break-inside: avoid; } }
+//     </style></head><body><div class="page">
+//       ${copyBlock(false)}
+//       <div class="cutting-line"></div>
+//       ${copyBlock(true)}
+//     </div></body></html>`;
+//   }
+// };
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  TABLE RENDERERS
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   const renderCustomerTable = () => {
+//     if (!canViewCustomerTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Customer tab.</CAlert></div>;
+
+//     const canShowActionColumn = canCreateInCustomerTab || canPrintInCustomerTab;
+//     const { docs: currentRecords, loading } = tabData[TAB.CUSTOMER];
+
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell>Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell>Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell>Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell>Total</CTableHeaderCell>
+//                 <CTableHeaderCell>Received</CTableHeaderCell>
+//                 <CTableHeaderCell>Balance</CTableHeaderCell>
+//                 <CTableHeaderCell>Receipts</CTableHeaderCell>
+//                 {canShowActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={canShowActionColumn ? 12 : 11} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.CUSTOMER].search ? `No results found for "${tabData[TAB.CUSTOMER].search}"` : 'No booking available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (tabData[TAB.CUSTOMER].currentPage - 1) * tabData[TAB.CUSTOMER].limit + index + 1;
+//                   const isLoading   = loadingReceipts[booking._id];
+//                   const receipts    = bookingReceipts[booking._id] || [];
+//                   const paymentReceipts = receipts.filter(r => r.isRefund === false);
+//                   const sortedReceipts  = [...paymentReceipts].sort((a, b) => new Date(a.receiptDate || a.createdAt || 0) - new Date(b.receiptDate || b.createdAt || 0));
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : sortedReceipts.length > 0 ? (
+//                           <CDropdown>
+//                             <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canPrintInCustomerTab}>
+//                               {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
+//                             </CDropdownToggle>
+//                             <CDropdownMenu>
+//                               {sortedReceipts.map((receipt, ri) => (
+//                                 <CDropdownItem key={receipt.id} onClick={() => printReceiptInvoice(receipt.id, booking._id, ri)}>
+//                                   <div className="d-flex align-items-center">
+//                                     <CIcon icon={cilPrint} className="me-2" />
+//                                     <div><div><strong>Receipt #{ri + 1}</strong></div><small>{receipt.display?.amount || `₹${receipt.amount}`} - {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}</small></div>
+//                                   </div>
+//                                 </CDropdownItem>
+//                               ))}
+//                             </CDropdownMenu>
+//                           </CDropdown>
+//                         ) : receiptsFetched[booking._id] ? (
+//                           <span className="text-muted">No receipts</span>
+//                         ) : (
+//                           <CButton size="sm" color="light" onClick={() => handleLoadReceipts(booking._id)} disabled={isLoading}>
+//                             <CIcon icon={cilCloudDownload} className="me-1" />Load Receipts
+//                           </CButton>
+//                         )}
+//                       </CTableDataCell>
+//                       {canShowActionColumn && (
+//                         <CTableDataCell>
+//                           <CButton size="sm" className='option-button btn-sm' onClick={(e) => handleMenuClick(e, booking._id)} disabled={!canCreateInCustomerTab}>
+//                             <CIcon icon={cilSettings} />Options
+//                           </CButton>
+//                           <Menu anchorEl={anchorEl} open={menuBookingId === booking._id} onClose={handleMenuClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+//                             {canCreateInCustomerTab && (
+//                               <MenuItem onClick={() => { handleAddClick(booking); handleMenuClose(); }}>
+//                                 <CIcon icon={cilPlus} className="me-2" />Add Payment
+//                               </MenuItem>
+//                             )}
+//                           </Menu>
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.CUSTOMER)}
+//       </>
+//     );
+//   };
+
+//   const renderPaymentVerificationTable = () => {
+//     if (!canViewPaymentVerificationTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Payment Verification tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.PAYMENT_VERIFICATION];
+//     const canShowActions = canCreateInPaymentVerificationTab || canRejectPayments;
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell>Amount</CTableHeaderCell><CTableHeaderCell>Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell>Date</CTableHeaderCell><CTableHeaderCell>Bank Receipts</CTableHeaderCell>
+//                 <CTableHeaderCell>Status</CTableHeaderCell>
+//                 {canShowActions && <CTableHeaderCell>Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={canShowActions ? 10 : 9} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.PAYMENT_VERIFICATION].search ? `No results found for "${tabData[TAB.PAYMENT_VERIFICATION].search}"` : 'No pending payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex   = (tabData[TAB.PAYMENT_VERIFICATION].currentPage - 1) * tabData[TAB.PAYMENT_VERIFICATION].limit + index + 1;
+//                   const bookingId     = entry.bookingDetails?._id || entry.booking;
+//                   const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+//                   const isLoading     = loadingReceipts[bookingId];
+//                   const receipts      = bookingReceipts[bookingId] || [];
+//                   const bankReceipts  = receipts.filter(r => r.paymentMode?.toUpperCase() === 'BANK');
+//                   const sortedBankReceipts = [...bankReceipts].sort((a, b) => new Date(a.receiptDate || a.createdAt || 0) - new Date(b.receiptDate || b.createdAt || 0));
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
+//                       <CTableDataCell>₹{entry.amount || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? <CSpinner size="sm" color="info" /> :
+//                           sortedBankReceipts.length > 0 ? (
+//                             <CDropdown>
+//                               <CDropdownToggle size="sm" color="info" variant="outline">{sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}</CDropdownToggle>
+//                               <CDropdownMenu>
+//                                 {sortedBankReceipts.map((r, ri) => (
+//                                   <CDropdownItem key={r.id} onClick={() => printReceiptInvoice(r.id, bookingId, ri)} disabled={!canPrintInCustomerTab}>
+//                                     <div className="d-flex align-items-center"><CIcon icon={cilPrint} className="me-2" /><div><div><strong>Bank Receipt #{ri + 1}</strong></div><small>{r.display?.amount || `₹${r.amount}`} - {r.display?.date || (r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('en-GB') : 'N/A')}</small></div></div>
+//                                   </CDropdownItem>
+//                                 ))}
+//                               </CDropdownMenu>
+//                             </CDropdown>
+//                           ) : receiptsFetched[bookingId] ? <span className="text-muted">No bank receipts</span> : (
+//                             <CButton size="sm" color="light" onClick={() => handleLoadReceipts(bookingId)} disabled={isLoading}>
+//                               <CIcon icon={cilCloudDownload} className="me-1" />Load Receipts
+//                             </CButton>
+//                           )}
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
+//                           {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       {canShowActions && (
+//                         <CTableDataCell>
+//                           <div className="d-flex gap-2">
+//                             {entry.approvalStatus === 'Pending' && canCreateInPaymentVerificationTab && (
+//                               <CButton size="sm" className="action-btn" onClick={() => handleVerifyPayment(entry)}><CIcon icon={cilCheckCircle} className="me-1" />Verify</CButton>
+//                             )}
+//                             {entry.approvalStatus === 'Pending' && canRejectPayments && (
+//                               <CButton size="sm" color="danger" variant="outline" onClick={() => handleRejectPayment(entry)}><CIcon icon={cilXCircle} className="me-1" />Reject</CButton>
+//                             )}
+//                             {entry.approvalStatus !== 'Pending' && <span className="text-muted">Verified</span>}
+//                           </div>
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.PAYMENT_VERIFICATION)}
+//       </>
+//     );
+//   };
+
+//   const renderCompletePaymentTable = () => {
+//     if (!canViewCompletePaymentTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Complete Payment tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.COMPLETE_PAYMENT];
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Model Name</CTableHeaderCell><CTableHeaderCell>Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell>Chassis Number</CTableHeaderCell><CTableHeaderCell>Total</CTableHeaderCell>
+//                 <CTableHeaderCell>Received</CTableHeaderCell><CTableHeaderCell>Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={10} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.COMPLETE_PAYMENT].search ? `No results found for "${tabData[TAB.COMPLETE_PAYMENT].search}"` : 'No complete payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (tabData[TAB.COMPLETE_PAYMENT].currentPage - 1) * tabData[TAB.COMPLETE_PAYMENT].limit + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.COMPLETE_PAYMENT)}
+//       </>
+//     );
+//   };
+
+//   const renderPendingListTable = () => {
+//     if (!canViewPendingListTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Pending List tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.PENDING_LIST];
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Model Name</CTableHeaderCell><CTableHeaderCell>Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell>Chassis Number</CTableHeaderCell><CTableHeaderCell>Total</CTableHeaderCell>
+//                 <CTableHeaderCell>Received</CTableHeaderCell><CTableHeaderCell>Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={10} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.PENDING_LIST].search ? `No results found for "${tabData[TAB.PENDING_LIST].search}"` : 'No pending payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (tabData[TAB.PENDING_LIST].currentPage - 1) * tabData[TAB.PENDING_LIST].limit + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.PENDING_LIST)}
+//       </>
+//     );
+//   };
+
+//   const renderVerifiedListTable = () => {
+//     if (!canViewVerifiedListTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Verified List tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.VERIFIED_LIST];
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell>Amount</CTableHeaderCell><CTableHeaderCell>Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell>Date</CTableHeaderCell><CTableHeaderCell>Verified By</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={8} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.VERIFIED_LIST].search ? `No results found for "${tabData[TAB.VERIFIED_LIST].search}"` : 'No verified payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (tabData[TAB.VERIFIED_LIST].currentPage - 1) * tabData[TAB.VERIFIED_LIST].limit + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || entry.booking || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || entry.customerName || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>₹{entry.amount?.toLocaleString('en-IN') || entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedByDetails?.name || entry.receivedBy?.name || ''}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.VERIFIED_LIST)}
+//       </>
+//     );
+//   };
+
+//   const renderRejectedListTable = () => {
+//     if (!canViewRejectedListTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Rejected List tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.REJECTED_LIST];
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell>Amount</CTableHeaderCell><CTableHeaderCell>Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell>Date</CTableHeaderCell><CTableHeaderCell>Received By</CTableHeaderCell>
+//                 <CTableHeaderCell>Rejection Reason</CTableHeaderCell><CTableHeaderCell>Rejected At</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={10} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.REJECTED_LIST].search ? `No results found for "${tabData[TAB.REJECTED_LIST].search}"` : 'No rejected payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (tabData[TAB.REJECTED_LIST].currentPage - 1) * tabData[TAB.REJECTED_LIST].limit + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.booking?.bookingNumber || entry.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.booking?.customerDetails?.name || entry.customerName || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>₹{entry.amount?.toLocaleString('en-IN') || entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
+//                       <CTableDataCell>{entry.receiptDate ? new Date(entry.receiptDate).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedBy?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color="danger" shape="rounded-pill" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+//                           {entry.rejectionReason || 'No reason provided'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       <CTableDataCell>{entry.approvedAt ? new Date(entry.approvedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.REJECTED_LIST)}
+//       </>
+//     );
+//   };
+
+//   // ── Guard renders ─────────────────────────────────────────────────────────
+//   if (!canViewReceipts) return <div className="alert alert-danger m-3">You do not have permission to view Receipts.</div>;
+//   if (!canViewAnyTab)   return <div className="alert alert-danger m-3">You do not have permission to view any tabs in Receipts.</div>;
+//   if (loading)          return <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}><CSpinner color="primary" /></div>;
+//   if (error)            return <div className="alert alert-danger">{error}</div>;
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  MAIN RENDER
+//   // ══════════════════════════════════════════════════════════════════════════
+//   return (
+//     <div>
+//       <div className='title'>Receipt Management</div>
+//       {successMessage && <CAlert color="success" className="mb-3">{successMessage}</CAlert>}
+
+//       <CCard className='table-container mt-4'>
+//         <CCardBody>
+//           {canViewAnyTab ? (
+//             <>
+//               {canCreateReceipts && (
+//                 <div className="d-flex mb-3 gap-2">
+//                   <CButton size="sm" className="action-btn" onClick={handleOpenExportModal} title="Export Receipts Excel">
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />Export Receipts
+//                   </CButton>
+//                   <CButton size="sm" className="action-btn" onClick={handleOpenVerifiedOutstandingModal} title="Export Verified Outstanding Report">
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />Verified Receipts
+//                   </CButton>
+//                   <CButton size="sm" className="action-btn" onClick={handleOpenPendingVerificationModal} title="Export Pending Verification Report">
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />Pending Verification
+//                   </CButton>
+//                 </div>
+//               )}
+
+//               <CNav variant="tabs" className="mb-3 border-bottom">
+//                 {[
+//                   { tab: TAB.CUSTOMER,             label: 'Customer',             can: canViewCustomerTab,            createCan: canCreateInCustomerTab },
+//                   { tab: TAB.PAYMENT_VERIFICATION, label: 'Payment Verification', can: canViewPaymentVerificationTab, createCan: canCreateInPaymentVerificationTab },
+//                   { tab: TAB.COMPLETE_PAYMENT,     label: 'Complete Payment',      can: canViewCompletePaymentTab,     createCan: canCreateInCompletePaymentTab },
+//                   { tab: TAB.PENDING_LIST,         label: 'Pending List',          can: canViewPendingListTab,         createCan: canCreateInPendingListTab },
+//                   { tab: TAB.VERIFIED_LIST,        label: 'Verified List',         can: canViewVerifiedListTab,        createCan: canCreateInVerifiedListTab },
+//                   { tab: TAB.REJECTED_LIST,        label: 'Rejected List',         can: canViewRejectedListTab,        createCan: true },
+//                 ].filter(t => t.can).map(({ tab, label, createCan }) => (
+//                   <CNavItem key={tab}>
+//                     <CNavLink
+//                       active={activeTab === tab}
+//                       onClick={() => handleTabChange(tab)}
+//                       style={{
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === tab ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       {label}
+//                       {!createCan && tab !== TAB.REJECTED_LIST && <span className="ms-1 text-muted small">(View Only)</span>}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 ))}
+//               </CNav>
+
+//               {/* ── Search bar ──
+//                   UNCONTROLLED input: React never writes the value= prop back,
+//                   so this input CANNOT lose focus due to re-renders.
+//                   localSearch is only used for displaying "No results for X" label. ── */}
+//               <div className="d-flex justify-content-between mb-3">
+//                 <div></div>
+//                 <div className='d-flex'>
+//                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//                   <input
+//                     ref={searchInputRef}
+//                     type="text"
+//                     defaultValue=""
+//                     style={{
+//                       maxWidth: '350px',
+//                       height: '30px',
+//                       borderRadius: '0',
+//                       border: '1px solid #ced4da',
+//                       padding: '0 8px',
+//                       outline: 'none',
+//                       fontSize: '14px'
+//                     }}
+//                     className="d-inline-block square-search"
+//                     onChange={e => handleSearch(e.target.value)}
+//                     placeholder="Search..."
+//                     autoComplete="off"
+//                     disabled={!canViewAnyTab}
+//                   />
+//                 </div>
+//               </div>
+
+//               <CTabContent>
+//                 {canViewCustomerTab            && <CTabPane visible={activeTab === TAB.CUSTOMER}>            {activeTab === TAB.CUSTOMER            && renderCustomerTable()}</CTabPane>}
+//                 {canViewPaymentVerificationTab && <CTabPane visible={activeTab === TAB.PAYMENT_VERIFICATION}>{activeTab === TAB.PAYMENT_VERIFICATION && renderPaymentVerificationTable()}</CTabPane>}
+//                 {canViewCompletePaymentTab     && <CTabPane visible={activeTab === TAB.COMPLETE_PAYMENT}>    {activeTab === TAB.COMPLETE_PAYMENT     && renderCompletePaymentTable()}</CTabPane>}
+//                 {canViewPendingListTab         && <CTabPane visible={activeTab === TAB.PENDING_LIST}>        {activeTab === TAB.PENDING_LIST         && renderPendingListTable()}</CTabPane>}
+//                 {canViewVerifiedListTab        && <CTabPane visible={activeTab === TAB.VERIFIED_LIST}>       {activeTab === TAB.VERIFIED_LIST        && renderVerifiedListTable()}</CTabPane>}
+//                 {canViewRejectedListTab        && <CTabPane visible={activeTab === TAB.REJECTED_LIST}>       {activeTab === TAB.REJECTED_LIST        && renderRejectedListTable()}</CTabPane>}
+//               </CTabContent>
+//             </>
+//           ) : (
+//             <CAlert color="warning" className="text-center">You don't have permission to view any tabs in Receipts.</CAlert>
+//           )}
+//         </CCardBody>
+//       </CCard>
+
+//       <ReceiptModal
+//         show={showModal}
+//         onClose={() => setShowModal(false)}
+//         bookingData={selectedBooking}
+//         canCreateReceipts={canCreateInCustomerTab}
+//         cashLocations={cashLocations}
+//         onPaymentSuccess={handlePaymentSuccess}
+//       />
+
+//       {/* Reject Payment Modal */}
+//       <CModal alignment="center" visible={showRejectModal} onClose={() => setShowRejectModal(false)}>
+//         <CModalHeader><CModalTitle>Reject Payment</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {selectedRejectEntry && (
+//             <>
+//               <div className="mb-3">
+//                 <p><strong>Booking:</strong> {selectedRejectEntry.bookingDetails?.bookingNumber || selectedRejectEntry.booking}</p>
+//                 <p><strong>Amount:</strong> ₹{selectedRejectEntry.amount}</p>
+//                 <p><strong>Payment Mode:</strong> {selectedRejectEntry.paymentMode}</p>
+//               </div>
+//               <div className="mb-3">
+//                 <CFormLabel htmlFor="rejectionReason">Rejection Reason <span className="text-danger">*</span></CFormLabel>
+//                 <CFormInput type="text" id="rejectionReason" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Enter reason for rejection" disabled={rejectLoading} />
+//               </div>
+//             </>
+//           )}
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={() => setShowRejectModal(false)} disabled={rejectLoading}>Cancel</CButton>
+//           <CButton color="danger" onClick={confirmRejectPayment} disabled={!rejectionReason.trim() || rejectLoading}>
+//             {rejectLoading ? <><CSpinner size="sm" className="me-2" />Rejecting...</> : 'Reject Payment'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Export Receipts Modal */}
+//       <CModal alignment="center" visible={openExportModal} onClose={handleCloseExportModal}>
+//         <CModalHeader><CModalTitle><FontAwesomeIcon icon={faCalendarAlt} className="me-2" />Export Receipts - Select Date Range</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {exportError && <CAlert color="warning" className="mb-3">{exportError}</CAlert>}
+//           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enIN}>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">Start Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={startDate} onChange={(v) => { setStartDate(v); setExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">End Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={endDate} onChange={(v) => { setEndDate(v); setExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" label="" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={startDate} views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//           </LocalizationProvider>
+//           <div className="mb-3">
+//             <CFormLabel className="mb-2 fw-bold">Select Branch <span className="text-danger">*</span></CFormLabel>
+//             <CFormSelect value={selectedBranchId} onChange={(e) => { setSelectedBranchId(e.target.value); setExportError(''); }} disabled={!canCreateReceipts}>
+//               <option value="">-- Select Branch --</option>
+//               {hasAllBranchAccess && <option value="all">All Branch</option>}
+//               {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+//             </CFormSelect>
+//           </div>
+//           <div className="mb-3">
+//             <CFormLabel className="mb-2 fw-bold">Cash/Other Filter <span className="text-danger">*</span></CFormLabel>
+//             <CFormSelect value={cashOtherFilter} onChange={(e) => { setCashOtherFilter(e.target.value); setExportError(''); }} disabled={!canCreateReceipts}>
+//               <option value="">-- Select Filter --</option>
+//               <option value="cash">Cash</option>
+//               <option value="other">Other</option>
+//             </CFormSelect>
+//           </div>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseExportModal}>Cancel</CButton>
+//           <CButton className="submit-button" onClick={handleExcelExport} disabled={!startDate || !endDate || !selectedBranchId || !cashOtherFilter || !canCreateReceipts || exportLoading}>
+//             {exportLoading ? <><CSpinner size="sm" className="me-2" />Exporting...</> : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Verified Outstanding Export Modal */}
+//       <CModal alignment="center" visible={openVerifiedOutstandingModal} onClose={handleCloseVerifiedOutstandingModal}>
+//         <CModalHeader><CModalTitle><FontAwesomeIcon icon={faCalendarAlt} className="me-2" />Export Verified Outstanding Report</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {verifiedOutstandingExportError && <CAlert color="warning" className="mb-3">{verifiedOutstandingExportError}</CAlert>}
+//           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enIN}>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">Start Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={verifiedOutstandingStartDate} onChange={(v) => { setVerifiedOutstandingStartDate(v); setVerifiedOutstandingExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">End Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={verifiedOutstandingEndDate} onChange={(v) => { setVerifiedOutstandingEndDate(v); setVerifiedOutstandingExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={verifiedOutstandingStartDate} views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//           </LocalizationProvider>
+//           <div className="mb-3">
+//             <CFormLabel className="mb-2 fw-bold">Select Branch <span className="text-danger">*</span></CFormLabel>
+//             <CFormSelect value={verifiedOutstandingBranchId} onChange={(e) => { setVerifiedOutstandingBranchId(e.target.value); setVerifiedOutstandingExportError(''); }} disabled={!canCreateReceipts}>
+//               <option value="">-- Select Branch --</option>
+//               {hasAllBranchAccess && <option value="all">All Branch</option>}
+//               {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+//             </CFormSelect>
+//           </div>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseVerifiedOutstandingModal}>Cancel</CButton>
+//           <CButton className="submit-button" onClick={handleVerifiedOutstandingExport} disabled={!verifiedOutstandingStartDate || !verifiedOutstandingEndDate || !verifiedOutstandingBranchId || !canCreateReceipts || verifiedOutstandingExportLoading}>
+//             {verifiedOutstandingExportLoading ? <><CSpinner size="sm" className="me-2" />Exporting...</> : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Pending Verification Export Modal */}
+//       <CModal alignment="center" visible={openPendingVerificationModal} onClose={handleClosePendingVerificationModal}>
+//         <CModalHeader><CModalTitle><FontAwesomeIcon icon={faCalendarAlt} className="me-2" />Export Pending Verification Report</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {pendingVerificationExportError && <CAlert color="warning" className="mb-3">{pendingVerificationExportError}</CAlert>}
+//           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enIN}>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">Start Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={pendingVerificationStartDate} onChange={(v) => { setPendingVerificationStartDate(v); setPendingVerificationExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">End Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={pendingVerificationEndDate} onChange={(v) => { setPendingVerificationEndDate(v); setPendingVerificationExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={pendingVerificationStartDate} views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//           </LocalizationProvider>
+//           <div className="mb-3">
+//             <CFormLabel className="mb-2 fw-bold">Select Branch <span className="text-danger">*</span></CFormLabel>
+//             <CFormSelect value={pendingVerificationBranchId} onChange={(e) => { setPendingVerificationBranchId(e.target.value); setPendingVerificationExportError(''); }} disabled={!canCreateReceipts}>
+//               <option value="">-- Select Branch --</option>
+//               {hasAllBranchAccess && <option value="all">All Branch</option>}
+//               {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+//             </CFormSelect>
+//           </div>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleClosePendingVerificationModal}>Cancel</CButton>
+//           <CButton className="submit-button" onClick={handlePendingVerificationExport} disabled={!pendingVerificationStartDate || !pendingVerificationEndDate || !pendingVerificationBranchId || !canCreateReceipts || pendingVerificationExportLoading}>
+//             {pendingVerificationExportLoading ? <><CSpinner size="sm" className="me-2" />Exporting...</> : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+//     </div>
+//   );
+// }
+
+// export default Receipt;
+
+
+
+// import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+// import { 
+//   CBadge, 
+//   CNav, 
+//   CNavItem, 
+//   CNavLink, 
+//   CTabContent, 
+//   CTabPane,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CCard,
+//   CCardBody,
+//   CButton,
+//   CFormInput,
+//   CSpinner,
+//   CFormLabel,
+//   CAlert,
+//   CDropdown,
+//   CDropdownToggle,
+//   CDropdownMenu,
+//   CDropdownItem,
+//   CModal,
+//   CModalHeader,
+//   CModalTitle,
+//   CModalBody,
+//   CModalFooter,
+//   CPagination,
+//   CPaginationItem,
+//   CFormSelect
+// } from '@coreui/react';
+// import { axiosInstance, getDefaultSearchFields, showError, showSuccess } from '../../utils/tableImports';
+// import '../../css/invoice.css';
+// import '../../css/table.css';
+// import ReceiptModal from './ReceiptModal';
+// import { confirmVerify } from '../../utils/sweetAlerts';
+// import CIcon from '@coreui/icons-react';
+// import { cilCheckCircle, cilPrint, cilSettings, cilPlus, cilChevronLeft, cilChevronRight, cilCloudDownload, cilXCircle } from '@coreui/icons';
+// import { numberToWords } from '../../utils/numberToWords';
+// import { Menu, MenuItem } from '@mui/material';
+// import { useAuth } from '../../context/AuthContext';
+// import QRCode from 'qrcode';
+// import { faFileExcel, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+// import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+// import Swal from 'sweetalert2';
+// import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// import TextField from '@mui/material/TextField';
+// import { enIN } from 'date-fns/locale';
+// import tvsLogo from '../../assets/images/logo.png';
+// import config from '../../config';
+
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS
+// } from '../../utils/modulePermissions';
+
+// // ─── Tab constants ──────────────────────────────────────────────────────────────
+// const TAB = {
+//   CUSTOMER: 0,
+//   PAYMENT_VERIFICATION: 1,
+//   COMPLETE_PAYMENT: 2,
+//   PENDING_LIST: 3,
+//   VERIFIED_LIST: 4,
+//   REJECTED_LIST: 5
+// };
+
+// const PAGE_SIZE_OPTIONS = [50, 100, 200, 500];
+// const DEFAULT_LIMIT = 50;
+
+// // Each tab gets its own fully independent state slice
+// const emptyTab = () => ({
+//   docs: [],
+//   total: 0,
+//   pages: 0,
+//   currentPage: 1,
+//   limit: DEFAULT_LIMIT,
+//   loading: false,
+//   search: '',
+// });
+
+// function Receipt() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [showModal, setShowModal] = useState(false);
+//   const [selectedBooking, setSelectedBooking] = useState(null);
+
+//   // ── Per-tab independent state ──────────────────────────────────────────────
+//   const [tabData, setTabData] = useState(() =>
+//     Object.values(TAB).reduce((acc, i) => { acc[i] = emptyTab(); return acc; }, {})
+//   );
+
+//   // ── LOCAL search state (display only — input is UNCONTROLLED) ──────────────
+//   const [localSearch, setLocalSearch] = useState('');
+
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState(null);
+//   const [anchorEl, setAnchorEl] = useState(null);
+//   const [menuBookingId, setMenuBookingId] = useState(null);
+//   const [successMessage, setSuccessMessage] = useState('');
+//   const [cashOtherFilter, setCashOtherFilter] = useState('');
+
+//   // ── Reject modal ───────────────────────────────────────────────────────────
+//   const [showRejectModal, setShowRejectModal] = useState(false);
+//   const [selectedRejectEntry, setSelectedRejectEntry] = useState(null);
+//   const [rejectionReason, setRejectionReason] = useState('');
+//   const [rejectLoading, setRejectLoading] = useState(false);
+
+//   // ── On-demand receipts ─────────────────────────────────────────────────────
+//   const [bookingReceipts, setBookingReceipts] = useState({});
+//   const [loadingReceipts, setLoadingReceipts] = useState({});
+//   const [receiptsFetched, setReceiptsFetched] = useState({});
+
+//   const [cashLocations, setCashLocations] = useState([]);
+
+//   // ── Export modals ──────────────────────────────────────────────────────────
+//   const [openExportModal, setOpenExportModal] = useState(false);
+//   const [startDate, setStartDate] = useState(null);
+//   const [endDate, setEndDate] = useState(null);
+//   const [selectedBranchId, setSelectedBranchId] = useState('');
+//   const [exportLoading, setExportLoading] = useState(false);
+//   const [exportError, setExportError] = useState('');
+
+//   const [openVerifiedOutstandingModal, setOpenVerifiedOutstandingModal] = useState(false);
+//   const [verifiedOutstandingStartDate, setVerifiedOutstandingStartDate] = useState(null);
+//   const [verifiedOutstandingEndDate, setVerifiedOutstandingEndDate] = useState(null);
+//   const [verifiedOutstandingBranchId, setVerifiedOutstandingBranchId] = useState('');
+//   const [verifiedOutstandingExportLoading, setVerifiedOutstandingExportLoading] = useState(false);
+//   const [verifiedOutstandingExportError, setVerifiedOutstandingExportError] = useState('');
+
+//   const [openPendingVerificationModal, setOpenPendingVerificationModal] = useState(false);
+//   const [pendingVerificationStartDate, setPendingVerificationStartDate] = useState(null);
+//   const [pendingVerificationEndDate, setPendingVerificationEndDate] = useState(null);
+//   const [pendingVerificationBranchId, setPendingVerificationBranchId] = useState('');
+//   const [pendingVerificationExportLoading, setPendingVerificationExportLoading] = useState(false);
+//   const [pendingVerificationExportError, setPendingVerificationExportError] = useState('');
+
+//   const [branches, setBranches] = useState([]);
+
+//   // ── Refs ───────────────────────────────────────────────────────────────────
+//   // Debounce timer for search
+//   const searchTimer = useRef(null);
+//   // Uncontrolled search input ref — React NEVER writes back to this DOM node,
+//   // so it cannot lose focus regardless of how many re-renders happen.
+//   const searchInputRef = useRef(null);
+//   // Keep activeTab in a ref so the debounced closure always reads the latest value
+//   const activeTabRef = useRef(activeTab);
+//   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
+//   const { permissions = [], user } = useAuth();
+//   const hasAllBranchAccess = user?.branchAccess === "ALL";
+
+//   // ── Permissions ────────────────────────────────────────────────────────────
+//   const canViewReceipts = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW);
+//   const canCreateReceipts = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE);
+//   const canViewCustomerTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.CUSTOMER);
+//   const canViewPaymentVerificationTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.PAYMENT_VERIFICATION);
+//   const canViewCompletePaymentTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.COMPLETE_PAYMENT);
+//   const canViewPendingListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.PENDING_LIST);
+//   const canViewVerifiedListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.VERIFIED_LIST);
+//   const canViewRejectedListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.REJECTED_LIST);
+//   const canCreateInCustomerTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.CUSTOMER);
+//   const canCreateInPaymentVerificationTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.PAYMENT_VERIFICATION);
+//   const canCreateInCompletePaymentTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.COMPLETE_PAYMENT);
+//   const canCreateInPendingListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.PENDING_LIST);
+//   const canCreateInVerifiedListTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.CREATE, TABS.RECEIPTS.VERIFIED_LIST);
+//   const canUpdateInPaymentVerificationTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.UPDATE, TABS.RECEIPTS.PAYMENT_VERIFICATION);
+//   const canPrintInCustomerTab = hasSafePagePermission(permissions, MODULES.ACCOUNT, PAGES.ACCOUNT.RECEIPTS, ACTIONS.VIEW, TABS.RECEIPTS.CUSTOMER) || canViewCustomerTab;
+//   const canRejectPayments = canUpdateInPaymentVerificationTab;
+//   const canViewAnyTab = canViewCustomerTab || canViewPaymentVerificationTab || canViewCompletePaymentTab || canViewPendingListTab || canViewVerifiedListTab || canViewRejectedListTab;
+
+//   // ── Helper: update a single tab's slice ───────────────────────────────────
+//   const setTab = useCallback((tabIndex, updates) =>
+//     setTabData(prev => ({ ...prev, [tabIndex]: { ...prev[tabIndex], ...updates } })),
+//   []);
+
+//   // ── Ledger view ────────────────────────────────────────────────────────────
+//   const openLedgerInNewTab = async (bookingId, bookingNumber) => {
+//     try {
+//       const res = await axiosInstance.get(`/ledger/report/${bookingId}`);
+//       const ledgerData = res.data.data;
+//       const ledgerUrl = `${config.baseURL}/ledger.html?bookingId=${bookingId}`;
+
+//       let approvedEntries = ledgerData.entries.filter((entry) => entry.approvalStatus !== 'Pending');
+//       let filteredEntries = approvedEntries;
+//       if (ledgerData.vehicleDetails?.isChassisAllocated === true) {
+//         filteredEntries = approvedEntries.filter((entry) => entry.debit !== undefined && entry.debit !== null);
+//       }
+
+//       const totals = {
+//         totalCredit: filteredEntries.reduce((sum, entry) => sum + (entry.credit || 0), 0),
+//         totalDebit: filteredEntries.reduce((sum, entry) => sum + (entry.debit || 0), 0),
+//         finalBalance: filteredEntries.reduce((sum, entry) => {
+//           const credit = entry.credit || 0;
+//           const debit = entry.debit || 0;
+//           return sum + (debit - credit);
+//         }, 0)
+//       };
+
+//       const win = window.open('', '_blank');
+//       win.document.write(`
+//         <!DOCTYPE html>
+//         <html>
+//           <head>
+//             <title>Customer Ledger - ${bookingNumber}</title>
+//             <style>
+//               @page { size: A4; margin: 15mm 10mm; }
+//               body { font-family: Arial; width: 100%; margin: 0; padding: 0; font-size: 14px; line-height: 1.3; font-family: Courier New; }
+//               .container { width: 190mm; margin: 0 auto; padding: 5mm; }
+//               .header-container { display: flex; justify-content:space-between; margin-bottom: 3mm; }
+//               .header-text{ font-size:20px; font-weight:bold; }
+//               .logo { width: 30mm; height: auto; margin-right: 5mm; } 
+//               .header { text-align: left; }
+//               .divider { border-top: 2px solid #AAAAAA; margin: 3mm 0; }
+//               .header h2 { margin: 2mm 0; font-size: 12pt; font-weight: bold; }
+//               .header div { font-size: 14px; }
+//               .customer-info { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2mm; margin-bottom: 5mm; font-size: 14px; }
+//               .customer-info div { display: flex; }
+//               .customer-info strong { min-width: 30mm; display: inline-block; }
+//               table { width: 100%; border-collapse: collapse; margin-bottom: 5mm; font-size: 14px; page-break-inside: avoid; }
+//               th, td { border: 1px solid #000; padding: 2mm; text-align: left; }
+//               th { background-color: #f0f0f0; font-weight: bold; }
+//               .footer { margin-top: 10mm; display: flex; justify-content: space-between; align-items: flex-end; font-size: 14px; }
+//               .qr-code { width: 35mm; height: 35mm; }
+//               .text-right { text-align: right; }
+//               .text-center { text-align: center; }
+//               @media print { body { width: 190mm; height: 277mm; } .no-print { display: none; } }
+//             </style>
+//           </head>
+//           <body>
+//             <div class="container">
+//               <div class="header-container">
+//                 <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+//                 <div class="header-text"> GANDHI TVS</div>
+//               </div>
+//               <div class="header">
+//                 <div>
+//                   Authorised Main Dealer: TVS Motor Company Ltd.<br>
+//                   Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//                   Upnagar, Nashik Road, Nashik - 422101<br>
+//                   Phone: 7498903672
+//                 </div>
+//               </div>
+//               <div class="divider"></div>
+//               <div class="customer-info">
+//                 <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
+//                 <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
+//                 <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
+//                 <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
+//                 <div><strong>Chassis No:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? (ledgerData.vehicleDetails?.chassisNo || 'N/A') : '-'}</div>
+//                 <div><strong>Engine No:</strong> ${ledgerData.vehicleDetails?.engineNo || 'N/A'}</div>
+//                 <div><strong>Chassis Allocated:</strong> ${ledgerData.vehicleDetails?.isChassisAllocated ? 'Yes' : 'No'}</div>
+//                 <div><strong>Finance Name:</strong> ${ledgerData.financeDetails?.financer || 'N/A'}</div>
+//                 <div><strong>Sale Executive:</strong> ${ledgerData.salesExecutive || 'N/A'}</div>
+//               </div>
+//               <table>
+//                 <thead>
+//                   <tr>
+//                     <th width="15%">Date</th>
+//                     <th width="35%">Description</th>
+//                     <th width="15%">Receipt/VC No</th>
+//                     <th width="10%" class="text-right">Credit (₹)</th>
+//                     <th width="10%" class="text-right">Debit (₹)</th>
+//                     <th width="15%" class="text-right">Balance (₹)</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   ${filteredEntries.length > 0
+//                     ? filteredEntries.map((entry) => `
+//                         <tr>
+//                           <td>${entry.date || 'N/A'}</td>
+//                           <td>${entry.description || 'N/A'}</td>
+//                           <td>${entry.receiptNo || 'N/A'}</td>
+//                           <td class="text-right">${entry.credit ? entry.credit.toLocaleString('en-IN') : '-'}</td>
+//                           <td class="text-right">${entry.debit !== undefined ? entry.debit.toLocaleString('en-IN') : '-'}</td>
+//                           <td class="text-right">${entry.balance ? entry.balance.toLocaleString('en-IN') : '-'}</td>
+//                         </tr>`).join('')
+//                     : `<tr><td colspan="6" class="text-center">No approved entries found</td></tr>`
+//                   }
+//                   ${filteredEntries.length > 0
+//                     ? `<tr>
+//                         <td colspan="3" class="text-left"><strong>Total</strong></td>
+//                         <td class="text-right"><strong>${totals.totalCredit.toLocaleString('en-IN')}</strong></td>
+//                         <td class="text-right"><strong>${totals.totalDebit.toLocaleString('en-IN')}</strong></td>
+//                         <td class="text-right"><strong>${totals.finalBalance.toLocaleString('en-IN')}</strong></td>
+//                       </tr>`
+//                     : ''
+//                   }
+//                 </tbody>
+//               </table>
+//               <div class="footer">
+//                 <div>
+//                   <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" class="qr-code" alt="QR Code" />
+//                 </div>
+//                 <div style="text-align:right">
+//                   <p>For, Gandhi TVS</p>
+//                   <p>Authorised Signatory</p>
+//                 </div>
+//               </div>
+//             </div>
+//             <script>
+//               window.onload = function() { setTimeout(() => { window.print(); }, 300); };
+//             </script>
+//           </body>
+//         </html>
+//       `);
+//       win.document.close();
+//     } catch (err) {
+//       console.error('Error fetching ledger:', err);
+//       const message = showError(err);
+//       if (message) setError(message);
+//     }
+//   };
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  CORE FETCH FUNCTIONS
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   // TAB 0 — Customer
+//   const fetchCustomerTab = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { bookingType: 'BRANCH', page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const data = response.data.data;
+//       const docs = data.bookings || [];
+
+//       setTab(tabIndex, {
+//         docs,
+//         total: data.total || 0,
+//         pages: data.pages || 1,
+//         currentPage: page,
+//         limit,
+//         loading: false,
+//         search
+//       });
+
+//       // Sync receipt-fetched state for new booking IDs
+//       setReceiptsFetched(prev => {
+//         const next = { ...prev };
+//         docs.forEach(b => { if (!(b._id in next)) next[b._id] = false; });
+//         // Clean up IDs no longer in docs
+//         Object.keys(next).forEach(id => { if (!docs.some(b => b._id === id)) delete next[id]; });
+//         return next;
+//       });
+//       setLoadingReceipts(prev => {
+//         const next = { ...prev };
+//         docs.forEach(b => { if (!(b._id in next)) next[b._id] = false; });
+//         Object.keys(next).forEach(id => { if (!docs.some(b => b._id === id)) delete next[id]; });
+//         return next;
+//       });
+
+//     } catch (error) {
+//       console.error('Error fetching customer tab:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [setTab]);
+
+//   // TAB 1 — Payment Verification
+//   const fetchPendingPayments = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewPaymentVerificationTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const fetchLimit = search ? 1000 : limit;
+//       const params = { page: search ? 1 : page, limit: fetchLimit };
+
+//       const response = await axiosInstance.get(`/ledger/pending`, { params });
+
+//       let docs = [], total = 0, pages = 1;
+//       if (response.data.data?.ledgerEntries) {
+//         docs  = response.data.data.ledgerEntries;
+//         total = response.data.pagination?.totalRecords || docs.length;
+//         pages = response.data.pagination?.totalPages   || 1;
+//       } else if (Array.isArray(response.data.data)) {
+//         docs  = response.data.data;
+//         total = docs.length;
+//         pages = Math.ceil(total / limit);
+//       }
+
+//       // Client-side filter when search is active
+//       if (search) {
+//         const term = search.toLowerCase();
+//         docs = docs.filter(entry => {
+//           const fields = [
+//             entry.bookingDetails?.bookingNumber,
+//             entry.bookingDetails?.customerDetails?.name,
+//             entry.paymentMode,
+//             entry.transactionReference,
+//             entry.amount?.toString(),
+//             entry.booking
+//           ];
+//           return fields.some(f => f && f.toString().toLowerCase().includes(term));
+//         });
+//         total = docs.length;
+//         pages = Math.max(1, Math.ceil(total / limit));
+//         const start = (page - 1) * limit;
+//         docs = docs.slice(start, start + limit);
+//       }
+
+//       setTab(tabIndex, { docs, total, pages, currentPage: page, limit, loading: false, search });
+//     } catch (error) {
+//       console.error('Error fetching pending payments:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewPaymentVerificationTab, setTab]);
+
+//   // TAB 2 — Complete Payment
+//   const fetchCompletePayments = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewCompletePaymentTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { bookingType: 'BRANCH', balanceStatus: 'complete', page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const data = response.data.data;
+//       setTab(tabIndex, {
+//         docs: data.bookings || [],
+//         total: data.total || 0,
+//         pages: data.pages || 1,
+//         currentPage: page,
+//         limit,
+//         loading: false,
+//         search
+//       });
+//     } catch (error) {
+//       console.error('Error fetching complete payments:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewCompletePaymentTab, setTab]);
+
+//   // TAB 3 — Pending List
+//   const fetchPendingList = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewPendingListTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { bookingType: 'BRANCH', balanceStatus: 'pending', page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/bookings`, { params });
+//       const data = response.data.data;
+//       setTab(tabIndex, {
+//         docs: data.bookings || [],
+//         total: data.total || 0,
+//         pages: data.pages || 1,
+//         currentPage: page,
+//         limit,
+//         loading: false,
+//         search
+//       });
+//     } catch (error) {
+//       console.error('Error fetching pending list:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewPendingListTab, setTab]);
+
+//   // TAB 4 — Verified List
+//   const fetchVerifiedPayments = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewVerifiedListTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/payment/verified/bank/ledger`, { params });
+
+//       let docs = [], total = 0, pages = 1;
+//       if (response.data.data?.ledgerEntries) {
+//         docs  = response.data.data.ledgerEntries;
+//         total = response.data.pagination?.totalRecords || docs.length;
+//         pages = response.data.pagination?.totalPages   || 1;
+//       } else if (Array.isArray(response.data.data)) {
+//         docs  = response.data.data;
+//         total = docs.length;
+//         pages = Math.ceil(total / limit);
+//       }
+
+//       setTab(tabIndex, { docs, total, pages, currentPage: page, limit, loading: false, search });
+//     } catch (error) {
+//       console.error('Error fetching verified payments:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewVerifiedListTab, setTab]);
+
+//   // TAB 5 — Rejected List
+//   const fetchRejectedPayments = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
+//     if (!canViewRejectedListTab) return;
+//     setTab(tabIndex, { loading: true });
+//     try {
+//       const params = { page, limit };
+//       if (search) params.search = search;
+//       const response = await axiosInstance.get(`/ledger/rejected`, { params });
+
+//       let docs = [], total = 0, pages = 1;
+//       if (response.data.data?.docs) {
+//         docs  = response.data.data.docs;
+//         total = response.data.data.totalDocs  || docs.length;
+//         pages = response.data.data.totalPages || 1;
+//       } else if (Array.isArray(response.data.data)) {
+//         docs  = response.data.data;
+//         total = docs.length;
+//         pages = Math.ceil(total / limit);
+//       }
+
+//       setTab(tabIndex, { docs, total, pages, currentPage: page, limit, loading: false, search });
+//     } catch (error) {
+//       console.error('Error fetching rejected payments:', error);
+//       showError(error);
+//       setTab(tabIndex, { loading: false, docs: [], total: 0 });
+//     }
+//   }, [canViewRejectedListTab, setTab]);
+
+//   // ── Central dispatcher ────────────────────────────────────────────────────
+//   const fetchTab = useCallback((tabIndex, page, limit, search) => {
+//     setTabData(prev => {
+//       const td = prev[tabIndex];
+//       const p = page   !== undefined ? page   : td.currentPage;
+//       const l = limit  !== undefined ? limit  : td.limit;
+//       const s = search !== undefined ? search : td.search;
+
+//       switch (tabIndex) {
+//         case TAB.CUSTOMER:             fetchCustomerTab(tabIndex, p, l, s);             break;
+//         case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tabIndex, p, l, s);         break;
+//         case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tabIndex, p, l, s);        break;
+//         case TAB.PENDING_LIST:         fetchPendingList(tabIndex, p, l, s);             break;
+//         case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tabIndex, p, l, s);        break;
+//         case TAB.REJECTED_LIST:        fetchRejectedPayments(tabIndex, p, l, s);        break;
+//         default: break;
+//       }
+//       return prev; // state unchanged here; fetch functions will update via setTab
+//     });
+//   }, [fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  EFFECTS
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   // Set first visible tab as active
+//   useEffect(() => {
+//     if (!canViewAnyTab) return;
+//     const visibleTabs = [
+//       canViewCustomerTab             && TAB.CUSTOMER,
+//       canViewPaymentVerificationTab  && TAB.PAYMENT_VERIFICATION,
+//       canViewCompletePaymentTab      && TAB.COMPLETE_PAYMENT,
+//       canViewPendingListTab          && TAB.PENDING_LIST,
+//       canViewVerifiedListTab         && TAB.VERIFIED_LIST,
+//       canViewRejectedListTab         && TAB.REJECTED_LIST,
+//     ].filter(t => t !== false);
+
+//     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
+//       setActiveTab(visibleTabs[0]);
+//     }
+//   }, [canViewAnyTab, canViewCustomerTab, canViewPaymentVerificationTab,
+//       canViewCompletePaymentTab, canViewPendingListTab, canViewVerifiedListTab,
+//       canViewRejectedListTab, activeTab]);
+
+//   // Initial load — fetch ALL tabs once on mount
+//   useEffect(() => {
+//     if (!canViewReceipts) {
+//       showError('You do not have permission to view Receipts');
+//       setLoading(false);
+//       return;
+//     }
+//     if (!canViewAnyTab) {
+//       showError('You do not have permission to view any Receipt tabs');
+//       setLoading(false);
+//       return;
+//     }
+
+//     if (canViewCustomerTab)            fetchCustomerTab(TAB.CUSTOMER, 1, DEFAULT_LIMIT, '');
+//     if (canViewPaymentVerificationTab) fetchPendingPayments(TAB.PAYMENT_VERIFICATION, 1, DEFAULT_LIMIT, '');
+//     if (canViewCompletePaymentTab)     fetchCompletePayments(TAB.COMPLETE_PAYMENT, 1, DEFAULT_LIMIT, '');
+//     if (canViewPendingListTab)         fetchPendingList(TAB.PENDING_LIST, 1, DEFAULT_LIMIT, '');
+//     if (canViewVerifiedListTab)        fetchVerifiedPayments(TAB.VERIFIED_LIST, 1, DEFAULT_LIMIT, '');
+//     if (canViewRejectedListTab)        fetchRejectedPayments(TAB.REJECTED_LIST, 1, DEFAULT_LIMIT, '');
+
+//     fetchCashLocations();
+//     fetchBranches();
+//     setLoading(false);
+//   // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [canViewReceipts, canViewAnyTab]);
+
+//   useEffect(() => {
+//     window.printReceiptCallback = printReceiptInvoice;
+//     return () => { delete window.printReceiptCallback; };
+//   }, []);
+
+//   // Pre-fetch receipts for visible Customer tab rows
+//   useEffect(() => {
+//     if (activeTab === TAB.CUSTOMER && tabData[TAB.CUSTOMER].docs.length > 0) {
+//       const timeoutId = setTimeout(() => {
+//         tabData[TAB.CUSTOMER].docs.forEach(booking => {
+//           if (!receiptsFetched[booking._id] && !loadingReceipts[booking._id]) {
+//             fetchReceiptsForBooking(booking._id);
+//           }
+//         });
+//       }, 100);
+//       return () => clearTimeout(timeoutId);
+//     }
+//   // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [activeTab, tabData[TAB.CUSTOMER].docs]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  PAGINATION — fully independent per tab
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   const handlePageChange = useCallback((tabIndex, newPage) => {
+//     setTabData(prev => {
+//       const td = prev[tabIndex];
+//       if (newPage < 1 || newPage > td.pages) return prev;
+//       // Dispatch fetch using current search of that tab
+//       switch (tabIndex) {
+//         case TAB.CUSTOMER:             fetchCustomerTab(tabIndex, newPage, td.limit, td.search);         break;
+//         case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tabIndex, newPage, td.limit, td.search);     break;
+//         case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tabIndex, newPage, td.limit, td.search);    break;
+//         case TAB.PENDING_LIST:         fetchPendingList(tabIndex, newPage, td.limit, td.search);         break;
+//         case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tabIndex, newPage, td.limit, td.search);    break;
+//         case TAB.REJECTED_LIST:        fetchRejectedPayments(tabIndex, newPage, td.limit, td.search);    break;
+//         default: break;
+//       }
+//       return prev;
+//     });
+//     window.scrollTo({ top: 0, behavior: 'smooth' });
+//   }, [fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   const handleLimitChange = useCallback((tabIndex, newLimit) => {
+//     const limit = parseInt(newLimit, 10);
+//     setTabData(prev => {
+//       const td = prev[tabIndex];
+//       switch (tabIndex) {
+//         case TAB.CUSTOMER:             fetchCustomerTab(tabIndex, 1, limit, td.search);         break;
+//         case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tabIndex, 1, limit, td.search);     break;
+//         case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tabIndex, 1, limit, td.search);    break;
+//         case TAB.PENDING_LIST:         fetchPendingList(tabIndex, 1, limit, td.search);         break;
+//         case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tabIndex, 1, limit, td.search);    break;
+//         case TAB.REJECTED_LIST:        fetchRejectedPayments(tabIndex, 1, limit, td.search);    break;
+//         default: break;
+//       }
+//       return prev;
+//     });
+//   }, [fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  SEARCH
+//   //  KEY DESIGN:
+//   //  • The <input> is UNCONTROLLED (no value= prop). React never writes to it,
+//   //    so it can NEVER lose focus due to re-renders.
+//   //  • localSearch is updated synchronously so "No results for X" label
+//   //    always reflects the latest typed value without waiting for the API.
+//   //  • The API call is debounced 400 ms so we don't hammer the server on
+//   //    every keystroke.
+//   //  • activeTabRef always holds the current tab, so the debounced closure
+//   //    never fires against a stale tab.
+//   // ══════════════════════════════════════════════════════════════════════════
+//   const handleSearch = useCallback((value) => {
+//     // Update display label immediately
+//     setLocalSearch(value);
+
+//     // Debounce the actual API call
+//     clearTimeout(searchTimer.current);
+//     searchTimer.current = setTimeout(() => {
+//       const tab = activeTabRef.current;
+//       setTabData(prev => {
+//         const limit = prev[tab]?.limit || DEFAULT_LIMIT;
+//         switch (tab) {
+//           case TAB.CUSTOMER:             fetchCustomerTab(tab, 1, limit, value);         break;
+//           case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tab, 1, limit, value);     break;
+//           case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tab, 1, limit, value);    break;
+//           case TAB.PENDING_LIST:         fetchPendingList(tab, 1, limit, value);         break;
+//           case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tab, 1, limit, value);    break;
+//           case TAB.REJECTED_LIST:        fetchRejectedPayments(tab, 1, limit, value);    break;
+//           default: break;
+//         }
+//         return prev;
+//       });
+//     }, 400);
+//   }, [fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  TAB CHANGE
+//   //  FIX: Always re-fetch fresh data with EMPTY search on every tab switch.
+//   //  Previously stale search results persisted when revisiting a tab because
+//   //  the fetch was skipped if docs.length > 0.
+//   // ══════════════════════════════════════════════════════════════════════════
+//   const handleTabChange = useCallback((tab) => {
+//     // Cancel any pending debounced search for the tab being left
+//     clearTimeout(searchTimer.current);
+
+//     setActiveTab(tab);
+
+//     // Clear local search display state
+//     setLocalSearch('');
+
+//     // Clear the uncontrolled DOM input value so the box visually empties
+//     if (searchInputRef.current) searchInputRef.current.value = '';
+
+//     // Reset this tab's search string in tabData immediately (prevents stale
+//     // "No results for X" flash when the tab content re-renders before the API returns)
+//     setTabData(prev => ({
+//       ...prev,
+//       [tab]: { ...prev[tab], search: '' }
+//     }));
+
+//     // Always re-fetch with empty search so returning to a previously-searched
+//     // tab always shows the full unfiltered list
+//     const limit = tabData[tab]?.limit || DEFAULT_LIMIT;
+//     switch (tab) {
+//       case TAB.CUSTOMER:             fetchCustomerTab(tab, 1, limit, '');         break;
+//       case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tab, 1, limit, '');     break;
+//       case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tab, 1, limit, '');    break;
+//       case TAB.PENDING_LIST:         fetchPendingList(tab, 1, limit, '');         break;
+//       case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tab, 1, limit, '');    break;
+//       case TAB.REJECTED_LIST:        fetchRejectedPayments(tab, 1, limit, '');    break;
+//       default: break;
+//     }
+//   }, [tabData, fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  REFRESH helper (used after mutations like verify / reject)
+//   // ══════════════════════════════════════════════════════════════════════════
+//   const refreshTab = useCallback((tabIndex) => {
+//     const td = tabData[tabIndex];
+//     const limit = td?.limit || DEFAULT_LIMIT;
+//     // Reset search for the refreshed tab
+//     setTabData(prev => ({ ...prev, [tabIndex]: { ...prev[tabIndex], search: '' } }));
+//     if (tabIndex === activeTab) {
+//       setLocalSearch('');
+//       if (searchInputRef.current) searchInputRef.current.value = '';
+//     }
+//     switch (tabIndex) {
+//       case TAB.CUSTOMER:             fetchCustomerTab(tabIndex, 1, limit, '');         break;
+//       case TAB.PAYMENT_VERIFICATION: fetchPendingPayments(tabIndex, 1, limit, '');     break;
+//       case TAB.COMPLETE_PAYMENT:     fetchCompletePayments(tabIndex, 1, limit, '');    break;
+//       case TAB.PENDING_LIST:         fetchPendingList(tabIndex, 1, limit, '');         break;
+//       case TAB.VERIFIED_LIST:        fetchVerifiedPayments(tabIndex, 1, limit, '');    break;
+//       case TAB.REJECTED_LIST:        fetchRejectedPayments(tabIndex, 1, limit, '');    break;
+//       default: break;
+//     }
+//   }, [activeTab, tabData, fetchCustomerTab, fetchPendingPayments, fetchCompletePayments,
+//       fetchPendingList, fetchVerifiedPayments, fetchRejectedPayments]);
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  PAGINATION RENDERER
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   const renderPagination = (tabIndex) => {
+//     const { currentPage, pages, total, limit, loading } = tabData[tabIndex];
+//     if (!total || pages <= 1) return null;
+
+//     const start = (currentPage - 1) * limit + 1;
+//     const end   = Math.min(currentPage * limit, total);
+
+//     let startPage = Math.max(1, currentPage - 2);
+//     let endPage   = Math.min(pages, currentPage + 2);
+//     if (currentPage <= 3)         endPage   = Math.min(5, pages);
+//     if (currentPage >= pages - 2) startPage = Math.max(1, pages - 4);
+
+//     const pageNums = [];
+//     for (let i = startPage; i <= endPage; i++) pageNums.push(i);
+
+//     return (
+//       <div className="mt-3 border-top pt-3">
+//         <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+//           <div className="d-flex align-items-center gap-2">
+//             <CFormLabel className="mb-0 text-muted" style={{ fontSize: '13px' }}>Records per page:</CFormLabel>
+//             <CFormSelect
+//               value={limit}
+//               onChange={e => handleLimitChange(tabIndex, e.target.value)}
+//               style={{ width: '80px', height: '32px', fontSize: '13px' }}
+//               size="sm"
+//               disabled={loading}
+//             >
+//               {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+//             </CFormSelect>
+//           </div>
+//           <span className="text-muted" style={{ fontSize: '13px' }}>
+//             {loading ? 'Loading…' : `Showing ${start}–${end} of ${total} entries`}
+//           </span>
+//         </div>
+//         {pages > 1 && (
+//           <CPagination align="center" size="sm">
+//             <CPaginationItem onClick={() => handlePageChange(tabIndex, 1)} disabled={currentPage === 1 || loading}>«</CPaginationItem>
+//             <CPaginationItem onClick={() => handlePageChange(tabIndex, currentPage - 1)} disabled={currentPage === 1 || loading}>
+//               <CIcon icon={cilChevronLeft} />
+//             </CPaginationItem>
+
+//             {startPage > 1 && (
+//               <>
+//                 <CPaginationItem onClick={() => handlePageChange(tabIndex, 1)} disabled={loading}>1</CPaginationItem>
+//                 {startPage > 2 && <CPaginationItem disabled>…</CPaginationItem>}
+//               </>
+//             )}
+
+//             {pageNums.map(p => (
+//               <CPaginationItem key={p} active={p === currentPage} onClick={() => handlePageChange(tabIndex, p)} disabled={loading}>
+//                 {p}
+//               </CPaginationItem>
+//             ))}
+
+//             {endPage < pages && (
+//               <>
+//                 {endPage < pages - 1 && <CPaginationItem disabled>…</CPaginationItem>}
+//                 <CPaginationItem onClick={() => handlePageChange(tabIndex, pages)} disabled={loading}>{pages}</CPaginationItem>
+//               </>
+//             )}
+
+//             <CPaginationItem onClick={() => handlePageChange(tabIndex, currentPage + 1)} disabled={currentPage === pages || loading}>
+//               <CIcon icon={cilChevronRight} />
+//             </CPaginationItem>
+//             <CPaginationItem onClick={() => handlePageChange(tabIndex, pages)} disabled={currentPage === pages || loading}>»</CPaginationItem>
+//           </CPagination>
+//         )}
+//       </div>
+//     );
+//   };
+
+//   // ── On-demand receipts fetching ───────────────────────────────────────────
+//   const fetchReceiptsForBooking = useCallback(async (bookingId) => {
+//     if (receiptsFetched[bookingId] || loadingReceipts[bookingId]) return;
+//     try {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: true }));
+//       const receiptsResponse = await axiosInstance.get(`/ledger/booking/${bookingId}`);
+//       const receipts = receiptsResponse.data.data.allReceipts || [];
+//       setBookingReceipts(prev => ({ ...prev, [bookingId]: receipts }));
+//       setReceiptsFetched(prev => ({ ...prev, [bookingId]: true }));
+//     } catch (error) {
+//       console.error(`Error fetching receipts for booking ${bookingId}:`, error);
+//       setBookingReceipts(prev => ({ ...prev, [bookingId]: [] }));
+//       setReceiptsFetched(prev => ({ ...prev, [bookingId]: true }));
+//     } finally {
+//       setLoadingReceipts(prev => ({ ...prev, [bookingId]: false }));
+//     }
+//   }, [receiptsFetched, loadingReceipts]);
+
+//   const fetchCashLocations = async () => {
+//     try {
+//       for (const endpoint of ['/settings/cash-locations', '/master/cash-locations']) {
+//         try {
+//           const response = await axiosInstance.get(endpoint);
+//           if (response.data.success && response.data.data) { setCashLocations(response.data.data); return; }
+//         } catch (err) { console.log(`Endpoint ${endpoint} not available`); }
+//       }
+//       setCashLocations([]);
+//     } catch (error) { setCashLocations([]); }
+//   };
+
+//   const fetchBranches = async () => {
+//     try {
+//       const response = await axiosInstance.get('/branches');
+//       setBranches(response.data.data);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) setError(message);
+//     }
+//   };
+
+//   const formatDateDDMMYYYY = (date) => {
+//     if (!date) return '';
+//     return `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
+//   };
+
+//   const formatDateForAPI = (date) => {
+//     if (!date) return '';
+//     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+//   };
+
+//   // ── Event handlers ────────────────────────────────────────────────────────
+//   const handleMenuClick  = (event, bookingId) => { setAnchorEl(event.currentTarget); setMenuBookingId(bookingId); };
+//   const handleMenuClose  = () => { setAnchorEl(null); setMenuBookingId(null); };
+
+//   const handleAddClick = (booking) => {
+//     if (!canCreateInCustomerTab) { showError('You do not have permission to add payments'); return; }
+//     setSelectedBooking(booking);
+//     setShowModal(true);
+//     handleMenuClose();
+//   };
+
+//   const handleVerifyPayment = async (entry) => {
+//     if (!canCreateInPaymentVerificationTab) { showError('You do not have permission to verify payments'); return; }
+//     try {
+//       const result = await confirmVerify({
+//         title: 'Confirm Payment Verification',
+//         text: `Are you sure you want to verify the payment of ₹${entry.amount} for booking ${entry.bookingDetails?.bookingNumber || entry.booking}?`,
+//         confirmButtonText: 'Yes, verify it!'
+//       });
+//       if (result.isConfirmed) {
+//         await axiosInstance.patch(`/ledger/approve/${entry._id}`, { remark: '' });
+//         setSuccessMessage('Payment verified successfully!');
+//         const bookingId     = entry.bookingDetails?._id  || entry.booking;
+//         const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+//         refreshTab(TAB.PAYMENT_VERIFICATION);
+//         refreshTab(TAB.VERIFIED_LIST);
+//         await openLedgerInNewTab(bookingId, bookingNumber);
+//         setTimeout(() => setSuccessMessage(''), 3000);
+//       }
+//     } catch (error) {
+//       console.error('Error verifying payment:', error);
+//       showError(error, 'Failed to verify payment');
+//     }
+//   };
+
+//   const handleRejectPayment = (entry) => {
+//     if (!canRejectPayments) { showError('You do not have permission to reject payments'); return; }
+//     setSelectedRejectEntry(entry);
+//     setRejectionReason('');
+//     setShowRejectModal(true);
+//   };
+
+//   const confirmRejectPayment = async () => {
+//     if (!rejectionReason.trim()) { showError('Please provide a rejection reason'); return; }
+//     try {
+//       setRejectLoading(true);
+//       await axiosInstance.patch(`/ledger/${selectedRejectEntry._id}/reject`, { rejectionReason: rejectionReason.trim() });
+//       setSuccessMessage('Payment rejected successfully!');
+//       setTimeout(() => setSuccessMessage(''), 3000);
+//       setShowRejectModal(false);
+//       setSelectedRejectEntry(null);
+//       setRejectionReason('');
+//       refreshTab(TAB.PAYMENT_VERIFICATION);
+//       refreshTab(TAB.REJECTED_LIST);
+//     } catch (error) {
+//       console.error('Error rejecting payment:', error);
+//       showError(error, 'Failed to reject payment');
+//     } finally {
+//       setRejectLoading(false);
+//     }
+//   };
+
+//   // ── Export handlers ───────────────────────────────────────────────────────
+//   const handleOpenExportModal = () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     setOpenExportModal(true); setExportError('');
+//   };
+//   const handleCloseExportModal = () => {
+//     setOpenExportModal(false); setStartDate(null); setEndDate(null);
+//     setSelectedBranchId(''); setCashOtherFilter(''); setExportError('');
+//   };
+//   const handleOpenVerifiedOutstandingModal = () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     setOpenVerifiedOutstandingModal(true); setVerifiedOutstandingExportError('');
+//   };
+//   const handleCloseVerifiedOutstandingModal = () => {
+//     setOpenVerifiedOutstandingModal(false); setVerifiedOutstandingStartDate(null);
+//     setVerifiedOutstandingEndDate(null); setVerifiedOutstandingBranchId(''); setVerifiedOutstandingExportError('');
+//   };
+//   const handleOpenPendingVerificationModal = () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     setOpenPendingVerificationModal(true); setPendingVerificationExportError('');
+//   };
+//   const handleClosePendingVerificationModal = () => {
+//     setOpenPendingVerificationModal(false); setPendingVerificationStartDate(null);
+//     setPendingVerificationEndDate(null); setPendingVerificationBranchId(''); setPendingVerificationExportError('');
+//   };
+
+//   // Generic blob export helper
+//   const doExport = async ({ url, params, fileName, onLoading, onError, onClose }) => {
+//     onLoading(true); onError('');
+//     try {
+//       const response = await axiosInstance.get(`${url}?${params.toString()}`, { responseType: 'blob' });
+//       const ct = response.headers['content-type'];
+//       if (ct && ct.includes('application/json')) {
+//         const text = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(response.data); });
+//         const err = JSON.parse(text);
+//         if (!err.success && err.message) { onError(err.message); Swal.fire({ icon: 'error', title: 'Export Failed', text: err.message }); return; }
+//       }
+//       const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+//       const link = Object.assign(document.createElement('a'), { href: window.URL.createObjectURL(blob) });
+//       link.setAttribute('download', fileName);
+//       document.body.appendChild(link); link.click(); link.remove();
+//       window.URL.revokeObjectURL(link.href);
+//       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Exported successfully!', showConfirmButton: false, timer: 3000, timerProgressBar: true });
+//       onClose();
+//     } catch (error) {
+//       const msg = error.response?.data?.message || error.message || 'Failed to export report';
+//       onError(msg); Swal.fire({ icon: 'error', title: 'Export Failed', text: msg });
+//     } finally { onLoading(false); }
+//   };
+
+//   const handleExcelExport = async () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     if (!selectedBranchId) { setExportError('Please select a branch'); return; }
+//     if (!startDate || !endDate) { setExportError('Please select both start and end dates'); return; }
+//     if (startDate > endDate) { setExportError('Start date cannot be after end date'); return; }
+//     if (!cashOtherFilter) { setExportError('Please select Cash/Other filter'); return; }
+//     const branchName = branches.find(b => b._id === selectedBranchId)?.name || 'Branch';
+//     const filterType = cashOtherFilter === 'cash' ? 'Cash' : 'Other';
+//     await doExport({
+//       url: '/reports/receipts',
+//       params: new URLSearchParams({ branchId: selectedBranchId, startDate: formatDateForAPI(startDate), endDate: formatDateForAPI(endDate), format: 'excel', cashOtherFilter }),
+//       fileName: `Receipts_${branchName}_${filterType}_${formatDateDDMMYYYY(startDate)}_to_${formatDateDDMMYYYY(endDate)}.xlsx`,
+//       onLoading: setExportLoading, onError: setExportError, onClose: handleCloseExportModal
+//     });
+//   };
+
+//   const handleVerifiedOutstandingExport = async () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     if (!verifiedOutstandingBranchId) { setVerifiedOutstandingExportError('Please select a branch'); return; }
+//     if (!verifiedOutstandingStartDate || !verifiedOutstandingEndDate) { setVerifiedOutstandingExportError('Please select both start and end dates'); return; }
+//     if (verifiedOutstandingStartDate > verifiedOutstandingEndDate) { setVerifiedOutstandingExportError('Start date cannot be after end date'); return; }
+//     const branchName = branches.find(b => b._id === verifiedOutstandingBranchId)?.name || 'Branch';
+//     await doExport({
+//       url: '/reports/outstanding/verified',
+//       params: new URLSearchParams({ branchId: verifiedOutstandingBranchId, startDate: formatDateForAPI(verifiedOutstandingStartDate), endDate: formatDateForAPI(verifiedOutstandingEndDate), format: 'excel' }),
+//       fileName: `Verified_Receipts_${branchName}_${formatDateDDMMYYYY(verifiedOutstandingStartDate)}_to_${formatDateDDMMYYYY(verifiedOutstandingEndDate)}.xlsx`,
+//       onLoading: setVerifiedOutstandingExportLoading, onError: setVerifiedOutstandingExportError, onClose: handleCloseVerifiedOutstandingModal
+//     });
+//   };
+
+//   const handlePendingVerificationExport = async () => {
+//     if (!canCreateReceipts) { showError('You do not have permission to export data'); return; }
+//     if (!pendingVerificationBranchId) { setPendingVerificationExportError('Please select a branch'); return; }
+//     if (!pendingVerificationStartDate || !pendingVerificationEndDate) { setPendingVerificationExportError('Please select both start and end dates'); return; }
+//     if (pendingVerificationStartDate > pendingVerificationEndDate) { setPendingVerificationExportError('Start date cannot be after end date'); return; }
+//     const branchName = branches.find(b => b._id === pendingVerificationBranchId)?.name || 'Branch';
+//     await doExport({
+//       url: '/reports/outstanding/pending-verification',
+//       params: new URLSearchParams({ branchId: pendingVerificationBranchId, startDate: formatDateForAPI(pendingVerificationStartDate), endDate: formatDateForAPI(pendingVerificationEndDate), format: 'excel' }),
+//       fileName: `Pending_Verification_${branchName}_${formatDateDDMMYYYY(pendingVerificationStartDate)}_to_${formatDateDDMMYYYY(pendingVerificationEndDate)}.xlsx`,
+//       onLoading: setPendingVerificationExportLoading, onError: setPendingVerificationExportError, onClose: handleClosePendingVerificationModal
+//     });
+//   };
+
+//   const handlePaymentSuccess = () => {
+//     refreshTab(TAB.CUSTOMER);
+//     if (selectedBooking) {
+//       setReceiptsFetched(prev => ({ ...prev, [selectedBooking._id]: false }));
+//       setBookingReceipts(prev => ({ ...prev, [selectedBooking._id]: [] }));
+//     }
+//   };
+
+//   const handleLoadReceipts = (bookingId) => { fetchReceiptsForBooking(bookingId); };
+
+//   // ── Print functions ───────────────────────────────────────────────────────
+//   const printReceiptInvoice = async (receiptId, bookingId, receiptIndex = 0) => {
+//     if (!canPrintInCustomerTab) { showError('You do not have permission to print invoices'); return; }
+//     try {
+//       const receiptResponse = await axiosInstance.get(`/ledger/receipt/${receiptId}`);
+//       const receiptData = receiptResponse.data.data.receipt;
+//       const bookingResponse = await axiosInstance.get(`/bookings/booking-payment-status/${bookingId}`);
+//       const bookingData = bookingResponse.data.data.bookingDetails;
+//       const finalStatus = bookingResponse.data.data.finalStatus || '';
+//       const qrCodeData  = receiptData.qrCodeData || {};
+//       const subsidyAmount = bookingData.subsidyAmount || 0;
+//       const isEV = bookingData.model?.type === 'EV';
+
+//       const priceComponents = bookingData.priceComponents || [];
+//       const filteredPriceComponents = priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         return !(/INSURANCE|INSURCANCE|INSUR|COVER|PREMIUM|INSURANCE CHARGES/i.test(headerKey) ||
+//                  /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey) ||
+//                  /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey));
+//       });
+//       const totalA = filteredPriceComponents.reduce((sum, item) => sum + (item.discountedValue || 0), 0);
+
+//       const findComp = (kws) => priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
+//       const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
+//       const rtoCharges = findComp(['RTO','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
+//       const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || bookingData.hypothecationCharges || 0;
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       const qrText = `GANDHI MOTORS PVT LTD\nBooking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}\nCustomer: ${qrCodeData.customerName || bookingData.customerDetails?.name}\nMobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}\nModel: ${qrCodeData.modelName || bookingData.model?.model_name}\nType: ${bookingData.model?.type || 'N/A'}\nChassis: ${qrCodeData.chassisNo || bookingData.chassisNumber || 'Not allocated'}\nPayment Type: ${qrCodeData.paymentType || bookingData.payment?.type}\nTotal Amount: ₹${grandTotal.toFixed(2)}\n${isEV && subsidyAmount > 0 ? `Subsidy: -₹${subsidyAmount.toFixed(2)}` : ''}\nReceipt: ${receiptData.receiptNumber || 'N/A'}\nAmount: ${receiptData.display?.amount || `₹${receiptData.amount?.toFixed(2) || '0'}`}\nPayment Mode: ${receiptData.paymentMode || 'Cash'}\nReference: ${receiptData.transactionReference || 'N/A'}\nDate: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
+
+//       let qrCodeImage = '';
+//       try {
+//         qrCodeImage = await QRCode.toDataURL(qrText, { width: 250, margin: 3, color: { dark: '#000000', light: '#FFFFFF' }, errorCorrectionLevel: 'H' });
+//       } catch (e) { console.error('QR error', e); }
+
+//       const transformedData = {
+//         bookingNumber: bookingData.bookingNumber, bookingType: bookingData.bookingType,
+//         rto: bookingData.rto, hpa: bookingData.hpa,
+//         hypothecationCharges: bookingData.hypothecationCharges || 0, gstin: bookingData.gstin || '',
+//         model: { model_name: bookingData.model?.model_name || 'N/A', type: bookingData.model?.type || 'N/A' },
+//         chassisNumber: qrCodeData.chassisNo || bookingData.chassisNumber,
+//         engineNumber: bookingData.vehicle?.engineNumber || bookingData.engineNumber,
+//         batteryNumber: bookingData.vehicle?.batteryNumber || '', keyNumber: bookingData.vehicle?.keyNumber || '',
+//         color: { name: bookingData.color?.name || '' },
+//         customerDetails: {
+//           name: bookingData.customerDetails?.name || 'N/A', address: bookingData.customerDetails?.address || '',
+//           taluka: bookingData.customerDetails?.taluka || '', district: bookingData.customerDetails?.district || '',
+//           pincode: bookingData.customerDetails?.pincode || '', mobile1: bookingData.customerDetails?.mobile1 || '',
+//           dob: bookingData.customerDetails?.dob || '', aadharNumber: bookingData.customerDetails?.aadharNumber || ''
+//         },
+//         exchange: bookingData.exchange, exchangeDetails: bookingData.exchangeDetails,
+//         payment: { type: bookingData.payment?.type || 'CASH', financer: bookingData.payment?.financer },
+//         salesExecutive: bookingData.salesExecutive,
+//         branch: { 
+//           gst_number: receiptData.bookingReference?.branch?.gst_number || bookingData.branch?.gst_number || '', 
+//           name: receiptData.bookingReference?.branch?.name || bookingData.branch?.name || '',
+//           address: receiptData.bookingReference?.branch?.address || bookingData.branch?.address || ''
+//         },
+//         bookingReference: receiptData.bookingReference || {},
+//         accessories: bookingData.accessories || [], priceComponents: bookingData.priceComponents || [],
+//         subdealer: bookingData.subdealer || '', receivedAmount: bookingData.receivedAmount || 0,
+//         finalStatus: finalStatus || '', recentPayment: receiptData, qrCodeData, qrCodeImage, qrCodeText: qrText,
+//         recentPaymentAmount: receiptData.amount || 0, bookingDetails: bookingData, subsidyAmount,
+//         calculatedTotals: { totalA, totalB, grandTotal, insuranceCharges, rtoCharges, hpCharges, subsidyDisplay }
+//       };
+
+//       const invoiceHTML = generateReceiptInvoiceHTML(transformedData, receiptIndex === 0);
+//       const printWindow = window.open('', '_blank');
+//       printWindow.document.write(invoiceHTML);
+//       printWindow.document.close();
+//       printWindow.onload = function() { printWindow.focus(); printWindow.print(); };
+//     } catch (error) {
+//       console.error('Error generating receipt invoice:', error);
+//       showError(error, 'Failed to generate receipt invoice');
+//     }
+//   };
+
+//   const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+//     const exchangeBrokerName    = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+//     const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
+//     const currentDate           = new Date().toLocaleDateString('en-GB');
+//     const receiptDate           = data.recentPayment?.receiptDate ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB') : currentDate;
+//     const recentPaymentAmount   = data.recentPaymentAmount || 0;
+//     const recentPaymentAmountRef  = data.recentPayment?.transactionReference || "-";
+//     const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+//     const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+//     const receiptNumber = data.recentPayment?.receiptNumber || "-";
+//     const qrCodeImage   = data.qrCodeImage || '';
+//     const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+//     const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
+    
+//     // Get branch address from various possible locations in the data
+//     const branchAddress = data.branch?.address || 
+//                           data.bookingDetails?.branch?.address || 
+//                           data.bookingReference?.branch?.address || 
+//                           "Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns, Upnagar, Nashik Road, Nashik - 422101";
+    
+//     // Get branch name from various possible locations
+//     const branchName = data.branch?.name || 
+//                        data.bookingDetails?.branch?.name || 
+//                        data.bookingReference?.branch?.name || 
+//                        'GANDHI TVS';
+    
+//     // Get GST number from various possible locations
+//     const gstNumber = data.branch?.gst_number || 
+//                       data.bookingDetails?.branch?.gst_number || 
+//                       data.bookingReference?.branch?.gst_number || 
+//                       '';
+    
+//     const customerType = data.bookingDetails?.customerType || data.customerType || 'N/A';
+
+//     if (isFirstReceipt) {
+//       const filteredPriceComponents = data.priceComponents.filter((comp) => {
+//         const headerKey = comp.header?.header_key?.toUpperCase() || '';
+//         return !(/INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey) ||
+//                  /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey) ||
+//                  /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey));
+//       });
+//       const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+//         const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+//         const unitCost    = component.originalValue;
+//         const lineTotal   = component.originalValue;
+//         const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+//         const totalGST    = lineTotal - taxableValue;
+//         const cgstAmount  = totalGST / 2;
+//         const sgstAmount  = totalGST / 2;
+//         return { ...component, unitCost, taxableValue, cgstAmount, sgstAmount, gstAmount: totalGST, gstRatePercentage, discount: 0, lineTotal };
+//       });
+//       const findComp = (kws) => data.priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
+//       const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
+//       const rtoCharges = findComp(['RTO','ROAD TAX','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
+//       const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || data.hypothecationCharges || 0;
+//       const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+//       const totalB = insuranceCharges + rtoCharges + hpCharges;
+//       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+//       const grandTotal = totalA + totalB - subsidyDisplay;
+
+//       return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
+//       <style>
+//         body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
+//         .page { width: 210mm; height: 297mm; margin: 0 auto; }
+//         .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
+//         .header-left { width: 60%; }
+//         .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+//         .logo-qr-container { display: flex; align-items: center; gap: 20px; justify-content: flex-end; margin-bottom: 10px; width: 100%; }
+//         .logo { height: 81px; }
+//         .qr-code-extra-big { width: 151px; height: 151px; border: 1px solid #ccc; }
+//         .dealer-info { text-align: left; font-size: 15px; line-height: 1.2; }
+//         .customer-info-container { display: flex; font-size: 15px; }
+//         .customer-info-left { width: 50%; }
+//         .customer-info-right { width: 50%; }
+//         .customer-info-row { margin: 1mm 0; line-height: 1.2; }
+//         .customer-info-row .value { font-weight: 700; }
+//         table { width: 100%; border-collapse: collapse; font-size: 10pt; margin: 2mm 0; }
+//         th, td { padding: 1mm; border: 1px solid #000; vertical-align: top; }
+//         .no-border { border: none !important; font-size: 15px; }
+//         .text-right { text-align: right; }
+//         .text-center { text-align: center; }
+//         .bold { font-weight: bold; }
+//         .divider { border-top: 2px solid #AAAAAA; }
+//         .totals-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
+//         .totals-table td { border: none; padding: 1mm; }
+//         .total-divider { border-top: 2px solid #AAAAAA; height: 1px; margin: 2px 0; }
+//         .broker-info { display:flex; justify-content:space-between; padding:2px; }
+//         .status-box { background-color: #e8f5e8; border: 2px solid #c3e6c3; border-radius: 4px; padding: 16px; margin: 11px 0; text-align: center; font-weight: bold; font-size: 21px; color: #495057; }
+//         .amount-in-words { font-style: italic; margin-top: 6px; color: #333; padding: 6px; }
+//         .amount-in-words .value { font-weight: 700; font-style: normal; }
+//         .note { padding:2px; margin:3px; }
+//         .note .value { font-weight: 700; }
+//         .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 11px; margin: 11px 0; }
+//         .receipt-info-row { margin: 2px 0; }
+//         .receipt-info-row .value { font-weight: 700; }
+//         .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 14px; }
+//         .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+//         .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 105px; display: inline-block; }
+//         .payment-grid-item .value { font-weight: 700; }
+//         .signature-box { margin-top: 6mm; font-size: 10pt; }
+//         .signature-line { border-top: 1px dashed #000; width: 41mm; display: inline-block; margin: 0 5mm; }
+//         @page { size: A4; margin: 0; }
+//         @media print { body { padding: 5mm; } }
+//       </style></head><body><div class="page">
+//         <div class="header-container">
+//           <div class="header-left">
+//             <h2 style="margin:3;font-size:16pt;">GANDHI MOTORS PVT LTD</h2>
+//             <div class="dealer-info">
+//               Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//               ${branchAddress}<br>
+//               ${gstNumber ? `GSTIN: ${gstNumber}<br>` : ''}
+//               ${branchName}
+//             </div>
+//           </div>
+//           <div class="header-right">
+//             <div class="logo-qr-container">
+//               <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//               ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />` : ''}
+//             </div>
+//             <div style="margin-top: 6px; font-size: 14px;">Date: ${receiptDate}</div>
+//             <div style="margin-top: 6px; font-size: 14px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+//             ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 13px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 12px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
+//           </div>
+//         </div>
+//         <div class="divider"></div>
+//         <div class="receipt-info" style="padding: 8px;">
+//           <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
+//           <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+//           <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+//           <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+//         </div>
+//         <div class="customer-info-container">
+//           <div class="customer-info-left">
+//             <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+//             <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+//             <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+//             <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</span></div>
+//             <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+//             <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
+//           </div>
+//           <div class="customer-info-right">
+//             <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+//             <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+//             <div class="customer-info-row">
+//               <strong>Payment Type:</strong> 
+//               <span class="value">
+//                 ${data.payment?.type === 'FINANCE' && !data.hpa 
+//                   ? `${data.payment?.type || 'CASH'} (NO HPA SCHEME APPLICABLE)`
+//                   : data.payment?.type || 'CASH'
+//                 }
+//               </span>
+//             </div>
+//             ${data.hpa && data.payment?.type === 'FINANCE' && data.payment?.financer?.name ? `
+//               <div class="customer-info-row">
+//                 <strong>Financer:</strong> <span class="value">${data.payment.financer.name}</span>
+//               </div>
+//             ` : ''}
+//             <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
+//           </div>
+//         </div>
+//         <div class="payment-info-box">
+//           <div class="receipt-info" style="padding: 4px;">
+//             <div class="payment-grid-2col">
+//               <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${recentPaymentAmount.toFixed(2)}</span></div>
+//               <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+//               <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+//               <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+//               <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+//             </div>
+//           </div>
+//           <div class="amount-in-words"><strong>(In Words):</strong> <span class="value">${recentPaymentAmountInWords} Only</span></div>
+//         </div>
+//         <table>
+//           <thead>
+//             <tr>
+//               <th style="width:25%">Particulars</th><th style="width:8%">HSN CODE</th><th style="width:8%">Unit Cost</th>
+//               <th style="width:8%">Taxable</th><th style="width:5%">CGST</th><th style="width:8%">CGST AMOUNT</th>
+//               <th style="width:5%">SGST</th><th style="width:8%">SGST AMOUNT</th><th style="width:7%">DISCOUNT</th><th style="width:10%">LINE TOTAL</th>
+//             </tr>
+//           </thead>
+//           <tbody>
+//             ${priceComponentsWithGST.map(c => `
+//               <tr>
+//                 <td>${c.header?.header_key || ''}</td>
+//                 <td>${c.header?.metadata?.hsn_code || ''}</td>
+//                 <td>${c.unitCost.toFixed(2)}</td>
+//                 <td>${c.taxableValue.toFixed(2)}</td>
+//                 <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
+//                 <td>${c.cgstAmount.toFixed(2)}</td>
+//                 <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
+//                 <td>${c.sgstAmount.toFixed(2)}</td>
+//                 <td>${c.discount.toFixed(2)}</td>
+//                 <td>${c.lineTotal.toFixed(2)}</td>
+//               </tr>
+//             `).join('')}
+//           </tbody>
+//         </table>
+//         <table class="totals-table">
+//           <tr><td class="no-border" style="width:80%"><strong>Total(A)</strong></td><td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td></tr>
+//           <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
+//           <tr><td class="no-border"><strong>INSURANCE CHARGES</strong></td><td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td></tr>
+//           <tr><td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td><td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td></tr>
+//           <tr><td class="no-border"><strong>HP CHARGES</strong></td><td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td></tr>
+//           ${isEV && subsidyAmount > 0 ? `<tr><td class="no-border"><strong>SUBSIDY AMOUNT</strong></td><td class="no-border text-right" style="color:green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td></tr>` : ''}
+//           <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
+//           <tr><td class="no-border"><strong>TOTAL(B)</strong></td><td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td></tr>
+//           <tr><td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td><td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td></tr>
+//         </table>
+//         <div class="broker-info">
+//           <div><strong>Ex. Broker/ Sub Dealer:</strong> <span>${exchangeBrokerName}</span></div>
+//           <div><strong>Ex. Veh No:</strong> <span>${exchangeVehicleNumber}</span></div>
+//         </div>
+//         <div class="note"><strong>Notes:</strong> <span class="value">Booking Awaiting approval as discount exceed</span></div>
+//         <div class="divider"></div>
+//         <div style="margin-top:2mm;"><div><strong>Booking Status: </strong></div><div class="status-box"><span>${data.finalStatus || 'Status: Not Available'}</span></div></div>
+//         <div class="divider"></div>
+//         <div class="divider" style="margin-top: 5mm;"></div>
+//         <div class="signature-box">
+//           <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
+//             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Sales Executive</div></div>
+//             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Manager</div></div>
+//             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
+//           </div>
+//         </div>
+//       </div></body></html>`;
+//     } else {
+//       const copyBlock = (isDuplicate) => `
+//         <div class="receipt-copy">
+//           <div class="header-container">
+//             <div class="header-left">
+//               <h2 style="margin:2;font-size:13pt;">GANDHI MOTORS PVT LTD</h2>
+//               <div class="dealer-info">
+//                 Authorized Main Dealer: TVS Motor Company Ltd.<br>
+//                 ${branchAddress}<br>
+//                 ${gstNumber ? `GSTIN: ${gstNumber}<br>` : ''}
+//                 ${branchName}
+//               </div>
+//             </div>
+//             <div class="header-right">
+//               <div class="logo-qr-container">
+//                 <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+//                 ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+//               </div>
+//               <div style="margin-top: 4px; font-size: 12px;">Date: ${receiptDate}</div>
+//               <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+//               ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 11px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 10px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
+//             </div>
+//           </div>
+//           <div class="divider"></div>
+//           <div class="receipt-info" style="padding: 6px;">
+//             <div class="receipt-info-row"><strong>Payment Receipt${isDuplicate ? ' (DUPLICATE)' : ''}</strong></div>
+//             <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+//             <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+//             <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+//           </div>
+//           <div class="customer-info-container">
+//             <div class="customer-info-left">
+//               <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+//               <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+//               <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+//               <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
+//               <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+//               <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
+//             </div>
+//             <div class="customer-info-right">
+//               <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+//               <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+//               <div class="customer-info-row">
+//                 <strong>Payment Type:</strong> 
+//                 <span class="value">
+//                   ${data.payment?.type === 'FINANCE' && !data.hpa 
+//                     ? `${data.payment?.type || 'CASH'} (NO HPA SCHEME APPLICABLE)`
+//                     : data.payment?.type || 'CASH'
+//                   }
+//                 </span>
+//               </div>
+//               ${data.hpa && data.payment?.type === 'FINANCE' && data.payment?.financer?.name ? `
+//                 <div class="customer-info-row">
+//                   <strong>Financer:</strong> <span class="value">${data.payment.financer.name}</span>
+//                 </div>
+//               ` : ''}
+//               <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
+//             </div>
+//           </div>
+//           <div class="payment-info-box">
+//             <div class="receipt-info" style="padding: 4px;">
+//               <div class="payment-grid-2col">
+//                 <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${recentPaymentAmount.toFixed(2)}</span></div>
+//                 <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+//                 <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+//                 <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+//                 <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+//               </div>
+//             </div>
+//           </div>
+//           <div class="note"><strong>Notes:</strong> <span class="value"></span></div>
+//           <div class="divider"></div>
+//           <div class="signature-box">
+//             <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+//               <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
+//               <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Sales Executive</div></div>
+//               <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Manager</div></div>
+//               <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
+//             </div>
+//           </div>
+//         </div>`;
+
+//       return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
+//       <style>
+//         body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
+//         .page { width: 210mm; height: 297mm; margin: 0 auto; }
+//         .receipt-copy { height: 138mm; page-break-inside: avoid; }
+//         .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
+//         .header-left { width: 60%; }
+//         .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+//         .logo-qr-container { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-bottom: 5px; width: 100%; }
+//         .logo { height: 61px; }
+//         .qr-code-small { width: 101px; height: 101px; border: 1px solid #ccc; }
+//         .dealer-info { text-align: left; font-size: 13px; line-height: 1.1; }
+//         .customer-info-container { display: flex; font-size: 13px; }
+//         .customer-info-left { width: 50%; }
+//         .customer-info-right { width: 50%; }
+//         .customer-info-row { margin: 0.5mm 0; line-height: 1.1; }
+//         .customer-info-row .value { font-weight: 700; }
+//         .divider { border-top: 1px solid #AAAAAA; margin: 2mm 0; }
+//         .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 9px; margin: 9px 0; font-size: 13px; }
+//         .receipt-info-row { margin: 2px 0; }
+//         .receipt-info-row .value { font-weight: 700; }
+//         .payment-info-box { margin: 6px 0; }
+//         .signature-box { margin-top: 4mm; font-size: 9pt; }
+//         .signature-line { border-top: 1px dashed #000; width: 36mm; display: inline-block; margin: 0 3mm; }
+//         .cutting-line { border-top: 2px dashed #333; margin: 11mm 0; text-align: center; position: relative; }
+//         .cutting-line::before { content: "✂ Cut Here ✂"; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: white; padding: 0 11px; font-size: 11px; color: #666; }
+//         .note { padding:2px; margin:3px; font-size: 12px; }
+//         .note .value { font-weight: 700; }
+//         .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 13px; }
+//         .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+//         .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 100px; display: inline-block; }
+//         .payment-grid-item .value { font-weight: 700; }
+//         @page { size: A4; margin: 0; }
+//         @media print { body { padding: 5mm; } .receipt-copy { page-break-inside: avoid; } }
+//       </style></head><body><div class="page">
+//         ${copyBlock(false)}
+//         <div class="cutting-line"></div>
+//         ${copyBlock(true)}
+//       </div></body></html>`;
+//     }
+//   };
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  TABLE RENDERERS
+//   // ══════════════════════════════════════════════════════════════════════════
+
+//   const renderCustomerTable = () => {
+//     if (!canViewCustomerTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Customer tab.</CAlert></div>;
+
+//     const canShowActionColumn = canCreateInCustomerTab || canPrintInCustomerTab;
+//     const { docs: currentRecords, loading } = tabData[TAB.CUSTOMER];
+
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell>
+//                 <CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Model Name</CTableHeaderCell>
+//                 <CTableHeaderCell>Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell>
+//                 <CTableHeaderCell>Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell>Chassis Number</CTableHeaderCell>
+//                 <CTableHeaderCell>Total</CTableHeaderCell>
+//                 <CTableHeaderCell>Received</CTableHeaderCell>
+//                 <CTableHeaderCell>Balance</CTableHeaderCell>
+//                 <CTableHeaderCell>Receipts</CTableHeaderCell>
+//                 {canShowActionColumn && <CTableHeaderCell>Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={canShowActionColumn ? 12 : 11} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.CUSTOMER].search ? `No results found for "${tabData[TAB.CUSTOMER].search}"` : 'No booking available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (tabData[TAB.CUSTOMER].currentPage - 1) * tabData[TAB.CUSTOMER].limit + index + 1;
+//                   const isLoading   = loadingReceipts[booking._id];
+//                   const receipts    = bookingReceipts[booking._id] || [];
+//                   const paymentReceipts = receipts.filter(r => r.isRefund === false);
+//                   const sortedReceipts  = [...paymentReceipts].sort((a, b) => new Date(a.receiptDate || a.createdAt || 0) - new Date(b.receiptDate || b.createdAt || 0));
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? (
+//                           <CSpinner size="sm" color="info" />
+//                         ) : sortedReceipts.length > 0 ? (
+//                           <CDropdown>
+//                             <CDropdownToggle size="sm" color="info" variant="outline" disabled={!canPrintInCustomerTab}>
+//                               {sortedReceipts.length} Receipt{sortedReceipts.length > 1 ? 's' : ''}
+//                             </CDropdownToggle>
+//                             <CDropdownMenu>
+//                               {sortedReceipts.map((receipt, ri) => (
+//                                 <CDropdownItem key={receipt.id} onClick={() => printReceiptInvoice(receipt.id, booking._id, ri)}>
+//                                   <div className="d-flex align-items-center">
+//                                     <CIcon icon={cilPrint} className="me-2" />
+//                                     <div><div><strong>Receipt #{ri + 1}</strong></div><small>{receipt.display?.amount || `₹${receipt.amount}`} - {receipt.display?.date || new Date(receipt.receiptDate).toLocaleDateString('en-GB')}</small></div>
+//                                   </div>
+//                                 </CDropdownItem>
+//                               ))}
+//                             </CDropdownMenu>
+//                           </CDropdown>
+//                         ) : receiptsFetched[booking._id] ? (
+//                           <span className="text-muted">No receipts</span>
+//                         ) : (
+//                           <CButton size="sm" color="light" onClick={() => handleLoadReceipts(booking._id)} disabled={isLoading}>
+//                             <CIcon icon={cilCloudDownload} className="me-1" />Load Receipts
+//                           </CButton>
+//                         )}
+//                       </CTableDataCell>
+//                       {canShowActionColumn && (
+//                         <CTableDataCell>
+//                           <CButton size="sm" className='option-button btn-sm' onClick={(e) => handleMenuClick(e, booking._id)} disabled={!canCreateInCustomerTab}>
+//                             <CIcon icon={cilSettings} />Options
+//                           </CButton>
+//                           <Menu anchorEl={anchorEl} open={menuBookingId === booking._id} onClose={handleMenuClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+//                             {canCreateInCustomerTab && (
+//                               <MenuItem onClick={() => { handleAddClick(booking); handleMenuClose(); }}>
+//                                 <CIcon icon={cilPlus} className="me-2" />Add Payment
+//                               </MenuItem>
+//                             )}
+//                           </Menu>
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.CUSTOMER)}
+//       </>
+//     );
+//   };
+
+//   const renderPaymentVerificationTable = () => {
+//     if (!canViewPaymentVerificationTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Payment Verification tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.PAYMENT_VERIFICATION];
+//     const canShowActions = canCreateInPaymentVerificationTab || canRejectPayments;
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell>Amount</CTableHeaderCell><CTableHeaderCell>Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell>Date</CTableHeaderCell><CTableHeaderCell>Bank Receipts</CTableHeaderCell>
+//                 <CTableHeaderCell>Status</CTableHeaderCell>
+//                 {canShowActions && <CTableHeaderCell>Action</CTableHeaderCell>}
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={canShowActions ? 10 : 9} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.PAYMENT_VERIFICATION].search ? `No results found for "${tabData[TAB.PAYMENT_VERIFICATION].search}"` : 'No pending payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex   = (tabData[TAB.PAYMENT_VERIFICATION].currentPage - 1) * tabData[TAB.PAYMENT_VERIFICATION].limit + index + 1;
+//                   const bookingId     = entry.bookingDetails?._id || entry.booking;
+//                   const bookingNumber = entry.bookingDetails?.bookingNumber || entry.booking;
+//                   const isLoading     = loadingReceipts[bookingId];
+//                   const receipts      = bookingReceipts[bookingId] || [];
+//                   const bankReceipts  = receipts.filter(r => r.paymentMode?.toUpperCase() === 'BANK');
+//                   const sortedBankReceipts = [...bankReceipts].sort((a, b) => new Date(a.receiptDate || a.createdAt || 0) - new Date(b.receiptDate || b.createdAt || 0));
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{bookingNumber}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
+//                       <CTableDataCell>₹{entry.amount || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>
+//                         {isLoading ? <CSpinner size="sm" color="info" /> :
+//                           sortedBankReceipts.length > 0 ? (
+//                             <CDropdown>
+//                               <CDropdownToggle size="sm" color="info" variant="outline">{sortedBankReceipts.length} Bank Receipt{sortedBankReceipts.length > 1 ? 's' : ''}</CDropdownToggle>
+//                               <CDropdownMenu>
+//                                 {sortedBankReceipts.map((r, ri) => (
+//                                   <CDropdownItem key={r.id} onClick={() => printReceiptInvoice(r.id, bookingId, ri)} disabled={!canPrintInCustomerTab}>
+//                                     <div className="d-flex align-items-center"><CIcon icon={cilPrint} className="me-2" /><div><div><strong>Bank Receipt #{ri + 1}</strong></div><small>{r.display?.amount || `₹${r.amount}`} - {r.display?.date || (r.receiptDate ? new Date(r.receiptDate).toLocaleDateString('en-GB') : 'N/A')}</small></div></div>
+//                                   </CDropdownItem>
+//                                 ))}
+//                               </CDropdownMenu>
+//                             </CDropdown>
+//                           ) : receiptsFetched[bookingId] ? <span className="text-muted">No bank receipts</span> : (
+//                             <CButton size="sm" color="light" onClick={() => handleLoadReceipts(bookingId)} disabled={isLoading}>
+//                               <CIcon icon={cilCloudDownload} className="me-1" />Load Receipts
+//                             </CButton>
+//                           )}
+//                       </CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color={entry.approvalStatus === 'Pending' ? 'danger' : 'success'} shape="rounded-pill">
+//                           {entry.approvalStatus === 'Pending' ? 'PENDING' : 'VERIFIED'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       {canShowActions && (
+//                         <CTableDataCell>
+//                           <div className="d-flex gap-2">
+//                             {entry.approvalStatus === 'Pending' && canCreateInPaymentVerificationTab && (
+//                               <CButton size="sm" className="action-btn" onClick={() => handleVerifyPayment(entry)}><CIcon icon={cilCheckCircle} className="me-1" />Verify</CButton>
+//                             )}
+//                             {entry.approvalStatus === 'Pending' && canRejectPayments && (
+//                               <CButton size="sm" color="danger" variant="outline" onClick={() => handleRejectPayment(entry)}><CIcon icon={cilXCircle} className="me-1" />Reject</CButton>
+//                             )}
+//                             {entry.approvalStatus !== 'Pending' && <span className="text-muted">Verified</span>}
+//                           </div>
+//                         </CTableDataCell>
+//                       )}
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.PAYMENT_VERIFICATION)}
+//       </>
+//     );
+//   };
+
+//   const renderCompletePaymentTable = () => {
+//     if (!canViewCompletePaymentTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Complete Payment tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.COMPLETE_PAYMENT];
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Model Name</CTableHeaderCell><CTableHeaderCell>Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell>Chassis Number</CTableHeaderCell><CTableHeaderCell>Total</CTableHeaderCell>
+//                 <CTableHeaderCell>Received</CTableHeaderCell><CTableHeaderCell>Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={10} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.COMPLETE_PAYMENT].search ? `No results found for "${tabData[TAB.COMPLETE_PAYMENT].search}"` : 'No complete payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (tabData[TAB.COMPLETE_PAYMENT].currentPage - 1) * tabData[TAB.COMPLETE_PAYMENT].limit + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'green' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.COMPLETE_PAYMENT)}
+//       </>
+//     );
+//   };
+
+//   const renderPendingListTable = () => {
+//     if (!canViewPendingListTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Pending List tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.PENDING_LIST];
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Model Name</CTableHeaderCell><CTableHeaderCell>Booking Date</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Mobile Number</CTableHeaderCell>
+//                 <CTableHeaderCell>Chassis Number</CTableHeaderCell><CTableHeaderCell>Total</CTableHeaderCell>
+//                 <CTableHeaderCell>Received</CTableHeaderCell><CTableHeaderCell>Balance</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={10} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.PENDING_LIST].search ? `No results found for "${tabData[TAB.PENDING_LIST].search}"` : 'No pending payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((booking, index) => {
+//                   const globalIndex = (tabData[TAB.PENDING_LIST].currentPage - 1) * tabData[TAB.PENDING_LIST].limit + index + 1;
+//                   return (
+//                     <CTableRow key={booking._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
+//                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell>{Math.round(booking.receivedAmount) || '0'}</CTableDataCell>
+//                       <CTableDataCell style={{ color: 'red' }}>{Math.round(booking.balanceAmount) || '0'}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.PENDING_LIST)}
+//       </>
+//     );
+//   };
+
+//   const renderVerifiedListTable = () => {
+//     if (!canViewVerifiedListTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Verified List tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.VERIFIED_LIST];
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell>Amount</CTableHeaderCell><CTableHeaderCell>Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell>Date</CTableHeaderCell><CTableHeaderCell>Verified By</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={8} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.VERIFIED_LIST].search ? `No results found for "${tabData[TAB.VERIFIED_LIST].search}"` : 'No verified payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (tabData[TAB.VERIFIED_LIST].currentPage - 1) * tabData[TAB.VERIFIED_LIST].limit + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || entry.booking || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || entry.customerName || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>₹{entry.amount?.toLocaleString('en-IN') || entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
+//                       <CTableDataCell>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedByDetails?.name || entry.receivedBy?.name || ''}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.VERIFIED_LIST)}
+//       </>
+//     );
+//   };
+
+//   const renderRejectedListTable = () => {
+//     if (!canViewRejectedListTab) return <div className="text-center py-4"><CAlert color="warning">You do not have permission to view the Rejected List tab.</CAlert></div>;
+//     const { docs: currentRecords, loading } = tabData[TAB.REJECTED_LIST];
+//     return (
+//       <>
+//         {loading && <div className="d-flex align-items-center py-2 text-muted" style={{ fontSize: '13px' }}><CSpinner size="sm" color="primary" className="me-2" /> Loading records…</div>}
+//         <div className="responsive-table-wrapper" style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+//           <CTable striped bordered hover className='responsive-table'>
+//             <CTableHead>
+//               <CTableRow>
+//                 <CTableHeaderCell>Sr.no</CTableHeaderCell><CTableHeaderCell>Booking ID</CTableHeaderCell>
+//                 <CTableHeaderCell>Customer Name</CTableHeaderCell><CTableHeaderCell>Payment Mode</CTableHeaderCell>
+//                 <CTableHeaderCell>Amount</CTableHeaderCell><CTableHeaderCell>Transaction Reference</CTableHeaderCell>
+//                 <CTableHeaderCell>Date</CTableHeaderCell><CTableHeaderCell>Received By</CTableHeaderCell>
+//                 <CTableHeaderCell>Rejection Reason</CTableHeaderCell><CTableHeaderCell>Rejected At</CTableHeaderCell>
+//               </CTableRow>
+//             </CTableHead>
+//             <CTableBody>
+//               {currentRecords.length === 0 && !loading ? (
+//                 <CTableRow><CTableDataCell colSpan={10} style={{ color: 'red', textAlign: 'center' }}>
+//                   {tabData[TAB.REJECTED_LIST].search ? `No results found for "${tabData[TAB.REJECTED_LIST].search}"` : 'No rejected payments available'}
+//                 </CTableDataCell></CTableRow>
+//               ) : (
+//                 currentRecords.map((entry, index) => {
+//                   const globalIndex = (tabData[TAB.REJECTED_LIST].currentPage - 1) * tabData[TAB.REJECTED_LIST].limit + index + 1;
+//                   return (
+//                     <CTableRow key={entry._id || index}>
+//                       <CTableDataCell>{globalIndex}</CTableDataCell>
+//                       <CTableDataCell>{entry.booking?.bookingNumber || entry.bookingNumber || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.booking?.customerDetails?.name || entry.customerName || ''}</CTableDataCell>
+//                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
+//                       <CTableDataCell>₹{entry.amount?.toLocaleString('en-IN') || entry.amount}</CTableDataCell>
+//                       <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
+//                       <CTableDataCell>{entry.receiptDate ? new Date(entry.receiptDate).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                       <CTableDataCell>{entry.receivedBy?.name || ''}</CTableDataCell>
+//                       <CTableDataCell>
+//                         <CBadge color="danger" shape="rounded-pill" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+//                           {entry.rejectionReason || 'No reason provided'}
+//                         </CBadge>
+//                       </CTableDataCell>
+//                       <CTableDataCell>{entry.approvedAt ? new Date(entry.approvedAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
+//                     </CTableRow>
+//                   );
+//                 })
+//               )}
+//             </CTableBody>
+//           </CTable>
+//         </div>
+//         {renderPagination(TAB.REJECTED_LIST)}
+//       </>
+//     );
+//   };
+
+//   // ── Guard renders ─────────────────────────────────────────────────────────
+//   if (!canViewReceipts) return <div className="alert alert-danger m-3">You do not have permission to view Receipts.</div>;
+//   if (!canViewAnyTab)   return <div className="alert alert-danger m-3">You do not have permission to view any tabs in Receipts.</div>;
+//   if (loading)          return <div className="d-flex justify-content-center align-items-center" style={{ height: '50vh' }}><CSpinner color="primary" /></div>;
+//   if (error)            return <div className="alert alert-danger">{error}</div>;
+
+//   // ══════════════════════════════════════════════════════════════════════════
+//   //  MAIN RENDER
+//   // ══════════════════════════════════════════════════════════════════════════
+//   return (
+//     <div>
+//       <div className='title'>Receipt Management</div>
+//       {successMessage && <CAlert color="success" className="mb-3">{successMessage}</CAlert>}
+
+//       <CCard className='table-container mt-4'>
+//         <CCardBody>
+//           {canViewAnyTab ? (
+//             <>
+//               {canCreateReceipts && (
+//                 <div className="d-flex mb-3 gap-2">
+//                   <CButton size="sm" className="action-btn" onClick={handleOpenExportModal} title="Export Receipts Excel">
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />Export Receipts
+//                   </CButton>
+//                   <CButton size="sm" className="action-btn" onClick={handleOpenVerifiedOutstandingModal} title="Export Verified Outstanding Report">
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />Verified Receipts
+//                   </CButton>
+//                   <CButton size="sm" className="action-btn" onClick={handleOpenPendingVerificationModal} title="Export Pending Verification Report">
+//                     <FontAwesomeIcon icon={faFileExcel} className='me-1' />Pending Verification
+//                   </CButton>
+//                 </div>
+//               )}
+
+//               <CNav variant="tabs" className="mb-3 border-bottom">
+//                 {[
+//                   { tab: TAB.CUSTOMER,             label: 'Customer',             can: canViewCustomerTab,            createCan: canCreateInCustomerTab },
+//                   { tab: TAB.PAYMENT_VERIFICATION, label: 'Payment Verification', can: canViewPaymentVerificationTab, createCan: canCreateInPaymentVerificationTab },
+//                   { tab: TAB.COMPLETE_PAYMENT,     label: 'Complete Payment',      can: canViewCompletePaymentTab,     createCan: canCreateInCompletePaymentTab },
+//                   { tab: TAB.PENDING_LIST,         label: 'Pending List',          can: canViewPendingListTab,         createCan: canCreateInPendingListTab },
+//                   { tab: TAB.VERIFIED_LIST,        label: 'Verified List',         can: canViewVerifiedListTab,        createCan: canCreateInVerifiedListTab },
+//                   { tab: TAB.REJECTED_LIST,        label: 'Rejected List',         can: canViewRejectedListTab,        createCan: true },
+//                 ].filter(t => t.can).map(({ tab, label, createCan }) => (
+//                   <CNavItem key={tab}>
+//                     <CNavLink
+//                       active={activeTab === tab}
+//                       onClick={() => handleTabChange(tab)}
+//                       style={{
+//                         cursor: 'pointer',
+//                         borderTop: activeTab === tab ? '4px solid #2759a2' : '3px solid transparent',
+//                         borderBottom: 'none',
+//                         color: 'black'
+//                       }}
+//                     >
+//                       {label}
+//                       {!createCan && tab !== TAB.REJECTED_LIST && <span className="ms-1 text-muted small">(View Only)</span>}
+//                     </CNavLink>
+//                   </CNavItem>
+//                 ))}
+//               </CNav>
+
+//               {/* ── Search bar ──
+//                   UNCONTROLLED input: React never writes the value= prop back,
+//                   so this input CANNOT lose focus due to re-renders.
+//                   localSearch is only used for displaying "No results for X" label. ── */}
+//               <div className="d-flex justify-content-between mb-3">
+//                 <div></div>
+//                 <div className='d-flex'>
+//                   <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//                   <input
+//                     ref={searchInputRef}
+//                     type="text"
+//                     defaultValue=""
+//                     style={{
+//                       maxWidth: '350px',
+//                       height: '30px',
+//                       borderRadius: '0',
+//                       border: '1px solid #ced4da',
+//                       padding: '0 8px',
+//                       outline: 'none',
+//                       fontSize: '14px'
+//                     }}
+//                     className="d-inline-block square-search"
+//                     onChange={e => handleSearch(e.target.value)}
+//                     placeholder="Search..."
+//                     autoComplete="off"
+//                     disabled={!canViewAnyTab}
+//                   />
+//                 </div>
+//               </div>
+
+//               <CTabContent>
+//                 {canViewCustomerTab            && <CTabPane visible={activeTab === TAB.CUSTOMER}>            {activeTab === TAB.CUSTOMER            && renderCustomerTable()}</CTabPane>}
+//                 {canViewPaymentVerificationTab && <CTabPane visible={activeTab === TAB.PAYMENT_VERIFICATION}>{activeTab === TAB.PAYMENT_VERIFICATION && renderPaymentVerificationTable()}</CTabPane>}
+//                 {canViewCompletePaymentTab     && <CTabPane visible={activeTab === TAB.COMPLETE_PAYMENT}>    {activeTab === TAB.COMPLETE_PAYMENT     && renderCompletePaymentTable()}</CTabPane>}
+//                 {canViewPendingListTab         && <CTabPane visible={activeTab === TAB.PENDING_LIST}>        {activeTab === TAB.PENDING_LIST         && renderPendingListTable()}</CTabPane>}
+//                 {canViewVerifiedListTab        && <CTabPane visible={activeTab === TAB.VERIFIED_LIST}>       {activeTab === TAB.VERIFIED_LIST        && renderVerifiedListTable()}</CTabPane>}
+//                 {canViewRejectedListTab        && <CTabPane visible={activeTab === TAB.REJECTED_LIST}>       {activeTab === TAB.REJECTED_LIST        && renderRejectedListTable()}</CTabPane>}
+//               </CTabContent>
+//             </>
+//           ) : (
+//             <CAlert color="warning" className="text-center">You don't have permission to view any tabs in Receipts.</CAlert>
+//           )}
+//         </CCardBody>
+//       </CCard>
+
+//       <ReceiptModal
+//         show={showModal}
+//         onClose={() => setShowModal(false)}
+//         bookingData={selectedBooking}
+//         canCreateReceipts={canCreateInCustomerTab}
+//         cashLocations={cashLocations}
+//         onPaymentSuccess={handlePaymentSuccess}
+//       />
+
+//       {/* Reject Payment Modal */}
+//       <CModal alignment="center" visible={showRejectModal} onClose={() => setShowRejectModal(false)}>
+//         <CModalHeader><CModalTitle>Reject Payment</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {selectedRejectEntry && (
+//             <>
+//               <div className="mb-3">
+//                 <p><strong>Booking:</strong> {selectedRejectEntry.bookingDetails?.bookingNumber || selectedRejectEntry.booking}</p>
+//                 <p><strong>Amount:</strong> ₹{selectedRejectEntry.amount}</p>
+//                 <p><strong>Payment Mode:</strong> {selectedRejectEntry.paymentMode}</p>
+//               </div>
+//               <div className="mb-3">
+//                 <CFormLabel htmlFor="rejectionReason">Rejection Reason <span className="text-danger">*</span></CFormLabel>
+//                 <CFormInput type="text" id="rejectionReason" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Enter reason for rejection" disabled={rejectLoading} />
+//               </div>
+//             </>
+//           )}
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={() => setShowRejectModal(false)} disabled={rejectLoading}>Cancel</CButton>
+//           <CButton color="danger" onClick={confirmRejectPayment} disabled={!rejectionReason.trim() || rejectLoading}>
+//             {rejectLoading ? <><CSpinner size="sm" className="me-2" />Rejecting...</> : 'Reject Payment'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Export Receipts Modal */}
+//       <CModal alignment="center" visible={openExportModal} onClose={handleCloseExportModal}>
+//         <CModalHeader><CModalTitle><FontAwesomeIcon icon={faCalendarAlt} className="me-2" />Export Receipts - Select Date Range</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {exportError && <CAlert color="warning" className="mb-3">{exportError}</CAlert>}
+//           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enIN}>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">Start Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={startDate} onChange={(v) => { setStartDate(v); setExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">End Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={endDate} onChange={(v) => { setEndDate(v); setExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={startDate} views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//           </LocalizationProvider>
+//           <div className="mb-3">
+//             <CFormLabel className="mb-2 fw-bold">Select Branch <span className="text-danger">*</span></CFormLabel>
+//             <CFormSelect value={selectedBranchId} onChange={(e) => { setSelectedBranchId(e.target.value); setExportError(''); }} disabled={!canCreateReceipts}>
+//               <option value="">-- Select Branch --</option>
+//               {hasAllBranchAccess && <option value="all">All Branch</option>}
+//               {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+//             </CFormSelect>
+//           </div>
+//           <div className="mb-3">
+//             <CFormLabel className="mb-2 fw-bold">Cash/Other Filter <span className="text-danger">*</span></CFormLabel>
+//             <CFormSelect value={cashOtherFilter} onChange={(e) => { setCashOtherFilter(e.target.value); setExportError(''); }} disabled={!canCreateReceipts}>
+//               <option value="">-- Select Filter --</option>
+//               <option value="cash">Cash</option>
+//               <option value="other">Other</option>
+//             </CFormSelect>
+//           </div>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseExportModal}>Cancel</CButton>
+//           <CButton className="submit-button" onClick={handleExcelExport} disabled={!startDate || !endDate || !selectedBranchId || !cashOtherFilter || !canCreateReceipts || exportLoading}>
+//             {exportLoading ? <><CSpinner size="sm" className="me-2" />Exporting...</> : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Verified Outstanding Export Modal */}
+//       <CModal alignment="center" visible={openVerifiedOutstandingModal} onClose={handleCloseVerifiedOutstandingModal}>
+//         <CModalHeader><CModalTitle><FontAwesomeIcon icon={faCalendarAlt} className="me-2" />Export Verified Outstanding Report</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {verifiedOutstandingExportError && <CAlert color="warning" className="mb-3">{verifiedOutstandingExportError}</CAlert>}
+//           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enIN}>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">Start Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={verifiedOutstandingStartDate} onChange={(v) => { setVerifiedOutstandingStartDate(v); setVerifiedOutstandingExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">End Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={verifiedOutstandingEndDate} onChange={(v) => { setVerifiedOutstandingEndDate(v); setVerifiedOutstandingExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={verifiedOutstandingStartDate} views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//           </LocalizationProvider>
+//           <div className="mb-3">
+//             <CFormLabel className="mb-2 fw-bold">Select Branch <span className="text-danger">*</span></CFormLabel>
+//             <CFormSelect value={verifiedOutstandingBranchId} onChange={(e) => { setVerifiedOutstandingBranchId(e.target.value); setVerifiedOutstandingExportError(''); }} disabled={!canCreateReceipts}>
+//               <option value="">-- Select Branch --</option>
+//               {hasAllBranchAccess && <option value="all">All Branch</option>}
+//               {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+//             </CFormSelect>
+//           </div>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleCloseVerifiedOutstandingModal}>Cancel</CButton>
+//           <CButton className="submit-button" onClick={handleVerifiedOutstandingExport} disabled={!verifiedOutstandingStartDate || !verifiedOutstandingEndDate || !verifiedOutstandingBranchId || !canCreateReceipts || verifiedOutstandingExportLoading}>
+//             {verifiedOutstandingExportLoading ? <><CSpinner size="sm" className="me-2" />Exporting...</> : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+
+//       {/* Pending Verification Export Modal */}
+//       <CModal alignment="center" visible={openPendingVerificationModal} onClose={handleClosePendingVerificationModal}>
+//         <CModalHeader><CModalTitle><FontAwesomeIcon icon={faCalendarAlt} className="me-2" />Export Pending Verification Report</CModalTitle></CModalHeader>
+//         <CModalBody>
+//           {pendingVerificationExportError && <CAlert color="warning" className="mb-3">{pendingVerificationExportError}</CAlert>}
+//           <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enIN}>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">Start Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={pendingVerificationStartDate} onChange={(v) => { setPendingVerificationStartDate(v); setPendingVerificationExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//             <div className="mb-3">
+//               <CFormLabel className="mb-2 fw-bold">End Date <span className="text-danger">*</span></CFormLabel>
+//               <DatePicker value={pendingVerificationEndDate} onChange={(v) => { setPendingVerificationEndDate(v); setPendingVerificationExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={pendingVerificationStartDate} views={['day','month','year']} disabled={!canCreateReceipts} />
+//             </div>
+//           </LocalizationProvider>
+//           <div className="mb-3">
+//             <CFormLabel className="mb-2 fw-bold">Select Branch <span className="text-danger">*</span></CFormLabel>
+//             <CFormSelect value={pendingVerificationBranchId} onChange={(e) => { setPendingVerificationBranchId(e.target.value); setPendingVerificationExportError(''); }} disabled={!canCreateReceipts}>
+//               <option value="">-- Select Branch --</option>
+//               {hasAllBranchAccess && <option value="all">All Branch</option>}
+//               {branches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+//             </CFormSelect>
+//           </div>
+//         </CModalBody>
+//         <CModalFooter>
+//           <CButton color="secondary" onClick={handleClosePendingVerificationModal}>Cancel</CButton>
+//           <CButton className="submit-button" onClick={handlePendingVerificationExport} disabled={!pendingVerificationStartDate || !pendingVerificationEndDate || !pendingVerificationBranchId || !canCreateReceipts || pendingVerificationExportLoading}>
+//             {pendingVerificationExportLoading ? <><CSpinner size="sm" className="me-2" />Exporting...</> : 'Export'}
+//           </CButton>
+//         </CModalFooter>
+//       </CModal>
+//     </div>
+//   );
+// }
+
+// export default Receipt;
+
+
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   CBadge, 
@@ -26101,6 +30310,17 @@ import {
   TABS,
   ACTIONS
 } from '../../utils/modulePermissions';
+
+// ─── Helper function to get full customer name ──────────────────────────────────
+const getFullCustomerName = (customerDetails) => {
+  if (!customerDetails) return 'N/A';
+  const { firstName = '', middleName = '', lastName = '' } = customerDetails;
+  // Filter out empty strings and join with spaces
+  const fullName = [firstName, middleName, lastName]
+    .filter(part => part && part.trim() !== '')
+    .join(' ');
+  return fullName || 'N/A';
+};
 
 // ─── Tab constants ──────────────────────────────────────────────────────────────
 const TAB = {
@@ -26289,7 +30509,7 @@ function Receipt() {
               </div>
               <div class="divider"></div>
               <div class="customer-info">
-                <div><strong>Customer Name:</strong> ${ledgerData.customerDetails?.name || 'N/A'}</div>
+                <div><strong>Customer Name:</strong> ${getFullCustomerName(ledgerData.customerDetails)}</div>
                 <div><strong>Ledger Date:</strong> ${ledgerData.ledgerDate || new Date().toLocaleDateString('en-GB')}</div>
                 <div><strong>Customer Address:</strong> ${ledgerData.customerDetails?.address || 'N/A'}</div>
                 <div><strong>Customer Phone:</strong> ${ledgerData.customerDetails?.phone || 'N/A'}</div>
@@ -26431,7 +30651,9 @@ function Receipt() {
         docs = docs.filter(entry => {
           const fields = [
             entry.bookingDetails?.bookingNumber,
-            entry.bookingDetails?.customerDetails?.name,
+            entry.bookingDetails?.customerDetails?.firstName,
+            entry.bookingDetails?.customerDetails?.middleName,
+            entry.bookingDetails?.customerDetails?.lastName,
             entry.paymentMode,
             entry.transactionReference,
             entry.amount?.toString(),
@@ -27114,7 +31336,7 @@ function Receipt() {
       const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
       const grandTotal = totalA + totalB - subsidyDisplay;
 
-      const qrText = `GANDHI MOTORS PVT LTD\nBooking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}\nCustomer: ${qrCodeData.customerName || bookingData.customerDetails?.name}\nMobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}\nModel: ${qrCodeData.modelName || bookingData.model?.model_name}\nType: ${bookingData.model?.type || 'N/A'}\nChassis: ${qrCodeData.chassisNo || bookingData.chassisNumber || 'Not allocated'}\nPayment Type: ${qrCodeData.paymentType || bookingData.payment?.type}\nTotal Amount: ₹${grandTotal.toFixed(2)}\n${isEV && subsidyAmount > 0 ? `Subsidy: -₹${subsidyAmount.toFixed(2)}` : ''}\nReceipt: ${receiptData.receiptNumber || 'N/A'}\nAmount: ${receiptData.display?.amount || `₹${receiptData.amount?.toFixed(2) || '0'}`}\nPayment Mode: ${receiptData.paymentMode || 'Cash'}\nReference: ${receiptData.transactionReference || 'N/A'}\nDate: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
+      const qrText = `GANDHI MOTORS PVT LTD\nBooking Number: ${qrCodeData.bookingNumber || bookingData.bookingNumber}\nCustomer: ${getFullCustomerName(bookingData.customerDetails)}\nMobile: ${qrCodeData.mobileNo || bookingData.customerDetails?.mobile1}\nModel: ${qrCodeData.modelName || bookingData.model?.model_name}\nType: ${bookingData.model?.type || 'N/A'}\nChassis: ${qrCodeData.chassisNo || bookingData.chassisNumber || 'Not allocated'}\nPayment Type: ${qrCodeData.paymentType || bookingData.payment?.type}\nTotal Amount: ₹${grandTotal.toFixed(2)}\n${isEV && subsidyAmount > 0 ? `Subsidy: -₹${subsidyAmount.toFixed(2)}` : ''}\nReceipt: ${receiptData.receiptNumber || 'N/A'}\nAmount: ${receiptData.display?.amount || `₹${receiptData.amount?.toFixed(2) || '0'}`}\nPayment Mode: ${receiptData.paymentMode || 'Cash'}\nReference: ${receiptData.transactionReference || 'N/A'}\nDate: ${new Date(receiptData.receiptDate).toLocaleDateString('en-GB')}`;
 
       let qrCodeImage = '';
       try {
@@ -27131,15 +31353,24 @@ function Receipt() {
         batteryNumber: bookingData.vehicle?.batteryNumber || '', keyNumber: bookingData.vehicle?.keyNumber || '',
         color: { name: bookingData.color?.name || '' },
         customerDetails: {
-          name: bookingData.customerDetails?.name || 'N/A', address: bookingData.customerDetails?.address || '',
-          taluka: bookingData.customerDetails?.taluka || '', district: bookingData.customerDetails?.district || '',
-          pincode: bookingData.customerDetails?.pincode || '', mobile1: bookingData.customerDetails?.mobile1 || '',
-          dob: bookingData.customerDetails?.dob || '', aadharNumber: bookingData.customerDetails?.aadharNumber || ''
+          name: getFullCustomerName(bookingData.customerDetails),
+          address: bookingData.customerDetails?.address || '',
+          taluka: bookingData.customerDetails?.taluka || '',
+          district: bookingData.customerDetails?.district || '',
+          pincode: bookingData.customerDetails?.pincode || '',
+          mobile1: bookingData.customerDetails?.mobile1 || '',
+          dob: bookingData.customerDetails?.dob || '',
+          aadharNumber: bookingData.customerDetails?.aadharNumber || ''
         },
         exchange: bookingData.exchange, exchangeDetails: bookingData.exchangeDetails,
         payment: { type: bookingData.payment?.type || 'CASH', financer: bookingData.payment?.financer },
         salesExecutive: bookingData.salesExecutive,
-        branch: { gst_number: bookingData.branch?.gst_number || '', name: bookingData.branch?.name || '' },
+        branch: { 
+          gst_number: receiptData.bookingReference?.branch?.gst_number || bookingData.branch?.gst_number || '', 
+          name: receiptData.bookingReference?.branch?.name || bookingData.branch?.name || '',
+          address: receiptData.bookingReference?.branch?.address || bookingData.branch?.address || ''
+        },
+        bookingReference: receiptData.bookingReference || {},
         accessories: bookingData.accessories || [], priceComponents: bookingData.priceComponents || [],
         subdealer: bookingData.subdealer || '', receivedAmount: bookingData.receivedAmount || 0,
         finalStatus: finalStatus || '', recentPayment: receiptData, qrCodeData, qrCodeImage, qrCodeText: qrText,
@@ -27158,230 +31389,133 @@ function Receipt() {
     }
   };
 
- const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
-  const exchangeBrokerName    = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
-  const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
-  const currentDate           = new Date().toLocaleDateString('en-GB');
-  const receiptDate           = data.recentPayment?.receiptDate ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB') : currentDate;
-  const recentPaymentAmount   = data.recentPaymentAmount || 0;
-  const recentPaymentAmountRef  = data.recentPayment?.transactionReference || "-";
-  const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
-  const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
-  const receiptNumber = data.recentPayment?.receiptNumber || "-";
-  const qrCodeImage   = data.qrCodeImage || '';
-  const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
-  const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
-  const branchName = data.branch?.name || data.bookingDetails?.branch?.name || 'GANDHI TVS';
-  const customerType = data.bookingDetails?.customerType || data.customerType || 'N/A';
+  const generateReceiptInvoiceHTML = (data, isFirstReceipt = true) => {
+    const exchangeBrokerName    = data.exchange ? data.exchangeDetails?.broker?.name || '' : '';
+    const exchangeVehicleNumber = data.exchange ? data.exchangeDetails?.vehicleNumber || '' : '';
+    const currentDate           = new Date().toLocaleDateString('en-GB');
+    const receiptDate           = data.recentPayment?.receiptDate ? new Date(data.recentPayment.receiptDate).toLocaleDateString('en-GB') : currentDate;
+    const recentPaymentAmount   = data.recentPaymentAmount || 0;
+    const recentPaymentAmountRef  = data.recentPayment?.transactionReference || "-";
+    const recentPaymentAmountInWords = numberToWords(recentPaymentAmount);
+    const recentPaymentAmountType = data.recentPayment?.paymentMode || "-";
+    const receiptNumber = data.recentPayment?.receiptNumber || "-";
+    const qrCodeImage   = data.qrCodeImage || '';
+    const subsidyAmount = data.bookingDetails?.subsidyAmount || data.subsidyAmount || 0;
+    const isEV = data.bookingDetails?.model?.type === 'EV' || data.model?.type === 'EV';
+    
+    // Get branch address from various possible locations in the data
+    const branchAddress = data.branch?.address || 
+                          data.bookingDetails?.branch?.address || 
+                          data.bookingReference?.branch?.address || 
+                          "Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns, Upnagar, Nashik Road, Nashik - 422101";
+    
+    // Get branch name from various possible locations
+    const branchName = data.branch?.name || 
+                       data.bookingDetails?.branch?.name || 
+                       data.bookingReference?.branch?.name || 
+                       'GANDHI TVS';
+    
+    // Get GST number from various possible locations
+    const gstNumber = data.branch?.gst_number || 
+                      data.bookingDetails?.branch?.gst_number || 
+                      data.bookingReference?.branch?.gst_number || 
+                      '';
+    
+    const customerType = data.bookingDetails?.customerType || data.customerType || 'N/A';
 
-  if (isFirstReceipt) {
-    const filteredPriceComponents = data.priceComponents.filter((comp) => {
-      const headerKey = comp.header?.header_key?.toUpperCase() || '';
-      return !(/INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey) ||
-               /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey) ||
-               /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey));
-    });
-    const priceComponentsWithGST = filteredPriceComponents.map((component) => {
-      const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
-      const unitCost    = component.originalValue;
-      const lineTotal   = component.originalValue;
-      const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
-      const totalGST    = lineTotal - taxableValue;
-      const cgstAmount  = totalGST / 2;
-      const sgstAmount  = totalGST / 2;
-      return { ...component, unitCost, taxableValue, cgstAmount, sgstAmount, gstAmount: totalGST, gstRatePercentage, discount: 0, lineTotal };
-    });
-    const findComp = (kws) => data.priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
-    const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
-    const rtoCharges = findComp(['RTO','ROAD TAX','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
-    const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || data.hypothecationCharges || 0;
-    const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
-    const totalB = insuranceCharges + rtoCharges + hpCharges;
-    const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
-    const grandTotal = totalA + totalB - subsidyDisplay;
+    if (isFirstReceipt) {
+      const filteredPriceComponents = data.priceComponents.filter((comp) => {
+        const headerKey = comp.header?.header_key?.toUpperCase() || '';
+        return !(/INSURANCE|INSURCANCE|INSUR|PREMIUM|INSURANCE CHARGES/i.test(headerKey) ||
+                 /RTO|ROAD TAX|RTO TAX & REGISTRATION CHARGES/i.test(headerKey) ||
+                 /HYPOTHECATION|HPA|HP CHARGES|HPA (if applicable)|HYPOTHECATION CHARGES (IF APPLICABLE)/i.test(headerKey));
+      });
+      const priceComponentsWithGST = filteredPriceComponents.map((component) => {
+        const gstRatePercentage = parseFloat(component.header?.metadata?.gst_rate) || 0;
+        const unitCost    = component.originalValue;
+        const lineTotal   = component.originalValue;
+        const taxableValue = (lineTotal * 100) / (100 + gstRatePercentage);
+        const totalGST    = lineTotal - taxableValue;
+        const cgstAmount  = totalGST / 2;
+        const sgstAmount  = totalGST / 2;
+        return { ...component, unitCost, taxableValue, cgstAmount, sgstAmount, gstAmount: totalGST, gstRatePercentage, discount: 0, lineTotal };
+      });
+      const findComp = (kws) => data.priceComponents.find(c => kws.some(k => (c.header?.header_key?.toUpperCase() || '').includes(k)));
+      const insuranceCharges = findComp(['INSURANCE','INSURCANCE','INSURANCE CHARGES'])?.originalValue || 0;
+      const rtoCharges = findComp(['RTO','ROAD TAX','RTO TAX & REGISTRATION CHARGES'])?.originalValue || 0;
+      const hpCharges  = findComp(['HYPOTHECATION','HPA','HPA (if applicable)'])?.originalValue || data.hypothecationCharges || 0;
+      const totalA = priceComponentsWithGST.reduce((sum, item) => sum + item.lineTotal, 0);
+      const totalB = insuranceCharges + rtoCharges + hpCharges;
+      const subsidyDisplay = isEV && subsidyAmount > 0 ? subsidyAmount : 0;
+      const grandTotal = totalA + totalB - subsidyDisplay;
 
-    return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
-    <style>
-      body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
-      .page { width: 210mm; height: 297mm; margin: 0 auto; }
-      .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
-      .header-left { width: 60%; }
-      .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-      .logo-qr-container { display: flex; align-items: center; gap: 20px; justify-content: flex-end; margin-bottom: 10px; width: 100%; }
-      .logo { height: 81px; }
-      .qr-code-extra-big { width: 151px; height: 151px; border: 1px solid #ccc; }
-      .dealer-info { text-align: left; font-size: 15px; line-height: 1.2; }
-      .customer-info-container { display: flex; font-size: 15px; }
-      .customer-info-left { width: 50%; }
-      .customer-info-right { width: 50%; }
-      .customer-info-row { margin: 1mm 0; line-height: 1.2; }
-      .customer-info-row .value { font-weight: 700; }
-      table { width: 100%; border-collapse: collapse; font-size: 10pt; margin: 2mm 0; }
-      th, td { padding: 1mm; border: 1px solid #000; vertical-align: top; }
-      .no-border { border: none !important; font-size: 15px; }
-      .text-right { text-align: right; }
-      .text-center { text-align: center; }
-      .bold { font-weight: bold; }
-      .divider { border-top: 2px solid #AAAAAA; }
-      .totals-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
-      .totals-table td { border: none; padding: 1mm; }
-      .total-divider { border-top: 2px solid #AAAAAA; height: 1px; margin: 2px 0; }
-      .broker-info { display:flex; justify-content:space-between; padding:2px; }
-      .status-box { background-color: #e8f5e8; border: 2px solid #c3e6c3; border-radius: 4px; padding: 16px; margin: 11px 0; text-align: center; font-weight: bold; font-size: 21px; color: #495057; }
-      .amount-in-words { font-style: italic; margin-top: 6px; color: #333; padding: 6px; }
-      .amount-in-words .value { font-weight: 700; font-style: normal; }
-      .note { padding:2px; margin:3px; }
-      .note .value { font-weight: 700; }
-      .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 11px; margin: 11px 0; }
-      .receipt-info-row { margin: 2px 0; }
-      .receipt-info-row .value { font-weight: 700; }
-      .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 14px; }
-      .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 105px; display: inline-block; }
-      .payment-grid-item .value { font-weight: 700; }
-      .signature-box { margin-top: 6mm; font-size: 10pt; }
-      .signature-line { border-top: 1px dashed #000; width: 41mm; display: inline-block; margin: 0 5mm; }
-      @page { size: A4; margin: 0; }
-      @media print { body { padding: 5mm; } }
-    </style></head><body><div class="page">
-      <div class="header-container">
-        <div class="header-left">
-          <h2 style="margin:3;font-size:16pt;">GANDHI MOTORS PVT LTD</h2>
-          <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik, 7498993672<br>GSTIN: ${data.branch?.gst_number || ''}<br>${branchName}</div>
-        </div>
-        <div class="header-right">
-          <div class="logo-qr-container">
-            <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
-            ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />` : ''}
-          </div>
-          <div style="margin-top: 6px; font-size: 14px;">Date: ${receiptDate}</div>
-          <div style="margin-top: 6px; font-size: 14px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-          ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 13px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 12px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="receipt-info" style="padding: 8px;">
-        <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
-        <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
-        <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
-        <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
-      </div>
-      <div class="customer-info-container">
-        <div class="customer-info-left">
-          <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
-          <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
-          <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
-          <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</span></div>
-          <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
-          <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
-        </div>
-        <div class="customer-info-right">
-          <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
-          <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
-          <div class="customer-info-row">
-            <strong>Payment Type:</strong> 
-            <span class="value">
-              ${data.payment?.type === 'FINANCE' && !data.hpa 
-                ? `${data.payment?.type || 'CASH'} (NO HPA SCHEME APPLICABLE)`
-                : data.payment?.type || 'CASH'
-              }
-            </span>
-          </div>
-          ${data.hpa && data.payment?.type === 'FINANCE' && data.payment?.financer?.name ? `
-            <div class="customer-info-row">
-              <strong>Financer:</strong> <span class="value">${data.payment.financer.name}</span>
-            </div>
-          ` : ''}
-          <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
-        </div>
-      </div>
-      <div class="payment-info-box">
-        <div class="receipt-info" style="padding: 4px;">
-          <div class="payment-grid-2col">
-            <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${recentPaymentAmount.toFixed(2)}</span></div>
-            <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
-            <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
-            <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
-            <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
-          </div>
-        </div>
-        <div class="amount-in-words"><strong>(In Words):</strong> <span class="value">${recentPaymentAmountInWords} Only</span></div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th style="width:25%">Particulars</th><th style="width:8%">HSN CODE</th><th style="width:8%">Unit Cost</th>
-            <th style="width:8%">Taxable</th><th style="width:5%">CGST</th><th style="width:8%">CGST AMOUNT</th>
-            <th style="width:5%">SGST</th><th style="width:8%">SGST AMOUNT</th><th style="width:7%">DISCOUNT</th><th style="width:10%">LINE TOTAL</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${priceComponentsWithGST.map(c => `
-            <tr>
-              <td>${c.header?.header_key || ''}</td>
-              <td>${c.header?.metadata?.hsn_code || ''}</td>
-              <td>${c.unitCost.toFixed(2)}</td>
-              <td>${c.taxableValue.toFixed(2)}</td>
-              <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
-              <td>${c.cgstAmount.toFixed(2)}</td>
-              <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
-              <td>${c.sgstAmount.toFixed(2)}</td>
-              <td>${c.discount.toFixed(2)}</td>
-              <td>${c.lineTotal.toFixed(2)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-      <table class="totals-table">
-        <tr><td class="no-border" style="width:80%"><strong>Total(A)</strong></td><td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td></tr>
-        <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
-        <tr><td class="no-border"><strong>INSURANCE CHARGES</strong></td><td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td></tr>
-        <tr><td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td><td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td></tr>
-        <tr><td class="no-border"><strong>HP CHARGES</strong></td><td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td></tr>
-        ${isEV && subsidyAmount > 0 ? `<tr><td class="no-border"><strong>SUBSIDY AMOUNT</strong></td><td class="no-border text-right" style="color:green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td></tr>` : ''}
-        <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
-        <tr><td class="no-border"><strong>TOTAL(B)</strong></td><td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td></tr>
-        <tr><td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td><td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td></tr>
-      </table>
-      <div class="broker-info">
-        <div><strong>Ex. Broker/ Sub Dealer:</strong> <span>${exchangeBrokerName}</span></div>
-        <div><strong>Ex. Veh No:</strong> <span>${exchangeVehicleNumber}</span></div>
-      </div>
-      <div class="note"><strong>Notes:</strong> <span class="value">Booking Awaiting approval as discount exceed</span></div>
-      <div class="divider"></div>
-      <div style="margin-top:2mm;"><div><strong>Booking Status: </strong></div><div class="status-box"><span>${data.finalStatus || 'Status: Not Available'}</span></div></div>
-      <div class="divider"></div>
-      <div class="divider" style="margin-top: 5mm;"></div>
-      <div class="signature-box">
-        <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
-          <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
-          <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Sales Executive</div></div>
-          <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Manager</div></div>
-          <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
-        </div>
-      </div>
-    </div></body></html>`;
-  } else {
-    const copyBlock = (isDuplicate) => `
-      <div class="receipt-copy">
+      return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
+      <style>
+        body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
+        .page { width: 210mm; height: 297mm; margin: 0 auto; }
+        .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
+        .header-left { width: 60%; }
+        .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+        .logo-qr-container { display: flex; align-items: center; gap: 20px; justify-content: flex-end; margin-bottom: 10px; width: 100%; }
+        .logo { height: 81px; }
+        .qr-code-extra-big { width: 151px; height: 151px; border: 1px solid #ccc; }
+        .dealer-info { text-align: left; font-size: 15px; line-height: 1.2; }
+        .customer-info-container { display: flex; font-size: 15px; }
+        .customer-info-left { width: 50%; }
+        .customer-info-right { width: 50%; }
+        .customer-info-row { margin: 1mm 0; line-height: 1.2; }
+        .customer-info-row .value { font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; font-size: 10pt; margin: 2mm 0; }
+        th, td { padding: 1mm; border: 1px solid #000; vertical-align: top; }
+        .no-border { border: none !important; font-size: 15px; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .bold { font-weight: bold; }
+        .divider { border-top: 2px solid #AAAAAA; }
+        .totals-table { width: 100%; border-collapse: collapse; margin: 2mm 0; }
+        .totals-table td { border: none; padding: 1mm; }
+        .total-divider { border-top: 2px solid #AAAAAA; height: 1px; margin: 2px 0; }
+        .broker-info { display:flex; justify-content:space-between; padding:2px; }
+        .status-box { background-color: #e8f5e8; border: 2px solid #c3e6c3; border-radius: 4px; padding: 16px; margin: 11px 0; text-align: center; font-weight: bold; font-size: 21px; color: #495057; }
+        .amount-in-words { font-style: italic; margin-top: 6px; color: #333; padding: 6px; }
+        .amount-in-words .value { font-weight: 700; font-style: normal; }
+        .note { padding:2px; margin:3px; }
+        .note .value { font-weight: 700; }
+        .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 11px; margin: 11px 0; }
+        .receipt-info-row { margin: 2px 0; }
+        .receipt-info-row .value { font-weight: 700; }
+        .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 14px; }
+        .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 105px; display: inline-block; }
+        .payment-grid-item .value { font-weight: 700; }
+        .signature-box { margin-top: 6mm; font-size: 10pt; }
+        .signature-line { border-top: 1px dashed #000; width: 41mm; display: inline-block; margin: 0 5mm; }
+        @page { size: A4; margin: 0; }
+        @media print { body { padding: 5mm; } }
+      </style></head><body><div class="page">
         <div class="header-container">
           <div class="header-left">
-            <h2 style="margin:2;font-size:13pt;">GANDHI MOTORS PVT LTD</h2>
-            <div class="dealer-info">Authorized Main Dealer: TVS Motor Company Ltd.<br>Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>Upnagar, Nashik Road, Nashik, 7498993672<br>GSTIN: ${data.branch?.gst_number || ''}<br>${branchName}</div>
+            <h2 style="margin:3;font-size:16pt;">GANDHI MOTORS PVT LTD</h2>
+            <div class="dealer-info">
+              Authorized Main Dealer: TVS Motor Company Ltd.<br>
+              ${branchAddress}<br>
+              ${gstNumber ? `GSTIN: ${gstNumber}<br>` : ''}
+              ${branchName}
+            </div>
           </div>
           <div class="header-right">
             <div class="logo-qr-container">
               <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
-              ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+              ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-extra-big" alt="QR Code" />` : ''}
             </div>
-            <div style="margin-top: 4px; font-size: 12px;">Date: ${receiptDate}</div>
-            <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
-            ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 11px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 10px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
+            <div style="margin-top: 6px; font-size: 14px;">Date: ${receiptDate}</div>
+            <div style="margin-top: 6px; font-size: 14px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+            ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 13px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 12px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
           </div>
         </div>
         <div class="divider"></div>
-        <div class="receipt-info" style="padding: 6px;">
-          <div class="receipt-info-row"><strong>Payment Receipt${isDuplicate ? ' (DUPLICATE)' : ''}</strong></div>
+        <div class="receipt-info" style="padding: 8px;">
+          <div class="receipt-info-row"><strong>Payment Receipt</strong></div>
           <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
           <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
           <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
@@ -27391,7 +31525,7 @@ function Receipt() {
             <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
             <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
             <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
-            <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
+            <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka},${data.customerDetails.pincode || ''}</span></div>
             <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
             <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
           </div>
@@ -27425,9 +31559,53 @@ function Receipt() {
               <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
             </div>
           </div>
+          <div class="amount-in-words"><strong>(In Words):</strong> <span class="value">${recentPaymentAmountInWords} Only</span></div>
         </div>
-        <div class="note"><strong>Notes:</strong> <span class="value"></span></div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width:25%">Particulars</th><th style="width:8%">HSN CODE</th><th style="width:8%">Unit Cost</th>
+              <th style="width:8%">Taxable</th><th style="width:5%">CGST</th><th style="width:8%">CGST AMOUNT</th>
+              <th style="width:5%">SGST</th><th style="width:8%">SGST AMOUNT</th><th style="width:7%">DISCOUNT</th><th style="width:10%">LINE TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${priceComponentsWithGST.map(c => `
+              <tr>
+                <td>${c.header?.header_key || ''}</td>
+                <td>${c.header?.metadata?.hsn_code || ''}</td>
+                <td>${c.unitCost.toFixed(2)}</td>
+                <td>${c.taxableValue.toFixed(2)}</td>
+                <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
+                <td>${c.cgstAmount.toFixed(2)}</td>
+                <td>${(c.gstRatePercentage/2).toFixed(2)}%</td>
+                <td>${c.sgstAmount.toFixed(2)}</td>
+                <td>${c.discount.toFixed(2)}</td>
+                <td>${c.lineTotal.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <table class="totals-table">
+          <tr><td class="no-border" style="width:80%"><strong>Total(A)</strong></td><td class="no-border text-right"><strong>${totalA.toFixed(2)}</strong></td></tr>
+          <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
+          <tr><td class="no-border"><strong>INSURANCE CHARGES</strong></td><td class="no-border text-right"><strong>${insuranceCharges.toFixed(2)}</strong></td></tr>
+          <tr><td class="no-border"><strong>RTO TAX,REGISTRATION SMART CARD CHARGES AGENT FEES</strong></td><td class="no-border text-right"><strong>${rtoCharges.toFixed(2)}</strong></td></tr>
+          <tr><td class="no-border"><strong>HP CHARGES</strong></td><td class="no-border text-right"><strong>${hpCharges.toFixed(2)}</strong></td></tr>
+          ${isEV && subsidyAmount > 0 ? `<tr><td class="no-border"><strong>SUBSIDY AMOUNT</strong></td><td class="no-border text-right" style="color:green;"><strong>-${subsidyAmount.toFixed(2)}</strong></td></tr>` : ''}
+          <tr><td colspan="2" class="no-border"><div class="total-divider"></div></td></tr>
+          <tr><td class="no-border"><strong>TOTAL(B)</strong></td><td class="no-border text-right"><strong>${totalB.toFixed(2)}</strong></td></tr>
+          <tr><td class="no-border"><strong>GRAND TOTAL(A) + (B)</strong></td><td class="no-border text-right"><strong>${grandTotal.toFixed(2)}</strong></td></tr>
+        </table>
+        <div class="broker-info">
+          <div><strong>Ex. Broker/ Sub Dealer:</strong> <span>${exchangeBrokerName}</span></div>
+          <div><strong>Ex. Veh No:</strong> <span>${exchangeVehicleNumber}</span></div>
+        </div>
+        <div class="note"><strong>Notes:</strong> <span class="value">Booking Awaiting approval as discount exceed</span></div>
         <div class="divider"></div>
+        <div style="margin-top:2mm;"><div><strong>Booking Status: </strong></div><div class="status-box"><span>${data.finalStatus || 'Status: Not Available'}</span></div></div>
+        <div class="divider"></div>
+        <div class="divider" style="margin-top: 5mm;"></div>
         <div class="signature-box">
           <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
@@ -27436,49 +31614,130 @@ function Receipt() {
             <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
           </div>
         </div>
-      </div>`;
+      </div></body></html>`;
+    } else {
+      const copyBlock = (isDuplicate) => `
+        <div class="receipt-copy">
+          <div class="header-container">
+            <div class="header-left">
+              <h2 style="margin:2;font-size:13pt;">GANDHI MOTORS PVT LTD</h2>
+              <div class="dealer-info">
+                Authorized Main Dealer: TVS Motor Company Ltd.<br>
+                ${branchAddress}<br>
+                ${gstNumber ? `GSTIN: ${gstNumber}<br>` : ''}
+                ${branchName}
+              </div>
+            </div>
+            <div class="header-right">
+              <div class="logo-qr-container">
+                <img src="https://c.ndtvimg.com/2025-01/t7f4o1kg_tvs_625x300_17_January_25.jpg?im=FaceCrop,algorithm=dnn,width=545,height=307" class="logo" alt="TVS Logo">
+                ${qrCodeImage ? `<img src="${qrCodeImage}" class="qr-code-small" alt="QR Code" />` : ''}
+              </div>
+              <div style="margin-top: 4px; font-size: 12px;">Date: ${receiptDate}</div>
+              <div style="margin-top: 4px; font-size: 12px;"><strong>Receipt No:</strong> ${receiptNumber}</div>
+              ${data.bookingType === 'SUBDEALER' ? `<div style="font-size: 11px;"><b>Subdealer:</b> ${data.subdealer?.name || ''}</div><div style="font-size: 10px;"><b>Address:</b> ${data.subdealer?.location || ''}</div>` : ''}
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="receipt-info" style="padding: 6px;">
+            <div class="receipt-info-row"><strong>Payment Receipt${isDuplicate ? ' (DUPLICATE)' : ''}</strong></div>
+            <div class="receipt-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+            <div class="receipt-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+            <div class="receipt-info-row"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+          </div>
+          <div class="customer-info-container">
+            <div class="customer-info-left">
+              <div class="customer-info-row"><strong>Booking Number:</strong> <span class="value">${data.bookingNumber}</span></div>
+              <div class="customer-info-row"><strong>Customer Name:</strong> <span class="value">${data.customerDetails.name}</span></div>
+              <div class="customer-info-row"><strong>Customer Type:</strong> <span class="value">${customerType}</span></div>
+              <div class="customer-info-row"><strong>Address:</strong> <span class="value">${data.customerDetails.address}, ${data.customerDetails.taluka}</span></div>
+              <div class="customer-info-row"><strong>Mobile No.:</strong> <span class="value">${data.customerDetails.mobile1}</span></div>
+              <div class="customer-info-row"><strong>HPA:</strong> <span class="value">${data.hpa ? 'YES' : 'NO'}</span></div>
+            </div>
+            <div class="customer-info-right">
+              <div class="customer-info-row"><strong>Model Name:</strong> <span class="value">${data.model.model_name}</span></div>
+              <div class="customer-info-row"><strong>Chassis No:</strong> <span class="value">${data.chassisNumber}</span></div>
+              <div class="customer-info-row">
+                <strong>Payment Type:</strong> 
+                <span class="value">
+                  ${data.payment?.type === 'FINANCE' && !data.hpa 
+                    ? `${data.payment?.type || 'CASH'} (NO HPA SCHEME APPLICABLE)`
+                    : data.payment?.type || 'CASH'
+                  }
+                </span>
+              </div>
+              ${data.hpa && data.payment?.type === 'FINANCE' && data.payment?.financer?.name ? `
+                <div class="customer-info-row">
+                  <strong>Financer:</strong> <span class="value">${data.payment.financer.name}</span>
+                </div>
+              ` : ''}
+              <div class="customer-info-row"><strong>Sales Executive:</strong> <span class="value">${data.salesExecutive?.name || 'N/A'}</span></div>
+            </div>
+          </div>
+          <div class="payment-info-box">
+            <div class="receipt-info" style="padding: 4px;">
+              <div class="payment-grid-2col">
+                <div class="payment-grid-item"><strong>Receipt Amount:</strong> <span class="value">₹${recentPaymentAmount.toFixed(2)}</span></div>
+                <div class="payment-grid-item"><strong>Payment Mode:</strong> <span class="value">${recentPaymentAmountType}</span></div>
+                <div class="payment-grid-item"><strong>Receipt Number:</strong> <span class="value">${receiptNumber}</span></div>
+                <div class="payment-grid-item"><strong>Receipt Date:</strong> <span class="value">${receiptDate}</span></div>
+                <div class="payment-grid-item"><strong>Reference No:</strong> <span class="value">${recentPaymentAmountRef}</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="note"><strong>Notes:</strong> <span class="value"></span></div>
+          <div class="divider"></div>
+          <div class="signature-box">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+              <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Customer's Signature</div></div>
+              <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Sales Executive</div></div>
+              <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Manager</div></div>
+              <div style="text-align:center; width: 22%;"><div class="signature-line"></div><div>Accountant</div></div>
+            </div>
+          </div>
+        </div>`;
 
-    return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
-    <style>
-      body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
-      .page { width: 210mm; height: 297mm; margin: 0 auto; }
-      .receipt-copy { height: 138mm; page-break-inside: avoid; }
-      .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
-      .header-left { width: 60%; }
-      .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-      .logo-qr-container { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-bottom: 5px; width: 100%; }
-      .logo { height: 61px; }
-      .qr-code-small { width: 101px; height: 101px; border: 1px solid #ccc; }
-      .dealer-info { text-align: left; font-size: 13px; line-height: 1.1; }
-      .customer-info-container { display: flex; font-size: 13px; }
-      .customer-info-left { width: 50%; }
-      .customer-info-right { width: 50%; }
-      .customer-info-row { margin: 0.5mm 0; line-height: 1.1; }
-      .customer-info-row .value { font-weight: 700; }
-      .divider { border-top: 1px solid #AAAAAA; margin: 2mm 0; }
-      .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 9px; margin: 9px 0; font-size: 13px; }
-      .receipt-info-row { margin: 2px 0; }
-      .receipt-info-row .value { font-weight: 700; }
-      .payment-info-box { margin: 6px 0; }
-      .signature-box { margin-top: 4mm; font-size: 9pt; }
-      .signature-line { border-top: 1px dashed #000; width: 36mm; display: inline-block; margin: 0 3mm; }
-      .cutting-line { border-top: 2px dashed #333; margin: 11mm 0; text-align: center; position: relative; }
-      .cutting-line::before { content: "✂ Cut Here ✂"; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: white; padding: 0 11px; font-size: 11px; color: #666; }
-      .note { padding:2px; margin:3px; font-size: 12px; }
-      .note .value { font-weight: 700; }
-      .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 13px; }
-      .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 100px; display: inline-block; }
-      .payment-grid-item .value { font-weight: 700; }
-      @page { size: A4; margin: 0; }
-      @media print { body { padding: 5mm; } .receipt-copy { page-break-inside: avoid; } }
-    </style></head><body><div class="page">
-      ${copyBlock(false)}
-      <div class="cutting-line"></div>
-      ${copyBlock(true)}
-    </div></body></html>`;
-  }
-};
+      return `<!DOCTYPE html><html><head><title>Payment Receipt - ${receiptNumber}</title>
+      <style>
+        body { font-family: "Courier New", Courier, monospace; margin: 0; padding: 10mm; font-size: 15px; color: #555555; }
+        .page { width: 210mm; height: 297mm; margin: 0 auto; }
+        .receipt-copy { height: 138mm; page-break-inside: avoid; }
+        .header-container { display: flex; justify-content: space-between; margin-bottom: 2mm; align-items: flex-start; font-size: 14px; }
+        .header-left { width: 60%; }
+        .header-right { width: 40%; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+        .logo-qr-container { display: flex; align-items: center; gap: 10px; justify-content: flex-end; margin-bottom: 5px; width: 100%; }
+        .logo { height: 61px; }
+        .qr-code-small { width: 101px; height: 101px; border: 1px solid #ccc; }
+        .dealer-info { text-align: left; font-size: 13px; line-height: 1.1; }
+        .customer-info-container { display: flex; font-size: 13px; }
+        .customer-info-left { width: 50%; }
+        .customer-info-right { width: 50%; }
+        .customer-info-row { margin: 0.5mm 0; line-height: 1.1; }
+        .customer-info-row .value { font-weight: 700; }
+        .divider { border-top: 1px solid #AAAAAA; margin: 2mm 0; }
+        .receipt-info { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 9px; margin: 9px 0; font-size: 13px; }
+        .receipt-info-row { margin: 2px 0; }
+        .receipt-info-row .value { font-weight: 700; }
+        .payment-info-box { margin: 6px 0; }
+        .signature-box { margin-top: 4mm; font-size: 9pt; }
+        .signature-line { border-top: 1px dashed #000; width: 36mm; display: inline-block; margin: 0 3mm; }
+        .cutting-line { border-top: 2px dashed #333; margin: 11mm 0; text-align: center; position: relative; }
+        .cutting-line::before { content: "✂ Cut Here ✂"; position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: white; padding: 0 11px; font-size: 11px; color: #666; }
+        .note { padding:2px; margin:3px; font-size: 12px; }
+        .note .value { font-weight: 700; }
+        .payment-grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 15px; padding: 3px; font-size: 13px; }
+        .payment-grid-item { padding: 2px 0; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .payment-grid-item strong { font-weight: 600; margin-right: 5px; min-width: 100px; display: inline-block; }
+        .payment-grid-item .value { font-weight: 700; }
+        @page { size: A4; margin: 0; }
+        @media print { body { padding: 5mm; } .receipt-copy { page-break-inside: avoid; } }
+      </style></head><body><div class="page">
+        ${copyBlock(false)}
+        <div class="cutting-line"></div>
+        ${copyBlock(true)}
+      </div></body></html>`;
+    }
+  };
 
   // ══════════════════════════════════════════════════════════════════════════
   //  TABLE RENDERERS
@@ -27529,7 +31788,7 @@ function Receipt() {
                       <CTableDataCell>{booking.bookingNumber}</CTableDataCell>
                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                      <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{getFullCustomerName(booking.customerDetails)}</CTableDataCell>
                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
@@ -27625,7 +31884,7 @@ function Receipt() {
                     <CTableRow key={entry._id || index}>
                       <CTableDataCell>{globalIndex}</CTableDataCell>
                       <CTableDataCell>{bookingNumber}</CTableDataCell>
-                      <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || ''}</CTableDataCell>
+                      <CTableDataCell>{getFullCustomerName(entry.bookingDetails?.customerDetails)}</CTableDataCell>
                       <CTableDataCell>{entry.paymentMode || ''}</CTableDataCell>
                       <CTableDataCell>₹{entry.amount || ''}</CTableDataCell>
                       <CTableDataCell>{entry.transactionReference || ''}</CTableDataCell>
@@ -27710,7 +31969,7 @@ function Receipt() {
                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                      <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{getFullCustomerName(booking.customerDetails)}</CTableDataCell>
                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
@@ -27759,7 +32018,7 @@ function Receipt() {
                       <CTableDataCell>{booking.bookingNumber || ''}</CTableDataCell>
                       <CTableDataCell>{booking.model?.model_name || 'N/A'}</CTableDataCell>
                       <CTableDataCell>{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-GB') : ' '}</CTableDataCell>
-                      <CTableDataCell>{booking.customerDetails?.name || 'N/A'}</CTableDataCell>
+                      <CTableDataCell>{getFullCustomerName(booking.customerDetails)}</CTableDataCell>
                       <CTableDataCell>{booking.customerDetails?.mobile1 || 'N/A'}</CTableDataCell>
                       <CTableDataCell>{booking.chassisAllocationStatus === 'ALLOCATED' && booking.status === 'ALLOCATED' ? (booking.chassisNumber || '') : ''}</CTableDataCell>
                       <CTableDataCell>{Math.round(booking.discountedAmount) || '0'}</CTableDataCell>
@@ -27805,7 +32064,7 @@ function Receipt() {
                     <CTableRow key={entry._id || index}>
                       <CTableDataCell>{globalIndex}</CTableDataCell>
                       <CTableDataCell>{entry.bookingDetails?.bookingNumber || entry.booking || ''}</CTableDataCell>
-                      <CTableDataCell>{entry.bookingDetails?.customerDetails?.name || entry.customerName || ''}</CTableDataCell>
+                      <CTableDataCell>{getFullCustomerName(entry.bookingDetails?.customerDetails) || entry.customerName || ''}</CTableDataCell>
                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
                       <CTableDataCell>₹{entry.amount?.toLocaleString('en-IN') || entry.amount}</CTableDataCell>
                       <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
@@ -27852,7 +32111,7 @@ function Receipt() {
                     <CTableRow key={entry._id || index}>
                       <CTableDataCell>{globalIndex}</CTableDataCell>
                       <CTableDataCell>{entry.booking?.bookingNumber || entry.bookingNumber || ''}</CTableDataCell>
-                      <CTableDataCell>{entry.booking?.customerDetails?.name || entry.customerName || ''}</CTableDataCell>
+                      <CTableDataCell>{getFullCustomerName(entry.booking?.customerDetails) || entry.customerName || ''}</CTableDataCell>
                       <CTableDataCell>{entry.paymentMode}</CTableDataCell>
                       <CTableDataCell>₹{entry.amount?.toLocaleString('en-IN') || entry.amount}</CTableDataCell>
                       <CTableDataCell>{entry.transactionReference || '-'}</CTableDataCell>
@@ -28027,7 +32286,7 @@ function Receipt() {
             </div>
             <div className="mb-3">
               <CFormLabel className="mb-2 fw-bold">End Date <span className="text-danger">*</span></CFormLabel>
-              <DatePicker value={endDate} onChange={(v) => { setEndDate(v); setExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" label="" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={startDate} views={['day','month','year']} disabled={!canCreateReceipts} />
+              <DatePicker value={endDate} onChange={(v) => { setEndDate(v); setExportError(''); }} renderInput={(p) => <TextField {...p} fullWidth size="small" />} inputFormat="dd/MM/yyyy" mask="__/__/____" minDate={startDate} views={['day','month','year']} disabled={!canCreateReceipts} />
             </div>
           </LocalizationProvider>
           <div className="mb-3">
@@ -28123,4 +32382,3 @@ function Receipt() {
 }
 
 export default Receipt;
-

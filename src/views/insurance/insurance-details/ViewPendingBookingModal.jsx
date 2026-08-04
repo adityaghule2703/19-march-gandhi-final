@@ -665,7 +665,8 @@ import {
   faUserTie,
   faCalendarAlt,
   faMoneyBillWave,
-  faUniversity
+  faUniversity,
+  faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
 import '../../../css/viewBookingModal.css'; // Create this CSS file for custom styles
 
@@ -785,37 +786,36 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
       
       <CModalBody>
         {/* Payment Information Card */}
-<CCard className="mb-3 border-0 shadow-sm">
-  <CCardBody>
-    <h5 className="card-title text-warning mb-3">
-      <FontAwesomeIcon icon={faMoneyBillWave} className="me-2" />
-      Payment Information
-    </h5>
-    
-    <CRow className="g-3">
-      {bookingData?.exShowroomComponents?.map((item, index) => (
-        <CCol md={6} key={index}>
-          <div className="info-group">
-            <label>
-             
-              EX SHOWROOM PRICE
-            </label>
-            <p className="fw-bold text-primary h5 mb-0">
-              ₹ {(item.originalValue || 0).toLocaleString('en-IN')}
-            </p>
-          </div>
-        </CCol>
-      ))}
-      
-      <CCol md={6}>
-        <div className="info-group">
-          <label>Payment Type</label>
-          {getPaymentTypeDisplay()}
-        </div>
-      </CCol>
-    </CRow>
-  </CCardBody>
-</CCard>
+        <CCard className="mb-3 border-0 shadow-sm">
+          <CCardBody>
+            <h5 className="card-title text-warning mb-3">
+              <FontAwesomeIcon icon={faMoneyBillWave} className="me-2" />
+              Payment Information
+            </h5>
+            
+            <CRow className="g-3">
+              {bookingData?.exShowroomComponents?.map((item, index) => (
+                <CCol md={6} key={index}>
+                  <div className="info-group">
+                    <label>
+                      EX SHOWROOM PRICE
+                    </label>
+                    <p className="fw-bold text-primary h5 mb-0">
+                      ₹ {(item.originalValue || 0).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </CCol>
+              ))}
+              
+              <CCol md={6}>
+                <div className="info-group">
+                  <label>Payment Type</label>
+                  {getPaymentTypeDisplay()}
+                </div>
+              </CCol>
+            </CRow>
+          </CCardBody>
+        </CCard>
 
         {/* Customer Information Card */}
         <CCard className="mb-3 border-0 shadow-sm">
@@ -955,7 +955,9 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
 
         {/* Additional Information Card */}
         {(bookingData.customerDetails?.nomineeName || 
-          bookingData.customerDetails?.occupation) && (
+          bookingData.customerDetails?.occupation ||
+          bookingData.customerDetails?.nominiSalutation ||
+          bookingData.customerDetails?.email) && (
           <CCard className="border-0 shadow-sm">
             <CCardBody>
               <h5 className="card-title text-secondary mb-3">
@@ -972,6 +974,32 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
                         Occupation
                       </label>
                       <p>{bookingData.customerDetails.occupation}</p>
+                    </div>
+                  </CCol>
+                )}
+                
+                {/* Nominee Salutation - NEW FIELD */}
+                {bookingData.customerDetails?.nominiSalutation && (
+                  <CCol md={4}>
+                    <div className="info-group">
+                      <label>
+                        <FontAwesomeIcon icon={faUser} className="me-1" />
+                        Nominee Salutation
+                      </label>
+                      <p>{bookingData.customerDetails.nominiSalutation}</p>
+                    </div>
+                  </CCol>
+                )}
+
+                {/* Nominee Email - NEW FIELD */}
+                {bookingData.customerDetails?.email && (
+                  <CCol md={4}>
+                    <div className="info-group">
+                      <label>
+                        <FontAwesomeIcon icon={faEnvelope} className="me-1" />
+                        Email
+                      </label>
+                      <p>{bookingData.customerDetails.email}</p>
                     </div>
                   </CCol>
                 )}

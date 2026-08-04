@@ -7,7 +7,7 @@ import axios from 'axios'
 const Dashboard = () => {
   const [backgroundImage, setBackgroundImage] = useState('')
   const [imageLoading, setImageLoading] = useState(true)
-  const baseURL = 'https://gmplmis.com/dealership-api/api/v1'
+  const baseURL = 'https://gandhitvs.in/dealership/api/v1'
 
   useEffect(() => {
     fetchActiveWallpaper()

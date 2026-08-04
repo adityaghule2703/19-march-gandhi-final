@@ -378,7 +378,7 @@
 //     const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
     
 //     // Use a direct base URL - replace with your actual API URL
-//     const baseUrl = 'https://gmplmis.com/dealership-api/api/v1';
+//     const baseUrl = 'https://gandhitvs.in/dealership/api/v1';
     
 //     // Construct the full URL
 //     return `${baseUrl}/${cleanPath}`;
@@ -1312,7 +1312,7 @@ const StockAuditList = () => {
     const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
     
     // Use a direct base URL - replace with your actual API URL
-    const baseUrl = 'https://gmplmis.com/dealership-api/api/v1';
+    const baseUrl = 'https://gandhitvs.in/dealership/api/v1';
     
     // Construct the full URL
     return `${baseUrl}/${cleanPath}`;

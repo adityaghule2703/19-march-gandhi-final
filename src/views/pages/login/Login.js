@@ -727,7 +727,7 @@
 // //   const [wallpaperLoading, setWallpaperLoading] = useState(true)
 
 // //   const navigate = useNavigate()
-// //   const API_BASE_URL = 'https://gmplmis.com/dealership-api/api/v1'
+// //   const API_BASE_URL = 'https://gandhitvs.in/dealership/api/v1'
 
 // //   // Fetch wallpaper on component mount
 // //   useEffect(() => {
@@ -1124,7 +1124,7 @@ const Login = () => {
   const [imageLoading, setImageLoading] = useState(true)
 
   const navigate = useNavigate()
-  const baseURL = 'https://gmplmis.com/dealership-api/api/v1'
+  const baseURL = 'https://gandhitvs.in/dealership/api/v1'
 
   // Fetch active wallpaper on component mount
   useEffect(() => {
@@ -1521,7 +1521,7 @@ export default Login
 //   const [imageLoading, setImageLoading] = useState(true)
 
 //   const navigate = useNavigate()
-//   const baseURL = 'https://gmplmis.com/dealership-api/api/v1'
+//   const baseURL = 'https://gandhitvs.in/dealership/api/v1'
 
 //   // Fetch active wallpaper on component mount
 //   useEffect(() => {

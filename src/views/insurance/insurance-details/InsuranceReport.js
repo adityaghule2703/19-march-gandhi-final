@@ -2408,14 +2408,11 @@ function InsuranceReport() {
     TABS.INSURANCE_DETAILS.UPDATE_LATER
   );
   
-  // Insurance Renewal tab VIEW permission
-  const canViewRenewalTab = hasSafePagePermission(
-    permissions, 
-    MODULES.INSURANCE, 
-    PAGES.INSURANCE.INSURANCE_DETAILS, 
-    ACTIONS.VIEW,
-    TABS.INSURANCE_DETAILS.INSURANCE_RENEWAL
-  );
+  // REMOVED PERMISSION CHECKS FOR INSURANCE RENEWAL TAB - Always accessible
+  const canViewRenewalTab = true; // Always true
+  const canCreateRenewalTab = true; // Always true
+  const canUpdateRenewalTab = true; // Always true
+  const canDeleteRenewalTab = true; // Always true
   
   // Tab-level CREATE permission for PENDING INSURANCE tab (for Add button)
   const canCreatePendingInsurance = hasSafePagePermission(
@@ -2435,44 +2432,11 @@ function InsuranceReport() {
     TABS.INSURANCE_DETAILS.UPDATE_LATER
   );
   
-  // Insurance Renewal tab CREATE permission
-  const canCreateRenewalTab = hasSafePagePermission(
-    permissions, 
-    MODULES.INSURANCE, 
-    PAGES.INSURANCE.INSURANCE_DETAILS, 
-    ACTIONS.CREATE,
-    TABS.INSURANCE_DETAILS.INSURANCE_RENEWAL
-  );
-  
-  // Insurance Renewal tab UPDATE permission
-  const canUpdateRenewalTab = hasSafePagePermission(
-    permissions, 
-    MODULES.INSURANCE, 
-    PAGES.INSURANCE.INSURANCE_DETAILS, 
-    ACTIONS.UPDATE,
-    TABS.INSURANCE_DETAILS.INSURANCE_RENEWAL
-  );
-  
-  // Insurance Renewal tab DELETE permission
-  const canDeleteRenewalTab = hasSafePagePermission(
-    permissions, 
-    MODULES.INSURANCE, 
-    PAGES.INSURANCE.INSURANCE_DETAILS, 
-    ACTIONS.DELETE,
-    TABS.INSURANCE_DETAILS.INSURANCE_RENEWAL
-  );
-  
   // Check if user can view any tab
   const canViewAnyTab = canViewPendingInsuranceTab || 
     canViewCompleteInsuranceTab || 
     canViewUpdateLaterTab || 
     canViewRenewalTab;
-  
-  // Check if user has any renewal-related permission (for buttons)
-  const canManageRenewals = canViewRenewalTab || 
-    canCreateRenewalTab || 
-    canUpdateRenewalTab || 
-    canDeleteRenewalTab;
 
   // Helper: update a single tab's slice
   const setTab = useCallback((tabIndex, updates) =>
@@ -2735,12 +2699,8 @@ function InsuranceReport() {
     }
   }, [canViewUpdateLaterTab, setTab]);
 
-  // Fetch Insurance Renewals - with permission check
+  // Fetch Insurance Renewals - No permission check
   const fetchInsuranceRenewals = useCallback(async (tabIndex, page = 1, limit = DEFAULT_LIMIT, search = '') => {
-    if (!canViewRenewalTab) {
-      console.warn('User does not have permission to view Insurance Renewals');
-      return;
-    }
     setTab(tabIndex, { loading: true });
     try {
       const params = { page, limit };
@@ -2771,7 +2731,7 @@ function InsuranceReport() {
       showError(error);
       setTab(tabIndex, { loading: false, docs: [], total: 0, pages: 1 });
     }
-  }, [canViewRenewalTab, setTab]);
+  }, [setTab]);
 
   // Central dispatcher for fetching
   const fetchTab = useCallback((tabIndex, page, limit, search) => {
@@ -2833,11 +2793,10 @@ function InsuranceReport() {
     if (canViewUpdateLaterTab) {
       fetchUpdateLater(TAB.UPDATE_LATER, 1, DEFAULT_LIMIT, '');
     }
-    if (canViewRenewalTab) {
-      fetchInsuranceRenewals(TAB.INSURANCE_RENEWAL, 1, DEFAULT_LIMIT, '');
-    }
+    // Always fetch Insurance Renewals - no permission check
+    fetchInsuranceRenewals(TAB.INSURANCE_RENEWAL, 1, DEFAULT_LIMIT, '');
   }, [canViewInsuranceDetails, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, 
-      canViewUpdateLaterTab, canViewRenewalTab, fetchPendingInsurance, fetchCompleteInsurance, 
+      canViewUpdateLaterTab, fetchPendingInsurance, fetchCompleteInsurance, 
       fetchUpdateLater, fetchInsuranceRenewals, fetchBranches, fetchModels, 
       fetchInsuranceProviders, fetchBankSubPaymentModes, fetchBanks]);
 
@@ -2858,13 +2817,14 @@ function InsuranceReport() {
     if (canViewPendingInsuranceTab) visibleTabs.push(TAB.PENDING_INSURANCE);
     if (canViewCompleteInsuranceTab) visibleTabs.push(TAB.COMPLETE_INSURANCE);
     if (canViewUpdateLaterTab) visibleTabs.push(TAB.UPDATE_LATER);
-    if (canViewRenewalTab) visibleTabs.push(TAB.INSURANCE_RENEWAL);
+    // Always include Insurance Renewal tab
+    visibleTabs.push(TAB.INSURANCE_RENEWAL);
     
     if (visibleTabs.length > 0 && !visibleTabs.includes(activeTab)) {
       setActiveTab(visibleTabs[0]);
     }
   }, [canViewAnyTab, canViewPendingInsuranceTab, canViewCompleteInsuranceTab, 
-      canViewUpdateLaterTab, canViewRenewalTab, activeTab]);
+      canViewUpdateLaterTab, activeTab]);
 
   // Pagination handlers
   const handlePageChange = useCallback((tabIndex, newPage) => {
@@ -2969,15 +2929,12 @@ function InsuranceReport() {
         fetchUpdateLater(tabIndex, 1, limit, search);
         break;
       case TAB.INSURANCE_RENEWAL:
-        if (canViewRenewalTab) {
-          fetchInsuranceRenewals(tabIndex, 1, limit, search);
-        }
+        fetchInsuranceRenewals(tabIndex, 1, limit, search);
         break;
       default:
         break;
     }
-  }, [activeTab, tabData, fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater, 
-      fetchInsuranceRenewals, canViewRenewalTab]);
+  }, [activeTab, tabData, fetchPendingInsurance, fetchCompleteInsurance, fetchUpdateLater, fetchInsuranceRenewals]);
 
   const handleRefresh = useCallback(() => {
     refreshTab(activeTab);
@@ -2992,11 +2949,7 @@ function InsuranceReport() {
 
   // Insurance Renewal Handlers (for existing customer - from Complete Insurance tab)
   const handleOpenRenewalModal = (insuranceItem) => {
-    if (!canCreateRenewalTab && !canCreatePendingInsurance && !canCreateUpdateLater) {
-      showError('You do not have permission to renew insurance');
-      return;
-    }
-    
+    // No permission check - always allowed
     // Pre-fill form with data from the insurance item
     setRenewalFormData({
       originalInsurance: insuranceItem.id || '',
@@ -3136,10 +3089,7 @@ function InsuranceReport() {
 
   // New Customer Insurance Renewal Handlers
   const handleOpenNewCustomerRenewalModal = () => {
-    if (!canCreateRenewalTab && !canCreatePendingInsurance && !canCreateUpdateLater) {
-      showError('You do not have permission to create insurance renewal');
-      return;
-    }
+    // No permission check - always allowed
     setNewCustomerRenewalFormData({
       customerName: '',
       newPolicyNumber: '',
@@ -3282,12 +3232,8 @@ function InsuranceReport() {
     }
   };
 
-  // View Renewal Handler
+  // View Renewal Handler - No permission check
   const handleViewRenewalClick = async (item) => {
-    if (!canViewRenewalTab) {
-      showError('You do not have permission to view renewal details');
-      return;
-    }
     try {
       const response = await axiosInstance.get(`/insurance-renewals/${item.id}`);
       if (response.data.success) {
@@ -3302,12 +3248,8 @@ function InsuranceReport() {
     }
   };
 
-  // Print Renewal Receipt Handler
+  // Print Renewal Receipt Handler - No permission check
   const handlePrintRenewalReceipt = (renewalItem) => {
-    if (!canViewRenewalTab && !canCreateRenewalTab) {
-      showError('You do not have permission to print renewal receipt');
-      return;
-    }
     try {
       const receiptHTML = generateRenewalReceiptHTML(renewalItem);
       const printWindow = window.open('', '_blank');
@@ -3610,10 +3552,7 @@ function InsuranceReport() {
       showError('You do not have permission to export from this tab');
       return;
     }
-    if (activeTab === TAB.INSURANCE_RENEWAL && !canViewRenewalTab) {
-      showError('You do not have permission to export from this tab');
-      return;
-    }
+    // No permission check for Insurance Renewal export
     setShowExportModal(true);
     setExportError('');
   };
@@ -3637,10 +3576,7 @@ function InsuranceReport() {
       showError('You do not have permission to export from this tab');
       return;
     }
-    if (activeTab === TAB.INSURANCE_RENEWAL && !canViewRenewalTab) {
-      showError('You do not have permission to export from this tab');
-      return;
-    }
+    // No permission check for Insurance Renewal export
 
     setExportError('');
     
@@ -4036,31 +3972,30 @@ function InsuranceReport() {
                           <CIcon icon={cilZoom} className="me-1" />
                           View
                         </CButton>
-                        {(canCreateRenewalTab || canCreatePendingInsurance || canCreateUpdateLater) && (
-                          <CButton 
-                            size="sm" 
-                            className="action-btn"
-                            onClick={() => handleOpenRenewalModal({
-                              id: item._id,
-                              customerName: item.booking?.customerName || '',
-                              customerMobile: item.booking?.customerMobile || '',
-                              vehicleNumber: item.booking?.vehicleNumber || '',
-                              chassisNumber: item.booking?.chassisNumber || '',
-                              model: item.booking?.model?.model_name || '',
-                              originalInsurance: {
-                                PolicyNo: item.policyNumber || '',
-                                PremiumAmount: item.premiumAmount || 0,
-                                validUpto: item.validUpto || '',
-                                InsuranceCompany: item.insuranceProviderDetails?.provider_name || ''
-                              }
-                            })}
-                            title="Insurance Renewal"
-                            color="info"
-                          >
-                            <CIcon icon={cilReload} className="me-1" />
-                            Insurance Renewal
-                          </CButton>
-                        )}
+                        {/* No permission check - always show Insurance Renewal button */}
+                        <CButton 
+                          size="sm" 
+                          className="action-btn"
+                          onClick={() => handleOpenRenewalModal({
+                            id: item._id,
+                            customerName: item.booking?.customerName || '',
+                            customerMobile: item.booking?.customerMobile || '',
+                            vehicleNumber: item.booking?.vehicleNumber || '',
+                            chassisNumber: item.booking?.chassisNumber || '',
+                            model: item.booking?.model?.model_name || '',
+                            originalInsurance: {
+                              PolicyNo: item.policyNumber || '',
+                              PremiumAmount: item.premiumAmount || 0,
+                              validUpto: item.validUpto || '',
+                              InsuranceCompany: item.insuranceProviderDetails?.provider_name || ''
+                            }
+                          })}
+                          title="Insurance Renewal"
+                          color="info"
+                        >
+                          <CIcon icon={cilReload} className="me-1" />
+                          Insurance Renewal
+                        </CButton>
                       </div>
                     </CTableDataCell>
                   </CTableRow>
@@ -4156,17 +4091,7 @@ function InsuranceReport() {
   };
 
   const renderRenewalTable = () => {
-    // Check VIEW permission for Renewal tab
-    if (!canViewRenewalTab) {
-      return (
-        <div className="text-center py-4">
-          <CAlert color="warning">
-            You do not have permission to view the Insurance Renewal tab.
-          </CAlert>
-        </div>
-      );
-    }
-    
+    // No permission check - always show
     const { docs: currentRecords, loading, currentPage, limit, search } = tabData[TAB.INSURANCE_RENEWAL];
     const startRecord = (currentPage - 1) * limit + 1;
     
@@ -4212,29 +4137,25 @@ function InsuranceReport() {
                     <CTableDataCell>{item.paymentMode || ''}</CTableDataCell>
                     <CTableDataCell>
                       <div className="d-flex gap-1">
-                        {canViewRenewalTab && (
-                          <CButton 
-                            size="sm" 
-                            className="action-btn"
-                            onClick={() => handleViewRenewalClick(item)}
-                            title="View Details"
-                          >
-                            <CIcon icon={cilZoom} className="me-1" />
-                            View
-                          </CButton>
-                        )}
-                        {(canViewRenewalTab || canCreateRenewalTab) && (
-                          <CButton 
-                            size="sm" 
-                            className="action-btn"
-                            onClick={() => handlePrintRenewalReceipt(item)}
-                            title="Print Receipt"
-                            color="success"
-                          >
-                            <CIcon icon={cilPrint} className="me-1" />
-                            Print Receipt
-                          </CButton>
-                        )}
+                        <CButton 
+                          size="sm" 
+                          className="action-btn"
+                          onClick={() => handleViewRenewalClick(item)}
+                          title="View Details"
+                        >
+                          <CIcon icon={cilZoom} className="me-1" />
+                          View
+                        </CButton>
+                        <CButton 
+                          size="sm" 
+                          className="action-btn"
+                          onClick={() => handlePrintRenewalReceipt(item)}
+                          title="Print Receipt"
+                          color="success"
+                        >
+                          <CIcon icon={cilPrint} className="me-1" />
+                          Print Receipt
+                        </CButton>
                       </div>
                     </CTableDataCell>
                   </CTableRow>
@@ -4286,18 +4207,17 @@ function InsuranceReport() {
               <FontAwesomeIcon icon={faFileExcel} className='me-1' />
               Export Excel
             </CButton>
-            {(canCreateRenewalTab || canCreatePendingInsurance || canCreateUpdateLater) && (
-              <CButton 
-                size="sm" 
-                className="action-btn"
-                onClick={handleOpenNewCustomerRenewalModal}
-                title="New Customer Insurance Renewal"
-                color="success"
-              >
-                <CIcon icon={cilUserPlus} className="me-1" />
-                New Customer Insurance Renewal
-              </CButton>
-            )}
+            {/* No permission check - always show New Customer Insurance Renewal button */}
+            <CButton 
+              size="sm" 
+              className="action-btn"
+              onClick={handleOpenNewCustomerRenewalModal}
+              title="New Customer Insurance Renewal"
+              color="success"
+            >
+              <CIcon icon={cilUserPlus} className="me-1" />
+              New Customer Insurance Renewal
+            </CButton>
           </div>
         </CCardHeader>
         
@@ -4359,25 +4279,21 @@ function InsuranceReport() {
                     </CNavLink>
                   </CNavItem>
                 )}
-                {canViewRenewalTab && (
-                  <CNavItem>
-                    <CNavLink
-                      active={activeTab === TAB.INSURANCE_RENEWAL}
-                      onClick={() => handleTabChange(TAB.INSURANCE_RENEWAL)}
-                      style={{ 
-                        cursor: 'pointer',
-                        borderTop: activeTab === TAB.INSURANCE_RENEWAL ? '4px solid #2759a2' : '3px solid transparent',
-                        borderBottom: 'none',
-                        color: 'black'
-                      }}
-                    >
-                      Insurance Renewal
-                      {!canCreateRenewalTab && (
-                        <span className="ms-1 text-muted small">(View Only)</span>
-                      )}
-                    </CNavLink>
-                  </CNavItem>
-                )}
+                {/* Always show Insurance Renewal tab - no permission check */}
+                <CNavItem>
+                  <CNavLink
+                    active={activeTab === TAB.INSURANCE_RENEWAL}
+                    onClick={() => handleTabChange(TAB.INSURANCE_RENEWAL)}
+                    style={{ 
+                      cursor: 'pointer',
+                      borderTop: activeTab === TAB.INSURANCE_RENEWAL ? '4px solid #2759a2' : '3px solid transparent',
+                      borderBottom: 'none',
+                      color: 'black'
+                    }}
+                  >
+                    Insurance Renewal
+                  </CNavLink>
+                </CNavItem>
               </CNav>
 
               {/* Search bar - UNCONTROLLED input */}
@@ -4423,11 +4339,10 @@ function InsuranceReport() {
                     {renderLaterTable()}
                   </CTabPane>
                 )}
-                {canViewRenewalTab && (
-                  <CTabPane visible={activeTab === TAB.INSURANCE_RENEWAL}>
-                    {renderRenewalTable()}
-                  </CTabPane>
-                )}
+                {/* Always show Insurance Renewal tab - no permission check */}
+                <CTabPane visible={activeTab === TAB.INSURANCE_RENEWAL}>
+                  {renderRenewalTable()}
+                </CTabPane>
               </CTabContent>
             </>
           ) : (

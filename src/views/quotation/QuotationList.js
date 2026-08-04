@@ -4636,7 +4636,7 @@
 
 // const PAGE_SIZE_OPTIONS = [25, 50, 100];
 // const DEFAULT_LIMIT = 25;
-// const BASE_IMAGE_URL = 'https://gmplmis.com/dealership-api/api/v1';
+// const BASE_IMAGE_URL = 'https://gandhitvs.in/dealership/api/v1';
 
 // const CustomersList = () => {
 //   const [anchorEl, setAnchorEl] = useState(null);
@@ -5708,7 +5708,7 @@ import { enIN } from 'date-fns/locale';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_LIMIT = 25;
-const BASE_IMAGE_URL = 'https://gmplmis.com/dealership-api/api/v1';
+const BASE_IMAGE_URL = 'https://gandhitvs.in/dealership/api/v1';
 
 const CustomersList = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -5725,6 +5725,11 @@ const CustomersList = () => {
   const [exportError, setExportError] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
   
+  // New states for Location Type and Subdealer
+  const [selectedLocationType, setSelectedLocationType] = useState(''); // 'all', 'branch', 'subdealer'
+  const [selectedSubdealerId, setSelectedSubdealerId] = useState('');
+  const [subdealers, setSubdealers] = useState([]);
+  const [loadingSubdealers, setLoadingSubdealers] = useState(false);
   
   // WhatsApp modal states
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -5773,6 +5778,29 @@ const CustomersList = () => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
+
+  // Fetch subdealers
+  const fetchSubdealers = async () => {
+    setLoadingSubdealers(true);
+    try {
+      const response = await axiosInstance.get('/subdealers');
+      let subdealersList = response.data?.data?.subdealers || [];
+      setSubdealers(subdealersList);
+    } catch (error) {
+      console.error('Error fetching subdealers:', error);
+      showError('Failed to fetch subdealers');
+      setSubdealers([]);
+    } finally {
+      setLoadingSubdealers(false);
+    }
+  };
+
+  // Fetch subdealers when location type changes to subdealer
+  useEffect(() => {
+    if (selectedLocationType === 'subdealer') {
+      fetchSubdealers();
+    }
+  }, [selectedLocationType]);
 
   // Fetch quotation details and get PDF URL
   const fetchQuotationDetails = async (quotationId) => {
@@ -6068,106 +6096,156 @@ const CustomersList = () => {
       return;
     }
     
+    // Reset location type selections when opening modal
+    setSelectedLocationType('');
+    setSelectedSubdealerId('');
+    setSelectedBranchId('');
     setOpenDateModal(true);
     setExportError('');
   };
 
- const handleCloseDateModal = () => {
-  setOpenDateModal(false);
-  setStartDate(null);
-  setEndDate(null);
-  setSelectedBranchId(''); // Reset to empty string (which shows the placeholder)
-  setExportError('');
-};
+  const handleCloseDateModal = () => {
+    setOpenDateModal(false);
+    setStartDate(null);
+    setEndDate(null);
+    setSelectedBranchId('');
+    setSelectedLocationType('');
+    setSelectedSubdealerId('');
+    setExportError('');
+  };
 
- const handleExcelExport = async () => {
-  if (!canViewCustomers) {
-    showError('You do not have permission to export data');
-    return;
-  }
-  
-  setExportError('');
-  
-  // Check if branch is selected (allow 'all' as valid option)
-  if (!selectedBranchId) {
-    setExportError('Please select a branch or All Territories');
-    return;
-  }
-
-  if (!startDate || !endDate) {
-    setExportError('Please select both start and end dates');
-    return;
-  }
-
-  if (startDate > endDate) {
-    setExportError('Start date cannot be after end date');
-    return;
-  }
-
-  try {
-    setExportLoading(true);
+  const handleExcelExport = async () => {
+    if (!canViewCustomers) {
+      showError('You do not have permission to export data');
+      return;
+    }
     
-    const formattedStartDate = formatDateForAPI(startDate);
-    const formattedEndDate = formatDateForAPI(endDate);
+    setExportError('');
+    
+    // Validate location type selection
+    if (!selectedLocationType) {
+      setExportError('Please select a location type (All Territory, Branch, or Subdealer)');
+      return;
+    }
 
-    const params = new URLSearchParams({
-      branchId: selectedBranchId === 'all' ? '' : selectedBranchId,
-      startDate: formattedStartDate,
-      endDate: formattedEndDate,
-      format: 'excel'
-    });
+    // Validate based on location type
+    if (selectedLocationType === 'branch' && !selectedBranchId) {
+      setExportError('Please select a branch');
+      return;
+    }
 
-    const response = await axiosInstance.get(
-      `/reports/quotations?${params.toString()}`,
-      { responseType: 'blob' }
-    );
+    if (selectedLocationType === 'subdealer' && !selectedSubdealerId) {
+      setExportError('Please select a subdealer');
+      return;
+    }
 
-    const blob = new Blob([response.data], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-    });
-    
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    
-    const branchName = selectedBranchId === 'all' 
-      ? 'All_Territories' 
-      : (branches.find(b => b._id === selectedBranchId)?.name || 'Branch');
-    const startDateStr = formatDateDDMMYYYY(startDate);
-    const endDateStr = formatDateDDMMYYYY(endDate);
-    const fileName = `Quotations_${branchName}_${startDateStr}_to_${endDateStr}.xlsx`;
-    link.setAttribute('download', fileName);
-    
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    
-    window.URL.revokeObjectURL(url);
-    
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon: 'success',
-      title: 'Excel exported successfully!',
-      showConfirmButton: false,
-      timer: 3000,
-      timerProgressBar: true
-    });
+    if (!startDate || !endDate) {
+      setExportError('Please select both start and end dates');
+      return;
+    }
 
-    handleCloseDateModal();
-    
-  } catch (error) {
-    console.error('Error exporting report:', error);
-    setExportError('Failed to export report');
-    Swal.fire({
-      icon: 'error',
-      title: 'Export Failed',
-      text: 'Failed to export report',
-    });
-  } finally {
-    setExportLoading(false);
-  }
-};
+    if (startDate > endDate) {
+      setExportError('Start date cannot be after end date');
+      return;
+    }
+
+    try {
+      setExportLoading(true);
+      
+      const formattedStartDate = formatDateForAPI(startDate);
+      const formattedEndDate = formatDateForAPI(endDate);
+
+      const params = new URLSearchParams({
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        format: 'excel',
+        locationType: selectedLocationType // 'all', 'branch', or 'subdealer'
+      });
+
+      // Add appropriate parameters based on location type
+      if (selectedLocationType === 'branch') {
+        if (selectedBranchId === 'all') {
+          params.append('branchId', ''); // Empty means all branches
+        } else {
+          params.append('branchId', selectedBranchId);
+        }
+      } else if (selectedLocationType === 'subdealer') {
+        if (selectedSubdealerId === 'all') {
+          params.append('subdealerId', ''); // Empty means all subdealers
+        } else {
+          params.append('subdealerId', selectedSubdealerId);
+        }
+      }
+      // For 'all' (All Territory), we don't add branchId or subdealerId
+
+      const response = await axiosInstance.get(
+        `/reports/quotations?${params.toString()}`,
+        { responseType: 'blob' }
+      );
+
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename based on location type
+      let locationName = '';
+      if (selectedLocationType === 'all') {
+        locationName = 'All_Territory';
+      } else if (selectedLocationType === 'branch') {
+        if (selectedBranchId === 'all') {
+          locationName = 'All_Branches';
+        } else {
+          const selectedBranch = branches.find(b => b._id === selectedBranchId);
+          locationName = selectedBranch?.name || 'Branch';
+        }
+      } else if (selectedLocationType === 'subdealer') {
+        if (selectedSubdealerId === 'all') {
+          locationName = 'All_Subdealers';
+        } else {
+          const selectedSubdealer = subdealers.find(s => s._id === selectedSubdealerId);
+          locationName = selectedSubdealer?.name || 'Subdealer';
+        }
+      }
+      
+      const startDateStr = formatDateDDMMYYYY(startDate);
+      const endDateStr = formatDateDDMMYYYY(endDate);
+      const fileName = `Quotations_${locationName}_${startDateStr}_to_${endDateStr}.xlsx`;
+      link.setAttribute('download', fileName);
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      window.URL.revokeObjectURL(url);
+      
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Excel exported successfully!',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      });
+
+      handleCloseDateModal();
+      
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      setExportError('Failed to export report');
+      Swal.fire({
+        icon: 'error',
+        title: 'Export Failed',
+        text: 'Failed to export report',
+      });
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const handleDelete = async (id) => {
     if (!canDeleteCustomers) {
@@ -6438,12 +6516,12 @@ const CustomersList = () => {
         </CCardBody>
       </CCard>
 
-      {/* Date Range Modal */}
-      <CModal alignment="center" visible={openDateModal} onClose={handleCloseDateModal}>
+      {/* Date Range Modal with Location Type */}
+      <CModal alignment="center" visible={openDateModal} onClose={handleCloseDateModal} size="lg">
         <CModalHeader>
           <CModalTitle>
             <FontAwesomeIcon icon={faCalendarAlt} className="me-2" />
-            Select Date Range
+            Export Quotations Report
           </CModalTitle>
         </CModalHeader>
         <CModalBody>
@@ -6487,26 +6565,85 @@ const CustomersList = () => {
             </div>
           </LocalizationProvider>
           
-      <TextField
-  select
-  value={selectedBranchId}
-  onChange={(e) => {
-    setSelectedBranchId(e.target.value);
-    setExportError('');
-  }}
-  fullWidth
-  size="small"
-  SelectProps={{ native: true }}
-  disabled={!canViewCustomers}
->
-  <option value="all">-- All Territories --</option>
-  <option value="" disabled>-- Select Branch --</option>
-  {branches.map((branch) => (
-    <option key={branch._id} value={branch._id}>
-      {branch.name}
-    </option>
-  ))}
-</TextField>
+          {/* Location Type Selection */}
+          <div className="mb-3">
+            <label className="form-label">Location Type:<span className='required'>*</span></label>
+            <CFormSelect
+              value={selectedLocationType}
+              onChange={(e) => {
+                setSelectedLocationType(e.target.value);
+                setSelectedBranchId('');
+                setSelectedSubdealerId('');
+                setExportError('');
+              }}
+              disabled={!canViewCustomers}
+            >
+              <option value="">-- Select Location Type --</option>
+              <option value="all">All Territory</option>
+              <option value="branch">Branch</option>
+              <option value="subdealer">Subdealer</option>
+            </CFormSelect>
+          </div>
+
+          {/* Branch Selection - shown when Branch is selected */}
+          {selectedLocationType === 'branch' && (
+            <div className="mb-3">
+              <label className="form-label">Branch:<span className='required'>*</span></label>
+              <CFormSelect
+                value={selectedBranchId}
+                onChange={(e) => {
+                  setSelectedBranchId(e.target.value);
+                  setExportError('');
+                }}
+                disabled={!canViewCustomers}
+              >
+                <option value="">-- Select Branch --</option>
+                <option value="all">All Branches</option>
+                {branches.map((branch) => (
+                  <option key={branch._id} value={branch._id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </CFormSelect>
+            </div>
+          )}
+
+          {/* Subdealer Selection - shown when Subdealer is selected */}
+          {selectedLocationType === 'subdealer' && (
+            <div className="mb-3">
+              <label className="form-label">Subdealer:<span className='required'>*</span></label>
+              <CFormSelect
+                value={selectedSubdealerId}
+                onChange={(e) => {
+                  setSelectedSubdealerId(e.target.value);
+                  setExportError('');
+                }}
+                disabled={!canViewCustomers || loadingSubdealers}
+              >
+                <option value="">-- Select Subdealer --</option>
+                <option value="all">All Subdealers</option>
+                {subdealers.map((subdealer) => (
+                  <option key={subdealer._id} value={subdealer._id}>
+                    {subdealer.name}
+                  </option>
+                ))}
+              </CFormSelect>
+              {loadingSubdealers && (
+                <div className="mt-2">
+                  <CSpinner size="sm" className="me-1" />
+                  <small>Loading subdealers...</small>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Helpful message when All Territory is selected */}
+          {selectedLocationType === 'all' && (
+            <div className="alert alert-info mb-3">
+              <CIcon icon={cilFile} className="me-2" />
+              Exporting quotations for all territories (Branches + Subdealers combined)
+            </div>
+          )}
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" onClick={handleCloseDateModal}>
@@ -6515,7 +6652,15 @@ const CustomersList = () => {
           <CButton 
             className="submit-button"
             onClick={handleExcelExport}
-            disabled={!startDate || !endDate || !selectedBranchId || !canViewCustomers || exportLoading}
+            disabled={
+              !startDate || 
+              !endDate || 
+              !selectedLocationType ||
+              (selectedLocationType === 'branch' && !selectedBranchId) ||
+              (selectedLocationType === 'subdealer' && !selectedSubdealerId) ||
+              !canViewCustomers || 
+              exportLoading
+            }
           >
             {exportLoading ? (
               <>
@@ -6586,116 +6731,112 @@ const CustomersList = () => {
                 />
               </div>
               
-             {/* Attachments Section */}
-<div className="mb-3">
-  <strong>Additional Attachments:</strong>
-  {attachments.length === 0 ? (
-    <CAlert color="info" className="mt-2">
-      No additional attachments available for the selected models.
-    </CAlert>
-  ) : (
-    <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="mt-2">
-      {attachments.map((attachment) => (
-        <div 
-          key={attachment._id} 
-          className="mb-3 p-3 border rounded"
-          style={{
-            backgroundColor: selectedAttachments.includes(attachment._id) ? '#f0fff4' : 'white',
-            borderColor: selectedAttachments.includes(attachment._id) ? '#25D366' : '#dee2e6'
-          }}
-        >
-          <CFormCheck
-            id={`att-${attachment._id}`}
-            label={
-              <div>
-                <strong>{attachment.title}</strong>
-                {attachment.description && (
-                  <p className="text-muted small mb-0">{attachment.description}</p>
+              {/* Attachments Section */}
+              <div className="mb-3">
+                <strong>Additional Attachments:</strong>
+                {attachments.length === 0 ? (
+                  <CAlert color="info" className="mt-2">
+                    No additional attachments available for the selected models.
+                  </CAlert>
+                ) : (
+                  <div style={{ maxHeight: '400px', overflowY: 'auto' }} className="mt-2">
+                    {attachments.map((attachment) => (
+                      <div 
+                        key={attachment._id} 
+                        className="mb-3 p-3 border rounded"
+                        style={{
+                          backgroundColor: selectedAttachments.includes(attachment._id) ? '#f0fff4' : 'white',
+                          borderColor: selectedAttachments.includes(attachment._id) ? '#25D366' : '#dee2e6'
+                        }}
+                      >
+                        <CFormCheck
+                          id={`att-${attachment._id}`}
+                          label={
+                            <div>
+                              <strong>{attachment.title}</strong>
+                              {attachment.description && (
+                                <p className="text-muted small mb-0">{attachment.description}</p>
+                              )}
+                            </div>
+                          }
+                          checked={selectedAttachments.includes(attachment._id)}
+                          onChange={() => toggleAttachment(attachment._id)}
+                        />
+                        
+                        <div className="d-flex gap-2 mt-2 flex-wrap">
+                          {attachment.attachments?.slice(0, 4).map((media, idx) => {
+                            const isPdf = media.url?.toLowerCase().endsWith('.pdf') || 
+                                         media.fileType === 'application/pdf' ||
+                                         media.mimeType === 'application/pdf';
+                            
+                            return isPdf ? (
+                              <div 
+                                key={idx} 
+                                style={{ 
+                                  width: '60px', 
+                                  height: '60px', 
+                                  backgroundColor: '#dc3545', 
+                                  borderRadius: '8px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  cursor: 'pointer'
+                                }}
+                                onClick={() => {
+                                  const fullUrl = `${BASE_IMAGE_URL}${media.url}`;
+                                  window.open(fullUrl, '_blank');
+                                }}
+                                title="Click to open PDF"
+                              >
+                                <CIcon icon={cilFile} size="xl" />
+                              </div>
+                            ) : (
+                              <div 
+                                key={idx} 
+                                style={{ 
+                                  width: '60px', 
+                                  height: '60px', 
+                                  backgroundColor: '#f8f9fa',
+                                  borderRadius: '4px',
+                                  overflow: 'hidden',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <img 
+                                  src={`${BASE_IMAGE_URL}${media.thumbnail || media.url}`}
+                                  alt={attachment.title}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.target.src = 'https://via.placeholder.com/60?text=No+Image';
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                          {attachment.attachments?.length > 4 && (
+                            <div style={{ 
+                              width: '60px', 
+                              height: '60px', 
+                              backgroundColor: '#f8f9fa',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '12px',
+                              color: '#6c757d'
+                            }}>
+                              +{attachment.attachments.length - 4}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            }
-            checked={selectedAttachments.includes(attachment._id)}
-            onChange={() => toggleAttachment(attachment._id)}
-          />
-          
-          <div className="d-flex gap-2 mt-2 flex-wrap">
-            {attachment.attachments?.slice(0, 4).map((media, idx) => {
-              // Check if the file is a PDF by extension or mime type
-              const isPdf = media.url?.toLowerCase().endsWith('.pdf') || 
-                           media.fileType === 'application/pdf' ||
-                           media.mimeType === 'application/pdf';
-              
-              return isPdf ? (
-                // Show PDF icon for PDF files
-                <div 
-                  key={idx} 
-                  style={{ 
-                    width: '60px', 
-                    height: '60px', 
-                    backgroundColor: '#dc3545', 
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => {
-                    // Optional: Open PDF in new tab on click
-                    const fullUrl = `${BASE_IMAGE_URL}${media.url}`;
-                    window.open(fullUrl, '_blank');
-                  }}
-                  title="Click to open PDF"
-                >
-                  <CIcon icon={cilFile} size="xl" />
-                </div>
-              ) : (
-                // Show image preview for non-PDF files
-                <div 
-                  key={idx} 
-                  style={{ 
-                    width: '60px', 
-                    height: '60px', 
-                    backgroundColor: '#f8f9fa',
-                    borderRadius: '4px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <img 
-                    src={`${BASE_IMAGE_URL}${media.thumbnail || media.url}`}
-                    alt={attachment.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/60?text=No+Image';
-                    }}
-                  />
-                </div>
-              );
-            })}
-            {attachment.attachments?.length > 4 && (
-              <div style={{ 
-                width: '60px', 
-                height: '60px', 
-                backgroundColor: '#f8f9fa',
-                borderRadius: '4px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '12px',
-                color: '#6c757d'
-              }}>
-                +{attachment.attachments.length - 4}
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
               
               {/* Selection Summary */}
               <CAlert color="info" className="mt-3">

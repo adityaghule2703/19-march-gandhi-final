@@ -4971,6 +4971,966 @@
 
 
 
+// import React, { useState, useEffect } from 'react';
+// import '../../../css/invoice.css';
+// import '../../../css/table.css';
+// import '../../../css/form.css';
+// import { 
+//   CButton, 
+//   CCol, 
+//   CFormLabel, 
+//   CFormSelect, 
+//   CNav, 
+//   CNavItem, 
+//   CNavLink, 
+//   CRow, 
+//   CTabContent, 
+//   CTabPane,
+//   CCard,
+//   CCardBody,
+//   CCardHeader,
+//   CFormInput,
+//   CTable,
+//   CTableHead,
+//   CTableRow,
+//   CTableHeaderCell,
+//   CTableBody,
+//   CTableDataCell,
+//   CAlert
+// } from '@coreui/react';
+// import { axiosInstance, getDefaultSearchFields, SearchOutlinedIcon, useTableFilter, showError } from 'src/utils/tableImports';
+// import tvsLogo from '../../../assets/images/logo.png';
+// import config from 'src/config';
+// import CIcon from '@coreui/icons-react';
+// import { cilPrint} from '@coreui/icons';
+// import { useAuth } from '../../../context/AuthContext';
+// import { 
+//   hasSafePagePermission,
+//   MODULES, 
+//   PAGES,
+//   TABS,
+//   ACTIONS,
+//   canViewPage
+// } from '../../../utils/modulePermissions';
+
+// function SubdealerLedger() {
+//   const [activeTab, setActiveTab] = useState(0);
+//   const [subdealers, setSubdealers] = useState([]);
+//   const [receipts, setReceipts] = useState([]);
+//   const [selectedSubdealer, setSelectedSubdealer] = useState('');
+//   const [selectedReceipt, setSelectedReceipt] = useState('');
+//   const [error, setError] = useState('');
+//   const [searchTerm, setSearchTerm] = useState('');
+//   const { user: authUser } = useAuth();
+//   const permissions = authUser?.permissions || [];
+  
+//   // Check if user is a subdealer
+//   const isSubdealer = authUser?.roles?.some(role => role.name === 'SUBDEALER');
+//   const userSubdealer = authUser?.subdealer;
+
+//   // Page-level permission checks for Subdealer Ledger page under Subdealer Account module
+//   const canViewSubdealerLedger = canViewPage(
+//     permissions, 
+//     MODULES.SUBDEALER_ACCOUNT, 
+//     PAGES.SUBDEALER_ACCOUNT.SUBDEALER_LEDGER
+//   );
+
+//   // Tab-level VIEW permission checks
+//   const canViewSubDealerTab = hasSafePagePermission(
+//     permissions,
+//     MODULES.SUBDEALER_ACCOUNT,
+//     PAGES.SUBDEALER_ACCOUNT.SUBDEALER_LEDGER,
+//     ACTIONS.VIEW,
+//     TABS.SUBDEALER_LEDGER.SUB_DEALER
+//   );
+  
+//   const canViewSubDealerUTRTab = hasSafePagePermission(
+//     permissions,
+//     MODULES.SUBDEALER_ACCOUNT,
+//     PAGES.SUBDEALER_ACCOUNT.SUBDEALER_LEDGER,
+//     ACTIONS.VIEW,
+//     TABS.SUBDEALER_LEDGER.SUB_DEALER_UTR
+//   );
+
+//   // Adjust activeTab when permissions change
+//   useEffect(() => {
+//     if (!canViewSubDealerTab && activeTab === 0 && canViewSubDealerUTRTab) {
+//       setActiveTab(1);
+//     }
+//   }, [canViewSubDealerTab, canViewSubDealerUTRTab, activeTab]);
+
+//   const { data, setData, filteredData, setFilteredData, handleFilter } = useTableFilter([]);
+
+//   useEffect(() => {
+//     if (!canViewSubdealerLedger) {
+//       showError('You do not have permission to view Subdealer Ledger');
+//       return;
+//     }
+    
+//     fetchData();
+//     fetchSubdealers();
+//   }, [canViewSubdealerLedger]);
+
+//   useEffect(() => {
+//     if (isSubdealer && userSubdealer && !selectedSubdealer) {
+//       setSelectedSubdealer(userSubdealer._id);
+//     }
+//   }, [isSubdealer, userSubdealer, selectedSubdealer]);
+
+//   useEffect(() => {
+//     if (selectedSubdealer) {
+//       fetchSubdealerReceipts();
+//     } else {
+//       setReceipts([]);
+//       setSelectedReceipt('');
+//     }
+//   }, [selectedSubdealer]);
+
+//   const fetchData = async () => {
+//     try {
+//       const response = await axiosInstance.get(`/subdealers`);
+//       let allSubdealers = response.data.data.subdealers || [];
+      
+//       if (isSubdealer && userSubdealer) {
+//         allSubdealers = allSubdealers.filter(subdealer => 
+//           subdealer._id === userSubdealer._id || subdealer.id === userSubdealer._id
+//         );
+//       }
+      
+//       setData(allSubdealers);
+//       setFilteredData(allSubdealers);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchSubdealers = async () => {
+//     try {
+//       const response = await axiosInstance.get('/subdealers');
+//       const allSubdealers = response.data.data.subdealers || [];
+//       setSubdealers(allSubdealers);
+      
+//       if (isSubdealer && userSubdealer) {
+//         const subdealerExists = allSubdealers.some(s => s._id === userSubdealer._id || s.id === userSubdealer._id);
+//         if (subdealerExists) {
+//           setSelectedSubdealer(userSubdealer._id);
+//         }
+//       }
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//     }
+//   };
+
+//   const fetchSubdealerReceipts = async () => {
+//     try {
+//       const response = await axiosInstance.get(`/subdealersonaccount/${selectedSubdealer}/on-account/receipts`);
+//       setReceipts(response.data.docs || []);
+//       setError('');
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) {
+//         setError(message);
+//       }
+//       setReceipts([]);
+//     }
+//   };
+
+//   const handleSubdealerChange = (e) => {
+//     if (isSubdealer) {
+//       return;
+//     }
+//     setSelectedSubdealer(e.target.value);
+//     setSelectedReceipt('');
+//   };
+
+//   const handleReceiptChange = (e) => {
+//     setSelectedReceipt(e.target.value);
+//   };
+
+//   const handleSearch = (searchValue) => {
+//     setSearchTerm(searchValue);
+//     handleFilter(searchValue, getDefaultSearchFields('subdealer'));
+//   };
+
+//   const handleTabChange = (tab) => {
+//     setActiveTab(tab);
+//     setSearchTerm('');
+//   };
+
+//   const handleResetSearch = () => {
+//     setSearchTerm('');
+//     handleFilter('', getDefaultSearchFields('subdealer'));
+//   };
+
+//  const handleViewLedger = async (subdealer) => {
+//   try {
+//     const res = await axiosInstance.get(`/subdealersonaccount/${subdealer._id}/on-account/receipts`);
+    
+//     let ledgerEntries = [];
+//     let subdealerBookings = [];
+//     let accessoryBillings = [];
+//     let onAccountBalance = 0;
+    
+//     if (res.data && res.data.data) {
+//       const responseData = res.data.data;
+//       ledgerEntries = responseData.entries || [];
+//       onAccountBalance = responseData.totals?.onAccountBalance || 0;
+      
+//       subdealerBookings = ledgerEntries
+//         .filter(entry => entry.source === 'BOOKING')
+//         .map(entry => ({
+//           ...entry,
+//           customerDetails: {
+//             salutation: '',
+//             name: entry.customerName || subdealer.name || ''
+//           },
+//           bookingNumber: entry.receiptNo || entry.bookingNumber,
+//           discountedAmount: entry.debit,
+//           amount: entry.debit,
+//           remark: entry.remark || entry.description,
+//           createdAt: entry.timestamp,
+//           bookingDate: entry.date
+//         }));
+//     } else if (res.data && res.data.docs) {
+//       ledgerEntries = res.data.docs || [];
+//       subdealerBookings = res.data.subdealerBookings || [];
+//       accessoryBillings = res.data.accessoryBillings || [];
+//       onAccountBalance = res.data.totalOnAccountBalance || 0;
+//     }
+    
+//     const ledgerUrl = `${config.baseURL}/ledger.html?ledgerId=${subdealer._id}`;
+
+//     let totalCredit = 0;
+//     let totalDebit = 0;
+//     let runningBalance = 0;
+
+//     const allTransactions = [];
+
+//     // Process subdealer bookings (debit transactions)
+//     subdealerBookings.forEach((booking) => {
+//       allTransactions.push({
+//         type: 'booking',
+//         data: booking,
+//         date: new Date(booking.createdAt || booking.bookingDate || booking.receivedDate),
+//         debit: booking.discountedAmount || 0
+//       });
+//     });
+
+//     // Process accessory billings - ONLY include if isDebit is true
+//     accessoryBillings.forEach((accessory) => {
+//       if (accessory.isDebit) {
+//         allTransactions.push({
+//           type: 'accessory',
+//           data: accessory,
+//           date: new Date(accessory.createdAt),
+//           debit: accessory.amount || 0
+//         });
+//       }
+//     });
+
+//     // Process ledger entries including ON_ACCOUNT_RECEIPT, ALLOCATION, PENALTY_MODEL, FINANCE_DISBURSEMENT, and PENALTY_PAYMENT
+//     ledgerEntries.forEach((entry) => {
+//       // Process ON_ACCOUNT_RECEIPT entries and their allocations
+//       if (entry.source === 'ON_ACCOUNT_RECEIPT') {
+//         // Main receipt entry (credit entry)
+//         allTransactions.push({
+//           type: 'receipt',
+//           data: entry,
+//           date: new Date(entry.timestamp || entry.createdAt),
+//           credit: entry.credit || 0,
+//           isReceipt: true
+//         });
+        
+//         // Process allocation breakdown for this receipt
+//         if (entry.receiptDetails && entry.receiptDetails.allocationBreakdown && 
+//             entry.receiptDetails.allocationBreakdown.length > 0) {
+          
+//           entry.receiptDetails.allocationBreakdown.forEach((allocation) => {
+//             allTransactions.push({
+//               type: 'allocation',
+//               data: allocation,
+//               parentReceipt: entry,
+//               date: new Date(allocation.allocatedAt || entry.timestamp),
+//               credit: allocation.allocatedAmount || 0,
+//               isAllocation: true,
+//               receiptNo: entry.receiptNo
+//             });
+//           });
+//         }
+//       } 
+//       // Process FINANCE_DISBURSEMENT entries
+//       else if (entry.source === 'FINANCE_DISBURSEMENT') {
+//         allTransactions.push({
+//           type: 'finance_disbursement',
+//           data: entry,
+//           date: new Date(entry.timestamp || entry.createdAt || entry.disbursementDate),
+//           credit: entry.credit || entry.amount || 0,
+//           debit: entry.debit || 0,
+//           isFinanceDisbursement: true
+//         });
+//       }
+//       // Process PENALTY_PAYMENT entries (penalty payment received - CREDIT)
+//       else if (entry.source === 'PENALTY_PAYMENT') {
+//         allTransactions.push({
+//           type: 'penalty_payment',
+//           data: entry,
+//           date: new Date(entry.timestamp || entry.createdAt || entry.paymentDate),
+//           credit: entry.credit || entry.amount || 0,
+//           isPenaltyPayment: true
+//         });
+//       }
+//       // Process regular ALLOCATION entries
+//       else if (entry.source === 'ALLOCATION') {
+//         allTransactions.push({
+//           type: 'allocation',
+//           data: entry,
+//           date: new Date(entry.timestamp || entry.createdAt),
+//           credit: entry.credit || 0,
+//           debit: entry.debit || 0
+//         });
+//       }
+//       // Process PENALTY_MODEL entries (penalty charges - DEBIT)
+//       else if (entry.source === 'PENALTY_MODEL') {
+//         allTransactions.push({
+//           type: 'penalty',
+//           data: entry,
+//           date: new Date(entry.timestamp || entry.createdAt || entry.approvedAt),
+//           debit: entry.debit || 0,
+//           isPenalty: true
+//         });
+//       }
+//     });
+
+//     // Sort all transactions by date (oldest first)
+//     allTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+//     // Calculate running balances with INVERTED logic
+//     const transactionsWithBalance = allTransactions.map(transaction => {
+//       let description = '';
+//       let referenceNo = '';
+//       let date = '';
+//       let formattedDate = '';
+//       let credit = 0;
+//       let debit = 0;
+      
+//       if (transaction.type === 'booking') {
+//         const booking = transaction.data;
+        
+//         debit = transaction.debit || 0;
+//         runningBalance += debit;
+//         totalDebit += debit;
+        
+//         description = `Booking Created<br>Customer: ${booking.customerDetails?.salutation || ''} ${booking.customerDetails?.name || 'N/A'}<br>${booking.remark || ''} Chassis No: ${booking.chassisNo || ''}`;
+//         referenceNo = booking.bookingNumber || '';
+        
+//         const dateToFormat = transaction.date || 
+//                             new Date(booking.bookingDate) || 
+//                             new Date(booking.createdAt) || 
+//                             (transaction.parentReceipt ? new Date(transaction.parentReceipt.createdAt) : new Date());
+//         date = dateToFormat;
+//         formattedDate = dateToFormat.toLocaleDateString('en-GB');
+          
+//       } else if (transaction.type === 'accessory') {
+//         const accessory = transaction.data;
+        
+//         debit = transaction.debit || 0;
+//         runningBalance += debit;
+//         totalDebit += debit;
+        
+//         description = `Accessory Billing<br>${accessory.remark || 'Accessory Purchase'}`;
+//         referenceNo = accessory.transactionReference || '';
+//         const dateToFormat = transaction.date || new Date(accessory.createdAt);
+//         date = dateToFormat;
+//         formattedDate = dateToFormat.toLocaleDateString('en-GB');
+        
+//       } else if (transaction.type === 'receipt') {
+//         const receipt = transaction.data;
+        
+//         credit = receipt.credit || 0;
+//         runningBalance -= credit;
+//         totalCredit += credit;
+        
+//         description = `On-Account Payment Received<br>${receipt.remark || ''}`;
+//         referenceNo = receipt.receiptNo || '';
+//         const dateToFormat = transaction.date || new Date(receipt.timestamp);
+//         date = dateToFormat;
+//         formattedDate = dateToFormat.toLocaleDateString('en-GB');
+        
+//       } else if (transaction.type === 'finance_disbursement') {
+//         const financeEntry = transaction.data;
+        
+//         credit = transaction.credit || 0;
+//         runningBalance -= credit;
+//         totalCredit += credit;
+        
+//         // Use description directly from API response
+//         description = financeEntry.description || financeEntry.remark || 'Finance Disbursement Received';
+        
+//         referenceNo = financeEntry.disbursementNumber || financeEntry.transactionId || financeEntry.receiptNo || '';
+//         const dateToFormat = transaction.date || new Date(financeEntry.timestamp || financeEntry.disbursementDate);
+//         date = dateToFormat;
+//         formattedDate = dateToFormat.toLocaleDateString('en-GB');
+        
+//       } else if (transaction.type === 'penalty_payment') {
+//         const penaltyPayment = transaction.data;
+        
+//         credit = transaction.credit || 0;
+//         runningBalance -= credit;
+//         totalCredit += credit;
+        
+//         description = `Penalty Payment Received<br>${penaltyPayment.remark || penaltyPayment.description || 'Penalty payment received'}`;
+//         referenceNo = penaltyPayment.receiptNo || penaltyPayment.transactionId || '';
+//         const dateToFormat = transaction.date || new Date(penaltyPayment.timestamp || penaltyPayment.paymentDate);
+//         date = dateToFormat;
+//         formattedDate = dateToFormat.toLocaleDateString('en-GB');
+        
+//       } else if (transaction.type === 'allocation') {
+//         const allocation = transaction.data;
+        
+//         if (transaction.isAllocation) {
+//           credit = allocation.allocatedAmount || 0;
+//           runningBalance += credit;
+//           totalCredit += credit;
+          
+//           description = `Payment Allocated to Booking ${allocation.bookingNumber}<br>Customer: ${allocation.customerName}`;
+//           if (allocation.remark) {
+//             description += `<br>${allocation.remark}`;
+//           }
+//           referenceNo = transaction.receiptNo || '';
+//           const dateToFormat = transaction.date || new Date(allocation.allocatedAt);
+//           date = dateToFormat;
+//           formattedDate = dateToFormat.toLocaleDateString('en-GB');
+//         } else {
+//           credit = allocation.credit || 0;
+//           debit = allocation.debit || 0;
+          
+//           if (credit > 0) {
+//             runningBalance -= credit;
+//             totalCredit += credit;
+//           }
+//           if (debit > 0) {
+//             runningBalance += debit;
+//             totalDebit += debit;
+//           }
+          
+//           description = allocation.description || 'Payment Allocation';
+//           if (allocation.remark) {
+//             description += `<br>${allocation.remark}`;
+//           }
+//           referenceNo = allocation.receiptNo || '';
+//           const dateToFormat = transaction.date || new Date(allocation.timestamp);
+//           date = dateToFormat;
+//           formattedDate = dateToFormat.toLocaleDateString('en-GB');
+//         }
+//       } else if (transaction.type === 'penalty') {
+//         const penalty = transaction.data;
+        
+//         debit = penalty.debit || 0;
+//         runningBalance += debit;
+//         totalDebit += debit;
+        
+//         description = `Penalty Charged<br>${penalty.remark || 'Penalty imposed'}`;
+//         referenceNo = penalty.receiptNo || '';
+//         const dateToFormat = transaction.date || new Date(penalty.timestamp || penalty.approvedAt);
+//         date = dateToFormat;
+//         formattedDate = dateToFormat.toLocaleDateString('en-GB');
+//       }
+      
+//       return {
+//         date: formattedDate,
+//         rawDate: date,
+//         description,
+//         referenceNo,
+//         credit: credit || 0,
+//         debit: debit || 0,
+//         balance: runningBalance,
+//         isAllocation: transaction.isAllocation,
+//         isReceipt: transaction.isReceipt,
+//         isPenalty: transaction.isPenalty,
+//         isFinanceDisbursement: transaction.isFinanceDisbursement,
+//         isPenaltyPayment: transaction.isPenaltyPayment
+//       };
+//     });
+
+//     // Sort transactions by raw date
+//     transactionsWithBalance.sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+
+//     // Calculate the final balance including remaining on-account balance
+//     const finalBalance = runningBalance;
+
+//     const win = window.open('', '_blank');
+//     win.document.write(`
+// <!DOCTYPE html>
+// <html>
+//   <head>
+//     <title>Subdealer Ledger</title>
+//     <style>
+//       @page {
+//         size: A4;
+//         margin: 15mm 10mm;
+//       }
+//       body {
+//         font-family: Arial;
+//         width: 100%;
+//         margin: 0;
+//         padding: 0;
+//         font-size: 14px;
+//         line-height: 1.3;
+//         font-family: Courier New;
+//       }
+//       .container {
+//         width: 190mm;
+//         margin: 0 auto;
+//         padding: 5mm;
+//       }
+//       .header-container {
+//         display: flex;
+//         justify-content:space-between;
+//         margin-bottom: 3mm;
+//       }
+//       .header-text{
+//         font-size:20px;
+//         font-weight:bold;
+//       }
+//       .logo {
+//         width: 30mm;
+//         height: auto;
+//         margin-right: 5mm;
+//       } 
+//       .header {
+//         text-align: left;
+//       }
+//       .divider {
+//         border-top: 2px solid #AAAAAA;
+//         margin: 3mm 0;
+//       }
+//       .header h2 {
+//         margin: 2mm 0;
+//         font-size: 12pt;
+//         font-weight: bold;
+//       }
+//       .header div {
+//         font-size: 14px;
+//       }
+//       .customer-info {
+//         display: grid;
+//         grid-template-columns: repeat(2, 1fr);
+//         gap: 2mm;
+//         margin-bottom: 5mm;
+//         font-size: 14px;
+//       }
+//       .customer-info div {
+//         display: flex;
+//       }
+//       .customer-info strong {
+//         min-width: 30mm;
+//         display: inline-block;
+//       }
+//       table {
+//         width: 100%;
+//         border-collapse: collapse;
+//         margin-bottom: 5mm;
+//         font-size: 14px;
+//         page-break-inside: avoid;
+//       }
+//       th, td {
+//         border: 1px solid #000;
+//         padding: 2mm;
+//         text-align: left;
+//       }
+//       th {
+//         background-color: #f0f0f0;
+//         font-weight: bold;
+//       }
+//       .footer {
+//         margin-top: 10mm;
+//         display: flex;
+//         justify-content: space-between;
+//         align-items: flex-end;
+//         font-size: 14px;
+//       }
+//       .footer-left {
+//         text-align: left;
+//       }
+//       .footer-right {
+//         text-align: right;
+//       }
+//       .qr-code {
+//         width: 35mm;
+//         height: 35mm;
+//       }
+//       .text-right {
+//         text-align: right;
+//       }
+//       .text-left {
+//         text-align: left;
+//       }
+//       .text-center {
+//         text-align: center;
+//       }
+//       .bold-row {
+//         font-weight: bold;
+//         background-color: #f8f9fa;
+//       }
+//       .total-row {
+//         font-weight: bold;
+//         background-color: #e9ecef;
+//       }
+//       .allocation-row {
+//         font-style: italic;
+//         background-color: #f9f9f9;
+//       }
+//       .penalty-row {
+//         background-color: #fff3f3;
+//         color: #dc3545;
+//       }
+//       .finance-disbursement-row {
+//         background-color: #e8f5e9;
+//         color: #2e7d32;
+//       }
+//       .penalty-payment-row {
+//         background-color: #e8f5e9;
+//         color: #2e7d32;
+//       }
+//       @media print {
+//         body {
+//           width: 190mm;
+//           height: 277mm;
+//         }
+//         .no-print {
+//           display: none;
+//         }
+//       }
+//     </style>
+//   </head>
+//   <body>
+//     <div class="container">
+//       <div class="header-container">
+//         <img src="${tvsLogo}" class="logo" alt="TVS Logo">
+//         <div class="header-text"> GANDHI TVS</div>
+//       </div>
+//       <div class="header">
+//         <div>
+//           Authorised Main Dealer: TVS Motor Company Ltd.<br>
+//           Registered office: 'JOGPREET' Asher Estate, Near Ichhamani Lawns,<br>
+//           Upnagar, Nashik Road, Nashik - 422101<br>
+//           Phone: 7498903672
+//         </div>
+//       </div>
+//       <div class="divider"></div>
+//       <div class="customer-info">
+//         <div><strong>Subdealer Name:</strong> ${subdealer.name || ''}</div>
+//         <div><strong>Ledger Date:</strong> ${new Date().toLocaleDateString('en-GB')}</div>
+//       </div>
+      
+//       <table>
+//         <thead>
+//           <tr>
+//             <th width="15%">Date</th>
+//             <th width="35%">Description</th>
+//             <th width="15%">Reference No</th>
+//             <th width="10%" class="text-right">Credit (₹)</th>
+//             <th width="10%" class="text-right">Debit (₹)</th>
+//             <th width="15%" class="text-right">Balance (₹)</th>
+//           </tr>
+//         </thead>
+//         <tbody>
+//           ${transactionsWithBalance
+//             .map(transaction => {
+//               let rowClass = '';
+//               if (transaction.isAllocation) rowClass = 'allocation-row';
+//               if (transaction.isPenalty) rowClass = 'penalty-row';
+//               if (transaction.isFinanceDisbursement) rowClass = 'finance-disbursement-row';
+//               if (transaction.isPenaltyPayment) rowClass = 'penalty-payment-row';
+//               return `
+//               <tr class="${rowClass}">
+//                 <td>${transaction.date}</td>
+//                 <td>${transaction.description}</td>
+//                 <td>${transaction.referenceNo}</td>
+//                 <td class="text-right">${transaction.credit > 0 ? transaction.credit.toLocaleString('en-IN') : '0'}</td>
+//                 <td class="text-right">${transaction.debit > 0 ? transaction.debit.toLocaleString('en-IN') : '0'}</td>
+//                 <td class="text-right">${transaction.balance.toLocaleString('en-IN')}</td>
+//               </tr>
+//             `})
+//             .join('')}
+          
+//           <!-- Total Row -->
+//           <tr class="total-row">
+//             <td colspan="3" class="text-left">Total</td>
+//             <td class="text-right">${totalCredit.toLocaleString('en-IN')}</td>
+//             <td class="text-right">${totalDebit.toLocaleString('en-IN')}</td>
+//             <td class="text-right">${runningBalance.toLocaleString('en-IN')}</td>
+//           </tr>
+          
+//           <!-- On Account Balance Row -->
+//           <tr class="bold-row">
+//             <td colspan="5" class="text-left">On Account Balance</td>
+//             <td class="text-right">${onAccountBalance.toLocaleString('en-IN')}</td>
+//           </tr>
+          
+//           <!-- Final Balance Row -->
+//           <tr class="bold-row">
+//             <td colspan="5" class="text-left">Final Balance</td>
+//             <td class="text-right">${finalBalance.toLocaleString('en-IN')}</td>
+//           </tr>
+//         </tbody>
+//       </table>
+      
+//       <div class="footer">
+//         <div class="footer-left">
+//           <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(ledgerUrl)}" 
+//                class="qr-code" 
+//                alt="QR Code" />
+//         </div>
+//         <div class="footer-right">
+//           <p>For, Gandhi TVS</p>
+//           <p>Authorised Signatory</p>
+//         </div>
+//       </div>
+//     </div>
+    
+//     <script>
+//       window.onload = function() {
+//         setTimeout(() => {
+//           window.print();
+//         }, 300);
+//       };
+//     </script>
+//   </body>
+// </html>
+// `);
+//   } catch (err) {
+//     console.error('Error fetching ledger:', err);
+//     showError('Failed to load ledger. Please try again.');
+//   }
+// };
+
+//   if (!canViewSubdealerLedger) {
+//     return (
+//       <div className="alert alert-danger m-3" role="alert">
+//         You do not have permission to view Subdealer Ledger.
+//       </div>
+//     );
+//   }
+
+//   if (error) {
+//     return (
+//       <div className="alert alert-danger" role="alert">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div>
+//       <div className='title'>Subdealer Ledger</div>
+    
+//       <CCard className='table-container mt-4'>
+//         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
+//           <CNav variant="tabs" className="mb-0 border-bottom">
+//             {canViewSubDealerTab && (
+//               <CNavItem>
+//                 <CNavLink
+//                   active={activeTab === 0}
+//                   onClick={() => handleTabChange(0)}
+//                   style={{ 
+//                     cursor: 'pointer',
+//                     borderTop: activeTab === 0 ? '4px solid #2759a2' : '3px solid transparent',
+//                     color: 'black',
+//                     borderBottom: 'none'
+//                   }}
+//                 >
+//                   Sub Dealer
+//                 </CNavLink>
+//               </CNavItem>
+//             )}
+//             {canViewSubDealerUTRTab && (
+//               <CNavItem>
+//                 <CNavLink
+//                   active={activeTab === 1}
+//                   onClick={() => handleTabChange(1)}
+//                   style={{ 
+//                     cursor: 'pointer',
+//                     borderTop: activeTab === 1 ? '4px solid #2759a2' : '3px solid transparent',
+//                     borderBottom: 'none',
+//                     color: 'black'
+//                   }}
+//                 >
+//                   Sub Dealer UTR
+//                 </CNavLink>
+//               </CNavItem>
+//             )}
+//           </CNav>
+//         </CCardHeader>
+        
+//         <CCardBody>
+//           <CTabContent>
+//             {canViewSubDealerTab && (
+//               <CTabPane visible={activeTab === 0} className="p-0">
+               
+                
+//                 <div className="d-flex justify-content-between mb-3">
+//                   <div></div>
+//                   <div className='d-flex'>
+//                     <CFormLabel className='mt-1 m-1'>Search:</CFormLabel>
+//                     <CFormInput
+//                       type="text"
+//                       style={{maxWidth: '350px', height: '30px', borderRadius: '0'}}
+//                       className="d-inline-block square-search"
+//                       value={searchTerm}
+//                       onChange={(e) => handleSearch(e.target.value)}
+                     
+//                     />
+//                     {searchTerm && (
+//                       <CButton 
+//                         size="sm" 
+//                         color="secondary" 
+//                         className="action-btn ms-2"
+//                         onClick={handleResetSearch}
+//                       >
+//                         Reset
+//                       </CButton>
+//                     )}
+//                   </div>
+//                 </div>
+                
+//                 <div className="responsive-table-wrapper">
+//                   <CTable striped bordered hover className='responsive-table'>
+//                     <CTableHead>
+//                       <CTableRow>
+//                         <CTableHeaderCell scope="col">Sr.no</CTableHeaderCell>
+//                         <CTableHeaderCell scope="col">Name</CTableHeaderCell>
+//                         <CTableHeaderCell scope="col">Location</CTableHeaderCell>
+//                         <CTableHeaderCell scope="col">Rate Of Interest</CTableHeaderCell>
+//                         <CTableHeaderCell scope="col">Type</CTableHeaderCell>
+//                         <CTableHeaderCell scope="col">Action</CTableHeaderCell>
+//                       </CTableRow>
+//                     </CTableHead>
+//                     <CTableBody>
+//                       {filteredData.length === 0 ? (
+//                         <CTableRow>
+//                           <CTableDataCell colSpan="6" style={{ color: 'red', textAlign: 'center' }}>
+//                             {isSubdealer 
+//                               ? 'No ledger data available for your account' 
+//                               : 'No subdealers available'}
+//                           </CTableDataCell>
+//                         </CTableRow>
+//                       ) : (
+//                         filteredData.map((subdealer, index) => (
+//                           <CTableRow key={index}>
+//                             <CTableDataCell>{index + 1}</CTableDataCell>
+//                             <CTableDataCell>{subdealer.name}</CTableDataCell>
+//                             <CTableDataCell>{subdealer.location}</CTableDataCell>
+//                             <CTableDataCell>{subdealer.rateOfInterest}</CTableDataCell>
+//                             <CTableDataCell>{subdealer.type}</CTableDataCell>
+//                             <CTableDataCell>
+//                               <CButton 
+//                                 size="sm" 
+//                                 className="action-btn"
+//                                 onClick={() => handleViewLedger(subdealer)}
+//                               >
+//                                 <CIcon icon={cilPrint} className='icon'/> View Ledger
+//                               </CButton>
+//                             </CTableDataCell>
+//                           </CTableRow>
+//                         ))
+//                       )}
+//                     </CTableBody>
+//                   </CTable>
+//                 </div>
+//               </CTabPane>
+//             )}
+            
+//             {canViewSubDealerUTRTab && (
+//               <CTabPane visible={activeTab === 1} className="p-0">
+//                 {error && <CAlert color="danger" className="mb-3">{error}</CAlert>}
+
+//                 <CRow className="mb-4">
+//                   <CCol md={5}>
+//                     <CFormLabel htmlFor="subdealerSelect" className="fw-bold">Select Subdealer</CFormLabel>
+//                     {isSubdealer ? (
+//                       <div>
+//                         <CFormSelect 
+//                           id="subdealerSelect" 
+//                           value={selectedSubdealer} 
+//                           className="square-select bg-light"
+//                           disabled
+//                         >
+//                           <option value={selectedSubdealer}>
+//                             {userSubdealer?.name || 'Your Subdealer Account'}
+//                           </option>
+//                         </CFormSelect>
+//                         <div className="text-muted small mt-1">
+//                           Subdealers can only view their own ledger
+//                         </div>
+//                       </div>
+//                     ) : (
+//                       <CFormSelect 
+//                         id="subdealerSelect" 
+//                         value={selectedSubdealer} 
+//                         onChange={handleSubdealerChange}
+//                         className="square-select"
+//                       >
+//                         <option value="">-- Select Subdealer --</option>
+//                         {subdealers.map((subdealer) => (
+//                           <option key={subdealer._id || subdealer.id} value={subdealer._id || subdealer.id}>
+//                             {subdealer.name} - {subdealer.location}
+//                           </option>
+//                         ))}
+//                       </CFormSelect>
+//                     )}
+//                   </CCol>
+
+//                   <CCol md={5}>
+//                     <CFormLabel htmlFor="receiptSelect" className="fw-bold">Select UTR/Receipt</CFormLabel>
+//                     <CFormSelect
+//                       id="receiptSelect"
+//                       value={selectedReceipt}
+//                       onChange={handleReceiptChange}
+//                       disabled={!selectedSubdealer || receipts.length === 0}
+//                       className="square-select"
+//                     >
+//                       <option value="">-- Select UTR/Receipt --</option>
+//                       {receipts.map((receipt) => {
+//                         const remainingAmount = receipt.amount - (receipt.allocatedTotal || 0);
+//                         return (
+//                           <option key={receipt._id || receipt.id} value={receipt._id || receipt.id} disabled={remainingAmount <= 0}>
+//                             {receipt.refNumber || 'No reference'} - ₹{remainingAmount.toLocaleString()} remaining
+//                           </option>
+//                         );
+//                       })}
+//                     </CFormSelect>
+//                     <small className="text-muted">
+//                       {receipts.length === 0 && selectedSubdealer ? 'No receipts available' : 'Select a UTR to allocate payments'}
+//                     </small>
+//                   </CCol>
+//                   <CCol md={2} className="d-flex align-items-end">
+//                     <CButton className="action-btn w-100">
+//                       View
+//                     </CButton>
+//                   </CCol>
+//                 </CRow>
+//               </CTabPane>
+//             )}
+//           </CTabContent>
+//         </CCardBody>
+//       </CCard>
+//     </div>
+//   );
+// }
+
+// export default SubdealerLedger;
+
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import '../../../css/invoice.css';
 import '../../../css/table.css';
@@ -4996,13 +5956,18 @@ import {
   CTableHeaderCell,
   CTableBody,
   CTableDataCell,
-  CAlert
+  CAlert,
+  CModal,
+  CModalHeader,
+  CModalTitle,
+  CModalBody,
+  CModalFooter
 } from '@coreui/react';
 import { axiosInstance, getDefaultSearchFields, SearchOutlinedIcon, useTableFilter, showError } from 'src/utils/tableImports';
 import tvsLogo from '../../../assets/images/logo.png';
 import config from 'src/config';
 import CIcon from '@coreui/icons-react';
-import { cilPrint} from '@coreui/icons';
+import { cilPrint, cilCalendar } from '@coreui/icons';
 import { useAuth } from '../../../context/AuthContext';
 import { 
   hasSafePagePermission,
@@ -5012,6 +5977,13 @@ import {
   ACTIONS,
   canViewPage
 } from '../../../utils/modulePermissions';
+
+// Import date picker components
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import TextField from '@mui/material/TextField';
+import { enIN } from 'date-fns/locale';
 
 function SubdealerLedger() {
   const [activeTab, setActiveTab] = useState(0);
@@ -5023,6 +5995,14 @@ function SubdealerLedger() {
   const [searchTerm, setSearchTerm] = useState('');
   const { user: authUser } = useAuth();
   const permissions = authUser?.permissions || [];
+  
+  // States for View Ledger Modal
+  const [viewLedgerModalOpen, setViewLedgerModalOpen] = useState(false);
+  const [selectedSubdealerForLedger, setSelectedSubdealerForLedger] = useState(null);
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
+  const [viewLedgerError, setViewLedgerError] = useState('');
+  const [viewLedgerLoading, setViewLedgerLoading] = useState(false);
   
   // Check if user is a subdealer
   const isSubdealer = authUser?.roles?.some(role => role.name === 'SUBDEALER');
@@ -5168,304 +6148,356 @@ function SubdealerLedger() {
     handleFilter('', getDefaultSearchFields('subdealer'));
   };
 
- const handleViewLedger = async (subdealer) => {
-  try {
-    const res = await axiosInstance.get(`/subdealersonaccount/${subdealer._id}/on-account/receipts`);
-    
-    let ledgerEntries = [];
-    let subdealerBookings = [];
-    let accessoryBillings = [];
-    let onAccountBalance = 0;
-    
-    if (res.data && res.data.data) {
-      const responseData = res.data.data;
-      ledgerEntries = responseData.entries || [];
-      onAccountBalance = responseData.totals?.onAccountBalance || 0;
-      
-      subdealerBookings = ledgerEntries
-        .filter(entry => entry.source === 'BOOKING')
-        .map(entry => ({
-          ...entry,
-          customerDetails: {
-            salutation: '',
-            name: entry.customerName || subdealer.name || ''
-          },
-          bookingNumber: entry.receiptNo || entry.bookingNumber,
-          discountedAmount: entry.debit,
-          amount: entry.debit,
-          remark: entry.remark || entry.description,
-          createdAt: entry.timestamp,
-          bookingDate: entry.date
-        }));
-    } else if (res.data && res.data.docs) {
-      ledgerEntries = res.data.docs || [];
-      subdealerBookings = res.data.subdealerBookings || [];
-      accessoryBillings = res.data.accessoryBillings || [];
-      onAccountBalance = res.data.totalOnAccountBalance || 0;
+  // Open the View Ledger modal with date range
+  const handleOpenViewLedger = (subdealer) => {
+    setSelectedSubdealerForLedger(subdealer);
+    setFromDate(null);
+    setToDate(null);
+    setViewLedgerError('');
+    setViewLedgerModalOpen(true);
+  };
+
+  // Close the View Ledger modal
+  const handleCloseViewLedger = () => {
+    setViewLedgerModalOpen(false);
+    setSelectedSubdealerForLedger(null);
+    setFromDate(null);
+    setToDate(null);
+    setViewLedgerError('');
+    setViewLedgerLoading(false);
+  };
+
+  // Generate the ledger with date range filter
+  const handleGenerateLedger = async () => {
+    // Validate dates
+    if (!fromDate) {
+      setViewLedgerError('Please select a From Date');
+      return;
     }
-    
-    const ledgerUrl = `${config.baseURL}/ledger.html?ledgerId=${subdealer._id}`;
+    if (!toDate) {
+      setViewLedgerError('Please select a To Date');
+      return;
+    }
+    if (fromDate > toDate) {
+      setViewLedgerError('From Date cannot be later than To Date');
+      return;
+    }
 
-    let totalCredit = 0;
-    let totalDebit = 0;
-    let runningBalance = 0;
+    setViewLedgerError('');
+    setViewLedgerLoading(true);
 
-    const allTransactions = [];
+    try {
+      const subdealer = selectedSubdealerForLedger;
+      
+      // Format dates for API
+      const fromDateStr = fromDate.toISOString().split('T')[0];
+      const toDateStr = toDate.toISOString().split('T')[0];
 
-    // Process subdealer bookings (debit transactions)
-    subdealerBookings.forEach((booking) => {
-      allTransactions.push({
-        type: 'booking',
-        data: booking,
-        date: new Date(booking.createdAt || booking.bookingDate || booking.receivedDate),
-        debit: booking.discountedAmount || 0
-      });
-    });
-
-    // Process accessory billings - ONLY include if isDebit is true
-    accessoryBillings.forEach((accessory) => {
-      if (accessory.isDebit) {
-        allTransactions.push({
-          type: 'accessory',
-          data: accessory,
-          date: new Date(accessory.createdAt),
-          debit: accessory.amount || 0
-        });
-      }
-    });
-
-    // Process ledger entries including ON_ACCOUNT_RECEIPT, ALLOCATION, PENALTY_MODEL, FINANCE_DISBURSEMENT, and PENALTY_PAYMENT
-    ledgerEntries.forEach((entry) => {
-      // Process ON_ACCOUNT_RECEIPT entries and their allocations
-      if (entry.source === 'ON_ACCOUNT_RECEIPT') {
-        // Main receipt entry (credit entry)
-        allTransactions.push({
-          type: 'receipt',
-          data: entry,
-          date: new Date(entry.timestamp || entry.createdAt),
-          credit: entry.credit || 0,
-          isReceipt: true
-        });
+      const res = await axiosInstance.get(
+        `/subdealersonaccount/${subdealer._id}/on-account/receipts`,
+        {
+          params: {
+            from: fromDateStr,
+            to: toDateStr
+          }
+        }
+      );
+      
+      let ledgerEntries = [];
+      let subdealerBookings = [];
+      let accessoryBillings = [];
+      let onAccountBalance = 0;
+      
+      if (res.data && res.data.data) {
+        const responseData = res.data.data;
+        ledgerEntries = responseData.entries || [];
+        onAccountBalance = responseData.totals?.onAccountBalance || 0;
         
-        // Process allocation breakdown for this receipt
-        if (entry.receiptDetails && entry.receiptDetails.allocationBreakdown && 
-            entry.receiptDetails.allocationBreakdown.length > 0) {
-          
-          entry.receiptDetails.allocationBreakdown.forEach((allocation) => {
-            allTransactions.push({
-              type: 'allocation',
-              data: allocation,
-              parentReceipt: entry,
-              date: new Date(allocation.allocatedAt || entry.timestamp),
-              credit: allocation.allocatedAmount || 0,
-              isAllocation: true,
-              receiptNo: entry.receiptNo
-            });
+        subdealerBookings = ledgerEntries
+          .filter(entry => entry.source === 'BOOKING')
+          .map(entry => ({
+            ...entry,
+            customerDetails: {
+              salutation: '',
+              name: entry.customerName || subdealer.name || ''
+            },
+            bookingNumber: entry.receiptNo || entry.bookingNumber,
+            discountedAmount: entry.debit,
+            amount: entry.debit,
+            remark: entry.remark || entry.description,
+            createdAt: entry.timestamp,
+            bookingDate: entry.date
+          }));
+      } else if (res.data && res.data.docs) {
+        ledgerEntries = res.data.docs || [];
+        subdealerBookings = res.data.subdealerBookings || [];
+        accessoryBillings = res.data.accessoryBillings || [];
+        onAccountBalance = res.data.totalOnAccountBalance || 0;
+      }
+      
+      const ledgerUrl = `${config.baseURL}/ledger.html?ledgerId=${subdealer._id}`;
+
+      let totalCredit = 0;
+      let totalDebit = 0;
+      let runningBalance = 0;
+
+      const allTransactions = [];
+
+      // Process subdealer bookings (debit transactions)
+      subdealerBookings.forEach((booking) => {
+        allTransactions.push({
+          type: 'booking',
+          data: booking,
+          date: new Date(booking.createdAt || booking.bookingDate || booking.receivedDate),
+          debit: booking.discountedAmount || 0
+        });
+      });
+
+      // Process accessory billings - ONLY include if isDebit is true
+      accessoryBillings.forEach((accessory) => {
+        if (accessory.isDebit) {
+          allTransactions.push({
+            type: 'accessory',
+            data: accessory,
+            date: new Date(accessory.createdAt),
+            debit: accessory.amount || 0
           });
         }
-      } 
-      // Process FINANCE_DISBURSEMENT entries
-      else if (entry.source === 'FINANCE_DISBURSEMENT') {
-        allTransactions.push({
-          type: 'finance_disbursement',
-          data: entry,
-          date: new Date(entry.timestamp || entry.createdAt || entry.disbursementDate),
-          credit: entry.credit || entry.amount || 0,
-          debit: entry.debit || 0,
-          isFinanceDisbursement: true
-        });
-      }
-      // Process PENALTY_PAYMENT entries (penalty payment received - CREDIT)
-      else if (entry.source === 'PENALTY_PAYMENT') {
-        allTransactions.push({
-          type: 'penalty_payment',
-          data: entry,
-          date: new Date(entry.timestamp || entry.createdAt || entry.paymentDate),
-          credit: entry.credit || entry.amount || 0,
-          isPenaltyPayment: true
-        });
-      }
-      // Process regular ALLOCATION entries
-      else if (entry.source === 'ALLOCATION') {
-        allTransactions.push({
-          type: 'allocation',
-          data: entry,
-          date: new Date(entry.timestamp || entry.createdAt),
-          credit: entry.credit || 0,
-          debit: entry.debit || 0
-        });
-      }
-      // Process PENALTY_MODEL entries (penalty charges - DEBIT)
-      else if (entry.source === 'PENALTY_MODEL') {
-        allTransactions.push({
-          type: 'penalty',
-          data: entry,
-          date: new Date(entry.timestamp || entry.createdAt || entry.approvedAt),
-          debit: entry.debit || 0,
-          isPenalty: true
-        });
-      }
-    });
+      });
 
-    // Sort all transactions by date (oldest first)
-    allTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-    // Calculate running balances with INVERTED logic
-    const transactionsWithBalance = allTransactions.map(transaction => {
-      let description = '';
-      let referenceNo = '';
-      let date = '';
-      let formattedDate = '';
-      let credit = 0;
-      let debit = 0;
-      
-      if (transaction.type === 'booking') {
-        const booking = transaction.data;
-        
-        debit = transaction.debit || 0;
-        runningBalance += debit;
-        totalDebit += debit;
-        
-        description = `Booking Created<br>Customer: ${booking.customerDetails?.salutation || ''} ${booking.customerDetails?.name || 'N/A'}<br>${booking.remark || ''} Chassis No: ${booking.chassisNo || ''}`;
-        referenceNo = booking.bookingNumber || '';
-        
-        const dateToFormat = transaction.date || 
-                            new Date(booking.bookingDate) || 
-                            new Date(booking.createdAt) || 
-                            (transaction.parentReceipt ? new Date(transaction.parentReceipt.createdAt) : new Date());
-        date = dateToFormat;
-        formattedDate = dateToFormat.toLocaleDateString('en-GB');
+      // Process ledger entries including ON_ACCOUNT_RECEIPT, ALLOCATION, PENALTY_MODEL, FINANCE_DISBURSEMENT, and PENALTY_PAYMENT
+      ledgerEntries.forEach((entry) => {
+        // Process ON_ACCOUNT_RECEIPT entries and their allocations
+        if (entry.source === 'ON_ACCOUNT_RECEIPT') {
+          // Main receipt entry (credit entry)
+          allTransactions.push({
+            type: 'receipt',
+            data: entry,
+            date: new Date(entry.timestamp || entry.createdAt),
+            credit: entry.credit || 0,
+            isReceipt: true
+          });
           
-      } else if (transaction.type === 'accessory') {
-        const accessory = transaction.data;
-        
-        debit = transaction.debit || 0;
-        runningBalance += debit;
-        totalDebit += debit;
-        
-        description = `Accessory Billing<br>${accessory.remark || 'Accessory Purchase'}`;
-        referenceNo = accessory.transactionReference || '';
-        const dateToFormat = transaction.date || new Date(accessory.createdAt);
-        date = dateToFormat;
-        formattedDate = dateToFormat.toLocaleDateString('en-GB');
-        
-      } else if (transaction.type === 'receipt') {
-        const receipt = transaction.data;
-        
-        credit = receipt.credit || 0;
-        runningBalance -= credit;
-        totalCredit += credit;
-        
-        description = `On-Account Payment Received<br>${receipt.remark || ''}`;
-        referenceNo = receipt.receiptNo || '';
-        const dateToFormat = transaction.date || new Date(receipt.timestamp);
-        date = dateToFormat;
-        formattedDate = dateToFormat.toLocaleDateString('en-GB');
-        
-      } else if (transaction.type === 'finance_disbursement') {
-        const financeEntry = transaction.data;
-        
-        credit = transaction.credit || 0;
-        runningBalance -= credit;
-        totalCredit += credit;
-        
-        // Use description directly from API response
-        description = financeEntry.description || financeEntry.remark || 'Finance Disbursement Received';
-        
-        referenceNo = financeEntry.disbursementNumber || financeEntry.transactionId || financeEntry.receiptNo || '';
-        const dateToFormat = transaction.date || new Date(financeEntry.timestamp || financeEntry.disbursementDate);
-        date = dateToFormat;
-        formattedDate = dateToFormat.toLocaleDateString('en-GB');
-        
-      } else if (transaction.type === 'penalty_payment') {
-        const penaltyPayment = transaction.data;
-        
-        credit = transaction.credit || 0;
-        runningBalance -= credit;
-        totalCredit += credit;
-        
-        description = `Penalty Payment Received<br>${penaltyPayment.remark || penaltyPayment.description || 'Penalty payment received'}`;
-        referenceNo = penaltyPayment.receiptNo || penaltyPayment.transactionId || '';
-        const dateToFormat = transaction.date || new Date(penaltyPayment.timestamp || penaltyPayment.paymentDate);
-        date = dateToFormat;
-        formattedDate = dateToFormat.toLocaleDateString('en-GB');
-        
-      } else if (transaction.type === 'allocation') {
-        const allocation = transaction.data;
-        
-        if (transaction.isAllocation) {
-          credit = allocation.allocatedAmount || 0;
-          runningBalance += credit;
-          totalCredit += credit;
-          
-          description = `Payment Allocated to Booking ${allocation.bookingNumber}<br>Customer: ${allocation.customerName}`;
-          if (allocation.remark) {
-            description += `<br>${allocation.remark}`;
+          // Process allocation breakdown for this receipt
+          if (entry.receiptDetails && entry.receiptDetails.allocationBreakdown && 
+              entry.receiptDetails.allocationBreakdown.length > 0) {
+            
+            entry.receiptDetails.allocationBreakdown.forEach((allocation) => {
+              allTransactions.push({
+                type: 'allocation',
+                data: allocation,
+                parentReceipt: entry,
+                date: new Date(allocation.allocatedAt || entry.timestamp),
+                credit: allocation.allocatedAmount || 0,
+                isAllocation: true,
+                receiptNo: entry.receiptNo
+              });
+            });
           }
-          referenceNo = transaction.receiptNo || '';
-          const dateToFormat = transaction.date || new Date(allocation.allocatedAt);
+        } 
+        // Process FINANCE_DISBURSEMENT entries
+        else if (entry.source === 'FINANCE_DISBURSEMENT') {
+          allTransactions.push({
+            type: 'finance_disbursement',
+            data: entry,
+            date: new Date(entry.timestamp || entry.createdAt || entry.disbursementDate),
+            credit: entry.credit || entry.amount || 0,
+            debit: entry.debit || 0,
+            isFinanceDisbursement: true
+          });
+        }
+        // Process PENALTY_PAYMENT entries (penalty payment received - CREDIT)
+        else if (entry.source === 'PENALTY_PAYMENT') {
+          allTransactions.push({
+            type: 'penalty_payment',
+            data: entry,
+            date: new Date(entry.timestamp || entry.createdAt || entry.paymentDate),
+            credit: entry.credit || entry.amount || 0,
+            isPenaltyPayment: true
+          });
+        }
+        // Process regular ALLOCATION entries
+        else if (entry.source === 'ALLOCATION') {
+          allTransactions.push({
+            type: 'allocation',
+            data: entry,
+            date: new Date(entry.timestamp || entry.createdAt),
+            credit: entry.credit || 0,
+            debit: entry.debit || 0
+          });
+        }
+        // Process PENALTY_MODEL entries (penalty charges - DEBIT)
+        else if (entry.source === 'PENALTY_MODEL') {
+          allTransactions.push({
+            type: 'penalty',
+            data: entry,
+            date: new Date(entry.timestamp || entry.createdAt || entry.approvedAt),
+            debit: entry.debit || 0,
+            isPenalty: true
+          });
+        }
+      });
+
+      // Sort all transactions by date (oldest first)
+      allTransactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+      // Calculate running balances with INVERTED logic
+      const transactionsWithBalance = allTransactions.map(transaction => {
+        let description = '';
+        let referenceNo = '';
+        let date = '';
+        let formattedDate = '';
+        let credit = 0;
+        let debit = 0;
+        
+        if (transaction.type === 'booking') {
+          const booking = transaction.data;
+          
+          debit = transaction.debit || 0;
+          runningBalance += debit;
+          totalDebit += debit;
+          
+          description = `Booking Created<br>Customer: ${booking.customerDetails?.salutation || ''} ${booking.customerDetails?.name || 'N/A'}<br>${booking.remark || ''} Chassis No: ${booking.chassisNo || ''}`;
+          referenceNo = booking.bookingNumber || '';
+          
+          const dateToFormat = transaction.date || 
+                              new Date(booking.bookingDate) || 
+                              new Date(booking.createdAt) || 
+                              (transaction.parentReceipt ? new Date(transaction.parentReceipt.createdAt) : new Date());
           date = dateToFormat;
           formattedDate = dateToFormat.toLocaleDateString('en-GB');
-        } else {
-          credit = allocation.credit || 0;
-          debit = allocation.debit || 0;
+            
+        } else if (transaction.type === 'accessory') {
+          const accessory = transaction.data;
           
-          if (credit > 0) {
-            runningBalance -= credit;
+          debit = transaction.debit || 0;
+          runningBalance += debit;
+          totalDebit += debit;
+          
+          description = `Accessory Billing<br>${accessory.remark || 'Accessory Purchase'}`;
+          referenceNo = accessory.transactionReference || '';
+          const dateToFormat = transaction.date || new Date(accessory.createdAt);
+          date = dateToFormat;
+          formattedDate = dateToFormat.toLocaleDateString('en-GB');
+          
+        } else if (transaction.type === 'receipt') {
+          const receipt = transaction.data;
+          
+          credit = receipt.credit || 0;
+          runningBalance -= credit;
+          totalCredit += credit;
+          
+          description = `On-Account Payment Received<br>${receipt.remark || ''}`;
+          referenceNo = receipt.receiptNo || '';
+          const dateToFormat = transaction.date || new Date(receipt.timestamp);
+          date = dateToFormat;
+          formattedDate = dateToFormat.toLocaleDateString('en-GB');
+          
+        } else if (transaction.type === 'finance_disbursement') {
+          const financeEntry = transaction.data;
+          
+          credit = transaction.credit || 0;
+          runningBalance -= credit;
+          totalCredit += credit;
+          
+          // Use description directly from API response
+          description = financeEntry.description || financeEntry.remark || 'Finance Disbursement Received';
+          
+          referenceNo = financeEntry.disbursementNumber || financeEntry.transactionId || financeEntry.receiptNo || '';
+          const dateToFormat = transaction.date || new Date(financeEntry.timestamp || financeEntry.disbursementDate);
+          date = dateToFormat;
+          formattedDate = dateToFormat.toLocaleDateString('en-GB');
+          
+        } else if (transaction.type === 'penalty_payment') {
+          const penaltyPayment = transaction.data;
+          
+          credit = transaction.credit || 0;
+          runningBalance -= credit;
+          totalCredit += credit;
+          
+          description = `Penalty Payment Received<br>${penaltyPayment.remark || penaltyPayment.description || 'Penalty payment received'}`;
+          referenceNo = penaltyPayment.receiptNo || penaltyPayment.transactionId || '';
+          const dateToFormat = transaction.date || new Date(penaltyPayment.timestamp || penaltyPayment.paymentDate);
+          date = dateToFormat;
+          formattedDate = dateToFormat.toLocaleDateString('en-GB');
+          
+        } else if (transaction.type === 'allocation') {
+          const allocation = transaction.data;
+          
+          if (transaction.isAllocation) {
+            credit = allocation.allocatedAmount || 0;
+            runningBalance += credit;
             totalCredit += credit;
+            
+            description = `Payment Allocated to Booking ${allocation.bookingNumber}<br>Customer: ${allocation.customerName}`;
+            if (allocation.remark) {
+              description += `<br>${allocation.remark}`;
+            }
+            referenceNo = transaction.receiptNo || '';
+            const dateToFormat = transaction.date || new Date(allocation.allocatedAt);
+            date = dateToFormat;
+            formattedDate = dateToFormat.toLocaleDateString('en-GB');
+          } else {
+            credit = allocation.credit || 0;
+            debit = allocation.debit || 0;
+            
+            if (credit > 0) {
+              runningBalance -= credit;
+              totalCredit += credit;
+            }
+            if (debit > 0) {
+              runningBalance += debit;
+              totalDebit += debit;
+            }
+            
+            description = allocation.description || 'Payment Allocation';
+            if (allocation.remark) {
+              description += `<br>${allocation.remark}`;
+            }
+            referenceNo = allocation.receiptNo || '';
+            const dateToFormat = transaction.date || new Date(allocation.timestamp);
+            date = dateToFormat;
+            formattedDate = dateToFormat.toLocaleDateString('en-GB');
           }
-          if (debit > 0) {
-            runningBalance += debit;
-            totalDebit += debit;
-          }
+        } else if (transaction.type === 'penalty') {
+          const penalty = transaction.data;
           
-          description = allocation.description || 'Payment Allocation';
-          if (allocation.remark) {
-            description += `<br>${allocation.remark}`;
-          }
-          referenceNo = allocation.receiptNo || '';
-          const dateToFormat = transaction.date || new Date(allocation.timestamp);
+          debit = penalty.debit || 0;
+          runningBalance += debit;
+          totalDebit += debit;
+          
+          description = `Penalty Charged<br>${penalty.remark || 'Penalty imposed'}`;
+          referenceNo = penalty.receiptNo || '';
+          const dateToFormat = transaction.date || new Date(penalty.timestamp || penalty.approvedAt);
           date = dateToFormat;
           formattedDate = dateToFormat.toLocaleDateString('en-GB');
         }
-      } else if (transaction.type === 'penalty') {
-        const penalty = transaction.data;
         
-        debit = penalty.debit || 0;
-        runningBalance += debit;
-        totalDebit += debit;
-        
-        description = `Penalty Charged<br>${penalty.remark || 'Penalty imposed'}`;
-        referenceNo = penalty.receiptNo || '';
-        const dateToFormat = transaction.date || new Date(penalty.timestamp || penalty.approvedAt);
-        date = dateToFormat;
-        formattedDate = dateToFormat.toLocaleDateString('en-GB');
-      }
-      
-      return {
-        date: formattedDate,
-        rawDate: date,
-        description,
-        referenceNo,
-        credit: credit || 0,
-        debit: debit || 0,
-        balance: runningBalance,
-        isAllocation: transaction.isAllocation,
-        isReceipt: transaction.isReceipt,
-        isPenalty: transaction.isPenalty,
-        isFinanceDisbursement: transaction.isFinanceDisbursement,
-        isPenaltyPayment: transaction.isPenaltyPayment
-      };
-    });
+        return {
+          date: formattedDate,
+          rawDate: date,
+          description,
+          referenceNo,
+          credit: credit || 0,
+          debit: debit || 0,
+          balance: runningBalance,
+          isAllocation: transaction.isAllocation,
+          isReceipt: transaction.isReceipt,
+          isPenalty: transaction.isPenalty,
+          isFinanceDisbursement: transaction.isFinanceDisbursement,
+          isPenaltyPayment: transaction.isPenaltyPayment
+        };
+      });
 
-    // Sort transactions by raw date
-    transactionsWithBalance.sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
+      // Sort transactions by raw date
+      transactionsWithBalance.sort((a, b) => a.rawDate.getTime() - b.rawDate.getTime());
 
-    // Calculate the final balance including remaining on-account balance
-    const finalBalance = runningBalance;
+      // Calculate the final balance including remaining on-account balance
+      const finalBalance = runningBalance;
 
-    const win = window.open('', '_blank');
-    win.document.write(`
+      // Open print window
+      const win = window.open('', '_blank');
+      win.document.write(`
 <!DOCTYPE html>
 <html>
   <head>
@@ -5598,6 +6630,14 @@ function SubdealerLedger() {
         background-color: #e8f5e9;
         color: #2e7d32;
       }
+      .date-range-info {
+        margin-bottom: 5mm;
+        padding: 2mm;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 13px;
+      }
       @media print {
         body {
           width: 190mm;
@@ -5627,6 +6667,10 @@ function SubdealerLedger() {
       <div class="customer-info">
         <div><strong>Subdealer Name:</strong> ${subdealer.name || ''}</div>
         <div><strong>Ledger Date:</strong> ${new Date().toLocaleDateString('en-GB')}</div>
+      </div>
+      
+      <div class="date-range-info">
+        <strong>Date Range:</strong> ${fromDate.toLocaleDateString('en-GB')} to ${toDate.toLocaleDateString('en-GB')}
       </div>
       
       <table>
@@ -5705,11 +6749,16 @@ function SubdealerLedger() {
   </body>
 </html>
 `);
-  } catch (err) {
-    console.error('Error fetching ledger:', err);
-    showError('Failed to load ledger. Please try again.');
-  }
-};
+      
+      // Close the modal after generating
+      handleCloseViewLedger();
+      
+    } catch (err) {
+      console.error('Error fetching ledger:', err);
+      setViewLedgerError('Failed to load ledger. Please try again.');
+      setViewLedgerLoading(false);
+    }
+  };
 
   if (!canViewSubdealerLedger) {
     return (
@@ -5833,7 +6882,7 @@ function SubdealerLedger() {
                               <CButton 
                                 size="sm" 
                                 className="action-btn"
-                                onClick={() => handleViewLedger(subdealer)}
+                                onClick={() => handleOpenViewLedger(subdealer)}
                               >
                                 <CIcon icon={cilPrint} className='icon'/> View Ledger
                               </CButton>
@@ -5921,6 +6970,99 @@ function SubdealerLedger() {
           </CTabContent>
         </CCardBody>
       </CCard>
+
+      {/* View Ledger Modal with Date Range */}
+      <CModal 
+        alignment="center" 
+        visible={viewLedgerModalOpen} 
+        onClose={handleCloseViewLedger} 
+        size="lg"
+      >
+        <CModalHeader>
+          <CModalTitle>
+            <CIcon icon={cilCalendar} className="me-2" />
+            View Ledger - {selectedSubdealerForLedger?.name || ''}
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {viewLedgerError && (
+            <CAlert color="danger" className="mb-3">
+              {viewLedgerError}
+            </CAlert>
+          )}
+          
+          <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enIN}>
+            <CRow className="mb-3">
+              <CCol md={6}>
+                <CFormLabel className="fw-bold">From Date <span className='required'>*</span></CFormLabel>
+                <DatePicker
+                  label="Select From Date"
+                  value={fromDate}
+                  onChange={(newValue) => {
+                    setFromDate(newValue);
+                    setViewLedgerError('');
+                  }}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: 'outlined',
+                      size: 'small'
+                    }
+                  }}
+                />
+              </CCol>
+              <CCol md={6}>
+                <CFormLabel className="fw-bold">To Date <span className='required'>*</span></CFormLabel>
+                <DatePicker
+                  label="Select To Date"
+                  value={toDate}
+                  onChange={(newValue) => {
+                    setToDate(newValue);
+                    setViewLedgerError('');
+                  }}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: 'outlined',
+                      size: 'small'
+                    }
+                  }}
+                />
+              </CCol>
+            </CRow>
+          </LocalizationProvider>
+
+          <div className="alert alert-info mb-0">
+            <CIcon icon={cilCalendar} className="me-2" />
+            Select the date range to filter ledger transactions.
+          </div>
+        </CModalBody>
+        <CModalFooter>
+          <CButton 
+            color="secondary" 
+            onClick={handleCloseViewLedger}
+            disabled={viewLedgerLoading}
+          >
+            Cancel
+          </CButton>
+          <CButton 
+            className="submit-button"
+            onClick={handleGenerateLedger}
+            disabled={viewLedgerLoading}
+          >
+            {viewLedgerLoading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Loading...
+              </>
+            ) : (
+              <>
+                <CIcon icon={cilPrint} className="me-1" /> Generate & Print
+              </>
+            )}
+          </CButton>
+        </CModalFooter>
+      </CModal>
     </div>
   );
 }

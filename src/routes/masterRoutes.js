@@ -105,6 +105,8 @@
 import React from 'react';
 
 
+
+
 const AddBranch = React.lazy(() => import('../views/masters/branch/AddBranch'))
 const BranchList = React.lazy(() => import('../views/masters/branch/BranchList'))
 const AddHeader = React.lazy(() => import('../views/masters/headers/AddHeader'))
@@ -196,6 +198,8 @@ export const masterRoutes = [
     { path:'/conditions/conditions-list',name:"Color List", element:ConditionList},
     { path:'/conditions/add-condition',name:"Add Color", element:AddCondition},
     { path:'/conditions/update-condition/:id',name:"Update Color", element:AddCondition},
+
+   
   
     { path:'/offers/offer-list', name:'Offers List', element:OffersList},
     { path:'/offers/add-offer', name:'Add Offers', element:AddOffers},

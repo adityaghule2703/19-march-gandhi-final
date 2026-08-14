@@ -14,6 +14,7 @@ import { branchStockAuditRoutes } from './routes/branchStockAuditRoutes'
 import { stockMovementRoutes } from './routes/stockMovementRoutes'
 import { serviceManagementRoutes } from './routes/serviceManagementRoutes'
 import { hrManagementRoutes } from './routes/hrManagementRoutes'
+import { aiMasterRoutes } from './routes/aiMasterRoutes'
 
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 
@@ -36,6 +37,8 @@ const routes = [
    
   //Masters
   ...masterRoutes,
+
+  ...aiMasterRoutes,
   //Sales
    ...salesRoutes,
   //RTO

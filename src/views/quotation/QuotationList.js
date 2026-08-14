@@ -4636,7 +4636,7 @@
 
 // const PAGE_SIZE_OPTIONS = [25, 50, 100];
 // const DEFAULT_LIMIT = 25;
-// const BASE_IMAGE_URL = 'https://gandhitvs.in/dealership/api/v1';
+// const BASE_IMAGE_URL = 'https://gmplmis.com/dealership-api/api/v1';
 
 // const CustomersList = () => {
 //   const [anchorEl, setAnchorEl] = useState(null);
@@ -5708,7 +5708,7 @@ import { enIN } from 'date-fns/locale';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_LIMIT = 25;
-const BASE_IMAGE_URL = 'https://gandhitvs.in/dealership/api/v1';
+const BASE_IMAGE_URL = 'https://gmplmis.com/dealership-api/api/v1';
 
 const CustomersList = () => {
   const [anchorEl, setAnchorEl] = useState(null);

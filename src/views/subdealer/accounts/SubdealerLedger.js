@@ -6066,6 +6066,14 @@ function SubdealerLedger() {
     }
   }, [selectedSubdealer]);
 
+  // Helper function to format date in local timezone (YYYY-MM-DD)
+  const formatDateLocal = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const fetchData = async () => {
     try {
       const response = await axiosInstance.get(`/subdealers`);
@@ -6189,9 +6197,9 @@ function SubdealerLedger() {
     try {
       const subdealer = selectedSubdealerForLedger;
       
-      // Format dates for API
-      const fromDateStr = fromDate.toISOString().split('T')[0];
-      const toDateStr = toDate.toISOString().split('T')[0];
+      // Format dates for API - using local date to avoid timezone issues
+      const fromDateStr = formatDateLocal(fromDate);
+      const toDateStr = formatDateLocal(toDate);
 
       const res = await axiosInstance.get(
         `/subdealersonaccount/${subdealer._id}/on-account/receipts`,

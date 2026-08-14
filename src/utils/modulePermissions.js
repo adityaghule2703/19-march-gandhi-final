@@ -6064,7 +6064,10 @@ export const PAGES = {
     VERTICAL_MASTERS: 'Vertical Masters',
     // New Masters pages
     MODEL_ANALYTICS: 'Model Analytics',
-    WALLPAPER: 'Wallpaper'
+    WALLPAPER: 'Wallpaper',
+    // RSA and Insurance Percentage pages
+    RSA_PLAN: 'RSA Plan',
+    INSURANCE_PERCENTAGE: 'Insurance Percentage'
   },
   
   // Fund Master module pages
@@ -6434,6 +6437,9 @@ export const getPageFromRoute = (routePath) => {
     // New Masters routes
     '/modelanalytics/model-analytics': PAGES.MASTERS.MODEL_ANALYTICS,
     '/wallpaper/wallpaper': PAGES.MASTERS.WALLPAPER,
+    // RSA and Insurance Percentage routes
+    '/rsa-plan/rsa-plan-list': PAGES.MASTERS.RSA_PLAN,
+    '/insurance-percentage': PAGES.MASTERS.INSURANCE_PERCENTAGE,
     
     // Fund Master
     '/cash-master': PAGES.FUND_MASTER.CASH_ACCOUNT_MASTER,
@@ -6628,6 +6634,9 @@ export const getModuleFromRoute = (routePath) => {
     // New Masters routes
     '/modelanalytics/model-analytics': MODULES.MASTERS,
     '/wallpaper/wallpaper': MODULES.MASTERS,
+    // RSA and Insurance Percentage routes
+    '/rsa-plan/rsa-plan-list': MODULES.MASTERS,
+    '/insurance-percentage': MODULES.MASTERS,
     
     // Fund Master
     '/cash-master': MODULES.FUND_MASTER,

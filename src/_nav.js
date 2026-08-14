@@ -4523,6 +4523,32 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
     });
   }
 
+  // const aiMasterItems = []
+
+  //  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION)) {
+  //   aiMasterItems.push({
+  //     component: CNavItem,
+  //     name: 'RSA Plan',
+  //     to: '/rsa-plan/rsa-plan-list',
+  //   });
+  // }
+  //  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION)) {
+  //   aiMasterItems.push({
+  //     component: CNavItem,
+  //     name: 'Insurance Percentage',
+  //     to: '/insurance-percentage',
+  //   });
+  // }
+
+  // if (aiMasterItems.length > 0) {
+  //   _nav.push({
+  //     component: CNavGroup,
+  //     name: 'AI Masters',
+  //     icon: <CIcon icon={cilLibrary} customClassName="nav-icon" />,
+  //     items: aiMasterItems,
+  //   });
+  // }
+
   // Masters Group
   const mastersItems = []
   
@@ -4581,6 +4607,8 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
       to: '/templateform/template-list',
     });
   }
+
+ 
   
   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.ACCESSORIES)) {
     mastersItems.push({

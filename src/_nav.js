@@ -4584,6 +4584,14 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
     });
   }
 
+   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES)) {
+    mastersItems.push({
+      component: CNavItem,
+      name: 'Download Insurance',
+      to: '/downloadinsurance/downloadinsurance',
+    });
+  }
+
   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES)) {
     mastersItems.push({
       component: CNavItem,

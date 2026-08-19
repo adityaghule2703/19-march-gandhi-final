@@ -29940,7 +29940,9 @@ function SubdealerNewBooking() {
     pincode: '',
     mobile1: '',
     mobile2: '',
+    email: '', // ADDED
     aadhar_number: '',
+    nominiSalutation: '', // ADDED
     nomineeName: '',
     nomineeRelation: '',
     nomineeAge: '',
@@ -30011,6 +30013,12 @@ function SubdealerNewBooking() {
 
   const navigate = useNavigate();
   const { id } = useParams();
+
+  // Email validation function
+  const validateEmail = (email) => {
+    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex.test(email);
+  };
 
   // ===== Function to distribute discount - SIMPLE PERCENTAGE OF TOTAL =====
   const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
@@ -30448,7 +30456,9 @@ function SubdealerNewBooking() {
       pincode: bookingData.customerDetails?.pincode || '',
       mobile1: bookingData.customerDetails?.mobile1 || '',
       mobile2: bookingData.customerDetails?.mobile2 || '',
+      email: bookingData.customerDetails?.email || '', // ADDED
       aadhar_number: bookingData.customerDetails?.aadharNumber || '',
+      nominiSalutation: bookingData.customerDetails?.nominiSalutation || '', // ADDED
       nomineeName: bookingData.customerDetails?.nomineeName || '',
       nomineeRelation: bookingData.customerDetails?.nomineeRelation || '',
       nomineeAge: bookingData.customerDetails?.nomineeAge || '',
@@ -30675,6 +30685,7 @@ function SubdealerNewBooking() {
         'name',
         'address',
         'mobile1',
+        'email', // ADDED
         'aadhar_number',
         'pan_no',
         'dob',
@@ -30682,6 +30693,7 @@ function SubdealerNewBooking() {
         'taluka',
         'district',
         'pincode',
+        'nominiSalutation', // ADDED
         'nomineeName',
         'nomineeRelation',
         'nomineeAge'
@@ -30698,6 +30710,9 @@ function SubdealerNewBooking() {
       }
       if (formData.mobile2 && !validateMobileNumber(formData.mobile2)) {
         newErrors.mobile2 = 'Invalid mobile number';
+      }
+      if (formData.email && !validateEmail(formData.email)) { // ADDED
+        newErrors.email = 'Invalid email format';
       }
       if (formData.pan_no && !validatePAN(formData.pan_no)) {
         newErrors.pan_no = 'Invalid PAN number';
@@ -31199,6 +31214,7 @@ function SubdealerNewBooking() {
       'name',
       'address',
       'mobile1',
+      'email', // ADDED
       'aadhar_number',
       'pan_no'
     ];
@@ -31229,6 +31245,10 @@ function SubdealerNewBooking() {
 
     if (formData.selfInsurance === true && formData.insuranceFivePlusFive === true) {
       formErrors.insurance = 'Self Insurance and Insurance 5+5 cannot both be true';
+    }
+
+    if (formData.email && !validateEmail(formData.email)) { // ADDED
+      formErrors.email = 'Invalid email format';
     }
 
     if (Object.keys(formErrors).length > 0) {
@@ -31306,7 +31326,9 @@ function SubdealerNewBooking() {
         pincode: formData.pincode,
         mobile1: formData.mobile1,
         mobile2: formData.mobile2,
+        email: formData.email || '', // ADDED
         aadhar_number: formData.aadhar_number,
+        nominiSalutation: formData.nominiSalutation || '', // ADDED
         nomineeName: formData.nomineeName,
         nomineeRelation: formData.nomineeRelation,
         nomineeAge: formData.nomineeAge ? parseInt(formData.nomineeAge) : undefined
@@ -31982,6 +32004,27 @@ function SubdealerNewBooking() {
                     {errors.name && <p className="error">{errors.name}</p>}
                   </div>
 
+                  {/* Email Field - ADDED */}
+                  <div className="input-box">
+                    <div className="details-container">
+                      <span className="details">Email</span>
+                      <span className="required">*</span>
+                    </div>
+                    <CInputGroup>
+                      <CInputGroupText className="input-icon">
+                        <CIcon icon={cilEnvelopeClosed} />
+                      </CInputGroupText>
+                      <CFormInput 
+                        type="email" 
+                        name="email" 
+                        value={formData.email} 
+                        onChange={handleChange} 
+                        placeholder="Enter email address"
+                      />
+                    </CInputGroup>
+                    {errors.email && <p className="error">{errors.email}</p>}
+                  </div>
+
                   <div className="input-box">
                     <div className="details-container">
                       <span className="details">Address</span>
@@ -32124,6 +32167,28 @@ function SubdealerNewBooking() {
                       </CFormSelect>
                     </CInputGroup>
                     {errors.occupation && <p className="error">{errors.occupation}</p>}
+                  </div>
+
+                  {/* Nominee Salutation Field - ADDED */}
+                  <div className="input-box">
+                    <div className="details-container">
+                      <span className="details">Nominee Salutation</span>
+                      <span className="required">*</span>
+                    </div>
+                    <CInputGroup>
+                      <CInputGroupText className="input-icon">
+                        <CIcon icon={cilUser} />
+                      </CInputGroupText>
+                      <CFormSelect name="nominiSalutation" value={formData.nominiSalutation} onChange={handleChange}>
+                        <option value="">-Select-</option>
+                        <option value="Mr.">Mr.</option>
+                        <option value="Mrs.">Mrs.</option>
+                        <option value="Miss">Miss</option>
+                        <option value="Dr.">Dr.</option>
+                        <option value="Prof.">Prof.</option>
+                      </CFormSelect>
+                    </CInputGroup>
+                    {errors.nominiSalutation && <p className="error">{errors.nominiSalutation}</p>}
                   </div>
 
                   <div className="input-box">

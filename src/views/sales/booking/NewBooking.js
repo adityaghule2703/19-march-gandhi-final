@@ -13849,6 +13849,2896 @@
 
 
 
+// import React, { useState, useEffect, useRef } from 'react';
+// import '../../../css/form.css';
+// import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CFormCheck, CButton, CTable, CTableHead, CTableRow, CTableHeaderCell, CTableBody, CTableDataCell, CAlert } from '@coreui/react';
+// import CIcon from '@coreui/icons-react';
+
+// import { cilSearch } from '@coreui/icons';
+// import {
+//   cilBank,
+//   cilBarcode,
+//   cilBike,
+//   cilBirthdayCake,
+//   cilBriefcase,
+//   cilCalendar,
+//   cilCarAlt,
+//   cilChartLine,
+//   cilCreditCard,
+//   cilEnvelopeClosed,
+//   cilFingerprint,
+//   cilHome,
+//   cilInstitution,
+//   cilList,
+//   cilListRich,
+//   cilLocationPin,
+//   cilMap,
+//   cilMoney,
+//   cilPaint,
+//   cilPeople,
+//   cilPhone,
+//   cilShieldAlt,
+//   cilSwapVertical,
+//   cilTask,
+//   cilUser
+// } from '@coreui/icons';
+// import { useNavigate, useParams } from 'react-router-dom';
+// import { showError, showFormSubmitError, showFormSubmitToast } from '../../../utils/sweetAlerts';
+// import axiosInstance from '../../../axiosInstance';
+// import Select from "react-select";
+
+// function BookingForm() {
+//   const [userData, setUserData] = useState(null);
+//   const [isSalesExecutive, setIsSalesExecutive] = useState(false);
+//   const [loadingUser, setLoadingUser] = useState(true);
+//   const [hasCSDAccess, setHasCSDAccess] = useState(false);
+  
+//   // ===== Discount limits state (only used in edit mode) =====
+//   const [discountLimits, setDiscountLimits] = useState({
+//     onRoadPrice: 0,
+//     addOnServices: 0,
+//     accessories: 0
+//   });
+
+//   const [remainingDiscounts, setRemainingDiscounts] = useState({
+//     onRoadPrice: 0,
+//     addOnServices: 0,
+//     addOnServicesAmount: 0,
+//     addOnServicesPercentage: 0,
+//     accessories: 0,
+//     accessoriesAmount: 0,
+//     accessoriesPercentage: 0,
+//     totalUsed: 0
+//   });
+
+//   const [discountUsageByCategory, setDiscountUsageByCategory] = useState({
+//     vehicle_price: 0,
+//     AddONservices: 0,
+//     Accessories: 0,
+//     other: 0
+//   });
+
+//   // State for global discount distribution (for both NEW and EDIT mode)
+//   const [globalDiscount, setGlobalDiscount] = useState('');
+//   const [discountDistribution, setDiscountDistribution] = useState({});
+
+//   // State to store the total values of special headers
+//   const [specialHeaderValues, setSpecialHeaderValues] = useState({
+//     addOnServicesTotal: 0,
+//     accessoriesTotal: 0,
+//     onRoadPriceTotal: 0
+//   });
+//   // ===== END =====
+  
+//   const [formData, setFormData] = useState({
+//     verticle_id: '',
+//     model_id: '',
+//     model_color: '',
+//     customer_type: 'B2C',
+//     rto_type: 'MH',
+//     branch: '',
+//     optionalComponents: [],
+//     sales_executive: '',
+//     gstin: '',
+//     rto_amount: '',
+//     salutation: '',
+//     name: '',
+//     pan_no: '',
+//     dob: '',
+//     occupation: '',
+//     address: '',
+//     taluka: '',
+//     district: '',
+//     pincode: '',
+//     mobile1: '',
+//     mobile2: '',
+//     email: '',
+//     aadhar_number: '',
+//     nominiSalutation: '',
+//     nomineeName: '',
+//     nomineeRelation: '',
+//     nomineeAge: '',
+//     type: 'cash',
+//     financer_id: '',
+//     scheme: '',
+//     emi_plan: '',
+//     gc_applicable: true,
+//     gc_amount: '',
+//     discountType: 'fixed',
+//     selected_accessories: [],
+//     hpa: true,
+//     selfInsurance: false,
+//     insuranceFivePlusFive: false,
+//     is_exchange: false,
+//     broker_id: '',
+//     exchange_price: '',
+//     vehicle_number: '',
+//     chassis_number: '',
+//     note: '',
+//     uncheckedHeaders: [],
+//     uncheckedAccessories: [],
+//     subsidy_amount: '',
+//     rto_code: ''
+//   });
+
+//   const [errors, setErrors] = useState({});
+//   const [error, setError] = useState(null);
+//   const [allVerticles, setAllVerticles] = useState([]); 
+//   const [userVerticles, setUserVerticles] = useState([]); 
+//   const [userVerticleIds, setUserVerticleIds] = useState([]); 
+//   const [models, setModels] = useState([]);
+//   const [filteredModels, setFilteredModels] = useState([]);
+//   const [colors, setColors] = useState([]);
+//   const [branches, setBranches] = useState([]);
+//   const [brokers, setBrokers] = useState([]);
+//   const [salesExecutives, setSalesExecutives] = useState([]);
+//   const [financers, setFinancers] = useState([]);
+//   const [filteredFinancers, setFilteredFinancers] = useState([]);
+//   const [selectedBranchName, setSelectedBranchName] = useState('');
+//   const [modelDetails, setModelDetails] = useState(null);
+//   const [accessoriesTotal, setAccessoriesTotal] = useState(0);
+//   const [activeTab, setActiveTab] = useState(1);
+//   const [selectedModelHeaders, setSelectedModelHeaders] = useState([]);
+//   const [accessories, setAccessories] = useState([]);
+//   const [isSubmitting, setIsSubmitting] = useState(false);
+//   const [isEditMode, setIsEditMode] = useState(false);
+//   const [selectedBroker, setSelectedBroker] = useState(null);
+//   const [otpSent, setOtpSent] = useState(false);
+//   const [otpVerified, setOtpVerified] = useState(false);
+//   const [otp, setOtp] = useState('');
+//   const [otpError, setOtpError] = useState('');
+//   const [modelType, setModelType] = useState('');
+//   const [selectedModelName, setSelectedModelName] = useState('');
+//   const [isEVModel, setIsEVModel] = useState(false);
+
+//   const [searchQuery, setSearchQuery] = useState('');
+//   const [searchLoading, setSearchLoading] = useState(false);
+//   const [searchError, setSearchError] = useState('');
+
+//   const [headerDiscounts, setHeaderDiscounts] = useState({});
+//   const [bookingPriceComponents, setBookingPriceComponents] = useState([]);
+//   const [selectedFinancerGC, setSelectedFinancerGC] = useState('');
+  
+//   // New state for RTO codes
+//   const [rtoCodes, setRtoCodes] = useState([]);
+//   const [loadingRtoCodes, setLoadingRtoCodes] = useState(false);
+  
+//   const isInitialBookingLoad = useRef(false);
+
+//   const navigate = useNavigate();
+//   const { id } = useParams();
+
+//   // Helper function to transform price data to consistent format
+//   const transformPriceData = (price) => {
+//     if (price.header && price.header._id) {
+//       return {
+//         ...price,
+//         header_id: price.header._id,
+//         header_key: price.header.header_key,
+//         is_mandatory: price.header.is_mandatory,
+//         is_discount: price.header.is_discount,
+//         discount_priority: price.header.discount_priority,
+//         discount_percentage: price.header.discount_percentage,
+//         category_key: price.header.category_key,
+//         metadata: price.header.metadata,
+//         header: price.header
+//       };
+//     }
+//     return {
+//       ...price,
+//       header: {
+//         _id: price.header_id,
+//         header_key: price.header_key,
+//         is_mandatory: price.is_mandatory,
+//         is_discount: price.is_discount,
+//         discount_priority: price.discount_priority,
+//         discount_percentage: price.discount_percentage,
+//         category_key: price.category_key,
+//         metadata: price.metadata
+//       }
+//     };
+//   };
+
+//   // ===== Function to distribute discount - SIMPLE PERCENTAGE OF TOTAL =====
+//   const calculateDiscountDistribution = (totalDiscountAmount, headersList) => {
+//     if (!headersList || headersList.length === 0) return {};
+    
+//     // Get discountable headers with unit cost > 0, sorted by priority
+//     const discountableHeaders = headersList
+//       .filter(price => {
+//         const hasDiscountPercentage = price.discount_percentage !== undefined && 
+//                                      price.discount_percentage !== null && 
+//                                      price.discount_percentage !== '';
+//         const unitCost = parseFloat(price.value) || 0;
+//         // Skip headers with zero unit cost
+//         return hasDiscountPercentage && unitCost > 0;
+//       })
+//       .map(price => ({
+//         ...price,
+//         header_id: price.header_id,
+//         unitCost: parseFloat(price.value) || 0,
+//         discountPercentage: parseFloat(price.discount_percentage)
+//       }))
+//       .sort((a, b) => a.discount_priority - b.discount_priority);
+    
+//     if (discountableHeaders.length === 0) return {};
+//     if (!totalDiscountAmount || totalDiscountAmount <= 0) return {};
+    
+//     const distribution = {};
+//     let remainingDiscount = totalDiscountAmount;
+    
+//     // Process headers in priority order
+//     for (const header of discountableHeaders) {
+//       if (remainingDiscount <= 0) {
+//         distribution[header.header_id] = 0;
+//         continue;
+//       }
+      
+//       // Calculate discount: Total Discount × (Percentage / 100)
+//       let calculatedDiscount = totalDiscountAmount * (header.discountPercentage / 100);
+      
+//       // Cap at unit cost
+//       if (calculatedDiscount > header.unitCost) {
+//         calculatedDiscount = header.unitCost;
+//       }
+      
+//       // Don't exceed remaining discount
+//       const discountToApply = Math.min(calculatedDiscount, remainingDiscount);
+      
+//       distribution[header.header_id] = discountToApply;
+//       remainingDiscount -= discountToApply;
+//     }
+    
+//     // If there's remaining discount, add it to the first Ex-Showroom header found
+//     if (remainingDiscount > 0) {
+//       // Find any Ex-Showroom header (case insensitive pattern matching)
+//       const exShowroomHeader = headersList.find(price => {
+//         const headerKey = price.header?.header_key || price.header_key || '';
+//         // Match any of the three Ex-Showroom patterns
+//         return /ex-showroom|ex showroom/i.test(headerKey);
+//       });
+      
+//       if (exShowroomHeader) {
+//         const exShowroomHeaderId = exShowroomHeader.header_id || exShowroomHeader.header?._id;
+//         // Add remaining discount to the existing distribution or create new entry
+//         distribution[exShowroomHeaderId] = (distribution[exShowroomHeaderId] || 0) + remainingDiscount;
+//       }
+//     }
+    
+//     return distribution;
+//   };
+
+//   // ===== Handle global discount change (for both NEW and EDIT mode) =====
+//   const handleGlobalDiscountChange = (value) => {
+//     const discountAmount = parseFloat(value) || 0;
+//     setGlobalDiscount(value);
+    
+//     if (discountAmount > 0) {
+//       const tab6Headers = getSelectedHeadersForTab6();
+//       const distribution = calculateDiscountDistribution(discountAmount, tab6Headers);
+//       setDiscountDistribution(distribution);
+      
+//       const newHeaderDiscounts = { ...headerDiscounts };
+//       Object.keys(distribution).forEach(headerId => {
+//         newHeaderDiscounts[headerId] = distribution[headerId];
+//       });
+//       setHeaderDiscounts(newHeaderDiscounts);
+      
+//       // Recalculate discount usage for edit mode
+//       if (isEditMode) {
+//         setTimeout(() => {
+//           const newUsage = calculateDiscountUsageByCategory(tab6Headers, newHeaderDiscounts);
+//           setDiscountUsageByCategory(newUsage);
+          
+//           const specialValues = extractSpecialHeaderValues(tab6Headers);
+//           setSpecialHeaderValues(specialValues);
+          
+//           const maxAddOnAmount = (specialValues.addOnServicesTotal * discountLimits.addOnServices) / 100;
+//           const maxAccessoriesAmount = (specialValues.accessoriesTotal * discountLimits.accessories) / 100;
+          
+//           const remainingAddOnAmount = Math.max(0, maxAddOnAmount - newUsage.AddONservices);
+//           const remainingAddOnPercentage = specialValues.addOnServicesTotal > 0 
+//             ? ((remainingAddOnAmount / specialValues.addOnServicesTotal) * 100).toFixed(1)
+//             : 0;
+          
+//           const remainingAccessoriesAmount = Math.max(0, maxAccessoriesAmount - newUsage.Accessories);
+//           const remainingAccessoriesPercentage = specialValues.accessoriesTotal > 0 
+//             ? ((remainingAccessoriesAmount / specialValues.accessoriesTotal) * 100).toFixed(1)
+//             : 0;
+          
+//           setRemainingDiscounts({
+//             onRoadPrice: Math.max(0, discountLimits.onRoadPrice - newUsage.vehicle_price),
+//             addOnServices: discountLimits.addOnServices,
+//             addOnServicesAmount: remainingAddOnAmount,
+//             addOnServicesPercentage: remainingAddOnPercentage,
+//             accessories: discountLimits.accessories,
+//             accessoriesAmount: remainingAccessoriesAmount,
+//             accessoriesPercentage: remainingAccessoriesPercentage,
+//             totalUsed: newUsage.vehicle_price + newUsage.AddONservices + newUsage.Accessories + newUsage.other
+//           });
+//         }, 100);
+//       }
+//     } else {
+//       setDiscountDistribution({});
+//       const resetDiscounts = { ...headerDiscounts };
+//       Object.keys(resetDiscounts).forEach(headerId => {
+//         resetDiscounts[headerId] = 0;
+//       });
+//       setHeaderDiscounts(resetDiscounts);
+      
+//       // Reset discount usage for edit mode
+//       if (isEditMode) {
+//         setDiscountUsageByCategory({
+//           vehicle_price: 0,
+//           AddONservices: 0,
+//           Accessories: 0,
+//           other: 0
+//         });
+//         setRemainingDiscounts({
+//           onRoadPrice: discountLimits.onRoadPrice || 0,
+//           addOnServices: discountLimits.addOnServices || 0,
+//           addOnServicesAmount: 0,
+//           addOnServicesPercentage: discountLimits.addOnServices || 0,
+//           accessories: discountLimits.accessories || 0,
+//           accessoriesAmount: 0,
+//           accessoriesPercentage: discountLimits.accessories || 0,
+//           totalUsed: 0
+//         });
+//       }
+//     }
+//   };
+
+//   // Filter financers based on branch
+//   useEffect(() => {
+//     if (formData.branch) {
+//       const filtered = financers.filter(financer => 
+//         financer.branchRates.some(rate => rate.branchId === formData.branch)
+//       );
+//       setFilteredFinancers(filtered);
+//     } else {
+//       setFilteredFinancers([]);
+//     }
+//   }, [formData.branch, financers]);
+
+//   // ===== Function to extract special header values =====
+//   const extractSpecialHeaderValues = (headers) => {
+//     let addOnServicesTotal = 0;
+//     let accessoriesTotal = 0;
+//     let onRoadPriceTotal = 0;
+    
+//     headers.forEach((price) => {
+//       const header = price.header;
+//       if (!header) return;
+//       const headerKey = header.header_key || '';
+//       if (headerKey.includes('ADD ON SERVICES TOTAL') || headerKey.includes('ADDON SERVICES TOTAL')) {
+//         addOnServicesTotal = price.value || 0;
+//       } else if (headerKey === 'ACCESSORIES TOTAL') {
+//         accessoriesTotal = price.value || 0;
+//       } else if (headerKey.includes('ON ROAD PRICE') || headerKey.includes('ON-ROAD PRICE')) {
+//         onRoadPriceTotal = price.value || 0;
+//       }
+//     });
+    
+//     return { addOnServicesTotal, accessoriesTotal, onRoadPriceTotal };
+//   };
+
+//   // ===== Function to calculate discount usage by category (EDIT mode) =====
+//   const calculateDiscountUsageByCategory = (headers, discounts) => {
+//     const usage = {
+//       vehicle_price: 0,
+//       AddONservices: 0,
+//       Accessories: 0,
+//       other: 0
+//     };
+    
+//     headers.forEach((price) => {
+//       const header = price.header;
+//       if (!header) return;
+//       const headerId = header._id || header.id;
+//       const categoryKey = header.category_key || '';
+//       const discountValue = discounts[headerId] !== undefined ? discounts[headerId] : 0;
+//       const discountAmount = discountValue !== '' ? parseFloat(discountValue) : 0;
+      
+//       if (discountAmount > 0) {
+//         if (categoryKey === 'vehicle_price') {
+//           usage.vehicle_price += discountAmount;
+//         } else if (categoryKey === 'AddONservices') {
+//           usage.AddONservices += discountAmount;
+//         } else if (categoryKey === 'Accesories' || categoryKey === 'Accessories') {
+//           usage.Accessories += discountAmount;
+//         } else {
+//           usage.other += discountAmount;
+//         }
+//       }
+//     });
+    
+//     return usage;
+//   };
+
+//   // ===== Effect to recalculate discount usage (EDIT mode) =====
+//   useEffect(() => {
+//     if (isEditMode && Object.keys(headerDiscounts).length > 0) {
+//       const tab6Headers = getSelectedHeadersForTab6();
+//       const newUsage = calculateDiscountUsageByCategory(tab6Headers, headerDiscounts);
+//       setDiscountUsageByCategory(newUsage);
+      
+//       const specialValues = extractSpecialHeaderValues(tab6Headers);
+//       setSpecialHeaderValues(specialValues);
+      
+//       const maxAddOnAmount = (specialValues.addOnServicesTotal * discountLimits.addOnServices) / 100;
+//       const maxAccessoriesAmount = (specialValues.accessoriesTotal * discountLimits.accessories) / 100;
+      
+//       const remainingAddOnAmount = Math.max(0, maxAddOnAmount - newUsage.AddONservices);
+//       const remainingAddOnPercentage = specialValues.addOnServicesTotal > 0 
+//         ? ((remainingAddOnAmount / specialValues.addOnServicesTotal) * 100).toFixed(1)
+//         : 0;
+      
+//       const remainingAccessoriesAmount = Math.max(0, maxAccessoriesAmount - newUsage.Accessories);
+//       const remainingAccessoriesPercentage = specialValues.accessoriesTotal > 0 
+//         ? ((remainingAccessoriesAmount / specialValues.accessoriesTotal) * 100).toFixed(1)
+//         : 0;
+      
+//       setRemainingDiscounts({
+//         onRoadPrice: Math.max(0, discountLimits.onRoadPrice - newUsage.vehicle_price),
+//         addOnServices: discountLimits.addOnServices,
+//         addOnServicesAmount: remainingAddOnAmount,
+//         addOnServicesPercentage: remainingAddOnPercentage,
+//         accessories: discountLimits.accessories,
+//         accessoriesAmount: remainingAccessoriesAmount,
+//         accessoriesPercentage: remainingAccessoriesPercentage,
+//         totalUsed: newUsage.vehicle_price + newUsage.AddONservices + newUsage.Accessories + newUsage.other
+//       });
+//     }
+//   }, [headerDiscounts, discountLimits, isEditMode, accessories, formData.selected_accessories, formData.uncheckedAccessories, formData.selfInsurance, formData.insuranceFivePlusFive]);
+
+//   useEffect(() => {
+//     const fetchRtoCodes = async () => {
+//       if (formData.rto_type === 'MH') {
+//         setLoadingRtoCodes(true);
+//         try {
+//           const response = await axiosInstance.get('/rtos');
+//           const activeRtoCodes = response.data?.data?.filter(rto => rto.is_active) || [];
+//           setRtoCodes(activeRtoCodes);
+          
+//           if (!isEditMode && activeRtoCodes.length > 0 && !formData.rto_code) {
+//             const mh15Code = activeRtoCodes.find(rto => rto.rto_code === 'MH 15');
+//             if (mh15Code) {
+//               setFormData(prev => ({ ...prev, rto_code: 'MH 15' }));
+//             }
+//           }
+//         } catch (error) {
+//           console.error('Error fetching RTO codes:', error);
+//           setRtoCodes([]);
+//           const message = showError(error);
+//           if (message) setError(message);
+//         } finally {
+//           setLoadingRtoCodes(false);
+//         }
+//       } else {
+//         setRtoCodes([]);
+//         setFormData(prev => ({ ...prev, rto_code: '' }));
+//       }
+//     };
+    
+//     fetchRtoCodes();
+//   }, [formData.rto_type, isEditMode, formData.rto_code]);
+
+//   useEffect(() => {
+//     const fetchBranches = async () => {
+//       try {
+//         const response = await axiosInstance.get('/branches');
+//         setBranches(response.data.data || []);
+//       } catch (error) {
+//         console.error('Error fetching branches:', error);
+//         const message = showError(error);
+//         if (message) setError(message);
+//       }
+//     };
+//     fetchBranches();
+//   }, []);
+
+//   useEffect(() => {
+//     if (isEditMode && formData.branch && formData.verticle_id) {
+//       const filtered = models.filter(model => 
+//         (!model.branch_id || model.branch_id === formData.branch || model.branch === formData.branch) &&
+//         (model.verticle_id === formData.verticle_id || model.verticle === formData.verticle_id)
+//       );
+//       setFilteredModels(filtered);
+//     }
+//   }, [isEditMode, formData.branch, formData.verticle_id, models]);
+
+//   useEffect(() => {
+//     if (id && !isInitialBookingLoad.current) {
+//       isInitialBookingLoad.current = true;
+//       fetchBookingDetails(id);
+//       setIsEditMode(true);
+//     }
+//   }, [id]);
+
+//   useEffect(() => {
+//     if (isEditMode && bookingPriceComponents.length > 0 && Object.keys(headerDiscounts).length === 0) {
+//       const initialDiscounts = {};
+//       bookingPriceComponents.forEach(priceComponent => {
+//         if (priceComponent.header && priceComponent.header._id) {
+//           const headerId = priceComponent.header._id;
+//           const discountAmount = priceComponent.discountAmount || 0;
+//           initialDiscounts[headerId] = discountAmount;
+//         }
+//       });
+//       setHeaderDiscounts(initialDiscounts);
+//     }
+//   }, [isEditMode, bookingPriceComponents]);
+
+//   // Fetch user data on component mount
+//   useEffect(() => {
+//     const fetchUserData = async () => {
+//       try {
+//         setLoadingUser(true);
+//         const response = await axiosInstance.get('/auth/me');
+//         const userData = response.data.data;
+//         setUserData(userData);
+        
+//         setDiscountLimits({
+//           onRoadPrice: userData.onRoadPrice || 0,
+//           addOnServices: userData.addOnServices || 0,
+//           accessories: userData.accessories || 0
+//         });
+        
+//         setRemainingDiscounts({
+//           onRoadPrice: userData.onRoadPrice || 0,
+//           addOnServices: userData.addOnServices || 0,
+//           addOnServicesAmount: 0,
+//           addOnServicesPercentage: userData.addOnServices || 0,
+//           accessories: userData.accessories || 0,
+//           accessoriesAmount: 0,
+//           accessoriesPercentage: userData.accessories || 0,
+//           totalUsed: 0
+//         });
+        
+//         const csdAccess = userData.csd || false;
+//         setHasCSDAccess(csdAccess);
+        
+//         const isSalesExec = userData.roles?.some(role => role.name === 'SALES_EXECUTIVE') || false;
+//         setIsSalesExecutive(isSalesExec);
+        
+//         if (isSalesExec && userData.branch?._id) {
+//           setFormData(prev => ({
+//             ...prev,
+//             branch: userData.branch._id,
+//             sales_executive: userData._id
+//           }));
+//         }
+        
+//         const verticlesData = userData.verticles || [];
+//         const verticleIds = verticlesData.map(verticle => verticle._id);
+//         setUserVerticleIds(verticleIds);
+        
+//         await fetchAllVerticles(verticlesData);
+        
+//         if (!id) {
+//           if (isSalesExec && userData.branch?._id) {
+//             fetchModels('B2C', userData.branch._id);
+//           } else {
+//             fetchModels('B2C');
+//           }
+//         }
+//       } catch (error) {
+//         console.error('Error fetching user data:', error);
+//         const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+//         const storedUserRole = localStorage.getItem('userRole');
+//         const isSalesExec = storedUser.roles?.some(role => role.name === 'SALES_EXECUTIVE') || 
+//                            storedUserRole === 'SALES_EXECUTIVE' || false;
+//         setIsSalesExecutive(isSalesExec);
+//         const storedCSD = storedUser.csd || false;
+//         setHasCSDAccess(storedCSD);
+//       } finally {
+//         setLoadingUser(false);
+//       }
+//     };
+    
+//     fetchUserData();
+//   }, [id]);
+
+//   const fetchAllVerticles = async (userVerticlesData) => {
+//     try {
+//       const response = await axiosInstance.get('/verticle-masters');
+//       const verticlesData = response.data.data?.verticleMasters || response.data.data || [];
+//       setAllVerticles(verticlesData);
+//       const filteredVerticles = userVerticlesData.filter(verticle => verticle.status === 'active');
+//       setUserVerticles(filteredVerticles);
+//     } catch (error) {
+//       const message = showError(error); 
+//       if (message) setError(message);
+//     }
+//   };
+
+//   const handleCustomerSearch = async () => {
+//     if (!searchQuery.trim()) {
+//       setSearchError('Please enter PAN or Aadhar number');
+//       return;
+//     }
+//     setSearchLoading(true);
+//     setSearchError('');
+//     try {
+//       const response = await axiosInstance.get(`/customer-ledgers/search?q=${encodeURIComponent(searchQuery)}`);
+//       if (response.data.success && response.data.data.customers.length > 0) {
+//         const customer = response.data.data.customers[0];
+//         const dobFromApi = customer.bookings?.[0]?.customerDetails?.dob;
+//         const formattedDob = dobFromApi ? dobFromApi.split('T')[0] : '';
+//         setFormData((prev) => ({
+//           ...prev,
+//           salutation: customer.bookings?.[0]?.customerDetails?.salutation || '',
+//           name: customer.name || '',
+//           pan_no: customer.pan || '',
+//           address: customer.address || '',
+//           taluka: customer.taluka || '',
+//           district: customer.district || '',
+//           mobile1: customer.mobile1 || '',
+//           mobile2: customer.mobile2 || '',
+//           email: customer.email || '',
+//           aadhar_number: customer.aadhaar || '',
+//           pincode: customer.bookings?.[0]?.customerDetails?.pincode || '',
+//           dob: formattedDob,
+//           occupation: customer.bookings?.[0]?.customerDetails?.occupation || ''
+//         }));
+//       } else {
+//         setSearchError('No customer found with this PAN/Aadhar');
+//       }
+//     } catch (error) {
+//       console.error('Search error:', error);
+//       setSearchError('Error searching for customer');
+//     } finally {
+//       setSearchLoading(false);
+//     }
+//   };
+
+//   const handleBrokerChange = (e) => {
+//     const brokerId = e.target.value;
+//     const broker = brokers.find((b) => b._id === brokerId);
+//     setSelectedBroker(broker);
+//     setFormData((prev) => ({ ...prev, broker_id: brokerId }));
+//     setErrors((prev) => ({ ...prev, broker_id: '' }));
+//     setOtpSent(false);
+//     setOtpVerified(false);
+//     setOtp('');
+//   };
+
+//   const handleSendOtp = async () => {
+//     try {
+//       if (!selectedBroker) return;
+//       const response = await axiosInstance.post(`/brokers/${selectedBroker._id}/send-otp`);
+//       if (response.data.success) {
+//         setOtpSent(true);
+//         setOtpVerified(false);
+//         setOtp('');
+//         showFormSubmitToast('OTP sent successfully to broker');
+//       } else {
+//         showFormSubmitError(response.data.message || 'Failed to send OTP');
+//       }
+//     } catch (error) {
+//       const message = showError(error); 
+//       if (message) setError(message);
+//     }
+//   };
+
+//   const handleVerifyOtp = async () => {
+//     try {
+//       if (!selectedBroker || !otp) return;
+//       const response = await axiosInstance.post('/brokers/verify-otp', {
+//         brokerId: selectedBroker._id,
+//         otp
+//       });
+//       if (response.data.success) {
+//         setOtpVerified(true);
+//         setOtpError('');
+//         showFormSubmitToast('OTP verified successfully');
+//       } else {
+//         setOtpError(response.data.message || 'Invalid OTP');
+//       }
+//     } catch (error) {
+//       console.error('Error verifying OTP:', error);
+//       setOtpError(error.response?.data?.message || 'Error verifying OTP');
+//     }
+//   };
+
+//   const fetchBookingDetails = async (bookingId) => {
+//     try {
+//       const response = await axiosInstance.get(`/bookings/${bookingId}`);
+//       const bookingData = response.data.data;
+
+//       // Get subsidy amount and isEV
+//       const isEV = bookingData.model?.type === 'EV';
+//       const subsidyAmount = bookingData.subsidyAmount || bookingData.subsidy_amount || 0;
+      
+//       setIsEVModel(isEV);
+      
+//       // Load global discount from the correct location in the response
+//       let globalDiscountAmount = 0;
+//       if (bookingData.totalDiscountDetails?.globalDiscount?.applied && 
+//           bookingData.totalDiscountDetails.globalDiscount.totalAmount) {
+//         globalDiscountAmount = bookingData.totalDiscountDetails.globalDiscount.totalAmount;
+//       } else if (bookingData.globalDiscount) {
+//         // Fallback for older API structure
+//         globalDiscountAmount = bookingData.globalDiscount;
+//       }
+      
+//       // Set the global discount state - this will make it editable
+//       setGlobalDiscount(globalDiscountAmount.toString());
+      
+//       const priceComponents = bookingData.priceComponents || [];
+//       setBookingPriceComponents(priceComponents);
+
+//       // Transform price components for distribution calculation
+//       const transformedPriceComponents = priceComponents.map(pc => ({
+//         ...pc,
+//         header_id: pc.header?._id,
+//         header_key: pc.header?.header_key,
+//         discount_percentage: pc.discountPercentage,
+//         discount_priority: pc.discountPriority,
+//         value: pc.originalValue,
+//         is_mandatory: pc.isMandatory,
+//         header: pc.header
+//       }));
+      
+//       // Calculate distribution based on global discount if it exists
+//       if (globalDiscountAmount > 0 && transformedPriceComponents.length > 0) {
+//         const distribution = calculateDiscountDistribution(globalDiscountAmount, transformedPriceComponents);
+//         setDiscountDistribution(distribution);
+//         setHeaderDiscounts(distribution);
+//       } else {
+//         // If no global discount, initialize empty distribution
+//         setDiscountDistribution({});
+//         const initialDiscounts = {};
+//         transformedPriceComponents.forEach(pc => {
+//           if (pc.header?._id) {
+//             initialDiscounts[pc.header._id] = 0;
+//           }
+//         });
+//         setHeaderDiscounts(initialDiscounts);
+//       }
+
+//       const bookedHeaderIds = priceComponents
+//         .filter(pc => pc.header && pc.header._id)
+//         .map(pc => pc.header._id);
+
+//       const bookingVerticle = bookingData.verticles && bookingData.verticles.length > 0 
+//         ? bookingData.verticles[0]._id || bookingData.verticles[0] 
+//         : '';
+
+//       const formDataToSet = {
+//         verticle_id: bookingVerticle,
+//         model_id: bookingData.model?.id || '',
+//         model_color: bookingData.color?.id || '',
+//         customer_type: bookingData.customerType || 'B2C',
+//         rto_type: bookingData.rto || 'MH',
+//         branch: bookingData.branch?._id || '',
+//         optionalComponents: bookedHeaderIds,
+//         sales_executive: bookingData.salesExecutive?._id || '',
+//         gstin: bookingData.gstin || '',
+//         rto_amount: bookingData.rtoAmount || '',
+//         salutation: bookingData.customerDetails?.salutation || '',
+//         name: bookingData.customerDetails?.name || '',
+//         pan_no: bookingData.customerDetails?.panNo || '',
+//         dob: bookingData.customerDetails?.dob?.split('T')[0] || '',
+//         occupation: bookingData.customerDetails?.occupation || '',
+//         address: bookingData.customerDetails?.address || '',
+//         taluka: bookingData.customerDetails?.taluka || '',
+//         district: bookingData.customerDetails?.district || '',
+//         pincode: bookingData.customerDetails?.pincode || '',
+//         mobile1: bookingData.customerDetails?.mobile1 || '',
+//         mobile2: bookingData.customerDetails?.mobile2 || '',
+//         email: bookingData.customerDetails?.email || '',
+//         aadhar_number: bookingData.customerDetails?.aadharNumber || '',
+//         nominiSalutation: bookingData.customerDetails?.nominiSalutation || '',
+//         nomineeName: bookingData.customerDetails?.nomineeName || '',
+//         nomineeRelation: bookingData.customerDetails?.nomineeRelation || '',
+//         nomineeAge: bookingData.customerDetails?.nomineeAge || '',
+//         type: bookingData.payment?.type?.toLowerCase() || 'cash',
+//         financer_id: bookingData.payment?.financer?._id || '',
+//         scheme: bookingData.payment?.scheme || '',
+//         emi_plan: bookingData.payment?.emiPlan || '',
+//         gc_applicable: bookingData.payment?.gcApplicable || false,
+//         gc_amount: bookingData.payment?.gcAmount || 0,
+//         discountType: bookingData.discounts?.[0]?.type?.toLowerCase() || 'fixed',
+//         selected_accessories: bookingData.accessories?.map((a) => a.accessory?._id).filter(Boolean) || [],
+//         hpa: bookingData.hpa || false,
+//         selfInsurance: bookingData.selfInsurance || false,
+//         insuranceFivePlusFive: bookingData.insuranceFivePlusFive || false,
+//         is_exchange: bookingData.exchange ? 'true' : 'false',
+//         broker_id: bookingData.exchangeDetails?.broker?._id || '',
+//         exchange_price: bookingData.exchangeDetails?.price || '',
+//         vehicle_number: bookingData.exchangeDetails?.vehicleNumber || '',
+//         chassis_number: bookingData.exchangeDetails?.chassisNumber || '',
+//         note: bookingData.note || '',
+//         uncheckedHeaders: [],
+//         uncheckedAccessories: [],
+//         subsidy_amount: subsidyAmount,
+//         rto_code: bookingData.rtoCode || bookingData.rto_code || ''
+//       };
+      
+//       setFormData(formDataToSet);
+//       setIsEditMode(true);
+//       setSelectedBranchName(bookingData.branch?.name || '');
+//       setModelDetails(bookingData.model || null);
+//       setAccessoriesTotal(bookingData.accessoriesTotal || 0);
+
+//       if (bookingData.model) {
+//         setModelType(bookingData.model.type);
+//         setSelectedModelName(bookingData.model.model_name);
+//       }
+
+//       await fetchModels(bookingData.customerType, bookingData.branch?._id);
+
+//       if (bookingData.model?.id) {
+//         const fetchModelDetails = async () => {
+//           try {
+//             const modelResponse = await axiosInstance.get(`/models/${bookingData.model.id}`);
+//             const modelData = modelResponse.data.data.model;
+//             const modelPrices = modelData.prices || [];
+            
+//             const allHeaders = modelPrices
+//               .filter(price => price.header && price.header._id)
+//               .map(price => price.header._id);
+            
+//             const mandatoryHeaders = modelPrices
+//               .filter(price => price.header && price.header.is_mandatory)
+//               .map(price => price.header._id);
+            
+//             const nonMandatoryHeaders = allHeaders.filter(headerId => 
+//               !mandatoryHeaders.includes(headerId)
+//             );
+            
+//             const currentOptionalComponents = formDataToSet.optionalComponents || [];
+//             const uncheckedHeaders = nonMandatoryHeaders.filter(headerId => 
+//               !currentOptionalComponents.includes(headerId)
+//             );
+            
+//             setFormData(prev => ({ ...prev, uncheckedHeaders }));
+//             setSelectedModelHeaders(modelPrices);
+//             setModelDetails(modelData);
+            
+//             if (isEV && modelData.subsidy_amount) {
+//               setFormData(prev => ({ ...prev, subsidy_amount: modelData.subsidy_amount }));
+//             }
+            
+//           } catch (error) {
+//             console.error('Error fetching model details:', error);
+//           }
+//         };
+        
+//         setTimeout(fetchModelDetails, 500);
+//         fetchAccessories(bookingData.model.id);
+//         fetchModelColors(bookingData.model.id);
+//       }
+//     } catch (error) {
+//       console.error('Error fetching booking details:', error);
+//       const message = showError(error); 
+//       if (message) setError(message);
+//     }
+//   };
+
+//   // Function to filter headers based on HPA status
+//   const filterHeadersByHPAStatus = (headers, hpaEnabled) => {
+//     if (hpaEnabled) return headers;
+//     return headers.filter(price => {
+//       const headerKey = (price.header?.header_key || price.header_key || '').toLowerCase();
+//       return !(
+//         headerKey.startsWith('hp') ||
+//         headerKey.startsWith('hpa') ||
+//         headerKey.includes('hypothecation') ||
+//         headerKey.includes('loan')
+//       );
+//     });
+//   };
+
+//   // Filter insurance headers
+//   const filterInsuranceHeaders = (headers) => {
+//     return headers.filter(price => {
+//       const headerKey = price.header?.header_key || price.header_key || '';
+      
+//       if (formData.selfInsurance === true) {
+//         if (headerKey.includes('INSURANCE') || 
+//             headerKey === 'INSURANCE' || 
+//             headerKey === 'INSURANCE CHARGES' || 
+//             headerKey === 'Insurance: 5 + 5 Years') {
+//           return false;
+//         }
+//       }
+//       if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
+//         if (headerKey === 'INSURANCE CHARGES') return false;
+//         return true;
+//       }
+//       if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
+//         if (headerKey === 'Insurance: 5 + 5 Years') return false;
+//         return true;
+//       }
+//       return true;
+//     });
+//   };
+
+//   const getSelectedHeadersForTab6 = () => {
+//     if (!formData.model_id) return [];
+
+//     const allModelHeaders = getSelectedModelHeaders();
+//     const hpaFiltered = filterHeadersByHPAStatus(allModelHeaders, formData.hpa);
+//     const insuranceFiltered = filterInsuranceHeaders(hpaFiltered);
+    
+//     return insuranceFiltered.filter((price) => {
+//       if (!price.header_id) return false;
+//       const headerId = price.header_id;
+//       const isMandatory = price.is_mandatory;
+//       if (isEditMode) {
+//         return isMandatory || formData.optionalComponents.includes(headerId);
+//       } else {
+//         const isExplicitlyUnchecked = formData.uncheckedHeaders && formData.uncheckedHeaders.includes(headerId);
+//         return isMandatory || !isExplicitlyUnchecked;
+//       }
+//     });
+//   };
+
+//   const validateGSTIN = (gstin) => {
+//     const regex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
+//     return regex.test(gstin);
+//   };
+
+//   // Email validation function
+//   const validateEmail = (email) => {
+//     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+//     return regex.test(email);
+//   };
+
+//   const validateTab1 = () => {
+//     const requiredFields = ['customer_type', 'verticle_id', 'model_id', 'branch'];
+//     const newErrors = {};
+//     requiredFields.forEach((field) => {
+//       if (!formData[field]) newErrors[field] = 'This field is required';
+//     });
+//     if (formData.customer_type === 'B2B') {
+//       if (!formData.gstin) {
+//         newErrors.gstin = 'GSTIN is required for B2B customers';
+//       } else if (!validateGSTIN(formData.gstin)) {
+//         newErrors.gstin = 'Invalid GSTIN format. Please enter a valid 15-digit GST number';
+//       }
+//     }
+//     if ((formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && !formData.rto_amount) {
+//       newErrors.rto_amount = 'RTO amount is required';
+//     }
+//     if (formData.rto_type === 'MH' && !formData.rto_code) {
+//       newErrors.rto_code = 'RTO Code is required when RTO type is MH';
+//     }
+//     if (formData.selfInsurance === true && formData.insuranceFivePlusFive === true) {
+//       newErrors.insurance = 'Self Insurance and Insurance 5+5 cannot both be true';
+//     }
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const validateTab2 = () => {
+//     const requiredFields = ['model_color', 'sales_executive'];
+//     const newErrors = {};
+//     requiredFields.forEach((field) => {
+//       if (!formData[field]) newErrors[field] = 'This field is required';
+//     });
+//     if (salesExecutives.length === 0 && formData.branch) {
+//       newErrors.sales_executive = 'No sales executives available for this branch';
+//     }
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const validateTab4 = () => {
+//     const newErrors = {};
+//     if (!formData.type) newErrors.type = 'Payment type is required';
+//     if (formData.is_exchange === 'true') {
+//       const exchangeFields = ['broker_id', 'exchange_price', 'vehicle_number', 'chassis_number'];
+//       exchangeFields.forEach((field) => {
+//         if (!formData[field]) newErrors[field] = 'This field is required for exchange';
+//       });
+//       if (selectedBroker?.otp_required && !otpVerified) {
+//         newErrors.otpVerification = 'OTP verification is required for this broker';
+//       }
+//       if (brokers.length === 0) {
+//         newErrors.broker_id = 'No brokers available for this branch';
+//       }
+//     }
+//     if (formData.type === 'finance') {
+//       if (!formData.financer_id) newErrors.financer_id = 'This field is required for finance';
+//     }
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const validateTab6 = () => {
+//     const newErrors = {};
+//     if (globalDiscount && parseFloat(globalDiscount) < 0) {
+//       newErrors.globalDiscount = 'Discount must be a positive number';
+//     }
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
+
+//   const validateMobileNumber = (mobile) => /^[6-9]\d{9}$/.test(mobile);
+//   const validatePAN = (pan) => /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
+//   const validateAadhar = (aadhar) => /^\d{12}$/.test(aadhar);
+//   const validatePincode = (pincode) => /^\d{6}$/.test(pincode);
+
+//   const handleNextTab = () => {
+//     if (activeTab === 1) {
+//       if (!validateTab1()) {
+//         const firstErrorField = Object.keys(errors)[0];
+//         if (firstErrorField) {
+//           document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+//         }
+//         return;
+//       }
+//     } else if (activeTab === 2) {
+//       if (!validateTab2()) return;
+//     } else if (activeTab === 3) {
+//       const newErrors = {};
+//       const requiredFields = ['salutation','name','address','mobile1','email','aadhar_number','pan_no','dob','occupation','taluka','district','pincode','nominiSalutation','nomineeName','nomineeRelation','nomineeAge'];
+//       requiredFields.forEach((field) => {
+//         if (!formData[field]) newErrors[field] = 'This field is required';
+//       });
+//       if (formData.mobile1 && !validateMobileNumber(formData.mobile1)) newErrors.mobile1 = 'Invalid mobile number';
+//       if (formData.mobile2 && !validateMobileNumber(formData.mobile2)) newErrors.mobile2 = 'Invalid mobile number';
+//       if (formData.email && !validateEmail(formData.email)) newErrors.email = 'Invalid email format';
+//       if (formData.pan_no && !validatePAN(formData.pan_no)) newErrors.pan_no = 'Invalid PAN number';
+//       if (formData.aadhar_number && !validateAadhar(formData.aadhar_number)) newErrors.aadhar_number = 'Invalid Aadhar number';
+//       if (formData.pincode && !validatePincode(formData.pincode)) newErrors.pincode = 'Pincode must be exactly 6 digits';
+//       setErrors(newErrors);
+//       if (Object.keys(newErrors).length > 0) {
+//         const firstErrorField = Object.keys(newErrors)[0];
+//         document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+//         return;
+//       }
+//     } else if (activeTab === 4) {
+//       if (!validateTab4()) {
+//         const firstErrorField = Object.keys(errors)[0];
+//         if (firstErrorField) {
+//           document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+//         }
+//         return;
+//       }
+//     } else if (activeTab === 6) {
+//       if (!validateTab6()) {
+//         return;
+//       }
+//     }
+//     if (activeTab < 6) setActiveTab((prev) => prev + 1);
+//   };
+
+//   const fetchModels = async (customerType = 'B2C', branchId = null, verticleId = null) => {
+//     try {
+//       let endpoint = `/models/with-prices?customerType=${customerType}`;
+//       if (isSalesExecutive && userData?.branch?._id) {
+//         endpoint += `&branch_id=${userData.branch._id}`;
+//       } else if (branchId) {
+//         endpoint += `&branch_id=${branchId}`;
+//       }
+
+//       const response = await axiosInstance.get(endpoint);
+//       let modelsData = response.data.data.models || [];
+
+//       if (branchId || (isSalesExecutive && userData?.branch?._id)) {
+//         const targetBranchId = branchId || (isSalesExecutive ? userData.branch._id : null);
+//         modelsData = modelsData.filter(model => {
+//           const modelBranchId = model.branch_id || model.branch;
+//           return !modelBranchId || modelBranchId === targetBranchId;
+//         });
+//       }
+
+//       if (verticleId) {
+//         modelsData = modelsData.filter(model => 
+//           model.verticle_id === verticleId || model.verticle === verticleId
+//         );
+//       }
+
+//       const processedModels = modelsData.map((model) => {
+//         const transformedPrices = model.prices.map(price => transformPriceData(price));
+//         return { ...model, modelPrices: transformedPrices };
+//       });
+
+//       setModels(processedModels);
+//       setFilteredModels(processedModels);
+//     } catch (error) {
+//       const message = showError(error);
+//       if (message) setError(message);
+//     }
+//   };
+
+//   useEffect(() => {
+//     const fetchSalesExecutive = async () => {
+//       try {
+//         const response = await axiosInstance.get('/users');
+//         const filteredExecutives = formData.branch
+//           ? response.data.data.filter(
+//               (user) =>
+//                 user.branch === formData.branch &&
+//                 user.roles.some((role) => role.name === 'SALES_EXECUTIVE') &&
+//                 user.status === 'ACTIVE' &&
+//                 !user.isFrozen
+//             )
+//           : [];
+//         setSalesExecutives(filteredExecutives);
+//         if (formData.branch && filteredExecutives.length === 0) {
+//           setErrors((prev) => ({ ...prev, sales_executive: 'No active sales executives available for this branch' }));
+//         }
+//       } catch (error) {
+//         console.error('Error fetching sales executive:', error);
+//         const message = showError(error);
+//         if (message) setError(message);
+//       }
+//     };
+//     fetchSalesExecutive();
+//   }, [formData.branch]);
+
+//   const fetchModelHeaders = async (modelId) => {
+//     try {
+//       const response = await axiosInstance.get(`/models/${modelId}`);
+//       const modelData = response.data.data.model;
+//       const prices = modelData.prices || [];
+
+//       const isEV = modelData.type === 'EV';
+//       setIsEVModel(isEV);
+//       if (isEV && modelData.subsidy_amount) {
+//         setFormData(prev => ({ ...prev, subsidy_amount: modelData.subsidy_amount }));
+//       }
+
+//       const transformedPrices = prices.map(price => transformPriceData(price));
+//       const allHeaders = transformedPrices.filter(price => price.header_id).map(price => price.header_id);
+
+//       setFormData((prev) => ({
+//         ...prev,
+//         optionalComponents: allHeaders,
+//         uncheckedHeaders: []
+//       }));
+
+//       setSelectedModelHeaders(transformedPrices);
+//       setModelDetails(modelData);
+
+//       const initialDiscounts = {};
+//       transformedPrices.forEach(price => {
+//         if (price.header_id) initialDiscounts[price.header_id] = '';
+//       });
+//       setHeaderDiscounts(initialDiscounts);
+
+//       fetchModelColors(modelId);
+//     } catch (error) {
+//       console.error('Failed to fetch model headers:', error);
+//       setSelectedModelHeaders([]);
+//       setModelDetails(null);
+//       setHeaderDiscounts({});
+//       setIsEVModel(false);
+//     }
+//   };
+
+//   const fetchAccessories = async (modelId) => {
+//     try {
+//       const modelResponse = await axiosInstance.get(`/models/${modelId}`);
+//       const modelData = modelResponse.data.data.model;
+//       const modelType = modelData.type;
+//       const modelName = modelData.model_name;
+//       setModelType(modelType);
+//       setSelectedModelName(modelName);
+      
+//       const accessoriesResponse = await axiosInstance.get('/accessories');
+//       const allAccessories = accessoriesResponse.data.data.accessories || [];
+//       const filteredAccessories = allAccessories.filter(accessory => {
+//         const typeMatches = accessory.categoryDetails?.type === modelType;
+//         if (!typeMatches) return false;
+//         if (accessory.applicable_models && accessory.applicable_models.length > 0) {
+//           return accessory.applicable_models.includes(modelId);
+//         }
+//         return true;
+//       });
+//       setAccessories(filteredAccessories);
+//     } catch (error) {
+//       console.error('Failed to fetch accessories:', error);
+//       setAccessories([]);
+//     }
+//   };
+
+//   const fetchModelColors = async (modelId) => {
+//     try {
+//       const response = await axiosInstance.get(`colors/model/${modelId}`);
+//       setColors(response.data.data.colors || []);
+//     } catch (error) {
+//       console.error('Failed to fetch model colors:', error);
+//       setColors([]);
+//     }
+//   };
+
+//   useEffect(() => {
+//     const fetchBrokers = async () => {
+//       try {
+//         if (!formData.branch) { setBrokers([]); return; }
+//         const response = await axiosInstance.get(`/brokers/branch/${formData.branch}`);
+//         setBrokers(response.data.data || []);
+//         if (response.data.data.length === 0) {
+//           setErrors((prev) => ({ ...prev, broker_id: 'No brokers available for this branch' }));
+//         }
+//       } catch (error) {
+//         console.error('Error fetching brokers:', error);
+//         const message = showError(error);
+//         if (message) setError(message);
+//         setBrokers([]);
+//       }
+//     };
+//     if (formData.branch && formData.is_exchange === 'true') fetchBrokers();
+//   }, [formData.branch, formData.is_exchange]);
+
+//   useEffect(() => {
+//     const fetchFinancer = async () => {
+//       try {
+//         const response = await axiosInstance.get('/financers/rates');
+//         const groupedData = response.data.data?.groupedByProvider || [];
+//         const financersList = groupedData.map(item => ({
+//           _id: item.providerId,
+//           financeProviderDetails: { _id: item.providerId, name: item.providerName },
+//           branchRates: item.branchRates || []
+//         }));
+//         setFinancers(financersList);
+//         if (isEditMode && formData.financer_id) {
+//           const selectedFinancer = financersList.find(f => f._id === formData.financer_id);
+//           if (selectedFinancer) {
+//             const branchRate = selectedFinancer.branchRates.find(rate => rate.branchId === formData.branch);
+//             if (branchRate) setSelectedFinancerGC(branchRate.gcRate);
+//           }
+//         }
+//       } catch (error) {
+//         console.error('Error fetching financers:', error);
+//         const message = showError(error); 
+//         if (message) setError(message);
+//       }
+//     };
+//     fetchFinancer();
+//   }, [formData.branch, isEditMode, formData.financer_id]);
+
+//   const handleChange = (e) => {
+//     const { name, value, type, checked } = e.target;
+
+//     if (type === 'checkbox') {
+//       setFormData((prevData) => ({ ...prevData, [name]: checked }));
+//     } else {
+//       if (name === 'hpa' || name === 'selfInsurance') {
+//         const booleanValue = value === 'true';
+//         setFormData((prevData) => ({ ...prevData, [name]: booleanValue }));
+//         if (name === 'hpa' && !booleanValue) {
+//           const hpHeaders = getSelectedModelHeaders()
+//             .filter(price => price.header_id)
+//             .filter(price => {
+//               const headerKey = price.header_key || '';
+//               return headerKey.startsWith('HP') || headerKey.startsWith('HPA');
+//             })
+//             .map(price => price.header_id);
+//           setFormData(prev => ({
+//             ...prev,
+//             optionalComponents: prev.optionalComponents.filter(id => !hpHeaders.includes(id))
+//           }));
+//         }
+//         if (name === 'selfInsurance' && booleanValue === true) {
+//           setFormData(prev => ({ ...prev, insuranceFivePlusFive: false }));
+//         }
+//       } else if (name === 'insuranceFivePlusFive') {
+//         const booleanValue = value === 'true';
+//         setFormData((prevData) => ({ ...prevData, [name]: booleanValue }));
+//         if (booleanValue === true && formData.selfInsurance === true) {
+//           setFormData(prev => ({ ...prev, selfInsurance: false }));
+//         }
+//       } else if (name === 'rto_type') {
+//         setFormData((prevData) => ({ ...prevData, [name]: value }));
+//         if (value !== 'MH') {
+//           setFormData(prev => ({ ...prev, rto_code: '' }));
+//         } else if (value === 'MH' && !isEditMode) {
+//           const mh15Code = rtoCodes.find(rto => rto.rto_code === 'MH 15');
+//           if (mh15Code) setFormData(prev => ({ ...prev, rto_code: 'MH 15' }));
+//         }
+//       } else {
+//         setFormData((prevData) => ({ ...prevData, [name]: value }));
+//       }
+//     }
+//     setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
+
+//     if (name === 'customer_type') {
+//       if (isSalesExecutive && userData?.branch?._id) {
+//         fetchModels(value, userData.branch._id);
+//       } else {
+//         fetchModels(value, formData.branch);
+//       }
+//       setFormData((prev) => ({ ...prev, verticle_id: '', model_id: '', model_name: '', uncheckedHeaders: [], subsidy_amount: '' }));
+//       setIsEVModel(false);
+//     } else if (name === 'verticle_id') {
+//       setFormData((prev) => ({ ...prev, verticle_id: value, model_id: '', model_name: '', uncheckedHeaders: [], subsidy_amount: '' }));
+//       setIsEVModel(false);
+//       if (value) {
+//         const filtered = models.filter(model => model.verticle_id === value || model.verticle === value);
+//         setFilteredModels(filtered);
+//       } else {
+//         setFilteredModels(models);
+//       }
+//     } else if (name === 'branch' && !isSalesExecutive) {
+//       const selectedBranch = branches.find((b) => b._id === value);
+//       setSelectedBranchName(selectedBranch ? selectedBranch.name : '');
+//       fetchModels(formData.customer_type, value);
+//       setFormData((prev) => ({ ...prev, verticle_id: '', model_id: '', model_name: '', uncheckedHeaders: [], subsidy_amount: '' }));
+//       setIsEVModel(false);
+//     } else if (name === 'financer_id') {
+//       setFormData((prevData) => ({ ...prevData, [name]: value }));
+//       const selectedFinancer = financers.find(f => f._id === value);
+//       if (selectedFinancer && formData.branch) {
+//         const branchRate = selectedFinancer.branchRates.find(rate => rate.branchId === formData.branch);
+//         if (branchRate) {
+//           setSelectedFinancerGC(branchRate.gcRate);
+//           setFormData(prev => ({ ...prev, gc_amount: branchRate.gcRate || '' }));
+//         }
+//       }
+//     } else if (name === 'model_id') {
+//       const selectedModel = models.find((model) => model._id === value);
+//       if (selectedModel) {
+//         const isEV = selectedModel.type === 'EV';
+//         setIsEVModel(isEV);
+//         setFormData((prev) => ({
+//           ...prev,
+//           model_name: selectedModel.model_name,
+//           model_id: value,
+//           uncheckedHeaders: [],
+//           uncheckedAccessories: [],
+//           subsidy_amount: isEV ? (selectedModel.subsidy_amount || '') : ''
+//         }));
+//         setModelType(selectedModel.type);
+//         setSelectedModelName(selectedModel.model_name);
+//         fetchAccessories(value);
+//         fetchModelColors(value);
+//         setGlobalDiscount('');
+//         setDiscountDistribution({});
+        
+//         if (isEditMode) {
+//           const fetchModelForEdit = async () => {
+//             try {
+//               const response = await axiosInstance.get(`/models/${value}`);
+//               const modelData = response.data.data.model;
+//               const modelPrices = modelData.prices || [];
+//               const transformedPrices = modelPrices.map(price => transformPriceData(price));
+//               if (isEV && modelData.subsidy_amount) {
+//                 setFormData(prev => ({ ...prev, subsidy_amount: modelData.subsidy_amount }));
+//               }
+//               setSelectedModelHeaders(transformedPrices);
+//               setModelDetails(modelData);
+//               setHeaderDiscounts(prev => {
+//                 const updated = { ...prev };
+//                 transformedPrices.forEach(price => {
+//                   const headerId = price.header_id;
+//                   if (headerId && updated[headerId] === undefined) updated[headerId] = 0;
+//                 });
+//                 return updated;
+//               });
+//             } catch (error) {
+//               console.error('Error fetching model for edit:', error);
+//             }
+//           };
+//           fetchModelForEdit();
+//         } else {
+//           fetchModelHeaders(value);
+//         }
+//       }
+//     }
+//   };
+
+//   const getSelectedModelHeaders = () => {
+//     if (!formData.model_id) return [];
+//     const selectedModel = models.find((model) => model._id === formData.model_id);
+//     const allHeaders = selectedModel?.modelPrices || [];
+//     return filterHeadersByHPAStatus(allHeaders, formData.hpa);
+//   };
+
+//   const handleHeaderSelection = (headerId, isChecked) => {
+//     setFormData((prev) => {
+//       if (isChecked) {
+//         return {
+//           ...prev,
+//           uncheckedHeaders: prev.uncheckedHeaders.filter((id) => id !== headerId),
+//           optionalComponents: [...(prev.optionalComponents || []), headerId]
+//         };
+//       } else {
+//         return {
+//           ...prev,
+//           uncheckedHeaders: [...(prev.uncheckedHeaders || []), headerId],
+//           optionalComponents: prev.optionalComponents.filter((id) => id !== headerId)
+//         };
+//       }
+//     });
+//   };
+
+//   const handleAccessorySelection = (accessoryId, isChecked) => {
+//     setFormData((prev) => {
+//       if (isChecked) {
+//         return { ...prev, selected_accessories: [...prev.selected_accessories, accessoryId] };
+//       } else {
+//         return { ...prev, selected_accessories: prev.selected_accessories.filter((id) => id !== accessoryId) };
+//       }
+//     });
+//   };
+
+//   const calculateTaxableAmount = (unitCost, discount, gstRate, customerType) => {
+//     const netAmount = unitCost - (discount || 0);
+//     const gstRateDecimal = gstRate / 100;
+//     if (customerType === 'CSD') return netAmount;
+//     if (gstRateDecimal === 0) return netAmount;
+//     return netAmount / (1 + gstRateDecimal);
+//   };
+
+//   const calculateGST = (taxable, gstRate, customerType) => {
+//     if (customerType === 'CSD') {
+//       const halfRate = gstRate / 2;
+//       return { cgstAmount: 0, sgstAmount: taxable * (halfRate / 100), halfRate, cgstRate: 0, sgstRate: halfRate };
+//     }
+//     const halfRate = gstRate / 2;
+//     const cgstAmount = taxable * (halfRate / 100);
+//     const sgstAmount = taxable * (halfRate / 100);
+//     return { cgstAmount, sgstAmount, halfRate, cgstRate: halfRate, sgstRate: halfRate };
+//   };
+
+//   const calculateLineTotal = (taxable, cgstAmount, sgstAmount) => taxable + cgstAmount + sgstAmount;
+
+//   const calculateTotalDealAmount = () => {
+//     const selectedHeaders = getSelectedHeadersForTab6()
+//       .filter((price) => price.header_id)
+//       .filter((price) => {
+//         const excludedHeaders = [
+//           'ON ROAD PRICE (A)', 'TOTAL ONROAD + ADDON SERVICES', 'TOTAL ONROAD+ADDON SERVICES',
+//           'ADDON SERVICES TOTAL (B)', 'ACCESSORIES TOTAL', 'ON ROAD PRICE', 'ADDON SERVICES TOTAL',
+//           'ADD ON SERVICES TOTAL', 'TOTAL AMOUNT', 'GRAND TOTAL', 'FINAL AMOUNT', 'TOTAL',
+//           'ON-ROAD PRICE', 'FINAL PRICE', 'LESS:- CENTER SUBSIDY(FAME-II)', 'COMPLETE PRICE',
+//           'LESS:- CENTER SUBSIDY'
+//         ];
+//         return !excludedHeaders.includes(price.header_key || '');
+//       });
+
+//     let totalUnitCost = 0;
+//     let totalDiscount = 0;
+//     let subsidyAmount = parseFloat(formData.subsidy_amount) || 0;
+    
+//     selectedHeaders.forEach((price) => {
+//       const headerKey = price.header_key;
+//       const isRTOHeader = headerKey === 'RTO TAX & REGISTRATION CHARGES' || 
+//                           headerKey.includes('RTO TAX') || headerKey.includes('REGISTRATION CHARGES');
+      
+//       const selectedMatchingAccessories = accessories.filter(accessory => 
+//         accessory.categoryDetails?.header_key === headerKey &&
+//         (isEditMode ? 
+//           formData.selected_accessories.includes(accessory._id) :
+//           !formData.uncheckedAccessories?.includes(accessory._id))
+//       );
+//       const accessoryPrice = selectedMatchingAccessories.reduce((sum, acc) => sum + (acc.price || 0), 0);
+//       let unitPrice = Math.max(price.value || 0, accessoryPrice);
+      
+//       if (isRTOHeader && (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && formData.rto_amount) {
+//         unitPrice = parseFloat(formData.rto_amount) || 0;
+//       }
+      
+//       // Add unit cost to total
+//       totalUnitCost += unitPrice;
+      
+//       // Get discount for this header from distribution
+//       const headerId = price.header_id;
+//       let discountForThisHeader = discountDistribution[headerId] || 0;
+      
+//       totalDiscount += discountForThisHeader;
+//     });
+    
+//     // Calculate final total: Total Unit Cost - Total Discount - Subsidy
+//     let finalTotal = totalUnitCost - totalDiscount - subsidyAmount;
+
+//     return {
+//       totalBeforeDiscount: totalUnitCost.toFixed(2),
+//       totalAfterDiscount: finalTotal.toFixed(2),
+//       totalDiscount: totalDiscount.toFixed(2),
+//       subsidyAmount: subsidyAmount.toFixed(2),
+//       hasDiscount: totalDiscount > 0,
+//       hasSubsidy: subsidyAmount > 0
+//     };
+//   };
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setIsSubmitting(true);
+
+//     const requiredFields = ['verticle_id', 'model_id', 'model_color', 'branch', 'customer_type', 'name', 'address', 'mobile1', 'aadhar_number', 'pan_no', 'email'];
+//     let formErrors = {};
+//     requiredFields.forEach((field) => {
+//       if (!formData[field]) formErrors[field] = 'This field is required';
+//     });
+//     if (!formData.verticle_id) formErrors.verticle_id = 'Verticle selection is required';
+//     if (formData.rto_type === 'MH' && !formData.rto_code) formErrors.rto_code = 'RTO Code is required when RTO type is MH';
+//     if (formData.selfInsurance === true && formData.insuranceFivePlusFive === true) {
+//       formErrors.insurance = 'Self Insurance and Insurance 5+5 cannot both be true';
+//     }
+//     if (formData.email && !validateEmail(formData.email)) formErrors.email = 'Invalid email format';
+
+//     if (Object.keys(formErrors).length > 0) {
+//       setErrors(formErrors);
+//       setIsSubmitting(false);
+//       const firstErrorField = Object.keys(formErrors)[0];
+//       document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+//       return;
+//     }
+
+//     let headersToSubmit = [];
+//     if (isEditMode) {
+//       headersToSubmit = formData.optionalComponents.filter(headerId => 
+//         !formData.uncheckedHeaders || !formData.uncheckedHeaders.includes(headerId)
+//       );
+//     } else {
+//       const allHeaders = getSelectedHeadersForTab6()
+//         .filter(price => price.header_id)
+//         .map(price => price.header_id);
+//       headersToSubmit = allHeaders.filter(headerId => 
+//         !formData.uncheckedHeaders || !formData.uncheckedHeaders.includes(headerId)
+//       );
+//     }
+
+//     // Prepare header discounts from distribution
+//     let headerDiscountsArray = [];
+//     if (Object.keys(discountDistribution).length > 0) {
+//       headerDiscountsArray = Object.entries(discountDistribution)
+//         .filter(([headerId, value]) => {
+//           const isSelected = headersToSubmit.includes(headerId);
+//           const hasDiscount = value !== '' && value !== null && value !== undefined && !isNaN(parseFloat(value)) && parseFloat(value) !== 0;
+//           return isSelected && hasDiscount;
+//         })
+//         .map(([headerId, value]) => ({
+//           headerId,
+//           discountAmount: parseFloat(value) || 0
+//         }));
+//     }
+
+//     let accessoriesToSubmit = [];
+//     if (isEditMode) {
+//       accessoriesToSubmit = formData.selected_accessories.filter(accessoryId => 
+//         !formData.uncheckedAccessories || !formData.uncheckedAccessories.includes(accessoryId)
+//       );
+//     } else {
+//       const allAccessoryIds = accessories.map(accessory => accessory._id);
+//       accessoriesToSubmit = allAccessoryIds.filter(accessoryId => 
+//         !formData.uncheckedAccessories || !formData.uncheckedAccessories.includes(accessoryId)
+//       );
+//     }
+
+//     const accessoriesArray = accessoriesToSubmit.map((id) => ({ id }));
+
+//     const exchangeDetails = {
+//       is_exchange: formData.is_exchange === 'true',
+//       ...(formData.is_exchange === 'true' && {
+//         broker_id: formData.broker_id,
+//         exchange_price: formData.exchange_price ? parseFloat(formData.exchange_price) : 0,
+//         vehicle_number: formData.vehicle_number || '',
+//         chassis_number: formData.chassis_number || '',
+//         ...(selectedBroker?.otp_required && otpVerified && { otp })
+//       })
+//     };
+
+//     const paymentDetails = {
+//       type: formData.type.toUpperCase(),
+//       ...(formData.type.toLowerCase() === 'finance' && {
+//         financer_id: formData.financer_id,
+//         scheme: formData.scheme || '',
+//         emi_plan: formData.emi_plan || '',
+//         gc_applicable: formData.gc_applicable,
+//         gc_amount: formData.gc_applicable ? parseFloat(formData.gc_amount) || 0 : 0
+//       })
+//     };
+
+//     const customerDetails = {
+//       salutation: formData.salutation,
+//       name: formData.name,
+//       pan_no: formData.pan_no,
+//       dob: formData.dob,
+//       occupation: formData.occupation,
+//       address: formData.address,
+//       taluka: formData.taluka,
+//       district: formData.district,
+//       pincode: formData.pincode,
+//       mobile1: formData.mobile1,
+//       mobile2: formData.mobile2 || '',
+//       email: formData.email || '',
+//       aadhar_number: formData.aadhar_number,
+//       nominiSalutation: formData.nominiSalutation,
+//       nomineeName: formData.nomineeName,
+//       nomineeRelation: formData.nomineeRelation,
+//       nomineeAge: formData.nomineeAge ? parseInt(formData.nomineeAge) : undefined
+//     };
+
+//     const requestBody = {
+//       model_id: formData.model_id,
+//       model_color: formData.model_color,
+//       customer_type: formData.customer_type,
+//       rto_type: formData.rto_type,
+//       branch: formData.branch,
+//       verticles: formData.verticle_id ? [formData.verticle_id] : [],
+//       optionalComponents: headersToSubmit,
+//       sales_executive: formData.sales_executive,
+//       customer_details: customerDetails,
+//       payment: paymentDetails,
+//       headerDiscounts: headerDiscountsArray,
+//       accessories: { selected: accessoriesArray },
+//       hpa: formData.hpa === true,
+//       selfInsurance: formData.selfInsurance === true,
+//       insuranceFivePlusFive: formData.insuranceFivePlusFive === true,
+//       exchange: exchangeDetails,
+//       note: formData.note || '',
+//       globalDiscount: globalDiscount ? parseFloat(globalDiscount) : 0,
+//       ...(formData.rto_type === 'MH' && formData.rto_code && { rto_code: formData.rto_code }),
+//       ...((formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && { rto_amount: formData.rto_amount ? parseFloat(formData.rto_amount) : 0 }),
+//       ...(isEVModel && { subsidy_amount: formData.subsidy_amount ? parseFloat(formData.subsidy_amount) : 0 })
+//     };
+
+//     if (formData.customer_type === 'B2B') {
+//       requestBody.gstin = formData.gstin;
+//     }
+
+//     try {
+//       let response;
+//       if (isEditMode) {
+//         response = await axiosInstance.put(`/bookings/${id}`, requestBody);
+//       } else {
+//         response = await axiosInstance.post(`/bookings`, requestBody);
+//       }
+//       if (response.data.success) {
+//         const successMessage = isEditMode ? 'Booking updated successfully!' : 'Booking created successfully!';
+//         await showFormSubmitToast(successMessage, () => navigate('/booking-list'));
+//         navigate('/booking-list');
+//       } else {
+//         showFormSubmitError(response.data.message || 'Submission failed');
+//       }
+//     } catch (error) {
+//       console.error('Submission error:', error);
+//       const message = showError(error); 
+//       if (message) setError(message);
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+//   };
+
+//   if (loadingUser) {
+//     return <div>Loading user data...</div>;
+//   }
+
+//   const dealTotals = calculateTotalDealAmount();
+
+//   return (
+//     <div className="form-container">
+//       <div className="title">{isEditMode ? 'Edit Booking' : 'Create New Booking'}</div>
+//       {error && <CAlert color="danger">{error}</CAlert>}
+//       <div className="form-card">
+//         <div className="form-body">
+//           <form onSubmit={handleSubmit} id="bookingForm">
+
+//             {/* ===== TAB 1 ===== */}
+//             {activeTab === 1 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Customer Type</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilUser} /></CInputGroupText>
+//                       <CFormSelect name="customer_type" value={formData.customer_type} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="B2B">B2B</option>
+//                         <option value="B2C">B2C</option>
+//                         {hasCSDAccess && !isSalesExecutive && <option value="CSD">CSD</option>}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.customer_type && <p className="error">{errors.customer_type}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Branch</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilLocationPin} /></CInputGroupText>
+//                       {isSalesExecutive && userData?.branch ? (
+//                         <CFormInput value={`${userData.branch.name} - ${userData.branch.branch_city || userData.branch.city}`} readOnly />
+//                       ) : (
+//                         <CFormSelect name="branch" value={formData.branch} onChange={handleChange}>
+//                           <option value="">-Select-</option>
+//                           {branches.map((branch) => (
+//                             <option key={branch._id} value={branch._id}>
+//                               {branch.name} - {branch.branch_city || branch.city}
+//                             </option>
+//                           ))}
+//                         </CFormSelect>
+//                       )}
+//                     </CInputGroup>
+//                     {errors.branch && <p className="error">{errors.branch}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Verticle</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilInstitution} /></CInputGroupText>
+//                       <CFormSelect name="verticle_id" value={formData.verticle_id} onChange={handleChange} disabled={userVerticles.length === 0}>
+//                         <option value="">- Select Verticle -</option>
+//                         {userVerticles.length > 0 ? (
+//                           userVerticles.filter(vertical => vertical.status === 'active').map((vertical) => (
+//                             <option key={vertical._id} value={vertical._id}>{vertical.name}</option>
+//                           ))
+//                         ) : (
+//                           <option value="" disabled>No verticles assigned to your account</option>
+//                         )}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.verticle_id && <p className="error">{errors.verticle_id}</p>}
+//                     {userVerticles.filter(v => v.status === 'active').length === 0 && (
+//                       <small className="text-muted">No active verticles available. Please contact administrator.</small>
+//                     )}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Model Name</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilBike} /></CInputGroupText>
+//                       <div style={{ flex: 1 }}>
+//                         <Select
+//                           name="model_id"
+//                           isDisabled={!formData.branch || !formData.verticle_id}
+//                           placeholder={
+//                             !formData.branch ? "Select branch first" :
+//                             !formData.verticle_id ? "Select verticle first" :
+//                             filteredModels.length === 0 ? "No models available" : "Search Model"
+//                           }
+//                           value={
+//                             filteredModels.find((m) => m._id === formData.model_id)
+//                               ? { label: filteredModels.find((m) => m._id === formData.model_id).model_name, value: formData.model_id }
+//                               : null
+//                           }
+//                           onChange={(selected) => handleChange({ target: { name: "model_id", value: selected ? selected.value : "" } })}
+//                           options={filteredModels.map((model) => ({ label: model.model_name, value: model._id }))}
+//                           noOptionsMessage={() => {
+//                             if (!formData.branch) return "Please select a branch first";
+//                             if (!formData.verticle_id) return "Please select a verticle first";
+//                             return "No models available for this branch and verticle";
+//                           }}
+//                           classNamePrefix="react-select"
+//                           className={`react-select-container ${errors.model_id ? "error-input" : formData.model_id ? "valid-input" : ""}`}
+//                         />
+//                       </div>
+//                     </CInputGroup>
+//                     {errors.model_id && <p className="error">{errors.model_id}</p>}
+//                   </div>
+
+//                   {formData.customer_type === 'B2B' && (
+//                     <div className="input-box">
+//                       <div className="details-container">
+//                         <span className="details">GST Number</span>
+//                         <span className="required">*</span>
+//                       </div>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon"><CIcon icon={cilBarcode} /></CInputGroupText>
+//                         <CFormInput type="text" name="gstin" value={formData.gstin} onChange={handleChange} />
+//                       </CInputGroup>
+//                       {errors.gstin && <p className="error">{errors.gstin}</p>}
+//                     </div>
+//                   )}
+
+//                   <div className="input-box">
+//                     <span className="details">RTO</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilCarAlt} /></CInputGroupText>
+//                       <CFormSelect name="rto_type" value={formData.rto_type} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="MH">MH</option>
+//                         <option value="BH">BH</option>
+//                         <option value="CRTM">CRTM</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                   </div>
+
+//                   {formData.rto_type === 'MH' && (
+//                     <div className="input-box">
+//                       <div className="details-container">
+//                         <span className="details">RTO Code</span>
+//                         <span className="required">*</span>
+//                       </div>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon"><CIcon icon={cilCarAlt} /></CInputGroupText>
+//                         <CFormSelect name="rto_code" value={formData.rto_code} onChange={handleChange} disabled={loadingRtoCodes}>
+//                           <option value="">-Select RTO Code-</option>
+//                           {loadingRtoCodes ? (
+//                             <option value="" disabled>Loading RTO codes...</option>
+//                           ) : rtoCodes.length > 0 ? (
+//                             rtoCodes.map((rto) => (
+//                               <option key={rto.id} value={rto.rto_code}>{rto.rto_code} - {rto.rto_name}</option>
+//                             ))
+//                           ) : (
+//                             <option value="" disabled>No RTO codes available</option>
+//                           )}
+//                         </CFormSelect>
+//                       </CInputGroup>
+//                       {errors.rto_code && <p className="error">{errors.rto_code}</p>}
+//                       {loadingRtoCodes && <small className="text-muted">Loading RTO codes...</small>}
+//                     </div>
+//                   )}
+
+//                   {(formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && (
+//                     <div className="input-box">
+//                       <div className="details-container">
+//                         <span className="details">RTO Amount</span>
+//                         <span className="required">*</span>
+//                       </div>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+//                         <CFormInput type="number" name="rto_amount" value={formData.rto_amount} onChange={handleChange} placeholder="Enter RTO amount" />
+//                       </CInputGroup>
+//                       {errors.rto_amount && <p className="error">{errors.rto_amount}</p>}
+//                       <small className="text-muted">This amount will override the RTO header value in calculations</small>
+//                     </div>
+//                   )}
+
+//                   {isEVModel && (
+//                     <div className="input-box">
+//                       <span className="details">Subsidy Amount</span>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+//                         <CFormInput type="text" name="subsidy_amount" value={formData.subsidy_amount} onChange={handleChange} disabled={true} placeholder="Auto-filled for EV models" />
+//                       </CInputGroup>
+//                       <small className="text-muted">Subsidy applicable for EV models only</small>
+//                     </div>
+//                   )}
+
+//                   <div className="input-box">
+//                     <span className="details">HPA Applicable</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilShieldAlt} /></CInputGroupText>
+//                       <CFormSelect name="hpa" value={formData.hpa} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value={true}>Yes</option>
+//                         <option value={false}>No</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                   </div>
+
+//                   <div className="input-box">
+//                     <span className="details">Self Insurance</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilShieldAlt} /></CInputGroupText>
+//                       <CFormSelect name="selfInsurance" value={formData.selfInsurance} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value={true}>Yes</option>
+//                         <option value={false}>No</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                   </div>
+
+//                   <div className="input-box">
+//                     <span className="details">Insurance 5+5</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilShieldAlt} /></CInputGroupText>
+//                       <CFormSelect name="insuranceFivePlusFive" value={formData.insuranceFivePlusFive} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value={true}>Yes</option>
+//                         <option value={false}>No</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                   </div>
+
+//                   {errors.insurance && (
+//                     <div className="input-box" style={{ width: '100%' }}>
+//                       <p className="error" style={{ color: '#dc3545', fontSize: '0.9em', marginTop: '5px' }}>{errors.insurance}</p>
+//                     </div>
+//                   )}
+//                 </div>
+
+//                 {/* ===== MODEL HEADERS SECTION — shown on Tab 1 for both NEW and EDIT MODE ===== */}
+//                 {getSelectedModelHeaders().length > 0 && (
+//                   <div className="model-headers-section">
+//                     <h5>
+//                       Model Options
+//                       {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>(HPA-related options hidden as HPA is disabled)</span>}
+//                       {formData.selfInsurance === true && <span style={{ color: '#28a745', fontSize: '0.9em', marginLeft: '10px' }}>(Insurance headers hidden as Self Insurance is enabled)</span>}
+//                       {formData.selfInsurance === false && formData.insuranceFivePlusFive === true && <span style={{ color: '#ffc107', fontSize: '0.9em', marginLeft: '10px' }}>(INSURANCE CHARGES header hidden for Insurance 5+5)</span>}
+//                       {formData.selfInsurance === false && formData.insuranceFivePlusFive === false && <span style={{ color: '#6c757d', fontSize: '0.9em', marginLeft: '10px' }}>(Standard insurance - INSURANCE CHARGES shown)</span>}
+//                     </h5>
+//                     <div className="headers-list">
+//                       {getSelectedModelHeaders()
+//                         .filter((price) => {
+//                           const headerKey = price.header?.header_key || '';
+//                           if (formData.selfInsurance === true) {
+//                             if (headerKey.includes('INSURANCE') || headerKey === 'INSURANCE' || headerKey === 'INSURANCE CHARGES' || headerKey === 'Insurance: 5 + 5 Years') return false;
+//                           }
+//                           if (formData.selfInsurance === false && formData.insuranceFivePlusFive === true) {
+//                             if (headerKey === 'INSURANCE CHARGES') return false;
+//                             return true;
+//                           }
+//                           if (formData.selfInsurance === false && formData.insuranceFivePlusFive === false) {
+//                             if (headerKey === 'Insurance: 5 + 5 Years') return false;
+//                             return true;
+//                           }
+//                           return true;
+//                         })
+//                         .filter((price) => price.header && price.header._id)
+//                         .map((price) => {
+//                           const header = price.header;
+//                           const isMandatory = header.is_mandatory;
+//                           const headerId = header._id;
+//                           const headerKey = header.header_key || '';
+//                           const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
+//                                               headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
+//                           const shouldShowHeader = formData.hpa || !isHPAHeader;
+//                           if (!shouldShowHeader) return null;
+
+//                           let isChecked;
+//                           if (isEditMode) {
+//                             isChecked = isMandatory || formData.optionalComponents.includes(headerId);
+//                           } else {
+//                             const isExplicitlyUnchecked = formData.uncheckedHeaders && formData.uncheckedHeaders.includes(headerId);
+//                             isChecked = isMandatory || !isExplicitlyUnchecked;
+//                           }
+
+//                           return (
+//                             <div key={headerId} className="header-item">
+//                               <CFormCheck
+//                                 id={`header-${headerId}`}
+//                                 label={`${header.header_key} (₹${price.value}) ${isMandatory ? '(Mandatory)' : '(Optional)'}${isHPAHeader ? ' (HPA-related)' : ''}`}
+//                                 checked={isChecked}
+//                                 onChange={(e) => {
+//                                   if (!isMandatory) {
+//                                     const isNowChecked = e.target.checked;
+//                                     if (!isNowChecked) {
+//                                       setFormData(prev => ({
+//                                         ...prev,
+//                                         uncheckedHeaders: [...(prev.uncheckedHeaders || []), headerId],
+//                                         optionalComponents: prev.optionalComponents.filter(id => id !== headerId)
+//                                       }));
+//                                     } else {
+//                                       setFormData(prev => ({
+//                                         ...prev,
+//                                         uncheckedHeaders: prev.uncheckedHeaders?.filter(id => id !== headerId) || [],
+//                                         optionalComponents: [...prev.optionalComponents, headerId]
+//                                       }));
+//                                     }
+//                                   }
+//                                 }}
+//                                 disabled={isMandatory}
+//                               />
+//                               {isMandatory && <input type="hidden" name={`mandatory-${headerId}`} value={headerId} />}
+//                             </div>
+//                           );
+//                         })}
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={handleNextTab}>Next</button>
+//                 </div>
+//               </>
+//             )}
+
+//             {/* ===== TAB 2 ===== */}
+//             {activeTab === 2 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Verticle</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilInstitution} /></CInputGroupText>
+//                       <CFormSelect name="verticle_id" value={formData.verticle_id} onChange={handleChange} disabled={userVerticles.length === 0 || isEditMode}>
+//                         <option value="">- Select Verticle -</option>
+//                         {userVerticles.filter(vertical => vertical.status === 'active').map((vertical) => (
+//                           <option key={vertical._id} value={vertical._id}>{vertical.name}</option>
+//                         ))}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.verticle_id && <p className="error">{errors.verticle_id}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Vehicle Model</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilBike} /></CInputGroupText>
+//                       <CFormSelect name="model_id" value={formData.model_id} onChange={handleChange} disabled={isEditMode || !formData.verticle_id}>
+//                         <option value="">- Select a Model -</option>
+//                         {filteredModels.length > 0 ? (
+//                           filteredModels.map((model) => (
+//                             <option key={model._id} value={model._id}>{model.model_name}</option>
+//                           ))
+//                         ) : formData.verticle_id ? (
+//                           <option value="" disabled>No models available for this verticle</option>
+//                         ) : (
+//                           <option value="" disabled>Please select a verticle first</option>
+//                         )}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.model_id && <p className="error">{errors.model_id}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Color</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilPaint} /></CInputGroupText>
+//                       <CFormSelect name="model_color" value={formData.model_color || ''} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         {colors.map((color) => (
+//                           <option key={color._id} value={color.id}>{color.name}</option>
+//                         ))}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.model_color && <p className="error">{errors.model_color}</p>}
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Booking Date</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilCalendar} /></CInputGroupText>
+//                       <CFormInput type="date" value={formData.booking_date || new Date().toISOString().split('T')[0]} readOnly />
+//                     </CInputGroup>
+//                   </div>
+
+//                   <div className="input-box">
+//                     <div className="details-container">
+//                       <span className="details">Sales Executive</span>
+//                       <span className="required">*</span>
+//                     </div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilUser} /></CInputGroupText>
+//                       <CFormSelect name="sales_executive" value={formData.sales_executive || ''} onChange={handleChange} disabled={salesExecutives.length === 0}>
+//                         <option value="">-Select-</option>
+//                         {salesExecutives.length > 0 ? (
+//                           salesExecutives.map((sales) => (
+//                             <option key={sales._id} value={sales._id}>{sales.name}</option>
+//                           ))
+//                         ) : (
+//                           <option value="" disabled>No sales executives available for this branch</option>
+//                         )}
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.sales_executive && <p className="error">{errors.sales_executive}</p>}
+//                   </div>
+//                 </div>
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={() => setActiveTab(1)}>Back</button>
+//                   <button type="button" className="submit-button" onClick={handleNextTab}>Next</button>
+//                 </div>
+//               </>
+//             )}
+
+//             {/* ===== TAB 3 ===== */}
+//             {activeTab === 3 && (
+//               <>
+//                 <div className="search-section" style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '5px' }}>
+//                   <h5>Search Existing Customer</h5>
+//                   <div className="user-details">
+//                     <div className="input-box">
+//                       <span className="details">Search by PAN or Aadhar</span>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon"><CIcon icon={cilSearch} /></CInputGroupText>
+//                         <CFormInput placeholder="Enter PAN or Aadhar number" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+//                         <CButton color="primary" onClick={handleCustomerSearch}>Search</CButton>
+//                       </CInputGroup>
+//                       {searchError && <p className="error">{searchError}</p>}
+//                       {searchLoading && <p>Searching...</p>}
+//                     </div>
+//                   </div>
+//                 </div>
+//                 <div className="user-details">
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Salutation</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilUser} /></CInputGroupText>
+//                       <CFormSelect name="salutation" value={formData.salutation} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="Mr.">Mr.</option>
+//                         <option value="Mrs.">Mrs.</option>
+//                         <option value="Miss">Miss</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.salutation && <p className="error">{errors.salutation}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Full Name</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilUser} /></CInputGroupText>
+//                       <CFormInput name="name" value={formData.name} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.name && <p className="error">{errors.name}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Email</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilEnvelopeClosed} /></CInputGroupText>
+//                       <CFormInput type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Enter email address" />
+//                     </CInputGroup>
+//                     {errors.email && <p className="error">{errors.email}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Address</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilHome} /></CInputGroupText>
+//                       <CFormInput name="address" value={formData.address} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.address && <p className="error">{errors.address}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Taluka</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilMap} /></CInputGroupText>
+//                       <CFormInput name="taluka" value={formData.taluka} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.taluka && <p className="error">{errors.taluka}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">District</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilMap} /></CInputGroupText>
+//                       <CFormInput name="district" value={formData.district} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.district && <p className="error">{errors.district}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Pin Code</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilEnvelopeClosed} /></CInputGroupText>
+//                       <CFormInput name="pincode" value={formData.pincode} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.pincode && <p className="error">{errors.pincode}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Contact Number</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilPhone} /></CInputGroupText>
+//                       <CFormInput name="mobile1" value={formData.mobile1} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.mobile1 && <p className="error">{errors.mobile1}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <span className="details">Alternate Contact Number</span>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilPhone} /></CInputGroupText>
+//                       <CFormInput name="mobile2" value={formData.mobile2} onChange={handleChange} />
+//                     </CInputGroup>
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Aadhaar Number</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilFingerprint} /></CInputGroupText>
+//                       <CFormInput name="aadhar_number" value={formData.aadhar_number} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.aadhar_number && <p className="error">{errors.aadhar_number}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">PAN Number</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilCreditCard} /></CInputGroupText>
+//                       <CFormInput name="pan_no" value={formData.pan_no} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.pan_no && <p className="error">{errors.pan_no}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Birth Date</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilCalendar} /></CInputGroupText>
+//                       <CFormInput type="date" name="dob" value={formData.dob} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.dob && <p className="error">{errors.dob}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Occupation</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilBriefcase} /></CInputGroupText>
+//                       <CFormSelect name="occupation" value={formData.occupation} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="Student">Student</option>
+//                         <option value="Business">Business</option>
+//                         <option value="Service">Service</option>
+//                         <option value="Farmer">Farmer</option>
+//                         <option value="Self Employed">Self Employed</option>
+//                         <option value="Government Servant">Government Servant</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.occupation && <p className="error">{errors.occupation}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Nominee Salutation</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilUser} /></CInputGroupText>
+//                       <CFormSelect name="nominiSalutation" value={formData.nominiSalutation} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="Mr.">Mr.</option>
+//                         <option value="Mrs.">Mrs.</option>
+//                         <option value="Miss">Miss</option>
+//                         <option value="Dr.">Dr.</option>
+//                         <option value="Prof.">Prof.</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.nominiSalutation && <p className="error">{errors.nominiSalutation}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Nominee Name</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilUser} /></CInputGroupText>
+//                       <CFormInput name="nomineeName" value={formData.nomineeName} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.nomineeName && <p className="error">{errors.nomineeName}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Nominee Relationship</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilPeople} /></CInputGroupText>
+//                       <CFormInput name="nomineeRelation" value={formData.nomineeRelation} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.nomineeRelation && <p className="error">{errors.nomineeRelation}</p>}
+//                   </div>
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Nominee Age</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilBirthdayCake} /></CInputGroupText>
+//                       <CFormInput name="nomineeAge" value={formData.nomineeAge} onChange={handleChange} />
+//                     </CInputGroup>
+//                     {errors.nomineeAge && <p className="error">{errors.nomineeAge}</p>}
+//                   </div>
+//                 </div>
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={() => setActiveTab(2)}>Back</button>
+//                   <button type="button" className="submit-button" onClick={handleNextTab}>Next</button>
+//                 </div>
+//               </>
+//             )}
+
+//             {/* ===== TAB 4 ===== */}
+//             {activeTab === 4 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Exchange Mode</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilSwapVertical} /></CInputGroupText>
+//                       <CFormSelect name="is_exchange" value={formData.is_exchange} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value={true}>Yes</option>
+//                         <option value={false}>No</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.is_exchange && <p className="error">{errors.is_exchange}</p>}
+//                   </div>
+
+//                   {formData.is_exchange === 'true' && (
+//                     <>
+//                       <div className="input-box">
+//                         <div className="details-container"><span className="details">Exchange Broker</span><span className="required">*</span></div>
+//                         <CInputGroup>
+//                           <CInputGroupText className="input-icon"><CIcon icon={cilPeople} /></CInputGroupText>
+//                           <CFormSelect name="broker_id" value={formData.broker_id} onChange={handleBrokerChange}>
+//                             <option value="">-Select-</option>
+//                             {brokers.map((broker) => (
+//                               <option key={broker._id} value={broker._id}>{broker.name} {broker.otp_required ? '(OTP Required)' : ''}</option>
+//                             ))}
+//                           </CFormSelect>
+//                         </CInputGroup>
+//                         {errors.broker_id && <p className="error">{errors.broker_id}</p>}
+//                       </div>
+//                       {selectedBroker && (
+//                         <div className="input-box">
+//                           <div className="details-container"><span className="details">Broker Mobile</span></div>
+//                           <CInputGroup>
+//                             <CInputGroupText className="input-icon"><CIcon icon={cilPhone} /></CInputGroupText>
+//                             <CFormInput value={selectedBroker.mobile} readOnly />
+//                           </CInputGroup>
+//                         </div>
+//                       )}
+//                       <div className="input-box">
+//                         <div className="details-container"><span className="details">Exchange Vehicle Number</span><span className="required">*</span></div>
+//                         <CInputGroup>
+//                           <CInputGroupText className="input-icon"><CIcon icon={cilBike} /></CInputGroupText>
+//                           <CFormInput name="vehicle_number" value={formData.vehicle_number} onChange={handleChange} />
+//                         </CInputGroup>
+//                         {errors.vehicle_number && <p className="error">{errors.vehicle_number}</p>}
+//                       </div>
+//                       <div className="input-box">
+//                         <div className="details-container"><span className="details">Exchange Price</span><span className="required">*</span></div>
+//                         <CInputGroup>
+//                           <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+//                           <CFormInput name="exchange_price" value={formData.exchange_price} onChange={handleChange} />
+//                         </CInputGroup>
+//                         {errors.exchange_price && <p className="error">{errors.exchange_price}</p>}
+//                       </div>
+//                       <div className="input-box">
+//                         <div className="details-container"><span className="details">Exchange Chassis Number</span><span className="required">*</span></div>
+//                         <CInputGroup>
+//                           <CInputGroupText className="input-icon"><CIcon icon={cilBarcode} /></CInputGroupText>
+//                           <CFormInput name="chassis_number" value={formData.chassis_number} onChange={handleChange} />
+//                         </CInputGroup>
+//                         {errors.chassis_number && <p className="error">{errors.chassis_number}</p>}
+//                       </div>
+//                       {selectedBroker?.otp_required && (
+//                         <div className="input-box">
+//                           <div className="details-container"><span className="details">OTP Verification</span><span className="required">*</span></div>
+//                           {!otpSent ? (
+//                             <CButton color="primary" onClick={handleSendOtp}>Send OTP</CButton>
+//                           ) : (
+//                             <>
+//                               <CInputGroup>
+//                                 <CInputGroupText className="input-icon"><CIcon icon={cilFingerprint} /></CInputGroupText>
+//                                 <CFormInput placeholder="Enter OTP" value={otp} onChange={(e) => setOtp(e.target.value)} />
+//                                 <CButton color="success" onClick={handleVerifyOtp}>Verify OTP</CButton>
+//                               </CInputGroup>
+//                               {otpError && <p className="error">{otpError}</p>}
+//                             </>
+//                           )}
+//                           {otpVerified && <div className="alert alert-success mt-2">OTP verified successfully</div>}
+//                         </div>
+//                       )}
+//                     </>
+//                   )}
+
+//                   <div style={{ width: '100%', height: '2px', backgroundColor: '#e0e0e0', margin: '5px 0', borderRadius: '2px' }}></div>
+
+//                   <div className="input-box">
+//                     <div className="details-container"><span className="details">Payment Type</span><span className="required">*</span></div>
+//                     <CInputGroup>
+//                       <CInputGroupText className="input-icon"><CIcon icon={cilBank} /></CInputGroupText>
+//                       <CFormSelect name="type" value={formData.type} onChange={handleChange}>
+//                         <option value="">-Select-</option>
+//                         <option value="cash">Cash</option>
+//                         <option value="finance">Finance</option>
+//                       </CFormSelect>
+//                     </CInputGroup>
+//                     {errors.type && <p className="error">{errors.type}</p>}
+//                   </div>
+
+//                   {formData.type === 'finance' && (
+//                     <>
+//                       <div className="input-box">
+//                         <div className="details-container"><span className="details">Financer Name</span><span className="required">*</span></div>
+//                         <CInputGroup>
+//                           <CInputGroupText className="input-icon"><CIcon icon={cilInstitution} /></CInputGroupText>
+//                           <div style={{ flex: 1 }}>
+//                             <Select
+//                               name="financer_id"
+//                               isDisabled={!formData.branch}
+//                               placeholder={!formData.branch ? "Select branch first" : filteredFinancers.length === 0 ? "No financers available" : "Search Financer"}
+//                               value={
+//                                 financers.find((f) => f._id === formData.financer_id)
+//                                   ? { label: financers.find((f) => f._id === formData.financer_id)?.financeProviderDetails?.name || 'Unknown', value: formData.financer_id }
+//                                   : null
+//                               }
+//                               onChange={(selected) => handleChange({ target: { name: "financer_id", value: selected ? selected.value : "" } })}
+//                               options={filteredFinancers.map((financer) => ({
+//                                 label: financer.financeProviderDetails?.name || 'Unknown',
+//                                 value: financer._id,
+//                                 ...(financer.branchRates[0]?.gcRate > 0 && { description: `GC: ₹${financer.branchRates[0].gcRate}` })
+//                               }))}
+//                               formatOptionLabel={(option) => (
+//                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+//                                   <span>{option.label}</span>
+//                                   {option.description && <small style={{ color: '#666', marginLeft: '10px' }}>{option.description}</small>}
+//                                 </div>
+//                               )}
+//                               noOptionsMessage={() => {
+//                                 if (!formData.branch) return "Please select a branch first";
+//                                 if (financers.length === 0) return "No financers available";
+//                                 return "No matching financers found";
+//                               }}
+//                               classNamePrefix="react-select"
+//                               className={`react-select-container ${errors.financer_id ? "error-input" : formData.financer_id ? "valid-input" : ""}`}
+//                             />
+//                           </div>
+//                         </CInputGroup>
+//                         {errors.financer_id && <p className="error">{errors.financer_id}</p>}
+//                         {formData.branch && filteredFinancers.length === 0 && <small className="text-muted">No financers available for this branch</small>}
+//                       </div>
+
+//                       {isEditMode && (
+//                         <>
+//                           <div className="input-box">
+//                             <div className="details-container"><span className="details">GC Applicable</span><span className="required">*</span></div>
+//                             <CInputGroup>
+//                               <CInputGroupText className="input-icon"><CIcon icon={cilTask} /></CInputGroupText>
+//                               <CFormSelect name="gc_applicable" value={formData.gc_applicable} onChange={handleChange}>
+//                                 <option value="">-Select-</option>
+//                                 <option value={true}>Yes</option>
+//                                 <option value={false}>No</option>
+//                               </CFormSelect>
+//                             </CInputGroup>
+//                             {errors.gc_applicable && <p className="error">{errors.gc_applicable}</p>}
+//                           </div>
+//                           {formData.gc_applicable && (
+//                             <div className="input-box">
+//                               <div className="details-container">
+//                                 <span className="details">GC Amount</span>
+//                                 {selectedFinancerGC > 0 && <span className="text-muted small ms-2">(Rate: ₹{selectedFinancerGC})</span>}
+//                               </div>
+//                               <CInputGroup>
+//                                 <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+//                                 <CFormInput name="gc_amount" type="number" value={formData.gc_amount} onChange={handleChange} placeholder={selectedFinancerGC > 0 ? `Suggested: ₹${selectedFinancerGC}` : "Enter GC amount"} />
+//                               </CInputGroup>
+//                               {errors.gc_amount && <p className="error">{errors.gc_amount}</p>}
+//                             </div>
+//                           )}
+//                         </>
+//                       )}
+//                     </>
+//                   )}
+//                 </div>
+//                 <div className="form-footer">
+//                   <button type="button" className="submit-button" onClick={() => setActiveTab(3)}>Back</button>
+//                   <button type="button" className="cancel-button" onClick={handleNextTab}>Next</button>
+//                 </div>
+//               </>
+//             )}
+
+//             {/* ===== TAB 5 ===== */}
+//             {activeTab === 5 && (
+//               <>
+//                 <div>
+//                   <h5>Accessories for {selectedModelName} ({modelType})</h5>
+//                   {accessories.length > 0 ? (
+//                     <>
+//                       <p className="text-muted mb-3">Showing accessories compatible with {selectedModelName} ({modelType} type)</p>
+//                       <div className="accessories-list">
+//                         {accessories.map((accessory) => {
+//                           const isExplicitlyUnchecked = formData.uncheckedAccessories && formData.uncheckedAccessories.includes(accessory._id);
+//                           let isChecked;
+//                           if (isEditMode) {
+//                             isChecked = formData.selected_accessories.includes(accessory._id);
+//                           } else {
+//                             isChecked = !isExplicitlyUnchecked;
+//                           }
+//                           return (
+//                             <div key={accessory._id} className="accessory-item">
+//                               <CFormCheck
+//                                 id={`accessory-${accessory._id}`}
+//                                 label={`${accessory.name} - ₹${accessory.price} ${accessory.applicableModelsDetails?.length > 0 ? '(Model Specific)' : '(General)'}`}
+//                                 checked={isChecked}
+//                                 onChange={(e) => {
+//                                   const isNowChecked = e.target.checked;
+//                                   if (!isNowChecked) {
+//                                     setFormData(prev => ({
+//                                       ...prev,
+//                                       uncheckedAccessories: [...(prev.uncheckedAccessories || []), accessory._id],
+//                                       selected_accessories: prev.selected_accessories.filter(id => id !== accessory._id)
+//                                     }));
+//                                   } else {
+//                                     setFormData(prev => ({
+//                                       ...prev,
+//                                       uncheckedAccessories: prev.uncheckedAccessories?.filter(id => id !== accessory._id) || [],
+//                                       selected_accessories: [...prev.selected_accessories, accessory._id]
+//                                     }));
+//                                   }
+//                                 }}
+//                               />
+//                               {accessory.description && <small className="text-muted d-block">{accessory.description}</small>}
+//                             </div>
+//                           );
+//                         })}
+//                       </div>
+//                     </>
+//                   ) : (
+//                     <div className="alert alert-info">
+//                       <p>No accessories available for {selectedModelName} ({modelType})</p>
+//                       <small>Accessories must match both the model type ({modelType}) and be applicable to this specific model</small>
+//                     </div>
+//                   )}
+//                 </div>
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={() => setActiveTab(4)}>Back</button>
+//                   <button type="button" className="submit-button" onClick={handleNextTab}>Next</button>
+//                 </div>
+//               </>
+//             )}
+
+//             {/* ===== TAB 6 ===== */}
+//             {activeTab === 6 && (
+//               <>
+//                 <div className="user-details">
+//                   <div className="input-box" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+//                     <div style={{ flex: '1', minWidth: '250px' }}>
+//                       <span className="details">Note</span>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon"><CIcon icon={cilList} /></CInputGroupText>
+//                         <CFormInput name="note" value={formData.note} onChange={handleChange} />
+//                       </CInputGroup>
+//                     </div>
+
+//                     {/* Global Discount - For both NEW and EDIT mode */}
+//                     <div style={{ flex: '1', minWidth: '250px' }}>
+//                       <div className="details-container">
+//                         <span className="details">Total Discount Amount (₹)</span>
+//                         {isEditMode && (
+//                           <small className="text-muted ms-2">(Change this value to auto-distribute discounts)</small>
+//                         )}
+//                       </div>
+//                       <CInputGroup>
+//                         <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+//                         <CFormInput 
+//                           type="number" 
+//                           step="1" 
+//                           min="0" 
+//                           value={globalDiscount} 
+//                           onChange={(e) => handleGlobalDiscountChange(e.target.value)}
+//                           placeholder="Enter total discount amount"
+//                         />
+//                       </CInputGroup>
+//                       <small className="text-muted">Discount will be distributed based on discount priority and percentage</small>
+//                       {errors.globalDiscount && <p className="error">{errors.globalDiscount}</p>}
+//                     </div>
+
+//                     <div style={{ flex: '1', minWidth: '250px', textAlign: 'right' }}>
+//                       <div className="details" style={{ marginBottom: '5px', display: 'block' }}>Total Deal Amount</div>
+//                       <div style={{ display: 'inline-block', backgroundColor: '#f8f9fa', padding: '10px 15px', borderRadius: '5px', border: '1px solid #dee2e6', minWidth: '200px', textAlign: 'left' }}>
+//                         {(() => {
+//                           const totals = calculateTotalDealAmount();
+//                           const totalBeforeDiscount = parseFloat(totals.totalBeforeDiscount);
+//                           const totalAfterDiscount = parseFloat(totals.totalAfterDiscount);
+//                           const totalDiscount = parseFloat(totals.totalDiscount);
+//                           const subsidyAmount = parseFloat(totals.subsidyAmount);
+//                           const hasDiscount = totals.hasDiscount;
+//                           const hasSubsidy = totals.hasSubsidy;
+//                           return (
+//                             <>
+//                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+//                                 <small>Original Total:</small>
+//                                 <span>₹{totalBeforeDiscount.toLocaleString('en-IN')}</span>
+//                               </div>
+//                               {hasDiscount && (
+//                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', fontSize: '12px' }}>
+//                                   <small>Discount:</small>
+//                                   <span>- ₹{totalDiscount.toLocaleString('en-IN')}</span>
+//                                 </div>
+//                               )}
+//                               {hasSubsidy && isEVModel && (
+//                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px', fontSize: '12px' }}>
+//                                   <small>EV Subsidy:</small>
+//                                   <span>- ₹{subsidyAmount.toLocaleString('en-IN')}</span>
+//                                 </div>
+//                               )}
+//                               {(hasDiscount || hasSubsidy) && <div style={{ width: '100%', height: '1px', backgroundColor: '#ccc', margin: '3px 0' }}></div>}
+//                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px', fontWeight: 'bold' }}>
+//                                 <span>{(hasDiscount || hasSubsidy) ? 'Final Amount:' : 'Total:'}</span>
+//                                 <span style={{ fontSize: '16px' }}>₹{totalAfterDiscount.toLocaleString('en-IN')}</span>
+//                               </div>
+//                             </>
+//                           );
+//                         })()}
+//                       </div>
+//                     </div>
+//                   </div>
+//                 </div>
+
+//                 {/* Discount Limits - EDIT mode only */}
+//                 {isEditMode && (
+//                   <div className="discount-limits-info" style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '5px', border: '1px solid #dee2e6' }}>
+//                     <h6 style={{ marginBottom: '10px', color: '#495057' }}>Available Discount Limits</h6>
+//                     <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+//                       <div style={{ flex: 1, minWidth: '200px' }}>
+//                         <small style={{ display: 'block', color: '#6c757d' }}>Vehicle Price Discount</small>
+//                         <strong style={{ fontSize: '1.1em' }}>₹{(discountLimits.onRoadPrice || 0).toLocaleString('en-IN')}</strong>
+//                         {discountUsageByCategory.vehicle_price > 0 && (
+//                           <div style={{ fontSize: '0.9em', color: '#28a745' }}>
+//                             Used: ₹{discountUsageByCategory.vehicle_price.toLocaleString('en-IN')}<br />
+//                             Remaining: ₹{remainingDiscounts.onRoadPrice.toLocaleString('en-IN')}
+//                           </div>
+//                         )}
+//                       </div>
+//                       <div style={{ flex: 1, minWidth: '200px' }}>
+//                         <small style={{ display: 'block', color: '#6c757d' }}>Add-On Services Discount</small>
+//                         <strong>{discountLimits.addOnServices || 0}%</strong>
+//                         {discountUsageByCategory.AddONservices > 0 && (
+//                           <div style={{ fontSize: '0.9em', color: '#28a745' }}>
+//                             Used: ₹{discountUsageByCategory.AddONservices.toLocaleString('en-IN')}<br />
+//                             Remaining: {remainingDiscounts.addOnServicesPercentage}% (₹{remainingDiscounts.addOnServicesAmount.toLocaleString('en-IN')})
+//                           </div>
+//                         )}
+//                       </div>
+//                       <div style={{ flex: 1, minWidth: '200px' }}>
+//                         <small style={{ display: 'block', color: '#6c757d' }}>Accessories Discount</small>
+//                         <strong>{discountLimits.accessories || 0}%</strong>
+//                         {discountUsageByCategory.Accessories > 0 && (
+//                           <div style={{ fontSize: '0.9em', color: '#28a745' }}>
+//                             Used: ₹{discountUsageByCategory.Accessories.toLocaleString('en-IN')}<br />
+//                             Remaining: {remainingDiscounts.accessoriesPercentage}% (₹{remainingDiscounts.accessoriesAmount.toLocaleString('en-IN')})
+//                           </div>
+//                         )}
+//                       </div>
+//                       {remainingDiscounts.totalUsed > 0 && (
+//                         <div style={{ flex: 1, minWidth: '200px' }}>
+//                           <small style={{ display: 'block', color: '#6c757d' }}>Total Discount Used</small>
+//                           <strong>₹{remainingDiscounts.totalUsed.toLocaleString('en-IN')}</strong>
+//                         </div>
+//                       )}
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 {/* ===== Headers Table ===== */}
+//                 {(() => {
+//                   const tab6Headers = getSelectedHeadersForTab6();
+//                   if (tab6Headers.length === 0) {
+//                     return <div className="alert alert-info">No headers available for this model. Please check your selection.</div>;
+//                   }
+
+//                   // For EDIT MODE: pre-calculate category discount totals for special headers
+//                   let totalDiscountFromVehiclePrice = 0;
+//                   let totalDiscountFromAddOnServices = 0;
+//                   let totalDiscountFromAccessories = 0;
+
+//                   if (isEditMode) {
+//                     tab6Headers.forEach((price) => {
+//                       const header = price.header;
+//                       if (!header) return;
+//                       const headerId = header._id || header.id;
+//                       const headerKey = header.header_key || '';
+//                       const categoryKey = header.category_key || '';
+//                       const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
+//                                           headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
+//                       if (!formData.hpa && isHPAHeader) return;
+
+//                       const isSpecialHeader = headerKey.includes('ON ROAD PRICE') ||
+//                                              headerKey.includes('ADDON SERVICES TOTAL') ||
+//                                              headerKey.includes('ADD ON SERVICES TOTAL') ||
+//                                              headerKey === 'ACCESSORIES TOTAL';
+//                       if (isSpecialHeader) return;
+
+//                       const discountValue = discountDistribution[headerId] !== undefined
+//                         ? discountDistribution[headerId]
+//                         : 0;
+//                       const discountAmount = parseFloat(discountValue) || 0;
+
+//                       if (discountAmount > 0) {
+//                         if (categoryKey === 'vehicle_price') totalDiscountFromVehiclePrice += discountAmount;
+//                         else if (categoryKey === 'AddONservices') totalDiscountFromAddOnServices += discountAmount;
+//                         else if (categoryKey === 'Accesories' || categoryKey === 'Accessories') totalDiscountFromAccessories += discountAmount;
+//                       }
+//                     });
+//                   }
+
+//                   return (
+//                     <div className="model-headers-section" style={{ marginTop: '20px' }}>
+//                       <h5>
+//                         Model Options ({tab6Headers.length} selected)
+//                         {!formData.hpa && <span style={{ color: '#dc3545', fontSize: '0.9em', marginLeft: '10px' }}>(HPA-related options hidden as HPA is disabled)</span>}
+//                         {formData.selfInsurance === true && <span style={{ color: '#28a745', fontSize: '0.9em', marginLeft: '10px' }}>(Insurance headers hidden as Self Insurance is enabled)</span>}
+//                         {formData.selfInsurance === false && formData.insuranceFivePlusFive === true && <span style={{ color: '#ffc107', fontSize: '0.9em', marginLeft: '10px' }}>(INSURANCE CHARGES header hidden for Insurance 5+5, Insurance: 5 + 5 Years shown)</span>}
+//                         {formData.selfInsurance === false && formData.insuranceFivePlusFive === false && <span style={{ color: '#6c757d', fontSize: '0.9em', marginLeft: '10px' }}>(Standard insurance - INSURANCE CHARGES shown)</span>}
+//                         {globalDiscount && parseFloat(globalDiscount) > 0 && (
+//                           <span style={{ color: '#17a2b8', fontSize: '0.9em', marginLeft: '10px' }}>(Discounts are distributed automatically based on priorities)</span>
+//                         )}
+//                       </h5>
+
+//                       <div className="table-responsive">
+//                         <CTable striped hover responsive>
+//                           <CTableHead>
+//                             <CTableRow>
+//                               <CTableHeaderCell>Particulars</CTableHeaderCell>
+//                               <CTableHeaderCell>HSN</CTableHeaderCell>
+//                               <CTableHeaderCell>Unit Cost (₹)</CTableHeaderCell>
+//                               <CTableHeaderCell>Discount Applied (₹)</CTableHeaderCell>
+//                               <CTableHeaderCell>Discount Priority</CTableHeaderCell>
+//                               <CTableHeaderCell>Discount % Limit</CTableHeaderCell>
+//                               <CTableHeaderCell>Taxable (₹)</CTableHeaderCell>
+//                               <CTableHeaderCell>CGST %</CTableHeaderCell>
+//                               <CTableHeaderCell>CGST Amount (₹)</CTableHeaderCell>
+//                               <CTableHeaderCell>SGST %</CTableHeaderCell>
+//                               <CTableHeaderCell>SGST Amount (₹)</CTableHeaderCell>
+//                               <CTableHeaderCell>LINE TOTAL (₹)</CTableHeaderCell>
+//                             </CTableRow>
+//                           </CTableHead>
+//                           <CTableBody>
+//                             {tab6Headers.map((price) => {
+//                               const header = price.header;
+//                               const headerId = header._id || header.id || price.header_id;
+//                               const headerKey = header.header_key || price.header_key || '';
+//                               const isRTOHeader = headerKey === 'RTO TAX & REGISTRATION CHARGES' ||
+//                                                   headerKey.includes('RTO TAX') || headerKey.includes('REGISTRATION CHARGES');
+//                               const isHPAHeader = headerKey.startsWith('HP') || headerKey.startsWith('HPA') ||
+//                                                   headerKey.toLowerCase().includes('hypothecation') || headerKey.toLowerCase().includes('loan');
+//                               if (!formData.hpa && isHPAHeader) return null;
+
+//                               const isMandatory = header.is_mandatory || price.is_mandatory;
+//                               const discountPriority = price.discount_priority || 'N/A';
+//                               const discountPercentage = price.discount_percentage || 'N/A';
+
+//                               // Special header detection
+//                               const isSpecialHeader = headerKey.includes('ON ROAD PRICE') ||
+//                                                       headerKey.includes('ADDON SERVICES TOTAL') ||
+//                                                       headerKey.includes('ADD ON SERVICES TOTAL') ||
+//                                                       headerKey === 'ACCESSORIES TOTAL';
+
+//                               const isExShowroomHeader = headerKey === 'Ex-SHOWROOM(INCLUDING 5% GST)' || 
+//                                                          headerKey === 'Ex-Showroom Price' || 
+//                                                          headerKey === 'Ex-Showroom CSD';
+
+//                               const isExplicitlyUnchecked = formData.uncheckedHeaders && formData.uncheckedHeaders.includes(headerId);
+//                               const isChecked = isMandatory || !isExplicitlyUnchecked;
+
+//                               const selectedMatchingAccessories = accessories.filter(accessory =>
+//                                 accessory.categoryDetails?.header_key === headerKey &&
+//                                 (isEditMode ?
+//                                   formData.selected_accessories.includes(accessory._id) :
+//                                   !formData.uncheckedAccessories?.includes(accessory._id))
+//                               );
+//                               const accessoryPrice = selectedMatchingAccessories.reduce((sum, acc) => sum + (acc.price || 0), 0);
+//                               let finalPrice = Math.max(price.value || 0, accessoryPrice);
+//                               if (isRTOHeader && (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && formData.rto_amount) {
+//                                 finalPrice = parseFloat(formData.rto_amount) || 0;
+//                               }
+
+//                               const gstRate = (header.metadata?.gst_rate || price.metadata?.gst_rate)
+//                                 ? parseFloat(header.metadata?.gst_rate || price.metadata?.gst_rate)
+//                                 : 0;
+//                               const hsnCode = header.metadata?.hsn_code || price.metadata?.hsn_code || 'N/A';
+
+//                               let discountAmount = 0;
+//                               let adjustedPrice = finalPrice;
+//                               let discountApplied = 0;
+
+//                               // Handle special headers (ON ROAD PRICE, ADDON SERVICES TOTAL, ACCESSORIES TOTAL)
+//                               if (isSpecialHeader && isEditMode) {
+//                                 if (headerKey.includes('ON ROAD PRICE') || headerKey.includes('TOTAL ONROAD')) {
+//                                   discountApplied = totalDiscountFromVehiclePrice;
+//                                   adjustedPrice = Math.max(0, finalPrice - discountApplied);
+//                                 } else if (headerKey.includes('ADDON SERVICES TOTAL') || headerKey.includes('ADD ON SERVICES TOTAL')) {
+//                                   discountApplied = totalDiscountFromAddOnServices;
+//                                   adjustedPrice = Math.max(0, finalPrice - discountApplied);
+//                                 } else if (headerKey === 'ACCESSORIES TOTAL') {
+//                                   discountApplied = totalDiscountFromAccessories;
+//                                   adjustedPrice = Math.max(0, finalPrice - discountApplied);
+//                                 }
+//                                 discountAmount = discountApplied;
+//                               } else {
+//                                 // Regular headers - get discount from distribution
+//                                 discountAmount = discountDistribution[headerId] || 0;
+//                                 discountApplied = discountAmount;
+//                               }
+
+//                               let taxable, cgstAmount, sgstAmount, cgstRate, sgstRate, lineTotal;
+                              
+//                               if (isSpecialHeader && isEditMode) {
+//                                 taxable = calculateTaxableAmount(adjustedPrice, 0, gstRate, formData.customer_type);
+//                                 const gstCalc = calculateGST(taxable, gstRate, formData.customer_type);
+//                                 cgstAmount = gstCalc.cgstAmount; sgstAmount = gstCalc.sgstAmount;
+//                                 cgstRate = gstCalc.cgstRate; sgstRate = gstCalc.sgstRate;
+//                                 lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+//                               } else {
+//                                 taxable = calculateTaxableAmount(finalPrice, discountAmount, gstRate, formData.customer_type);
+//                                 const gstCalc = calculateGST(taxable, gstRate, formData.customer_type);
+//                                 cgstAmount = gstCalc.cgstAmount; sgstAmount = gstCalc.sgstAmount;
+//                                 cgstRate = gstCalc.cgstRate; sgstRate = gstCalc.sgstRate;
+//                                 lineTotal = calculateLineTotal(taxable, cgstAmount, sgstAmount);
+                                
+//                                 // For Ex-Showroom, subtract subsidy from line total ONLY for EV models with subsidy
+//                                 if (isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0) {
+//                                   lineTotal = lineTotal - (parseFloat(formData.subsidy_amount) || 0);
+//                                 }
+//                               }
+
+//                               return (
+//                                 <CTableRow key={headerId}>
+//                                   <CTableDataCell>
+//                                     <div style={{ display: 'flex', alignItems: 'center' }}>
+//                                       <CFormCheck
+//                                         id={`tab6-header-${headerId}`}
+//                                         checked={isChecked}
+//                                         onChange={(e) => { if (!isMandatory) handleHeaderSelection(headerId, e.target.checked); }}
+//                                         disabled={isMandatory}
+//                                         style={{ marginRight: '10px' }}
+//                                       />
+//                                       <span>
+//                                         {headerKey} {isMandatory ? '(Mandatory)' : '(Optional)'}
+//                                         {isHPAHeader ? ' (HPA-related)' : ''}
+//                                         {isRTOHeader && (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && formData.rto_amount ? ' (Using entered RTO amount)' : ''}
+//                                         {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 ? ` (Subsidy: ₹${formData.subsidy_amount} applied separately)` : ''}
+//                                       </span>
+//                                     </div>
+//                                   </CTableDataCell>
+//                                   <CTableDataCell>{hsnCode}</CTableDataCell>
+//                                   <CTableDataCell>₹{finalPrice.toFixed(2)}</CTableDataCell>
+//                                   <CTableDataCell>
+//                                     <div>
+//                                       {isSpecialHeader && isEditMode ? (
+//                                         <div style={{ padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px', textAlign: 'center' }}>
+//                                           ₹{adjustedPrice.toFixed(2)}
+//                                           {discountApplied > 0 && <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>Discount: -₹{discountApplied.toFixed(2)}</div>}
+//                                         </div>
+//                                       ) : (
+//                                         <>
+//                                           <strong style={{ color: discountAmount > 0 ? '#28a745' : '#6c757d' }}>₹{discountAmount.toFixed(2)}</strong>
+//                                           {discountAmount > 0 && !isSpecialHeader && (
+//                                             <div style={{ fontSize: '11px', color: '#17a2b8', marginTop: '2px' }}>
+//                                               (Auto-distributed)
+//                                             </div>
+//                                           )}
+//                                         </>
+//                                       )}
+//                                     </div>
+//                                   </CTableDataCell>
+//                                   <CTableDataCell>{discountPriority}</CTableDataCell>
+//                                   <CTableDataCell>{discountPercentage !== 'N/A' ? `${discountPercentage}%` : 'N/A'}</CTableDataCell>
+//                                   <CTableDataCell>₹{taxable.toFixed(2)}</CTableDataCell>
+//                                   <CTableDataCell>{cgstRate?.toFixed(2) || '0.00'}%</CTableDataCell>
+//                                   <CTableDataCell>₹{cgstAmount.toFixed(2)}</CTableDataCell>
+//                                   <CTableDataCell>{sgstRate?.toFixed(2) || '0.00'}%</CTableDataCell>
+//                                   <CTableDataCell>₹{sgstAmount.toFixed(2)}</CTableDataCell>
+//                                   <CTableDataCell>
+//                                     <strong>₹{lineTotal.toFixed(2)}</strong>
+//                                     {isExShowroomHeader && isEVModel && formData.subsidy_amount && parseFloat(formData.subsidy_amount) > 0 && (
+//                                       <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>(After ₹{formData.subsidy_amount} EV subsidy)</div>
+//                                     )}
+//                                   </CTableDataCell>
+//                                 </CTableRow>
+//                               );
+//                             })}
+//                           </CTableBody>
+//                         </CTable>
+//                       </div>
+//                     </div>
+//                   );
+//                 })()}
+
+//                 <div className="form-footer">
+//                   <button type="button" className="cancel-button" onClick={() => setActiveTab(5)}>Back</button>
+//                   <button type="submit" className="submit-button" disabled={isSubmitting}>
+//                     {isSubmitting ? 'Submitting...' : 'Apply for Approval'}
+//                   </button>
+//                 </div>
+//               </>
+//             )}
+//           </form>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default BookingForm;
+
+
+
+
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import '../../../css/form.css';
 import { CInputGroup, CInputGroupText, CFormInput, CFormSelect, CFormCheck, CButton, CTable, CTableHead, CTableRow, CTableHeaderCell, CTableBody, CTableDataCell, CAlert } from '@coreui/react';
@@ -14899,6 +17789,12 @@ function BookingForm() {
       requiredFields.forEach((field) => {
         if (!formData[field]) newErrors[field] = 'This field is required';
       });
+      
+      // Address colon validation - prevent colon character
+      if (formData.address && formData.address.includes(':')) {
+        newErrors.address = 'Colon ":" is not allowed in address field';
+      }
+      
       if (formData.mobile1 && !validateMobileNumber(formData.mobile1)) newErrors.mobile1 = 'Invalid mobile number';
       if (formData.mobile2 && !validateMobileNumber(formData.mobile2)) newErrors.mobile2 = 'Invalid mobile number';
       if (formData.email && !validateEmail(formData.email)) newErrors.email = 'Invalid email format';
@@ -15114,13 +18010,30 @@ function BookingForm() {
     fetchFinancer();
   }, [formData.branch, isEditMode, formData.financer_id]);
 
+  // UPDATED handleChange with address colon validation
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
     if (type === 'checkbox') {
       setFormData((prevData) => ({ ...prevData, [name]: checked }));
     } else {
-      if (name === 'hpa' || name === 'selfInsurance') {
+      // Address field validation - prevent colon character
+      if (name === 'address') {
+        // Remove any colons from the input
+        const sanitizedValue = value.replace(/:/g, '');
+        
+        setFormData((prevData) => ({ ...prevData, [name]: sanitizedValue }));
+        
+        // Show error if colon was removed
+        if (value.includes(':')) {
+          setErrors((prevErrors) => ({ 
+            ...prevErrors, 
+            address: 'Colon ":" is not allowed in address field' 
+          }));
+        } else {
+          setErrors((prevErrors) => ({ ...prevErrors, address: '' }));
+        }
+      } else if (name === 'hpa' || name === 'selfInsurance') {
         const booleanValue = value === 'true';
         setFormData((prevData) => ({ ...prevData, [name]: booleanValue }));
         if (name === 'hpa' && !booleanValue) {
@@ -15139,12 +18052,14 @@ function BookingForm() {
         if (name === 'selfInsurance' && booleanValue === true) {
           setFormData(prev => ({ ...prev, insuranceFivePlusFive: false }));
         }
+        setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
       } else if (name === 'insuranceFivePlusFive') {
         const booleanValue = value === 'true';
         setFormData((prevData) => ({ ...prevData, [name]: booleanValue }));
         if (booleanValue === true && formData.selfInsurance === true) {
           setFormData(prev => ({ ...prev, selfInsurance: false }));
         }
+        setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
       } else if (name === 'rto_type') {
         setFormData((prevData) => ({ ...prevData, [name]: value }));
         if (value !== 'MH') {
@@ -15153,11 +18068,12 @@ function BookingForm() {
           const mh15Code = rtoCodes.find(rto => rto.rto_code === 'MH 15');
           if (mh15Code) setFormData(prev => ({ ...prev, rto_code: 'MH 15' }));
         }
+        setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
       } else {
         setFormData((prevData) => ({ ...prevData, [name]: value }));
+        setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
       }
     }
-    setErrors((prevErrors) => ({ ...prevErrors, [name]: '' }));
 
     if (name === 'customer_type') {
       if (isSalesExecutive && userData?.branch?._id) {
@@ -15368,6 +18284,12 @@ function BookingForm() {
     requiredFields.forEach((field) => {
       if (!formData[field]) formErrors[field] = 'This field is required';
     });
+    
+    // Address colon validation on submit
+    if (formData.address && formData.address.includes(':')) {
+      formErrors.address = 'Colon ":" is not allowed in address field';
+    }
+    
     if (!formData.verticle_id) formErrors.verticle_id = 'Verticle selection is required';
     if (formData.rto_type === 'MH' && !formData.rto_code) formErrors.rto_code = 'RTO Code is required when RTO type is MH';
     if (formData.selfInsurance === true && formData.insuranceFivePlusFive === true) {
@@ -15997,7 +18919,12 @@ function BookingForm() {
                     <div className="details-container"><span className="details">Address</span><span className="required">*</span></div>
                     <CInputGroup>
                       <CInputGroupText className="input-icon"><CIcon icon={cilHome} /></CInputGroupText>
-                      <CFormInput name="address" value={formData.address} onChange={handleChange} />
+                      <CFormInput 
+                        name="address" 
+                        value={formData.address} 
+                        onChange={handleChange}
+                        placeholder="Enter address (colon ':' not allowed)"
+                      />
                     </CInputGroup>
                     {errors.address && <p className="error">{errors.address}</p>}
                   </div>
@@ -16104,10 +19031,24 @@ function BookingForm() {
                     {errors.nomineeName && <p className="error">{errors.nomineeName}</p>}
                   </div>
                   <div className="input-box">
-                    <div className="details-container"><span className="details">Nominee Relationship</span><span className="required">*</span></div>
+                    <div className="details-container">
+                      <span className="details">Nominee Relationship</span>
+                      <span className="required">*</span>
+                    </div>
                     <CInputGroup>
-                      <CInputGroupText className="input-icon"><CIcon icon={cilPeople} /></CInputGroupText>
-                      <CFormInput name="nomineeRelation" value={formData.nomineeRelation} onChange={handleChange} />
+                      <CInputGroupText className="input-icon">
+                        <CIcon icon={cilPeople} />
+                      </CInputGroupText>
+                      <CFormSelect name="nomineeRelation" value={formData.nomineeRelation} onChange={handleChange}>
+                        <option value="">-Select-</option>
+                        <option value="Mother">Mother</option>
+                        <option value="Spouse">Spouse</option>
+                        <option value="Father">Father</option>
+                        <option value="Sibling">Sibling</option>
+                        <option value="Daughter">Daughter</option>
+                        <option value="Son">Son</option>
+                        <option value="Other">Other</option>
+                      </CFormSelect>
                     </CInputGroup>
                     {errors.nomineeRelation && <p className="error">{errors.nomineeRelation}</p>}
                   </div>
@@ -16733,6 +19674,12 @@ function BookingForm() {
 }
 
 export default BookingForm;
+
+
+
+
+
+
 
 
 // ----------------ORIGINAL CODE WITHOUT NEW DISCOUNT LOGIC--------------------

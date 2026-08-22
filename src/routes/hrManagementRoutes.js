@@ -4,6 +4,7 @@ import React from 'react';
 
 
 
+const SchemaList = React.lazy(() => import('../views/hrmanagement/schema/SchemaList'));
 const Incentives = React.lazy(() => import('../views/hrmanagement/incentives/Incentives'));
 const IncentivePerformance = React.lazy(() => import('../views/hrmanagement/incentives/IncentivePerformance'));
 const IncentiveSummary = React.lazy(() => import('../views/hrmanagement/incentives/IncentiveSummary'));
@@ -15,6 +16,7 @@ const ApplyIncentive = React.lazy(() => import('../views/hrmanagement/incentives
 const IncentiveTransaction = React.lazy(() => import('../views/hrmanagement/incentives/IncentiveTransaction'));
 
 export const hrManagementRoutes = [
+  { path: '/hr-management/schema-list', name: 'Schema List', element: SchemaList },
   { path: '/hr-management/incentives', name: 'Incentives List', element: Incentives },
   { path: '/hr-management/incentive-performance', name: 'Incentives Performance', element: IncentivePerformance },
   { path: '/hr-management/incentive-summary', name: 'Incentives Summary', element: IncentiveSummary },

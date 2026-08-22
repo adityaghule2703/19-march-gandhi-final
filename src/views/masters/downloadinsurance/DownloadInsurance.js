@@ -19,6 +19,7 @@ import {
   MODULES, 
   PAGES,
   ACTIONS,
+  TABS,
   canViewPage,
   canCreateInPage,
   canUpdateInPage,
@@ -68,16 +69,30 @@ const DownloadInsurance = () => {
   const { currentRecords, PaginationOptions } = usePagination(Array.isArray(filteredData) ? filteredData : []);
   const { permissions } = useAuth();
   
-  // Page-level permission checks
-  const hasInsuranceView = canViewPage(permissions, MODULES.MASTERS, PAGES.MASTERS.DOCUMENTS);
+  // Page-level permission checks - Using INSURANCE module
+  const hasInsuranceView = hasSafePagePermission(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS, 
+    ACTIONS.VIEW
+  );
+  
+  // Tab-level permission check for Complete Insurance tab
+  const canViewCompleteInsuranceTab = hasSafePagePermission(
+    permissions, 
+    MODULES.INSURANCE, 
+    PAGES.INSURANCE.INSURANCE_DETAILS, 
+    ACTIONS.VIEW,
+    TABS.INSURANCE_DETAILS.COMPLETE_INSURANCE
+  );
 
   useEffect(() => {
-    if (!hasInsuranceView) {
+    if (!hasInsuranceView || !canViewCompleteInsuranceTab) {
       showError('You do not have permission to view Insurance Policies');
       return;
     }
     fetchData();
-  }, [hasInsuranceView]);
+  }, [hasInsuranceView, canViewCompleteInsuranceTab]);
 
   const fetchData = async () => {
     try {
@@ -185,7 +200,7 @@ const DownloadInsurance = () => {
     return cleaned || 'N/A';
   };
 
-  if (!hasInsuranceView) {
+  if (!hasInsuranceView || !canViewCompleteInsuranceTab) {
     return (
       <div className="alert alert-danger m-3" role="alert">
         You do not have permission to view Insurance Policies.
@@ -212,6 +227,11 @@ const DownloadInsurance = () => {
   return (
     <div>
       <div className='title'>Insurance Policies</div>
+      
+      {/* ⚠️ IMPORTANT NOTE - Please verify policy details */}
+      <div className="alert alert-warning mt-3 mb-3" role="alert" style={{ borderLeft: '4px solid #ffc107' }}>
+        <strong>Important:</strong> Please verify the <strong>Model Name</strong>, <strong>Variant</strong>, and <strong>Chassis Number</strong> after downloading the policy document to ensure they match the vehicle details.
+      </div>
     
       <CCard className='table-container mt-4'>
         <CCardHeader className='card-header d-flex justify-content-between align-items-center'>

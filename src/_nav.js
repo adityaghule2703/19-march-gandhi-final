@@ -3912,6 +3912,14 @@ if (canViewPage(userPermissions, MODULES.SERVICE_MANAGEMENT, PAGES.SERVICE_MANAG
   // HR Management Group
 const hrManagementItems = []
 
+// if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCENTIVES_LIST)) {
+//   hrManagementItems.push({
+//     component: CNavItem,
+//     name: 'Schemas List',
+//     to: '/hr-management/schema-list',
+//   });
+// }
+
 if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCENTIVES_LIST)) {
   hrManagementItems.push({
     component: CNavItem,
@@ -4344,6 +4352,15 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
       to: '/insurance-details',
     });
   }
+  
+
+  if (canViewPage(userPermissions, MODULES.INSURANCE, PAGES.INSURANCE.INSURANCE_DETAILS)) {
+    insuranceItems.push({
+      component: CNavItem,
+      name: 'Download Insurance',
+      to: '/downloadinsurance/downloadinsurance',
+    });
+  }
 
   if (insuranceItems.length > 0) {
     _nav.push({
@@ -4523,15 +4540,15 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
     });
   }
 
-  // const aiMasterItems = []
+  const aiMasterItems = []
 
-  //  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION)) {
-  //   aiMasterItems.push({
-  //     component: CNavItem,
-  //     name: 'RSA Plan',
-  //     to: '/rsa-plan/rsa-plan-list',
-  //   });
-  // }
+   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION)) {
+    aiMasterItems.push({
+      component: CNavItem,
+      name: 'RSA Plan',
+      to: '/rsa-plan/rsa-plan-list',
+    });
+  }
   //  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.LOCATION)) {
   //   aiMasterItems.push({
   //     component: CNavItem,
@@ -4540,14 +4557,14 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
   //   });
   // }
 
-  // if (aiMasterItems.length > 0) {
-  //   _nav.push({
-  //     component: CNavGroup,
-  //     name: 'AI Masters',
-  //     icon: <CIcon icon={cilLibrary} customClassName="nav-icon" />,
-  //     items: aiMasterItems,
-  //   });
-  // }
+  if (aiMasterItems.length > 0) {
+    _nav.push({
+      component: CNavGroup,
+      name: 'AI Masters',
+      icon: <CIcon icon={cilLibrary} customClassName="nav-icon" />,
+      items: aiMasterItems,
+    });
+  }
 
   // Masters Group
   const mastersItems = []
@@ -4584,13 +4601,13 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
     });
   }
 
-   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES)) {
-    mastersItems.push({
-      component: CNavItem,
-      name: 'Download Insurance',
-      to: '/downloadinsurance/downloadinsurance',
-    });
-  }
+  //  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES)) {
+  //   mastersItems.push({
+  //     component: CNavItem,
+  //     name: 'Download Insurance',
+  //     to: '/downloadinsurance/downloadinsurance',
+  //   });
+  // }
 
   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.VEHICLES)) {
     mastersItems.push({

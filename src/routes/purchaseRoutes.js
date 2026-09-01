@@ -4,6 +4,7 @@ import React from 'react';
 
 
 
+const AdvantageTVSVehicles = React.lazy(() => import('../views/purchase/AdvantageTVSVehicles'))
 const StockDashboard = React.lazy(() => import('../views/purchase/StockDashboard'))
 const PurchaseOrderDashboard = React.lazy(() => import('../views/purchase/PurchaseOrderDashboard'))
 const PurchaseOrderConfig = React.lazy(() => import('../views/purchase/PurchaseOrderConfig'))
@@ -16,6 +17,7 @@ const StockVerification = React.lazy(() => import('../views/purchase/StockVerifi
 const StockTransfer = React.lazy(() => import('../views/purchase/StockTransfer'))
 const UploadChallan = React.lazy(() => import('../views/purchase/UploadChallan'))
 export const purchaseRoutes = [
+  { path: '/advantage-tvs-vehicles', name: 'Advantage TVS Vehicles', element: AdvantageTVSVehicles},
   { path: '/inward-stock', name: 'Inward Stock', element: InwardStock},
   { path: '/stock-dashboard', name: 'Stock Dashboard', element: StockDashboard},
    { path: '/purchase-order-dashboard', name: 'Purchase Order Dashboard', element: PurchaseOrderDashboard},

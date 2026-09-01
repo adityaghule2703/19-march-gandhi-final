@@ -1,5 +1,7 @@
 import React from 'react';
 
+
+const SubdealerInsuranceDownload = React.lazy(() => import('../views/subdealer/booking/SubdealerInsuranceDownload'))
 const SubdealerList = React.lazy(() => import('../views/subdealer/SubdealerList'))
 const SubdealerReport = React.lazy(() => import('../views/subdealer/subdealerreport/SubdealerReport'))
 const SubdealerAuditList = React.lazy(() => import('../views/subdealer/SubdealerAuditList'))
@@ -26,6 +28,7 @@ const SubdealerNewBooking = React.lazy(() => import('../views/subdealer/booking/
 const ChassisAllocation = React.lazy(() => import('../views/subdealer/booking/ChassisAllocation'))
 
 export const subdealerRoutes = [
+    { path:'/subdealer-insurance-download', name:'Subdealer Insurance Download', element:SubdealerInsuranceDownload},
     { path:'/subdealer-list', name:'Subdealer List', element:SubdealerList},
     { path:'/subdealer/subdealer-report', name:'Subdealer Report', element:SubdealerReport},
     { path:'/add-subdealer', name:'Add Subdealer', element:AddSubdealer},

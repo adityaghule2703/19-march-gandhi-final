@@ -3305,8 +3305,23 @@ const ChassisNumberModal = ({
   const [showReasonField, setShowReasonField] = useState(false);
   const [nonFifoError, setNonFifoError] = useState(false);
   
+  // NEW STATE for additional fields
+  const [rsaOptIn, setRsaOptIn] = useState('YES');
+  const [extendedWarranty, setExtendedWarranty] = useState('NO');
+  const [insuranceAddons, setInsuranceAddons] = useState([]);
+  
   // State for selected chassis details
   const [selectedChassisDetails, setSelectedChassisDetails] = useState(null);
+
+  // Insurance Addon options
+  const insuranceAddonOptions = [
+    { value: 'ZERO_DEPRECIATION', label: 'Zero Depreciation' },
+    { value: 'RETURN_TO_INVOICE', label: 'Return to Invoice' },
+    { value: 'CONSUMABLES', label: 'Consumables' },
+    { value: 'KEY_PROTECT', label: 'Key Protect' },
+    { value: 'TYRE_WHEEL_RIM_PROTECT', label: 'Tyre & Wheel Rim Protect' },
+    { value: 'EXTRA_TOWING', label: 'Extra Towing' },
+  ];
 
   // Add safe access for booking properties
   const isCashPayment = booking?.payment?.type?.toLowerCase() === 'cash';
@@ -3332,6 +3347,11 @@ const ChassisNumberModal = ({
       setShowReasonField(false);
       setNonFifoError(false);
       setSelectedChassisDetails(null);
+      
+      // NEW: Reset additional fields
+      setRsaOptIn(booking?.rsaOptIn || 'YES');
+      setExtendedWarranty(booking?.extendedWarranty || 'NO');
+      setInsuranceAddons(booking?.insuranceAddons || []);
       
       fetchAvailableChassisNumbers();
     }
@@ -3591,6 +3611,51 @@ const ChassisNumberModal = ({
     })
   };
 
+  // Styles for insurance addon select
+  const insuranceSelectStyles = {
+    control: (provided, state) => ({
+      ...provided,
+      borderColor: state.isFocused ? '#80bdff' : '#ced4da',
+      boxShadow: state.isFocused ? '0 0 0 0.2rem rgba(0,123,255,.25)' : null,
+      '&:hover': {
+        borderColor: '#80bdff'
+      }
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isSelected 
+        ? '#007bff' 
+        : state.isFocused 
+          ? '#f8f9fa' 
+          : null,
+      color: state.isSelected ? 'white' : '#495057',
+      cursor: 'pointer',
+      ':active': {
+        backgroundColor: state.isSelected ? '#007bff' : '#e9ecef',
+      }
+    }),
+    menu: (provided) => ({
+      ...provided,
+      zIndex: 9999
+    }),
+    multiValue: (provided) => ({
+      ...provided,
+      backgroundColor: '#e9ecef',
+    }),
+    multiValueLabel: (provided) => ({
+      ...provided,
+      color: '#495057',
+    }),
+    multiValueRemove: (provided) => ({
+      ...provided,
+      color: '#6c757d',
+      ':hover': {
+        backgroundColor: '#dc3545',
+        color: 'white',
+      }
+    }),
+  };
+
   const handleDocumentUpload = (e) => {
     const files = Array.from(e.target.files);
     if (files.length + claimDetails.documents.length > 6) {
@@ -3720,7 +3785,12 @@ const ChassisNumberModal = ({
       }),
       ...((isCashPayment || isFinanceBooking) && { is_deviation: isDeviation }),
       // Include engine number if available
-      ...(selectedChassisDetails?.engineNumber && { engineNumber: selectedChassisDetails.engineNumber })
+      ...(selectedChassisDetails?.engineNumber && { engineNumber: selectedChassisDetails.engineNumber }),
+      // NEW: Include additional fields
+      rsaOptIn: rsaOptIn,
+      extendedWarranty: extendedWarranty,
+      ...(insuranceAddons.length > 0 && { insuranceAddons: insuranceAddons }),
+      hasClaim: hasClaim || false,
     };
 
     console.log('Final Payload:', payload);
@@ -3742,6 +3812,12 @@ const ChassisNumberModal = ({
     });
     setDocumentPreviews([]);
     setSelectedChassisDetails(null);
+    
+    // NEW: Reset additional fields
+    setRsaOptIn('YES');
+    setExtendedWarranty('NO');
+    setInsuranceAddons([]);
+    
     onClose();
   };
 
@@ -3933,6 +4009,73 @@ const ChassisNumberModal = ({
                 <CFormTextarea id="updateReason" value={reason} onChange={(e) => setReason(e.target.value)} required rows={3} />
               </div>
             )}
+
+            {/* NEW: Additional Fields Section */}
+            <div className="mt-4 border-top pt-3">
+              <h6>Additional Details</h6>
+              
+              {/* RSA Opt In */}
+              <div className="mb-3">
+                <CFormLabel>RSA Opt In</CFormLabel>
+                <div className="d-flex gap-3 mt-1">
+                  <CFormCheck
+                    id="rsaOptInYes"
+                    label="Yes"
+                    checked={rsaOptIn === 'YES'}
+                    onChange={() => setRsaOptIn('YES')}
+                  />
+                  <CFormCheck
+                    id="rsaOptInNo"
+                    label="No"
+                    checked={rsaOptIn === 'NO'}
+                    onChange={() => setRsaOptIn('NO')}
+                  />
+                </div>
+              </div>
+
+              {/* Extended Warranty */}
+              <div className="mb-3">
+                <CFormLabel>Extended Warranty</CFormLabel>
+                <div className="d-flex gap-3 mt-1">
+                  <CFormCheck
+                    id="extendedWarrantyYes"
+                    label="Yes"
+                    checked={extendedWarranty === 'YES'}
+                    onChange={() => setExtendedWarranty('YES')}
+                  />
+                  <CFormCheck
+                    id="extendedWarrantyNo"
+                    label="No"
+                    checked={extendedWarranty === 'NO'}
+                    onChange={() => setExtendedWarranty('NO')}
+                  />
+                </div>
+              </div>
+
+              {/* Insurance Addons - Always visible */}
+              <div className="mb-3">
+                <CFormLabel htmlFor="insuranceAddons">Insurance Addons</CFormLabel>
+                <Select
+                  id="insuranceAddons"
+                  name="insuranceAddons"
+                  placeholder="Select insurance addons..."
+                  value={insuranceAddonOptions.filter(option => insuranceAddons.includes(option.value))}
+                  onChange={(selected) => {
+                    setInsuranceAddons(selected ? selected.map(opt => opt.value) : []);
+                  }}
+                  options={insuranceAddonOptions}
+                  styles={insuranceSelectStyles}
+                  isMulti
+                  isClearable
+                  isSearchable
+                  noOptionsMessage={() => "No addons available"}
+                  classNamePrefix="react-select"
+                />
+                <small className="text-muted mt-1 d-block">
+                  Select one or more insurance addons
+                </small>
+              </div>
+            </div>
 
             {hasClaim && (
               <div className="mt-4 border-top pt-3">

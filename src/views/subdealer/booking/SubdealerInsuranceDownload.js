@@ -65,7 +65,7 @@ import { useAuth } from '../../../context/AuthContext';
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const DEFAULT_LIMIT = 10;
 
-const DownloadInsurance = () => {
+const SubdealerInsuranceDownload = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuId, setMenuId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,39 +86,130 @@ const DownloadInsurance = () => {
   const baseURL = 'https://gmplmis.com/dealership-api';
   const { permissions } = useAuth();
   
-  // Page-level permission checks - Using INSURANCE module
-  const hasInsuranceView = hasSafePagePermission(
-    permissions, 
-    MODULES.INSURANCE, 
-    PAGES.INSURANCE.INSURANCE_DETAILS, 
-    ACTIONS.VIEW
+  // ========== TAB-LEVEL VIEW PERMISSIONS FOR SUBDEALER BOOKING ==========
+  const canViewApprovedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.VIEW,
+    TABS.SUBDEALER_ALL_BOOKING.APPROVED
   );
   
-  // Tab-level permission check for Complete Insurance tab
-  const canViewCompleteInsuranceTab = hasSafePagePermission(
-    permissions, 
-    MODULES.INSURANCE, 
-    PAGES.INSURANCE.INSURANCE_DETAILS, 
+  const canViewPendingAllocatedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
     ACTIONS.VIEW,
-    TABS.INSURANCE_DETAILS.COMPLETE_INSURANCE
+    TABS.SUBDEALER_ALL_BOOKING.PENDING_ALLOCATED
+  );
+  
+  const canViewAllocatedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.VIEW,
+    TABS.SUBDEALER_ALL_BOOKING.ALLOCATED
+  );
+  
+  // ========== TAB-LEVEL CREATE PERMISSIONS ==========
+  const canCreateInApprovedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.CREATE,
+    TABS.SUBDEALER_ALL_BOOKING.APPROVED
+  );
+  
+  const canCreateInPendingAllocatedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.CREATE,
+    TABS.SUBDEALER_ALL_BOOKING.PENDING_ALLOCATED
+  );
+  
+  const canCreateInAllocatedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.CREATE,
+    TABS.SUBDEALER_ALL_BOOKING.ALLOCATED
+  );
+  
+  // ========== TAB-LEVEL UPDATE PERMISSIONS ==========
+  const canUpdateInApprovedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.UPDATE,
+    TABS.SUBDEALER_ALL_BOOKING.APPROVED
+  );
+  
+  const canUpdateInPendingAllocatedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.UPDATE,
+    TABS.SUBDEALER_ALL_BOOKING.PENDING_ALLOCATED
+  );
+  
+  const canUpdateInAllocatedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.UPDATE,
+    TABS.SUBDEALER_ALL_BOOKING.ALLOCATED
+  );
+  
+  // ========== TAB-LEVEL DELETE PERMISSIONS ==========
+  const canDeleteInApprovedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.DELETE,
+    TABS.SUBDEALER_ALL_BOOKING.APPROVED
+  );
+  
+  const canDeleteInPendingAllocatedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.DELETE,
+    TABS.SUBDEALER_ALL_BOOKING.PENDING_ALLOCATED
+  );
+  
+  const canDeleteInAllocatedTab = hasSafePagePermission(
+    permissions,
+    MODULES.SUBDEALER_BOOKING,
+    PAGES.SUBDEALER_BOOKING.ALL_BOOKING,
+    ACTIONS.DELETE,
+    TABS.SUBDEALER_ALL_BOOKING.ALLOCATED
   );
 
+  // Check if user can view at least one tab
+  const canViewAnyTab = canViewApprovedTab || canViewPendingAllocatedTab || canViewAllocatedTab;
+
   useEffect(() => {
-    if (!hasInsuranceView || !canViewCompleteInsuranceTab) {
-      showError('You do not have permission to view Insurance Policies');
+    if (!canViewAnyTab) {
+      showError('You do not have permission to view Subdealer Insurance Policies');
       return;
     }
     fetchData(1, limit, '');
-  }, [hasInsuranceView, canViewCompleteInsuranceTab]);
+  }, [canViewAnyTab]);
 
-  // Fetch data with server-side pagination and search - Filter by BRANCH bookingType
+  // Fetch data with server-side pagination and search - Filter by SUBDEALER bookingType
   const fetchData = async (page = 1, pageLimit = DEFAULT_LIMIT, search = '') => {
+    if (!canViewAnyTab) {
+      showError('You do not have permission to view Subdealer Insurance Policies');
+      return;
+    }
+    
     try {
       setLoading(true);
       const params = { 
         page, 
         limit: pageLimit,
-        bookingType: 'BRANCH'
+        bookingType: 'SUBDEALER'
       };
       if (search) params.search = search;
       
@@ -163,6 +254,11 @@ const DownloadInsurance = () => {
 
   // Handle search with debounce
   const handleSearch = (value) => {
+    if (!canViewAnyTab) {
+      showError('You do not have permission to search Subdealer Insurance Policies');
+      return;
+    }
+    
     setSearchTerm(value);
     // Debounce search
     clearTimeout(window.searchTimeout);
@@ -173,6 +269,7 @@ const DownloadInsurance = () => {
 
   // Handle page change
   const handlePageChange = (newPage) => {
+    if (!canViewAnyTab) return;
     if (newPage < 1 || newPage > pages) return;
     fetchData(newPage, limit, searchQuery);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -180,6 +277,7 @@ const DownloadInsurance = () => {
 
   // Handle limit change
   const handleLimitChange = (newLimit) => {
+    if (!canViewAnyTab) return;
     const newLimitValue = parseInt(newLimit, 10);
     fetchData(1, newLimitValue, searchQuery);
   };
@@ -225,6 +323,11 @@ const DownloadInsurance = () => {
 
   // Handle download Harita policy document
   const handleDownloadPolicy = async (bookingNumber) => {
+    if (!canViewAnyTab) {
+      showError('You do not have permission to download Harita Policy');
+      return;
+    }
+    
     if (!bookingNumber) {
       showError('No booking number available');
       return;
@@ -260,6 +363,11 @@ const DownloadInsurance = () => {
 
   // Handle download RSA policy document
   const handleDownloadRsa = async (bookingNumber) => {
+    if (!canViewAnyTab) {
+      showError('You do not have permission to download RSA Policy');
+      return;
+    }
+    
     if (!bookingNumber) {
       showError('No booking number available');
       return;
@@ -371,10 +479,10 @@ const DownloadInsurance = () => {
     );
   };
 
-  if (!hasInsuranceView || !canViewCompleteInsuranceTab) {
+  if (!canViewAnyTab) {
     return (
       <div className="alert alert-danger m-3" role="alert">
-        You do not have permission to view Insurance Policies.
+        You do not have permission to view Subdealer Insurance Policies.
       </div>
     );
   }
@@ -397,7 +505,7 @@ const DownloadInsurance = () => {
 
   return (
     <div>
-      <div className='title'>Branch Insurance Policies</div>
+      <div className='title'>Subdealer Insurance Policies</div>
       
       {/* ⚠️ IMPORTANT NOTE - Please verify policy details */}
       <div className="alert alert-warning mt-3 mb-3" role="alert" style={{ borderLeft: '4px solid #ffc107' }}>
@@ -416,7 +524,7 @@ const DownloadInsurance = () => {
               </CBadge>
             )}
             <CBadge color="primary" className="me-2">
-              Type: Branch
+              Type: Subdealer
             </CBadge>
           </div>
         </CCardHeader>
@@ -448,7 +556,7 @@ const DownloadInsurance = () => {
                 <CTableRow>
                   <CTableHeaderCell>Sr.no</CTableHeaderCell>
                   <CTableHeaderCell>Booking #</CTableHeaderCell>
-                  <CTableHeaderCell>Branch Name</CTableHeaderCell>
+                  <CTableHeaderCell>Subdealer Name</CTableHeaderCell>
                   <CTableHeaderCell>Chassis #</CTableHeaderCell>
                   <CTableHeaderCell>Customer Name</CTableHeaderCell>
                   <CTableHeaderCell>Mobile</CTableHeaderCell>
@@ -464,7 +572,7 @@ const DownloadInsurance = () => {
                 {insuranceData.length === 0 && !loading ? (
                   <CTableRow>
                     <CTableDataCell colSpan="12" className="text-center">
-                      {searchQuery ? `No results found for "${searchQuery}"` : 'No branch insurance policies available'}
+                      {searchQuery ? `No results found for "${searchQuery}"` : 'No subdealer insurance policies available'}
                     </CTableDataCell>
                   </CTableRow>
                 ) : (
@@ -479,7 +587,7 @@ const DownloadInsurance = () => {
                           </CBadge>
                         </CTableDataCell>
                         <CTableDataCell style={{ fontSize: '12px' }}>
-                          {policy.branchName || 'N/A'}
+                          {policy.subdealerName || 'N/A'}
                         </CTableDataCell>
                         <CTableDataCell style={{ fontSize: '12px' }}>
                           {policy.chassisNumber || 'N/A'}
@@ -572,4 +680,4 @@ const DownloadInsurance = () => {
   );
 };
 
-export default DownloadInsurance;
+export default SubdealerInsuranceDownload;

@@ -6280,6 +6280,17 @@ const StockList = () => {
   const hasAllBranchAccess = user?.branchAccess === "ALL";
   const navigate = useNavigate();
 
+  // Check if user is SUPERADMIN - using both methods for safety
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const userRole = localStorage.getItem('userRole') || 
+                   (storedUser.roles?.[0]?.name || '').toUpperCase();
+  
+  // Check if user is SUPERADMIN from API response
+  const isSuperAdminFromRoles = storedUser.roles?.some(role => role.name === 'SUPERADMIN') || false;
+  const isSuperAdmin = userRole === 'SUPERADMIN' || 
+                       storedUser.is_superadmin === true ||
+                       isSuperAdminFromRoles;
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     
@@ -6345,15 +6356,6 @@ const StockList = () => {
   // For export, you might need a specific permission or use CREATE permission
   const canExportInwardStock = hasInwardStockCreate || canCreateInwardStock;
   const canExportReport = canCreateInwardStock; // Using CREATE permission for report export
-
-  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-  const branchId = storedUser.branch?._id;
-  const userRole = localStorage.getItem('userRole') || 
-                   (storedUser.roles?.[0]?.name || '').toUpperCase();
-
-  // Check if user is SUPERADMIN
-  const isSuperAdmin = userRole === 'SUPERADMIN' || 
-                       (storedUser.roles?.[0]?.isSuperAdmin === true);
 
   useEffect(() => {
     if (!canViewInwardStock) {
@@ -7296,6 +7298,17 @@ const StockList = () => {
     setMenuId(null);
   };
 
+  // Add the handleEdit function - only for SUPERADMIN
+  const handleEdit = (vehicleId) => {
+    if (!isSuperAdmin) {
+      showError('Only SUPERADMIN users can edit vehicles');
+      return;
+    }
+    
+    navigate(`/update-inward/${vehicleId}`);
+    handleClose();
+  };
+
   const handleUnblockClick = (vehicleId) => {
     if (!canUpdateInwardStock) {
       showError('You do not have permission to unblock vehicles');
@@ -7721,6 +7734,14 @@ const StockList = () => {
                               open={menuId === vehicleId} 
                               onClose={handleClose}
                             >
+                              {/* Edit Option - Only for SUPERADMIN */}
+                              {isSuperAdmin && canUpdateInwardStock && (
+                                <MenuItem onClick={() => handleEdit(vehicleId)}>
+                                  <CIcon icon={cilPencil} className="me-2" />
+                                  Edit
+                                </MenuItem>
+                              )}
+                              
                               {/* Updated: Show Unblock for both Blocked and Booked status */}
                               {canUpdateInwardStock && isVehicleBlockedOrBooked(vehicle.status) && (
                                 <MenuItem onClick={() => handleUnblockClick(vehicleId)}>
@@ -8290,7 +8311,6 @@ const StockList = () => {
 };
 
 export default StockList;
-
 
 
 

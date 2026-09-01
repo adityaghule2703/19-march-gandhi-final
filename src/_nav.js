@@ -3999,6 +3999,14 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
     purchaseItems.push({
       component: CNavItem,
+      name: 'Advantage TVS Vehicles',
+      to: '/advantage-tvs-vehicles',
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
       name: 'Stock Alert',
       to: '/stock-alert',
     });
@@ -4943,6 +4951,14 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
         component: CNavItem,
         name: 'All Booking',
         to: '/subdealer-all-bookings',
+      });
+    }
+
+     if (canViewPage(userPermissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.ALL_BOOKING)) {
+      subdealerBookingItems.push({
+        component: CNavItem,
+        name: 'Subdealer Insurance Download',
+        to: '/subdealer-insurance-download',
       });
     }
     

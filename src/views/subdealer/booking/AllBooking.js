@@ -19352,47 +19352,55 @@ const handleSaveChassisNumber = async (payload, success, errorMessage) => {
                       <CTableDataCell>{booking.customerDetails?.name || ''}</CTableDataCell>
                       {tabIndex !== 1 && <CTableDataCell>{booking.customerDetails?.mobile1 || ''}</CTableDataCell>}
                       
-                      {tabIndex !== 1 && (
-                        <CTableDataCell>
-                          {canUploadKycInThisTab() && booking.documentStatus?.kyc?.status === 'NOT_UPLOADED' ? (
-                            <Link
-                              to={`/upload-kyc/${bookingId}`}
-                              state={{
-                                bookingId: bookingId,
-                                customerName: booking.customerDetails?.name || '',
-                                address: `${booking.customerDetails?.address || ''}, ${booking.customerDetails?.taluka || ''}, ${booking.customerDetails?.district || ''}, ${booking.customerDetails?.pincode || ''}`,
-                                bookingType: 'SUBDEALER'
-                              }}
-                            >
-                              <CButton size="sm" className="upload-kyc-btn icon-only">
-                                <CIcon icon={cilCloudUpload} />
-                              </CButton>
-                            </Link>
-                          ) : (
-                            <div className="d-flex align-items-center">
-                              <span className={`status-badge ${booking.documentStatus?.kyc?.status?.toLowerCase() || ''}`}>
-                                {booking.documentStatus?.kyc?.status || ''}
-                              </span>
-                              {canUploadKycInThisTab() && booking.documentStatus?.kyc?.status === 'REJECTED' && (
-                                <Link
-                                  to={`/upload-kyc/${bookingId}`}
-                                  state={{
-                                    bookingId: bookingId,
-                                    customerName: booking.customerDetails?.name || '',
-                                    address: `${booking.customerDetails?.address || ''}, ${booking.customerDetails?.taluka || ''}, ${booking.customerDetails?.district || ''}, ${booking.customerDetails?.pincode || ''}`,
-                                    bookingType: 'SUBDEALER'
-                                  }}
-                                  className="ms-2"
-                                >
-                                  <CButton size="sm" className="upload-kyc-btn icon-only">
-                                    <CIcon icon={cilCloudUpload} />
-                                  </CButton>
-                                </Link>
-                              )}
-                            </div>
-                          )}
-                        </CTableDataCell>
-                      )}
+                     {tabIndex !== 1 && (
+  <CTableDataCell>
+    {(booking.documentStatus?.kyc?.status === 'NOT_UPLOADED' || booking.documentStatus?.kyc?.status === 'INCOMPLETE') ? (
+      <Link
+        to={`/upload-kyc/${bookingId}`}
+        state={{
+          bookingId: bookingId,
+          customerName: booking.customerDetails?.name || '',
+          address: `${booking.customerDetails?.address || ''}, ${booking.customerDetails?.taluka || ''}, ${booking.customerDetails?.district || ''}, ${booking.customerDetails?.pincode || ''}`,
+          bookingType: 'SUBDEALER'
+        }}
+      >
+        <CButton 
+          size="sm" 
+          className="upload-kyc-btn icon-only"
+          style={{
+            backgroundColor: booking.documentStatus?.kyc?.status === 'INCOMPLETE' ? '#FD7E14' : '#0d6efd',
+            borderColor: booking.documentStatus?.kyc?.status === 'INCOMPLETE' ? '#FD7E14' : '#0d6efd',
+            color: 'white'
+          }}
+        >
+          <CIcon icon={cilCloudUpload} />
+        </CButton>
+      </Link>
+    ) : (
+      <div className="d-flex align-items-center">
+        <span className={`status-badge ${booking.documentStatus?.kyc?.status?.toLowerCase() || ''}`}>
+          {booking.documentStatus?.kyc?.status || ''}
+        </span>
+        {booking.documentStatus?.kyc?.status === 'REJECTED' && (
+          <Link
+            to={`/upload-kyc/${bookingId}`}
+            state={{
+              bookingId: bookingId,
+              customerName: booking.customerDetails?.name || '',
+              address: `${booking.customerDetails?.address || ''}, ${booking.customerDetails?.taluka || ''}, ${booking.customerDetails?.district || ''}, ${booking.customerDetails?.pincode || ''}`,
+              bookingType: 'SUBDEALER'
+            }}
+            className="ms-2"
+          >
+            <CButton size="sm" className="upload-kyc-btn icon-only">
+              <CIcon icon={cilCloudUpload} />
+            </CButton>
+          </Link>
+        )}
+      </div>
+    )}
+  </CTableDataCell>
+)}
                       <CTableDataCell>
                         <span 
                           className="status-badge" 

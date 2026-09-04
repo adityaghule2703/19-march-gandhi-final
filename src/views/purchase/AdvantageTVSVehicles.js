@@ -49,7 +49,10 @@ import {
   CPaginationItem,
   CFormSelect,
   CAlert,
-  CFormTextarea
+  CFormTextarea,
+  CForm,
+  CRow,
+  CCol
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
@@ -68,7 +71,8 @@ import {
   cilWarning,
   cilThumbUp,
   cilThumbDown,
-  cilSearch
+  cilSearch,
+  cilSave
 } from '@coreui/icons';
 import { useAuth } from '../../context/AuthContext';
 
@@ -104,6 +108,28 @@ const AdvantageTVSVehicles = () => {
   const [actionNotes, setActionNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionModalLoading, setActionModalLoading] = useState(false);
+
+  // Edit Modal States
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editVehicle, setEditVehicle] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    modelName: '',
+    modelId: '',
+    colorName: '',
+    type: 'ICE',
+    unloadLocation: '',
+    engineNumber: '',
+    batteryNumber: '',
+    keyNumber: '',
+    noOfDaysInStockDLR: 0,
+    notes: ''
+  });
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState(null);
+  
+  // Branches state for dropdown
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
   
   const { permissions } = useAuth();
   
@@ -148,7 +174,25 @@ const AdvantageTVSVehicles = () => {
       return;
     }
     fetchData(1, limit, '');
+    fetchBranches();
   }, [canViewAdvantageTVS]);
+
+  // Fetch branches for dropdown
+  const fetchBranches = async () => {
+    try {
+      setBranchesLoading(true);
+      const response = await axiosInstance.get('/branches');
+      if (response.data && response.data.data) {
+        setBranches(response.data.data);
+      } else if (response.data && Array.isArray(response.data)) {
+        setBranches(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    } finally {
+      setBranchesLoading(false);
+    }
+  };
 
   // Fetch data with server-side pagination and search
   const fetchData = async (page = 1, pageLimit = DEFAULT_LIMIT, search = '') => {
@@ -338,6 +382,112 @@ const AdvantageTVSVehicles = () => {
       showError(error.response?.data?.message || 'Failed to reject vehicle');
     } finally {
       setActionModalLoading(false);
+    }
+  };
+
+  // ========== EDIT FUNCTIONS ==========
+  
+  // Open edit modal
+  const openEditModal = (vehicle, event) => {
+    if (event) {
+      event.stopPropagation();
+    }
+    
+    if (!canUpdateAdvantageTVS) {
+      showError('You do not have permission to edit vehicles');
+      return;
+    }
+    
+    // Get chassis number
+    const chassisNumber = vehicle.stockData?.chassisNumber || vehicle.chassisNumber;
+    if (!chassisNumber) {
+      showError('Vehicle chassis number not found');
+      return;
+    }
+    
+    // Populate form data from approvalPreview object
+    const preview = vehicle.approvalPreview || {};
+    const modelInfo = preview.model || {};
+    const colorInfo = preview.color || {};
+    const branchInfo = preview.branch || {};
+    const vehicleData = preview.vehicleData || {};
+    const stockData = vehicle.stockData || {};
+    
+    setEditVehicle(vehicle);
+    setEditFormData({
+      modelName: modelInfo.name || vehicleData.modelName || stockData.vehicleModel || '',
+      modelId: modelInfo.id || '',
+      colorName: colorInfo.name || colorInfo.suggestedName || vehicleData.colorName || stockData.vehicleColor || '',
+      type: modelInfo.type || vehicleData.type || 'ICE',
+      unloadLocation: branchInfo.id || branchInfo.name || stockData.location || '',
+      engineNumber: vehicleData.engineNumber || stockData.engineNo || '',
+      batteryNumber: vehicleData.batteryNumber || '',
+      keyNumber: vehicleData.keyNumber || '',
+      noOfDaysInStockDLR: vehicleData.noOfDaysInStockDLR || 0,
+      notes: vehicleData.notes || ''
+    });
+    setEditError(null);
+    setEditModalVisible(true);
+  };
+
+  // Handle edit form input changes
+  const handleEditInputChange = (field, value) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle edit form submit
+  const handleEditSubmit = async () => {
+    if (!editVehicle) return;
+    
+    // Validation
+    if (!editFormData.modelName.trim()) {
+      setEditError('Model Name is required');
+      return;
+    }
+    
+    const chassisNumber = editVehicle.stockData?.chassisNumber || editVehicle.chassisNumber;
+    if (!chassisNumber) {
+      setEditError('Chassis number not found');
+      return;
+    }
+    
+    try {
+      setEditLoading(true);
+      setEditError(null);
+      
+      // Prepare payload
+      const payload = {
+        modelName: editFormData.modelName,
+        model: editFormData.modelId || '',
+        color: {
+          name: editFormData.colorName
+        },
+        type: editFormData.type,
+        unloadLocation: editFormData.unloadLocation,
+        engineNumber: editFormData.engineNumber,
+        batteryNumber: editFormData.batteryNumber,
+        keyNumber: editFormData.keyNumber,
+        noOfDaysInStockDLR: Number(editFormData.noOfDaysInStockDLR) || 0,
+        notes: editFormData.notes
+      };
+      
+      // Make API call
+      await axiosInstance.post(`/approvals/edit-and-save/${chassisNumber}`, payload);
+      
+      showSuccess('Vehicle updated successfully!');
+      setEditModalVisible(false);
+      setEditVehicle(null);
+      fetchData(currentPage, limit, searchQuery);
+    } catch (error) {
+      console.error('Error updating vehicle:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to update vehicle';
+      setEditError(errorMsg);
+      showError(errorMsg);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -563,6 +713,17 @@ const AdvantageTVSVehicles = () => {
                             >
                               <CIcon icon={cilSearch} size="sm" />
                             </CButton>
+                            {/* EDIT BUTTON - Added here */}
+                            <CButton
+                              color="warning"
+                              size="sm"
+                              onClick={(e) => openEditModal(item, e)}
+                              disabled={!canUpdateAdvantageTVS}
+                              className="px-2 py-1"
+                              title="Edit Vehicle"
+                            >
+                              <CIcon icon={cilPencil} size="sm" />
+                            </CButton>
                             <CButton
                               color="success"
                               size="sm"
@@ -746,6 +907,193 @@ const AdvantageTVSVehicles = () => {
               <><CIcon icon={actionType === 'approve' ? cilCheck : cilX} className="me-1" /> 
               {actionType === 'approve' ? 'Approve' : 'Reject'}
               </>
+            )}
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* ========== EDIT MODAL ========== */}
+      <CModal 
+        visible={editModalVisible} 
+        onClose={() => {
+          setEditModalVisible(false);
+          setEditVehicle(null);
+          setEditError(null);
+        }}
+        size="lg"
+        scrollable
+      >
+        <CModalHeader className="border-bottom">
+          <CModalTitle className="d-flex align-items-center">
+            <CIcon icon={cilPencil} className="me-2 text-warning" />
+            Edit Vehicle Details
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {editVehicle && (
+            <div>
+              {/* Vehicle Info Banner */}
+              <div className="alert alert-info d-flex align-items-center mb-4">
+                <CIcon icon={cilInfo} className="me-2" />
+                <span>
+                  <strong>Editing:</strong> Chassis #{editVehicle.stockData?.chassisNumber || editVehicle.chassisNumber || 'N/A'}
+                </span>
+              </div>
+
+              {editError && (
+                <CAlert color="danger" className="mb-3">
+                  <CIcon icon={cilWarning} className="me-2" />
+                  {editError}
+                </CAlert>
+              )}
+
+              <CForm>
+                {/* Hidden fields for modelName and modelId - passed in payload but not shown in UI */}
+                <input type="hidden" name="modelName" value={editFormData.modelName} />
+                <input type="hidden" name="modelId" value={editFormData.modelId} />
+
+                <CRow className="mb-3">
+                  <CCol md="6">
+                    <CFormLabel className="fw-bold">Color Name</CFormLabel>
+                    <CFormInput
+                      type="text"
+                      value={editFormData.colorName}
+                      onChange={(e) => handleEditInputChange('colorName', e.target.value)}
+                      placeholder="Enter color name"
+                    />
+                  </CCol>
+                  <CCol md="6">
+                    <CFormLabel className="fw-bold">Vehicle Type</CFormLabel>
+                    <CFormSelect
+                      value={editFormData.type}
+                      onChange={(e) => handleEditInputChange('type', e.target.value)}
+                    >
+                      <option value="ICE">ICE</option>
+                      <option value="EV">EV</option>
+                    </CFormSelect>
+                  </CCol>
+                </CRow>
+
+                <CRow className="mb-3">
+                  <CCol md="12">
+                    <CFormLabel className="fw-bold">Unload Location / Branch</CFormLabel>
+                    <CFormSelect
+                      value={editFormData.unloadLocation}
+                      onChange={(e) => handleEditInputChange('unloadLocation', e.target.value)}
+                      disabled={branchesLoading}
+                    >
+                      <option value="">Select a branch...</option>
+                      {branches.map((branch) => (
+                        <option key={branch._id || branch.id} value={branch._id || branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </CFormSelect>
+                    {branchesLoading && (
+                      <div className="text-muted small mt-1">
+                        <CSpinner size="sm" className="me-1" /> Loading branches...
+                      </div>
+                    )}
+                  </CCol>
+                </CRow>
+
+                <CRow className="mb-3">
+                  <CCol md="6">
+                    <CFormLabel className="fw-bold">Engine Number</CFormLabel>
+                    <CFormInput
+                      type="text"
+                      value={editFormData.engineNumber}
+                      onChange={(e) => handleEditInputChange('engineNumber', e.target.value)}
+                      placeholder="Enter engine number"
+                    />
+                  </CCol>
+                  <CCol md="6">
+                    <CFormLabel className="fw-bold">Battery Number</CFormLabel>
+                    <CFormInput
+                      type="text"
+                      value={editFormData.batteryNumber}
+                      onChange={(e) => handleEditInputChange('batteryNumber', e.target.value)}
+                      placeholder="Enter battery number"
+                    />
+                  </CCol>
+                </CRow>
+
+                <CRow className="mb-3">
+                  <CCol md="6">
+                    <CFormLabel className="fw-bold">Key Number</CFormLabel>
+                    <CFormInput
+                      type="text"
+                      value={editFormData.keyNumber}
+                      onChange={(e) => handleEditInputChange('keyNumber', e.target.value)}
+                      placeholder="Enter key number"
+                    />
+                  </CCol>
+                  <CCol md="6">
+                    <CFormLabel className="fw-bold">Days in Stock DLR</CFormLabel>
+                    <CFormInput
+                      type="number"
+                      value={editFormData.noOfDaysInStockDLR}
+                      onChange={(e) => handleEditInputChange('noOfDaysInStockDLR', e.target.value)}
+                      placeholder="Enter days in stock"
+                      min="0"
+                    />
+                  </CCol>
+                </CRow>
+
+                <CRow className="mb-3">
+                  <CCol md="12">
+                    <CFormLabel className="fw-bold">Notes</CFormLabel>
+                    <CFormTextarea
+                      rows={3}
+                      value={editFormData.notes}
+                      onChange={(e) => handleEditInputChange('notes', e.target.value)}
+                      placeholder="Enter any additional notes"
+                    />
+                  </CCol>
+                </CRow>
+
+                {/* Preview of what will be updated */}
+                <CAlert color="secondary" className="mt-3">
+                  <h6 className="mb-2">
+                    <CIcon icon={cilInfo} className="me-2" />
+                    Summary of Changes
+                  </h6>
+                  <div className="small">
+                    <p className="mb-1"><strong>Color:</strong> {editFormData.colorName || '(empty)'}</p>
+                    <p className="mb-1"><strong>Type:</strong> {editFormData.type}</p>
+                    <p className="mb-1"><strong>Branch:</strong> {
+                      branches.find(b => (b._id || b.id) === editFormData.unloadLocation)?.name || 
+                      editFormData.unloadLocation || 
+                      '(not selected)'
+                    }</p>
+                    <p className="mb-0"><strong>Engine:</strong> {editFormData.engineNumber || '(empty)'}</p>
+                  </div>
+                </CAlert>
+              </CForm>
+            </div>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton 
+            color="secondary" 
+            onClick={() => {
+              setEditModalVisible(false);
+              setEditVehicle(null);
+              setEditError(null);
+            }}
+            disabled={editLoading}
+          >
+            Cancel
+          </CButton>
+          <CButton 
+            color="warning" 
+            onClick={handleEditSubmit}
+            disabled={editLoading || !editFormData.modelName.trim()}
+          >
+            {editLoading ? (
+              <><CSpinner size="sm" className="me-2" /> Saving...</>
+            ) : (
+              <><CIcon icon={cilSave} className="me-1" /> Save Changes</>
             )}
           </CButton>
         </CModalFooter>
@@ -1013,10 +1361,7 @@ const AdvantageTVSVehicles = () => {
                             </div>
                           </div>
                           <div className="row">
-                            {/* <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Vehicle Value</label>
-                              <p className="mb-2">₹{stockData.vehicleValue?.toLocaleString() || 'N/A'}</p>
-                            </div> */}
+                           
                             <div className="col-md-6">
                               <label className="text-muted small fw-bold">TVS Invoice No</label>
                               <p className="mb-2">{stockData.tvsInvoiceNo || 'N/A'}</p>

@@ -83,8 +83,14 @@ const SubdealerInsuranceDownload = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredCount, setFilteredCount] = useState(0);
   
+  // User data state
+  const [userData, setUserData] = useState(null);
+  const [isSubdealer, setIsSubdealer] = useState(false);
+  const [subdealerId, setSubdealerId] = useState('');
+  const [subdealerName, setSubdealerName] = useState('');
+  
   const baseURL = 'https://gmplmis.com/dealership-api';
-  const { permissions } = useAuth();
+  const { permissions, user } = useAuth();
   
   // ========== TAB-LEVEL VIEW PERMISSIONS FOR SUBDEALER BOOKING ==========
   const canViewApprovedTab = hasSafePagePermission(
@@ -189,31 +195,98 @@ const SubdealerInsuranceDownload = () => {
   // Check if user can view at least one tab
   const canViewAnyTab = canViewApprovedTab || canViewPendingAllocatedTab || canViewAllocatedTab;
 
+const fetchUserData = async () => {
+  try {
+    const response = await axiosInstance.get('/auth/me');
+    if (response.data && response.data.data) {
+      const userData = response.data.data;
+      setUserData(userData);
+
+      const hasSubdealerRole = userData.roles && userData.roles.some(role => role.name === 'SUBDEALER');
+      setIsSubdealer(hasSubdealerRole);
+
+      let sId = '';
+      let sName = '';
+      if (hasSubdealerRole && userData.subdealer) {
+        sId = userData.subdealer._id || userData.subdealer.id || '';
+        sName = userData.subdealer.name || '';
+        setSubdealerId(sId);
+        setSubdealerName(sName);
+      } else {
+        setSubdealerId('');
+        setSubdealerName('');
+      }
+
+      // Return the fresh values directly — state (isSubdealer/subdealerId) won't
+      // be updated yet on this render pass, so callers should use this return
+      // value instead of reading state right after calling fetchUserData().
+      return { userData, isSubdealer: hasSubdealerRole, subdealerId: sId, subdealerName: sName };
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    showError('Failed to fetch user information');
+    return null;
+  }
+};
+
   useEffect(() => {
+  const initialize = async () => {
     if (!canViewAnyTab) {
       showError('You do not have permission to view Subdealer Insurance Policies');
+      setLoading(false);
       return;
     }
-    fetchData(1, limit, '');
-  }, [canViewAnyTab]);
+
+    const userInfo = await fetchUserData();
+
+    // Pass the fresh values straight through instead of relying on
+    // isSubdealer/subdealerId state, which hasn't re-rendered yet here.
+    fetchData(
+      1,
+      limit,
+      '',
+      userInfo ? { isSubdealer: userInfo.isSubdealer, subdealerId: userInfo.subdealerId } : null
+    );
+  };
+
+  initialize();
+}, [canViewAnyTab]);
 
   // Fetch data with server-side pagination and search - Filter by SUBDEALER bookingType
-  const fetchData = async (page = 1, pageLimit = DEFAULT_LIMIT, search = '') => {
-    if (!canViewAnyTab) {
-      showError('You do not have permission to view Subdealer Insurance Policies');
-      return;
+  const fetchData = async (page = 1, pageLimit = DEFAULT_LIMIT, search = '', subdealerOverride = null) => {
+  if (!canViewAnyTab) {
+    showError('You do not have permission to view Subdealer Insurance Policies');
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const params = {
+      page,
+      limit: pageLimit,
+      bookingType: 'SUBDEALER'
+    };
+
+    // Prefer the override (fresh values, e.g. right after fetchUserData resolves)
+    // over state, since state can be stale at that point.
+    const effectiveIsSubdealer = subdealerOverride ? subdealerOverride.isSubdealer : isSubdealer;
+    const effectiveSubdealerId = subdealerOverride ? subdealerOverride.subdealerId : subdealerId;
+
+    if (effectiveIsSubdealer && effectiveSubdealerId) {
+      params.subdealer = effectiveSubdealerId;
+      console.log('Adding subdealer filter with ID:', effectiveSubdealerId);
     }
-    
-    try {
-      setLoading(true);
-      const params = { 
-        page, 
-        limit: pageLimit,
-        bookingType: 'SUBDEALER'
-      };
-      if (search) params.search = search;
+
+    if (search) params.search = search;
+
+    console.log('Final params being sent:', params);
+    console.log('Full URL:', `/insurance-panel/completed?${new URLSearchParams(params).toString()}`);
+
+    const response = await axiosInstance.get('/insurance-panel/completed', { params });
       
-      const response = await axiosInstance.get('/insurance-panel/completed', { params });
+      console.log('API Response:', response.data);
       
       let docs = [];
       let totalCount = 0;
@@ -507,6 +580,8 @@ const SubdealerInsuranceDownload = () => {
     <div>
       <div className='title'>Subdealer Insurance Policies</div>
       
+     
+      
       {/* ⚠️ IMPORTANT NOTE - Please verify policy details */}
       <div className="alert alert-warning mt-3 mb-3" role="alert" style={{ borderLeft: '4px solid #ffc107' }}>
         <strong>Important:</strong> Please verify the <strong>Model Name</strong>, <strong>Variant</strong>, and <strong>Chassis Number</strong> after downloading the policy document to ensure they match the vehicle details.
@@ -526,6 +601,11 @@ const SubdealerInsuranceDownload = () => {
             <CBadge color="primary" className="me-2">
               Type: Subdealer
             </CBadge>
+            {isSubdealer && subdealerName && (
+              <CBadge color="success" className="me-2">
+                {subdealerName}
+              </CBadge>
+            )}
           </div>
         </CCardHeader>
         
@@ -572,7 +652,9 @@ const SubdealerInsuranceDownload = () => {
                 {insuranceData.length === 0 && !loading ? (
                   <CTableRow>
                     <CTableDataCell colSpan="12" className="text-center">
-                      {searchQuery ? `No results found for "${searchQuery}"` : 'No subdealer insurance policies available'}
+                      {searchQuery ? `No results found for "${searchQuery}"` : 
+                       isSubdealer ? `No insurance policies found for ${subdealerName}` : 
+                       'No subdealer insurance policies available'}
                     </CTableDataCell>
                   </CTableRow>
                 ) : (

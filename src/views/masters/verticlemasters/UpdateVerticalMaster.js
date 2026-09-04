@@ -13,6 +13,8 @@ function UpdateVerticalMaster() {
     name: '',
     status: 'active'
   });
+
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);

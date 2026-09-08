@@ -668,7 +668,7 @@ import {
   faUniversity,
   faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
-import '../../../css/viewBookingModal.css'; // Create this CSS file for custom styles
+import '../../../css/viewBookingModal.css';
 
 function ViewPendingBookingModal({ show, onClose, bookingData }) {
   if (!bookingData) return null;
@@ -691,7 +691,6 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
     let age = today.getFullYear() - dob.getFullYear();
     const monthDiff = today.getMonth() - dob.getMonth();
     
-    // Adjust age if birthday hasn't occurred this year
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
       age--;
     }
@@ -714,7 +713,6 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
         </div>
       );
     } else if (type === 'FINANCE') {
-      // Safely get financer name
       const financerName = financer ? (typeof financer === 'object' ? financer.name : financer) : null;
       
       return (
@@ -739,12 +737,10 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
   const getColorName = () => {
     if (!bookingData.colorDetails) return 'N/A';
     
-    // If colorDetails is an object with name property
     if (typeof bookingData.colorDetails === 'object' && bookingData.colorDetails.name) {
       return bookingData.colorDetails.name;
     }
     
-    // If colorDetails is a string
     if (typeof bookingData.colorDetails === 'string') {
       return bookingData.colorDetails;
     }
@@ -756,18 +752,35 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
   const getModelName = () => {
     if (!bookingData.modelDetails) return 'N/A';
     
-    // If modelDetails is an object with model_name property
     if (typeof bookingData.modelDetails === 'object' && bookingData.modelDetails.model_name) {
       return bookingData.modelDetails.model_name;
     }
     
-    // If modelDetails is a string
     if (typeof bookingData.modelDetails === 'string') {
       return bookingData.modelDetails;
     }
     
     return 'N/A';
   };
+
+  // Get Ex-Showroom Price from priceComponents
+  const getExShowroomPrice = () => {
+    if (!bookingData.priceComponents || !Array.isArray(bookingData.priceComponents)) {
+      return null;
+    }
+    
+    const component = bookingData.priceComponents.find(
+      item => item.header?.header_key === 'Ex-Showroom Price'
+    );
+    
+    if (component) {
+      return component.discountedValue || component.originalValue || 0;
+    }
+    
+    return null;
+  };
+
+  const exShowroomPrice = getExShowroomPrice();
 
   return (
     <CModal 
@@ -780,7 +793,7 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
       <CModalHeader className="bg-primary text-white">
         <CModalTitle>
           <FontAwesomeIcon icon={faFileInvoice} className="me-2" />
-          Booking Details - {bookingData.bookingNumber}
+          Booking Details - {bookingData.bookingNumber || 'N/A'}
         </CModalTitle>
       </CModalHeader>
       
@@ -794,18 +807,16 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
             </h5>
             
             <CRow className="g-3">
-              {bookingData?.exShowroomComponents?.map((item, index) => (
-                <CCol md={6} key={index}>
+              {exShowroomPrice !== null && (
+                <CCol md={6}>
                   <div className="info-group">
-                    <label>
-                      EX SHOWROOM PRICE
-                    </label>
+                    <label>EX SHOWROOM PRICE</label>
                     <p className="fw-bold text-primary h5 mb-0">
-                      ₹ {(item.originalValue || 0).toLocaleString('en-IN')}
+                      ₹ {exShowroomPrice.toLocaleString('en-IN')}
                     </p>
                   </div>
                 </CCol>
-              ))}
+              )}
               
               <CCol md={6}>
                 <div className="info-group">
@@ -946,7 +957,10 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
                     <FontAwesomeIcon icon={faCog} className="me-1" />
                     Engine Number
                   </label>
-                  <p className="font-monospace">{bookingData.engineNumber || 'N/A'}</p>
+                  <p className="font-monospace">
+                    {/* FIX: Check vehicle object for engine number */}
+                    {bookingData.engineNumber || bookingData.vehicle?.engineNumber || 'N/A'}
+                  </p>
                 </div>
               </CCol>
             </CRow>
@@ -978,7 +992,6 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
                   </CCol>
                 )}
                 
-                {/* Nominee Salutation - NEW FIELD */}
                 {bookingData.customerDetails?.nominiSalutation && (
                   <CCol md={4}>
                     <div className="info-group">
@@ -991,7 +1004,6 @@ function ViewPendingBookingModal({ show, onClose, bookingData }) {
                   </CCol>
                 )}
 
-                {/* Nominee Email - NEW FIELD */}
                 {bookingData.customerDetails?.email && (
                   <CCol md={4}>
                     <div className="info-group">

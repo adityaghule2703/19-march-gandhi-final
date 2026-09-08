@@ -4,7 +4,10 @@ import React from 'react';
 
 
 
+
+const MisOnlyVehicles = React.lazy(() => import('../views/purchase/MisOnlyVehicles'))
 const AdvantageTVSVehicles = React.lazy(() => import('../views/purchase/AdvantageTVSVehicles'))
+const AdvantageModelMapping = React.lazy(() => import('../views/purchase/AdvantageModelMapping'))
 const StockDashboard = React.lazy(() => import('../views/purchase/StockDashboard'))
 const PurchaseOrderDashboard = React.lazy(() => import('../views/purchase/PurchaseOrderDashboard'))
 const PurchaseOrderConfig = React.lazy(() => import('../views/purchase/PurchaseOrderConfig'))
@@ -17,7 +20,9 @@ const StockVerification = React.lazy(() => import('../views/purchase/StockVerifi
 const StockTransfer = React.lazy(() => import('../views/purchase/StockTransfer'))
 const UploadChallan = React.lazy(() => import('../views/purchase/UploadChallan'))
 export const purchaseRoutes = [
+  { path: '/mis-only-vehicles', name: 'MIS Only Vehicles', element: MisOnlyVehicles},
   { path: '/advantage-tvs-vehicles', name: 'Advantage TVS Vehicles', element: AdvantageTVSVehicles},
+  { path: '/advantage-model-mapping', name: 'Advantage Model Mapping', element: AdvantageModelMapping},
   { path: '/inward-stock', name: 'Inward Stock', element: InwardStock},
   { path: '/stock-dashboard', name: 'Stock Dashboard', element: StockDashboard},
    { path: '/purchase-order-dashboard', name: 'Purchase Order Dashboard', element: PurchaseOrderDashboard},

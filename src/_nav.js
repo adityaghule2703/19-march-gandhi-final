@@ -3999,8 +3999,25 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
     purchaseItems.push({
       component: CNavItem,
+      name: 'MIS Only Vehicles',
+      to: '/mis-only-vehicles',
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
       name: 'Advantage TVS Vehicles',
       to: '/advantage-tvs-vehicles',
+    });
+  }
+
+
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
+      name: 'Advantage Model Mapping',
+      to: '/advantage-model-mapping',
     });
   }
 

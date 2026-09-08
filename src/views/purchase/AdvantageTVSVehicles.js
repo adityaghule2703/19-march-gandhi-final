@@ -75,6 +75,7 @@ import {
   cilSave
 } from '@coreui/icons';
 import { useAuth } from '../../context/AuthContext';
+import Select from 'react-select';
 
 // Constants
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -103,11 +104,12 @@ const AdvantageTVSVehicles = () => {
   
   // Action Modal States
   const [actionModalVisible, setActionModalVisible] = useState(false);
-  const [actionType, setActionType] = useState(null); // 'approve' or 'reject'
+  const [actionType, setActionType] = useState(null);
   const [actionVehicle, setActionVehicle] = useState(null);
   const [actionNotes, setActionNotes] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionModalLoading, setActionModalLoading] = useState(false);
+  const [actionError, setActionError] = useState(null);
 
   // Edit Modal States
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -130,6 +132,19 @@ const AdvantageTVSVehicles = () => {
   // Branches state for dropdown
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
+  
+  // Models and Colors states for dropdown
+  const [models, setModels] = useState([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [colors, setColors] = useState([]);
+  const [colorsLoading, setColorsLoading] = useState(false);
+  const [selectedModelForColors, setSelectedModelForColors] = useState(null);
+  
+  // React-Select options
+  const [modelOptions, setModelOptions] = useState([]);
+  const [colorOptions, setColorOptions] = useState([]);
+  const [selectedModelOption, setSelectedModelOption] = useState(null);
+  const [selectedColorOption, setSelectedColorOption] = useState(null);
   
   const { permissions } = useAuth();
   
@@ -162,7 +177,6 @@ const AdvantageTVSVehicles = () => {
     ACTIONS.DELETE
   );
 
-  // Using convenience functions for cleaner code
   const canViewAdvantageTVS = canViewPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
   const canCreateAdvantageTVS = canCreateInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
   const canUpdateAdvantageTVS = canUpdateInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
@@ -175,6 +189,7 @@ const AdvantageTVSVehicles = () => {
     }
     fetchData(1, limit, '');
     fetchBranches();
+    fetchModels();
   }, [canViewAdvantageTVS]);
 
   // Fetch branches for dropdown
@@ -186,11 +201,90 @@ const AdvantageTVSVehicles = () => {
         setBranches(response.data.data);
       } else if (response.data && Array.isArray(response.data)) {
         setBranches(response.data);
+      } else {
+        setBranches([]);
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
+      setBranches([]);
     } finally {
       setBranchesLoading(false);
+    }
+  };
+
+  // Fetch models for dropdown
+  const fetchModels = async () => {
+    try {
+      setModelsLoading(true);
+      const response = await axiosInstance.get('/models');
+      
+      let modelsData = [];
+      if (response.data?.data?.models) {
+        modelsData = response.data.data.models;
+      } else if (response.data?.models) {
+        modelsData = response.data.models;
+      } else if (Array.isArray(response.data?.data)) {
+        modelsData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        modelsData = response.data;
+      }
+      
+      modelsData = Array.isArray(modelsData) ? modelsData : [];
+      setModels(modelsData);
+      
+      const options = modelsData.map(model => ({
+        value: model._id || model.id,
+        label: model.model_name || model.name || ''
+      }));
+      setModelOptions(options);
+      
+    } catch (error) {
+      console.error('Error fetching models:', error);
+      setModels([]);
+      setModelOptions([]);
+    } finally {
+      setModelsLoading(false);
+    }
+  };
+
+  // Fetch colors for a specific model
+  const fetchColorsForModel = async (modelId) => {
+    if (!modelId) {
+      setColors([]);
+      setColorOptions([]);
+      return;
+    }
+    
+    try {
+      setColorsLoading(true);
+      const response = await axiosInstance.get(`/colors/model/${modelId}`);
+      
+      let colorsData = [];
+      if (response.data?.data?.colors) {
+        colorsData = response.data.data.colors;
+      } else if (response.data?.colors) {
+        colorsData = response.data.colors;
+      } else if (Array.isArray(response.data?.data)) {
+        colorsData = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        colorsData = response.data;
+      }
+      
+      colorsData = Array.isArray(colorsData) ? colorsData : [];
+      setColors(colorsData);
+      
+      const options = colorsData.map(color => ({
+        value: color._id || color.id,
+        label: color.name || color.color_name || ''
+      }));
+      setColorOptions(options);
+      
+    } catch (error) {
+      console.error('Error fetching colors for model:', error);
+      setColors([]);
+      setColorOptions([]);
+    } finally {
+      setColorsLoading(false);
     }
   };
 
@@ -217,7 +311,6 @@ const AdvantageTVSVehicles = () => {
         totalCount = response.data.total || response.data.results || docs.length;
         totalPages = response.data.totalPages || Math.ceil(totalCount / pageLimit);
         
-        // Handle different response structures
         if (response.data.pagination) {
           totalCount = response.data.pagination.total || docs.length;
           totalPages = response.data.pagination.totalPages || 1;
@@ -292,7 +385,7 @@ const AdvantageTVSVehicles = () => {
     return 'N/A';
   };
 
-  // Handle view vehicle details - opens modal
+  // Handle view vehicle details
   const handleViewVehicle = (vehicle, event) => {
     if (event) {
       event.stopPropagation();
@@ -326,29 +419,86 @@ const AdvantageTVSVehicles = () => {
     setActionType(type);
     setActionNotes('');
     setRejectionReason('');
+    setActionError(null);
     setActionModalVisible(true);
   };
 
-  // Handle approve vehicle from modal
+  // Handle approve vehicle from modal with proper error handling
   const handleApproveFromModal = async () => {
     if (!actionVehicle) return;
     
+    setActionModalLoading(true);
+    setActionError(null);
+    
     try {
-      setActionModalLoading(true);
       const chassisNumber = actionVehicle.stockData?.chassisNumber || actionVehicle.chassisNumber;
       
-      await axiosInstance.post(`/advantage-approval/approve/${chassisNumber}`, {
+      const response = await axiosInstance.post(`/advantage-approval/approve/${chassisNumber}`, {
         notes: actionNotes || 'Approved'
       });
       
-      showSuccess('Vehicle approved successfully!');
+      // Check if response indicates success
+      if (response.data && response.data.success === false) {
+        // Handle error response from API
+        const errorMessage = response.data.message || 'Failed to approve vehicle';
+        const errorDetail = response.data.error || '';
+        
+        setActionError(`${errorMessage}${errorDetail ? `: ${errorDetail}` : ''}`);
+        showError(errorMessage);
+        return;
+      }
+      
+      showSuccess(response.data?.message || 'Vehicle approved successfully!');
       setActionModalVisible(false);
       setActionVehicle(null);
       setActionType(null);
+      setActionError(null);
       fetchData(currentPage, limit, searchQuery);
+      
     } catch (error) {
       console.error('Error approving vehicle:', error);
-      showError(error.response?.data?.message || 'Failed to approve vehicle');
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to approve vehicle';
+      let errorDetail = '';
+      
+      if (error.response) {
+        // Server responded with error
+        const responseData = error.response.data;
+        
+        if (responseData) {
+          if (responseData.message) {
+            errorMessage = responseData.message;
+          }
+          if (responseData.error) {
+            errorDetail = responseData.error;
+          }
+          // If there's a specific field error like 'frameNo'
+          if (responseData.error && responseData.error.includes('Field')) {
+            errorMessage = 'Schema validation error: Please check the vehicle data fields.';
+            errorDetail = responseData.error;
+          }
+        }
+        
+        // Set detailed error message
+        const fullErrorMessage = errorDetail 
+          ? `${errorMessage}: ${errorDetail}` 
+          : errorMessage;
+          
+        setActionError(fullErrorMessage);
+        showError(errorMessage);
+        
+      } else if (error.request) {
+        // Request made but no response
+        setActionError('No response from server. Please check your network connection.');
+        showError('Network error: Could not reach the server');
+        
+      } else {
+        // Error in request setup
+        setActionError(error.message || 'An unexpected error occurred');
+        showError(error.message || 'An unexpected error occurred');
+      }
+      
     } finally {
       setActionModalLoading(false);
     }
@@ -363,23 +513,59 @@ const AdvantageTVSVehicles = () => {
       return;
     }
     
+    setActionModalLoading(true);
+    setActionError(null);
+    
     try {
-      setActionModalLoading(true);
       const chassisNumber = actionVehicle.stockData?.chassisNumber || actionVehicle.chassisNumber;
       
-      await axiosInstance.post(`/advantage-approval/reject/${chassisNumber}`, {
+      const response = await axiosInstance.post(`/advantage-approval/reject/${chassisNumber}`, {
         rejectionReason: rejectionReason,
         notes: actionNotes || 'Rejected'
       });
       
-      showSuccess('Vehicle rejected successfully!');
+      // Check if response indicates success
+      if (response.data && response.data.success === false) {
+        const errorMessage = response.data.message || 'Failed to reject vehicle';
+        const errorDetail = response.data.error || '';
+        
+        setActionError(`${errorMessage}${errorDetail ? `: ${errorDetail}` : ''}`);
+        showError(errorMessage);
+        return;
+      }
+      
+      showSuccess(response.data?.message || 'Vehicle rejected successfully!');
       setActionModalVisible(false);
       setActionVehicle(null);
       setActionType(null);
+      setActionError(null);
       fetchData(currentPage, limit, searchQuery);
+      
     } catch (error) {
       console.error('Error rejecting vehicle:', error);
-      showError(error.response?.data?.message || 'Failed to reject vehicle');
+      
+      let errorMessage = 'Failed to reject vehicle';
+      let errorDetail = '';
+      
+      if (error.response) {
+        const responseData = error.response.data;
+        if (responseData) {
+          if (responseData.message) errorMessage = responseData.message;
+          if (responseData.error) errorDetail = responseData.error;
+        }
+        const fullErrorMessage = errorDetail 
+          ? `${errorMessage}: ${errorDetail}` 
+          : errorMessage;
+        setActionError(fullErrorMessage);
+        showError(errorMessage);
+      } else if (error.request) {
+        setActionError('No response from server. Please check your network connection.');
+        showError('Network error: Could not reach the server');
+      } else {
+        setActionError(error.message || 'An unexpected error occurred');
+        showError(error.message || 'An unexpected error occurred');
+      }
+      
     } finally {
       setActionModalLoading(false);
     }
@@ -398,14 +584,12 @@ const AdvantageTVSVehicles = () => {
       return;
     }
     
-    // Get chassis number
     const chassisNumber = vehicle.stockData?.chassisNumber || vehicle.chassisNumber;
     if (!chassisNumber) {
       showError('Vehicle chassis number not found');
       return;
     }
     
-    // Populate form data from approvalPreview object
     const preview = vehicle.approvalPreview || {};
     const modelInfo = preview.model || {};
     const colorInfo = preview.color || {};
@@ -413,11 +597,15 @@ const AdvantageTVSVehicles = () => {
     const vehicleData = preview.vehicleData || {};
     const stockData = vehicle.stockData || {};
     
+    const modelId = modelInfo.id || stockData.modelId || '';
+    const modelName = modelInfo.name || vehicleData.modelName || stockData.vehicleModel || '';
+    const colorName = colorInfo.name || colorInfo.suggestedName || vehicleData.colorName || stockData.vehicleColor || '';
+    
     setEditVehicle(vehicle);
     setEditFormData({
-      modelName: modelInfo.name || vehicleData.modelName || stockData.vehicleModel || '',
-      modelId: modelInfo.id || '',
-      colorName: colorInfo.name || colorInfo.suggestedName || vehicleData.colorName || stockData.vehicleColor || '',
+      modelName: modelName,
+      modelId: modelId,
+      colorName: colorName,
       type: modelInfo.type || vehicleData.type || 'ICE',
       unloadLocation: branchInfo.id || branchInfo.name || stockData.location || '',
       engineNumber: vehicleData.engineNumber || stockData.engineNo || '',
@@ -426,6 +614,33 @@ const AdvantageTVSVehicles = () => {
       noOfDaysInStockDLR: vehicleData.noOfDaysInStockDLR || 0,
       notes: vehicleData.notes || ''
     });
+    
+    // Set selected model option
+    if (modelId && modelOptions.length > 0) {
+      const selected = modelOptions.find(opt => opt.value === modelId);
+      setSelectedModelOption(selected || null);
+    } else {
+      setSelectedModelOption(null);
+    }
+    
+    // Set selected color option
+    if (colorName && colorOptions.length > 0) {
+      const selected = colorOptions.find(opt => opt.label === colorName);
+      setSelectedColorOption(selected || null);
+    } else {
+      setSelectedColorOption(null);
+    }
+    
+    // Set selected model for colors and fetch colors
+    if (modelId) {
+      setSelectedModelForColors(modelId);
+      fetchColorsForModel(modelId);
+    } else {
+      setSelectedModelForColors(null);
+      setColors([]);
+      setColorOptions([]);
+    }
+    
     setEditError(null);
     setEditModalVisible(true);
   };
@@ -438,11 +653,45 @@ const AdvantageTVSVehicles = () => {
     }));
   };
 
+  // Handle model change in edit form
+  const handleModelChange = (selectedOption) => {
+    const modelId = selectedOption ? selectedOption.value : null;
+    const modelName = selectedOption ? selectedOption.label : '';
+    
+    setSelectedModelOption(selectedOption);
+    setSelectedModelForColors(modelId);
+    setSelectedColorOption(null);
+    
+    setEditFormData(prev => ({
+      ...prev,
+      modelId: modelId || '',
+      modelName: modelName,
+      colorName: ''
+    }));
+    
+    if (modelId) {
+      fetchColorsForModel(modelId);
+    } else {
+      setColors([]);
+      setColorOptions([]);
+    }
+  };
+
+  // Handle color change in edit form
+  const handleColorChange = (selectedOption) => {
+    const colorName = selectedOption ? selectedOption.label : '';
+    
+    setSelectedColorOption(selectedOption);
+    setEditFormData(prev => ({
+      ...prev,
+      colorName: colorName
+    }));
+  };
+
   // Handle edit form submit
   const handleEditSubmit = async () => {
     if (!editVehicle) return;
     
-    // Validation
     if (!editFormData.modelName.trim()) {
       setEditError('Model Name is required');
       return;
@@ -458,7 +707,6 @@ const AdvantageTVSVehicles = () => {
       setEditLoading(true);
       setEditError(null);
       
-      // Prepare payload
       const payload = {
         modelName: editFormData.modelName,
         model: editFormData.modelId || '',
@@ -474,8 +722,7 @@ const AdvantageTVSVehicles = () => {
         notes: editFormData.notes
       };
       
-      // Make API call
-      await axiosInstance.post(`/approvals/edit-and-save/${chassisNumber}`, payload);
+      await axiosInstance.post(`/advantage-approval/edit-and-save/${chassisNumber}`, payload);
       
       showSuccess('Vehicle updated successfully!');
       setEditModalVisible(false);
@@ -655,11 +902,8 @@ const AdvantageTVSVehicles = () => {
                 ) : (
                   vehicleData.map((item, index) => {
                     const startRecord = (currentPage - 1) * limit + 1;
-                    // Extract stockData properly
                     const vehicle = item.stockData || item;
                     const preview = item.approvalPreview || {};
-                    // This "pending" endpoint only ever returns pending items,
-                    // so default to 'pending' unless the API explicitly says otherwise.
                     const approvalStatus = item.approvalStatus || vehicle.approvalStatus || 'pending';
                     const chassisNumber = vehicle.chassisNumber || item.chassisNumber;
                     
@@ -674,19 +918,15 @@ const AdvantageTVSVehicles = () => {
                         <CTableDataCell style={{ fontSize: '12px' }}>
                           {vehicle.engineNo || vehicle.engineNumber || 'N/A'}
                         </CTableDataCell>
-                        {/* DMS Model - from stockData */}
                         <CTableDataCell style={{ fontSize: '12px' }}>
                           {vehicle.vehicleModel || 'N/A'}
                         </CTableDataCell>
-                        {/* DMS Color - from stockData */}
                         <CTableDataCell style={{ fontSize: '12px' }}>
                           {vehicle.vehicleColor || 'N/A'}
                         </CTableDataCell>
-                        {/* MIS Model - from approvalPreview.model */}
                         <CTableDataCell style={{ fontSize: '12px' }}>
                           {preview.model?.name || preview.model?.suggestedName || 'N/A'}
                         </CTableDataCell>
-                        {/* MIS Color - from approvalPreview.color */}
                         <CTableDataCell style={{ fontSize: '12px' }}>
                           {preview.color?.name || preview.color?.suggestedName || 'N/A'}
                         </CTableDataCell>
@@ -713,7 +953,6 @@ const AdvantageTVSVehicles = () => {
                             >
                               <CIcon icon={cilSearch} size="sm" />
                             </CButton>
-                            {/* EDIT BUTTON - Added here */}
                             <CButton
                               color="warning"
                               size="sm"
@@ -754,12 +993,11 @@ const AdvantageTVSVehicles = () => {
             </CTable>
           </div>
           
-          {/* Pagination */}
           {renderPagination()}
         </CCardBody>
       </CCard>
 
-      {/* Action Modal - Approve/Reject */}
+      {/* Action Modal - Approve/Reject with Error Handling */}
       <CModal 
         visible={actionModalVisible} 
         onClose={() => {
@@ -768,6 +1006,7 @@ const AdvantageTVSVehicles = () => {
           setActionType(null);
           setActionNotes('');
           setRejectionReason('');
+          setActionError(null);
         }}
         size="md"
       >
@@ -783,7 +1022,18 @@ const AdvantageTVSVehicles = () => {
         <CModalBody>
           {actionVehicle && (
             <div>
-              {/* Vehicle Summary */}
+              {/* Error Alert */}
+              {actionError && (
+                <CAlert color="danger" className="mb-3">
+                  <div className="d-flex align-items-start">
+                    <CIcon icon={cilWarning} className="me-2 mt-1 flex-shrink-0" />
+                    <div>
+                      <strong>Error:</strong> {actionError}
+                    </div>
+                  </div>
+                </CAlert>
+              )}
+
               <div className="card border-0 bg-light mb-3">
                 <div className="card-body">
                   <h6 className="card-title mb-3">Vehicle Details</h6>
@@ -812,7 +1062,6 @@ const AdvantageTVSVehicles = () => {
                 </div>
               </div>
 
-              {/* Action Form */}
               {actionType === 'reject' && (
                 <div className="mb-3">
                   <CFormLabel className="fw-bold">
@@ -852,12 +1101,8 @@ const AdvantageTVSVehicles = () => {
                   }
                   className="form-control"
                 />
-                <div className="text-muted small mt-1">
-                  {actionType === 'approve' ? 'Example: "Approved - existing model and color"' : 'Additional context for rejection'}
-                </div>
               </div>
 
-              {/* Warning/Info Alert */}
               {actionType === 'approve' && (
                 <CAlert color="info" className="mt-3">
                   <CIcon icon={cilInfo} className="me-2" />
@@ -891,6 +1136,7 @@ const AdvantageTVSVehicles = () => {
               setActionType(null);
               setActionNotes('');
               setRejectionReason('');
+              setActionError(null);
             }}
             disabled={actionModalLoading}
           >
@@ -912,13 +1158,18 @@ const AdvantageTVSVehicles = () => {
         </CModalFooter>
       </CModal>
 
-      {/* ========== EDIT MODAL ========== */}
+      {/* ========== EDIT MODAL WITH MODEL AND COLOR DROPDOWNS ========== */}
       <CModal 
         visible={editModalVisible} 
         onClose={() => {
           setEditModalVisible(false);
           setEditVehicle(null);
           setEditError(null);
+          setColors([]);
+          setColorOptions([]);
+          setSelectedModelForColors(null);
+          setSelectedModelOption(null);
+          setSelectedColorOption(null);
         }}
         size="lg"
         scrollable
@@ -932,7 +1183,6 @@ const AdvantageTVSVehicles = () => {
         <CModalBody>
           {editVehicle && (
             <div>
-              {/* Vehicle Info Banner */}
               <div className="alert alert-info d-flex align-items-center mb-4">
                 <CIcon icon={cilInfo} className="me-2" />
                 <span>
@@ -948,29 +1198,64 @@ const AdvantageTVSVehicles = () => {
               )}
 
               <CForm>
-                {/* Hidden fields for modelName and modelId - passed in payload but not shown in UI */}
-                <input type="hidden" name="modelName" value={editFormData.modelName} />
-                <input type="hidden" name="modelId" value={editFormData.modelId} />
+                <CRow className="mb-3">
+                  <CCol md="6">
+                    <CFormLabel className="fw-bold">MIS Model <span className="text-danger">*</span></CFormLabel>
+                    <Select
+                      classNamePrefix="react-select"
+                      placeholder={modelsLoading ? 'Loading models...' : 'Select MIS Model'}
+                      isLoading={modelsLoading}
+                      isClearable
+                      options={modelOptions}
+                      value={selectedModelOption}
+                      onChange={handleModelChange}
+                      isDisabled={editLoading}
+                    />
+                    {!selectedModelOption && !modelsLoading && (
+                      <div className="text-muted small mt-1">Please select a model</div>
+                    )}
+                  </CCol>
+                  <CCol md="6">
+                    <CFormLabel className="fw-bold">MIS Color <span className="text-danger">*</span></CFormLabel>
+                    <Select
+                      classNamePrefix="react-select"
+                      placeholder={
+                        colorsLoading 
+                          ? 'Loading colors...' 
+                          : (selectedModelForColors 
+                            ? 'Select MIS Color' 
+                            : 'Select model first')
+                      }
+                      isLoading={colorsLoading}
+                      isClearable
+                      options={colorOptions}
+                      value={selectedColorOption}
+                      onChange={handleColorChange}
+                      isDisabled={!selectedModelForColors || editLoading}
+                      noOptionsMessage={() => {
+                        if (!selectedModelForColors) return 'Select a model first';
+                        if (colorOptions.length === 0) return 'No colors available';
+                        return 'No options';
+                      }}
+                    />
+                    {selectedModelForColors && colorOptions.length === 0 && !colorsLoading && (
+                      <div className="text-muted small mt-1">No colors available for this model</div>
+                    )}
+                    {!selectedModelForColors && !modelsLoading && (
+                      <div className="text-muted small mt-1">Select a model to load colors</div>
+                    )}
+                  </CCol>
+                </CRow>
 
                 <CRow className="mb-3">
                   <CCol md="6">
-                    <CFormLabel className="fw-bold">Color Name</CFormLabel>
+                    <CFormLabel className="fw-bold">Vehicle Type</CFormLabel>
                     <CFormInput
                       type="text"
-                      value={editFormData.colorName}
-                      onChange={(e) => handleEditInputChange('colorName', e.target.value)}
-                      placeholder="Enter color name"
-                    />
-                  </CCol>
-                  <CCol md="6">
-                    <CFormLabel className="fw-bold">Vehicle Type</CFormLabel>
-                    <CFormSelect
                       value={editFormData.type}
-                      onChange={(e) => handleEditInputChange('type', e.target.value)}
-                    >
-                      <option value="ICE">ICE</option>
-                      <option value="EV">EV</option>
-                    </CFormSelect>
+                      disabled={true}
+                      className="bg-light"
+                    />
                   </CCol>
                 </CRow>
 
@@ -980,10 +1265,10 @@ const AdvantageTVSVehicles = () => {
                     <CFormSelect
                       value={editFormData.unloadLocation}
                       onChange={(e) => handleEditInputChange('unloadLocation', e.target.value)}
-                      disabled={branchesLoading}
+                      disabled={branchesLoading || editLoading}
                     >
                       <option value="">Select a branch...</option>
-                      {branches.map((branch) => (
+                      {Array.isArray(branches) && branches.map((branch) => (
                         <option key={branch._id || branch.id} value={branch._id || branch.id}>
                           {branch.name}
                         </option>
@@ -1005,6 +1290,7 @@ const AdvantageTVSVehicles = () => {
                       value={editFormData.engineNumber}
                       onChange={(e) => handleEditInputChange('engineNumber', e.target.value)}
                       placeholder="Enter engine number"
+                      disabled={editLoading}
                     />
                   </CCol>
                   <CCol md="6">
@@ -1014,6 +1300,7 @@ const AdvantageTVSVehicles = () => {
                       value={editFormData.batteryNumber}
                       onChange={(e) => handleEditInputChange('batteryNumber', e.target.value)}
                       placeholder="Enter battery number"
+                      disabled={editLoading}
                     />
                   </CCol>
                 </CRow>
@@ -1026,6 +1313,7 @@ const AdvantageTVSVehicles = () => {
                       value={editFormData.keyNumber}
                       onChange={(e) => handleEditInputChange('keyNumber', e.target.value)}
                       placeholder="Enter key number"
+                      disabled={editLoading}
                     />
                   </CCol>
                   <CCol md="6">
@@ -1036,6 +1324,7 @@ const AdvantageTVSVehicles = () => {
                       onChange={(e) => handleEditInputChange('noOfDaysInStockDLR', e.target.value)}
                       placeholder="Enter days in stock"
                       min="0"
+                      disabled={editLoading}
                     />
                   </CCol>
                 </CRow>
@@ -1048,21 +1337,22 @@ const AdvantageTVSVehicles = () => {
                       value={editFormData.notes}
                       onChange={(e) => handleEditInputChange('notes', e.target.value)}
                       placeholder="Enter any additional notes"
+                      disabled={editLoading}
                     />
                   </CCol>
                 </CRow>
 
-                {/* Preview of what will be updated */}
                 <CAlert color="secondary" className="mt-3">
                   <h6 className="mb-2">
                     <CIcon icon={cilInfo} className="me-2" />
                     Summary of Changes
                   </h6>
                   <div className="small">
-                    <p className="mb-1"><strong>Color:</strong> {editFormData.colorName || '(empty)'}</p>
+                    <p className="mb-1"><strong>Model:</strong> {editFormData.modelName || '(not selected)'}</p>
+                    <p className="mb-1"><strong>Color:</strong> {editFormData.colorName || '(not selected)'}</p>
                     <p className="mb-1"><strong>Type:</strong> {editFormData.type}</p>
                     <p className="mb-1"><strong>Branch:</strong> {
-                      branches.find(b => (b._id || b.id) === editFormData.unloadLocation)?.name || 
+                      Array.isArray(branches) && branches.find(b => (b._id || b.id) === editFormData.unloadLocation)?.name || 
                       editFormData.unloadLocation || 
                       '(not selected)'
                     }</p>
@@ -1080,6 +1370,11 @@ const AdvantageTVSVehicles = () => {
               setEditModalVisible(false);
               setEditVehicle(null);
               setEditError(null);
+              setColors([]);
+              setColorOptions([]);
+              setSelectedModelForColors(null);
+              setSelectedModelOption(null);
+              setSelectedColorOption(null);
             }}
             disabled={editLoading}
           >
@@ -1088,7 +1383,7 @@ const AdvantageTVSVehicles = () => {
           <CButton 
             color="warning" 
             onClick={handleEditSubmit}
-            disabled={editLoading || !editFormData.modelName.trim()}
+            disabled={editLoading || !editFormData.modelId || !editFormData.colorName}
           >
             {editLoading ? (
               <><CSpinner size="sm" className="me-2" /> Saving...</>
@@ -1099,7 +1394,7 @@ const AdvantageTVSVehicles = () => {
         </CModalFooter>
       </CModal>
 
-      {/* View Vehicle Modal - Beautiful Design */}
+      {/* View Vehicle Modal */}
       <CModal 
         visible={viewModalVisible} 
         onClose={() => {
@@ -1119,8 +1414,6 @@ const AdvantageTVSVehicles = () => {
           {selectedVehicle && (
             <div className="vehicle-details">
               {(() => {
-                // IMPORTANT: These keys match the ACTUAL API response shape:
-                // item.approvalPreview.{model,color,branch,vehicleData}, item.summary
                 const preview = selectedVehicle.approvalPreview || {};
                 const stockData = selectedVehicle.stockData || {};
                 const approvalInfo = selectedVehicle.summary || {};
@@ -1132,7 +1425,6 @@ const AdvantageTVSVehicles = () => {
 
                 return (
                   <>
-                    {/* Status Banner */}
                     <div className="alert alert-info d-flex align-items-center mb-4">
                       <CIcon icon={cilCheck} className="me-2" />
                       <span>
@@ -1141,7 +1433,6 @@ const AdvantageTVSVehicles = () => {
                       </span>
                     </div>
 
-                    {/* Vehicle Preview Card */}
                     <div className="card border-0 shadow-sm mb-4">
                       <div className="card-header bg-primary text-white">
                         <h5 className="mb-0">
@@ -1199,9 +1490,7 @@ const AdvantageTVSVehicles = () => {
                       </div>
                     </div>
 
-                    {/* Match Status Cards */}
                     <div className="row g-3 mb-4">
-                      {/* Model Match Card */}
                       <div className="col-md-4">
                         <div className={`card border-0 shadow-sm h-100 ${modelInfo.found ? 'border-success border-2' : 'border-danger border-2'}`}>
                           <div className="card-body text-center">
@@ -1223,7 +1512,6 @@ const AdvantageTVSVehicles = () => {
                         </div>
                       </div>
 
-                      {/* Color Match Card */}
                       <div className="col-md-4">
                         <div className={`card border-0 shadow-sm h-100 ${colorInfo.found ? 'border-success border-2' : 'border-danger border-2'}`}>
                           <div className="card-body text-center">
@@ -1245,7 +1533,6 @@ const AdvantageTVSVehicles = () => {
                         </div>
                       </div>
 
-                      {/* Branch Match Card */}
                       <div className="col-md-4">
                         <div className={`card border-0 shadow-sm h-100 ${branchInfo.found ? 'border-success border-2' : 'border-warning border-2'}`}>
                           <div className="card-body text-center">
@@ -1268,7 +1555,6 @@ const AdvantageTVSVehicles = () => {
                       </div>
                     </div>
 
-                    {/* Approval Summary */}
                     {approvalInfo && Object.keys(approvalInfo).length > 0 && (
                       <div className="card border-0 shadow-sm mb-4">
                         <div className="card-header bg-light">
@@ -1320,7 +1606,6 @@ const AdvantageTVSVehicles = () => {
                       </div>
                     )}
 
-                    {/* Stock Data Reference */}
                     {stockData && Object.keys(stockData).length > 0 && (
                       <div className="card border-0 shadow-sm">
                         <div className="card-header bg-light">
@@ -1361,7 +1646,6 @@ const AdvantageTVSVehicles = () => {
                             </div>
                           </div>
                           <div className="row">
-                           
                             <div className="col-md-6">
                               <label className="text-muted small fw-bold">TVS Invoice No</label>
                               <p className="mb-2">{stockData.tvsInvoiceNo || 'N/A'}</p>
@@ -1393,7 +1677,6 @@ const AdvantageTVSVehicles = () => {
                       </div>
                     )}
 
-                    {/* Approve/Reject Buttons - Update to use new modal */}
                     {canUpdateAdvantageTVS && (
                       <div className="mt-4 d-flex gap-2 justify-content-end border-top pt-3">
                         <CButton 

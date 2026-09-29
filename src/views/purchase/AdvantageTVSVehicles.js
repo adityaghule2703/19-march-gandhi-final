@@ -17,12 +17,12 @@ import {
 import { 
   hasSafePagePermission,
   MODULES, 
-  PAGES,
-  ACTIONS,
-  TABS,
-  canViewPage,
-  canCreateInPage,
-  canUpdateInPage,
+  PAGES, 
+  ACTIONS, 
+  TABS, 
+  canViewPage, 
+  canCreateInPage, 
+  canUpdateInPage, 
   canDeleteInPage 
 } from '../../utils/modulePermissions';
 import { 
@@ -52,11 +52,13 @@ import {
   CFormTextarea,
   CForm,
   CRow,
-  CCol
+  CCol,
+  CNav,
+  CNavItem,
+  CNavLink
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
-  cilSettings, 
   cilTrash, 
   cilCheckCircle, 
   cilXCircle,
@@ -65,7 +67,6 @@ import {
   cilChevronRight,
   cilCheck,
   cilX,
-  cilZoomOut,
   cilPencil,
   cilInfo,
   cilWarning,
@@ -81,6 +82,10 @@ import Select from 'react-select';
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const DEFAULT_LIMIT = 10;
 
+// Tab keys
+const TAB_PENDING = 'pending';
+const TAB_REJECTED = 'rejected';
+
 const AdvantageTVSVehicles = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuId, setMenuId] = useState(null);
@@ -88,6 +93,9 @@ const AdvantageTVSVehicles = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  
+  // ========== TAB STATE ==========
+  const [activeTab, setActiveTab] = useState(TAB_PENDING);
   
   // Server-side pagination state
   const [vehicleData, setVehicleData] = useState([]);
@@ -97,6 +105,9 @@ const AdvantageTVSVehicles = () => {
   const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredCount, setFilteredCount] = useState(0);
+  
+  // Export loading state
+  const [exportLoading, setExportLoading] = useState(false);
   
   // Modal states
   const [viewModalVisible, setViewModalVisible] = useState(false);
@@ -128,6 +139,11 @@ const AdvantageTVSVehicles = () => {
   });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState(null);
+
+  // NEW: names we still need to resolve into option objects once their
+  // corresponding option lists have loaded (fixes async race conditions)
+  const [pendingColorName, setPendingColorName] = useState('');
+  const [pendingBranchName, setPendingBranchName] = useState('');
   
   // Branches state for dropdown
   const [branches, setBranches] = useState([]);
@@ -182,15 +198,79 @@ const AdvantageTVSVehicles = () => {
   const canUpdateAdvantageTVS = canUpdateInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
   const canDeleteAdvantageTVS = canDeleteInPage(permissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK);
 
+  // ========== HELPER: GET API ENDPOINT BASED ON TAB ==========
+  const getApiEndpoint = (tab) => {
+    return tab === TAB_REJECTED 
+      ? '/advantage-approval' 
+      : '/advantage-approval/pending';
+  };
+
+  // ========== HELPER: GET API PARAMS BASED ON TAB ==========
+  const getApiParams = (page, pageLimit, search, tab) => {
+    const params = { page, limit: pageLimit };
+    if (tab === TAB_REJECTED) {
+      params.status = 'rejected';
+    }
+    if (search) params.search = search;
+    return params;
+  };
+
+  // ========== TAB CHANGE HANDLER ==========
+  const handleTabChange = (tab) => {
+    if (tab === activeTab) return;
+    setActiveTab(tab);
+    setSearchTerm('');
+    setSearchQuery('');
+    setError(null);
+    // Reset to page 1 when switching tabs
+    fetchData(1, limit, '', tab);
+  };
+
   useEffect(() => {
     if (!canViewAdvantageTVS) {
       showError('You do not have permission to view Advantage TVS Vehicles');
       return;
     }
-    fetchData(1, limit, '');
+    fetchData(1, limit, '', TAB_PENDING);
     fetchBranches();
     fetchModels();
   }, [canViewAdvantageTVS]);
+
+  // NEW EFFECT: resolve MIS Color selection once colorOptions finish loading
+  useEffect(() => {
+    if (!editModalVisible) return;
+    if (!pendingColorName) return;
+    if (!colorOptions || colorOptions.length === 0) return;
+
+    const match =
+      colorOptions.find(
+        opt => opt.label.trim().toLowerCase() === pendingColorName.trim().toLowerCase()
+      ) || null;
+
+    setSelectedColorOption(match);
+    if (match) {
+      setEditFormData(prev => ({ ...prev, colorName: match.label }));
+      setPendingColorName('');
+    }
+  }, [colorOptions, pendingColorName, editModalVisible]);
+
+  // NEW EFFECT: resolve branch/unload-location selection once branches finish
+  useEffect(() => {
+    if (!editModalVisible) return;
+    if (!pendingBranchName) return;
+    if (!Array.isArray(branches) || branches.length === 0) return;
+
+    const target = pendingBranchName.trim().toLowerCase();
+    const match =
+      branches.find(b => (b.name || '').trim().toLowerCase() === target) ||
+      branches.find(b => (b.name || '').trim().toLowerCase().includes(target)) ||
+      branches.find(b => target.includes((b.name || '').trim().toLowerCase()) && b.name);
+
+    if (match) {
+      setEditFormData(prev => ({ ...prev, unloadLocation: match._id || match.id }));
+      setPendingBranchName('');
+    }
+  }, [branches, pendingBranchName, editModalVisible]);
 
   // Fetch branches for dropdown
   const fetchBranches = async () => {
@@ -288,8 +368,8 @@ const AdvantageTVSVehicles = () => {
     }
   };
 
-  // Fetch data with server-side pagination and search
-  const fetchData = async (page = 1, pageLimit = DEFAULT_LIMIT, search = '') => {
+  // ========== FETCH DATA with tab support (UPDATED for rejected tab) ==========
+  const fetchData = async (page = 1, pageLimit = DEFAULT_LIMIT, search = '', tab = activeTab) => {
     if (!canViewAdvantageTVS) {
       showError('You do not have permission to view Advantage TVS Vehicles');
       return;
@@ -297,23 +377,43 @@ const AdvantageTVSVehicles = () => {
     
     try {
       setLoading(true);
-      const params = { page, limit: pageLimit };
-      if (search) params.search = search;
-      
-      const response = await axiosInstance.get('/advantage-approval/pending', { params });
+      const params = getApiParams(page, pageLimit, search, tab);
+      const endpoint = getApiEndpoint(tab);
+      const response = await axiosInstance.get(endpoint, { params });
       
       let docs = [];
       let totalCount = 0;
       let totalPages = 1;
       
-      if (response.data) {
-        docs = response.data.data?.vehicles || response.data.data || [];
-        totalCount = response.data.total || response.data.results || docs.length;
-        totalPages = response.data.totalPages || Math.ceil(totalCount / pageLimit);
-        
-        if (response.data.pagination) {
-          totalCount = response.data.pagination.total || docs.length;
-          totalPages = response.data.pagination.totalPages || 1;
+      if (tab === TAB_REJECTED) {
+        // Handle new response structure for rejected tab
+        if (response.data) {
+          // New API returns: { status, results, total, page, limit, totalPages, data: { approvals: [...] } }
+          if (response.data.data?.approvals && Array.isArray(response.data.data.approvals)) {
+            docs = response.data.data.approvals;
+            totalCount = response.data.total || response.data.results || docs.length;
+            totalPages = response.data.totalPages || Math.ceil(totalCount / pageLimit);
+          } else if (response.data.data && Array.isArray(response.data.data)) {
+            docs = response.data.data;
+            totalCount = response.data.total || response.data.results || docs.length;
+            totalPages = response.data.totalPages || Math.ceil(totalCount / pageLimit);
+          } else if (Array.isArray(response.data)) {
+            docs = response.data;
+            totalCount = response.data.length;
+            totalPages = 1;
+          }
+        }
+      } else {
+        // Pending tab: use existing response structure
+        if (response.data) {
+          docs = response.data.data?.vehicles || response.data.data || [];
+          totalCount = response.data.total || response.data.results || docs.length;
+          totalPages = response.data.totalPages || Math.ceil(totalCount / pageLimit);
+          
+          if (response.data.pagination) {
+            totalCount = response.data.pagination.total || docs.length;
+            totalPages = response.data.pagination.totalPages || 1;
+          }
         }
       }
       
@@ -338,6 +438,60 @@ const AdvantageTVSVehicles = () => {
     }
   };
 
+  // Handle export to Excel
+  const handleExport = async () => {
+    if (!canViewAdvantageTVS) {
+      showError('You do not have permission to export Advantage TVS Vehicles');
+      return;
+    }
+
+    try {
+      setExportLoading(true);
+      
+      const params = {};
+      if (searchQuery) params.search = searchQuery;
+      if (activeTab === TAB_REJECTED) params.status = 'rejected';
+
+      // Export endpoint differs by tab
+      const exportEndpoint = activeTab === TAB_REJECTED
+        ? '/advantage-approval/export-excel-rejected'
+        : '/advantage-approval/export-excel';
+
+      const response = await axiosInstance.get(exportEndpoint, {
+        params,
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = activeTab === TAB_REJECTED 
+        ? 'Rejected_TVS_Vehicles.xlsx' 
+        : 'Advantage_TVS_Vehicles.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showSuccess('Export completed successfully');
+    } catch (err) {
+      console.error('Error exporting Advantage TVS Vehicles:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to export Advantage TVS Vehicles';
+      showError(errorMsg);
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   // Handle search with debounce
   const handleSearch = (value) => {
     if (!canViewAdvantageTVS) {
@@ -348,7 +502,7 @@ const AdvantageTVSVehicles = () => {
     setSearchTerm(value);
     clearTimeout(window.searchTimeout);
     window.searchTimeout = setTimeout(() => {
-      fetchData(1, limit, value);
+      fetchData(1, limit, value, activeTab);
     }, 400);
   };
 
@@ -356,7 +510,7 @@ const AdvantageTVSVehicles = () => {
   const handlePageChange = (newPage) => {
     if (!canViewAdvantageTVS) return;
     if (newPage < 1 || newPage > pages) return;
-    fetchData(newPage, limit, searchQuery);
+    fetchData(newPage, limit, searchQuery, activeTab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -364,7 +518,7 @@ const AdvantageTVSVehicles = () => {
   const handleLimitChange = (newLimit) => {
     if (!canViewAdvantageTVS) return;
     const newLimitValue = parseInt(newLimit, 10);
-    fetchData(1, newLimitValue, searchQuery);
+    fetchData(1, newLimitValue, searchQuery, activeTab);
   };
 
   // Format date
@@ -377,6 +531,26 @@ const AdvantageTVSVehicles = () => {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric'
+        });
+      }
+    } catch (e) {
+      return 'N/A';
+    }
+    return 'N/A';
+  };
+
+  // Format date-time
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
         });
       }
     } catch (e) {
@@ -431,15 +605,13 @@ const AdvantageTVSVehicles = () => {
     setActionError(null);
     
     try {
-      const chassisNumber = actionVehicle.stockData?.chassisNumber || actionVehicle.chassisNumber;
+      const chassisNumber = actionVehicle.stockData?.chassisNumber || actionVehicle.chassisNumber || actionVehicle.stockDetails?.chassisNumber;
       
       const response = await axiosInstance.post(`/advantage-approval/approve/${chassisNumber}`, {
         notes: actionNotes || 'Approved'
       });
       
-      // Check if response indicates success
       if (response.data && response.data.success === false) {
-        // Handle error response from API
         const errorMessage = response.data.message || 'Failed to approve vehicle';
         const errorDetail = response.data.error || '';
         
@@ -453,17 +625,15 @@ const AdvantageTVSVehicles = () => {
       setActionVehicle(null);
       setActionType(null);
       setActionError(null);
-      fetchData(currentPage, limit, searchQuery);
+      fetchData(currentPage, limit, searchQuery, activeTab);
       
     } catch (error) {
       console.error('Error approving vehicle:', error);
       
-      // Extract error message from response
       let errorMessage = 'Failed to approve vehicle';
       let errorDetail = '';
       
       if (error.response) {
-        // Server responded with error
         const responseData = error.response.data;
         
         if (responseData) {
@@ -473,14 +643,12 @@ const AdvantageTVSVehicles = () => {
           if (responseData.error) {
             errorDetail = responseData.error;
           }
-          // If there's a specific field error like 'frameNo'
           if (responseData.error && responseData.error.includes('Field')) {
             errorMessage = 'Schema validation error: Please check the vehicle data fields.';
             errorDetail = responseData.error;
           }
         }
         
-        // Set detailed error message
         const fullErrorMessage = errorDetail 
           ? `${errorMessage}: ${errorDetail}` 
           : errorMessage;
@@ -489,12 +657,10 @@ const AdvantageTVSVehicles = () => {
         showError(errorMessage);
         
       } else if (error.request) {
-        // Request made but no response
         setActionError('No response from server. Please check your network connection.');
         showError('Network error: Could not reach the server');
         
       } else {
-        // Error in request setup
         setActionError(error.message || 'An unexpected error occurred');
         showError(error.message || 'An unexpected error occurred');
       }
@@ -517,14 +683,13 @@ const AdvantageTVSVehicles = () => {
     setActionError(null);
     
     try {
-      const chassisNumber = actionVehicle.stockData?.chassisNumber || actionVehicle.chassisNumber;
+      const chassisNumber = actionVehicle.stockData?.chassisNumber || actionVehicle.chassisNumber || actionVehicle.stockDetails?.chassisNumber;
       
       const response = await axiosInstance.post(`/advantage-approval/reject/${chassisNumber}`, {
         rejectionReason: rejectionReason,
         notes: actionNotes || 'Rejected'
       });
       
-      // Check if response indicates success
       if (response.data && response.data.success === false) {
         const errorMessage = response.data.message || 'Failed to reject vehicle';
         const errorDetail = response.data.error || '';
@@ -539,7 +704,7 @@ const AdvantageTVSVehicles = () => {
       setActionVehicle(null);
       setActionType(null);
       setActionError(null);
-      fetchData(currentPage, limit, searchQuery);
+      fetchData(currentPage, limit, searchQuery, activeTab);
       
     } catch (error) {
       console.error('Error rejecting vehicle:', error);
@@ -573,7 +738,6 @@ const AdvantageTVSVehicles = () => {
 
   // ========== EDIT FUNCTIONS ==========
   
-  // Open edit modal
   const openEditModal = (vehicle, event) => {
     if (event) {
       event.stopPropagation();
@@ -584,7 +748,7 @@ const AdvantageTVSVehicles = () => {
       return;
     }
     
-    const chassisNumber = vehicle.stockData?.chassisNumber || vehicle.chassisNumber;
+    const chassisNumber = vehicle.stockData?.chassisNumber || vehicle.chassisNumber || vehicle.stockDetails?.chassisNumber;
     if (!chassisNumber) {
       showError('Vehicle chassis number not found');
       return;
@@ -595,11 +759,27 @@ const AdvantageTVSVehicles = () => {
     const colorInfo = preview.color || {};
     const branchInfo = preview.branch || {};
     const vehicleData = preview.vehicleData || {};
-    const stockData = vehicle.stockData || {};
+    const stockData = vehicle.stockData || vehicle.stockDetails || {};
+    const mapping = vehicle.dmsToMisMapping || {};
     
     const modelId = modelInfo.id || stockData.modelId || '';
-    const modelName = modelInfo.name || vehicleData.modelName || stockData.vehicleModel || '';
-    const colorName = colorInfo.name || colorInfo.suggestedName || vehicleData.colorName || stockData.vehicleColor || '';
+    const modelName = mapping.model?.final || modelInfo.name || vehicleData.modelName || stockData.vehicleModel || '';
+    const colorName = mapping.color?.final || colorInfo.name || colorInfo.suggestedName || vehicleData.colorName || stockData.vehicleColor || '';
+
+    const branchNameCandidate =
+      branchInfo.name || branchInfo.suggestedName || stockData.branch || stockData.location || '';
+
+    let unloadLocationValue = branchInfo.id || '';
+    if (!unloadLocationValue && branchNameCandidate && Array.isArray(branches) && branches.length > 0) {
+      const target = branchNameCandidate.trim().toLowerCase();
+      const matched =
+        branches.find(b => (b.name || '').trim().toLowerCase() === target) ||
+        branches.find(b => (b.name || '').trim().toLowerCase().includes(target)) ||
+        branches.find(b => target.includes((b.name || '').trim().toLowerCase()) && b.name);
+      if (matched) {
+        unloadLocationValue = matched._id || matched.id;
+      }
+    }
     
     setEditVehicle(vehicle);
     setEditFormData({
@@ -607,15 +787,14 @@ const AdvantageTVSVehicles = () => {
       modelId: modelId,
       colorName: colorName,
       type: modelInfo.type || vehicleData.type || 'ICE',
-      unloadLocation: branchInfo.id || branchInfo.name || stockData.location || '',
+      unloadLocation: unloadLocationValue,
       engineNumber: vehicleData.engineNumber || stockData.engineNo || '',
       batteryNumber: vehicleData.batteryNumber || '',
       keyNumber: vehicleData.keyNumber || '',
-      noOfDaysInStockDLR: vehicleData.noOfDaysInStockDLR || 0,
+      noOfDaysInStockDLR: vehicleData.noOfDaysInStockDLR || stockData.noOfDaysInStockDLR || 0,
       notes: vehicleData.notes || ''
     });
     
-    // Set selected model option
     if (modelId && modelOptions.length > 0) {
       const selected = modelOptions.find(opt => opt.value === modelId);
       setSelectedModelOption(selected || null);
@@ -623,15 +802,22 @@ const AdvantageTVSVehicles = () => {
       setSelectedModelOption(null);
     }
     
-    // Set selected color option
     if (colorName && colorOptions.length > 0) {
-      const selected = colorOptions.find(opt => opt.label === colorName);
+      const selected = colorOptions.find(
+        opt => opt.label.trim().toLowerCase() === colorName.trim().toLowerCase()
+      );
       setSelectedColorOption(selected || null);
     } else {
       setSelectedColorOption(null);
     }
+    setPendingColorName(colorName || '');
+
+    if (!unloadLocationValue && branchNameCandidate) {
+      setPendingBranchName(branchNameCandidate);
+    } else {
+      setPendingBranchName('');
+    }
     
-    // Set selected model for colors and fetch colors
     if (modelId) {
       setSelectedModelForColors(modelId);
       fetchColorsForModel(modelId);
@@ -645,7 +831,6 @@ const AdvantageTVSVehicles = () => {
     setEditModalVisible(true);
   };
 
-  // Handle edit form input changes
   const handleEditInputChange = (field, value) => {
     setEditFormData(prev => ({
       ...prev,
@@ -653,7 +838,6 @@ const AdvantageTVSVehicles = () => {
     }));
   };
 
-  // Handle model change in edit form
   const handleModelChange = (selectedOption) => {
     const modelId = selectedOption ? selectedOption.value : null;
     const modelName = selectedOption ? selectedOption.label : '';
@@ -661,6 +845,7 @@ const AdvantageTVSVehicles = () => {
     setSelectedModelOption(selectedOption);
     setSelectedModelForColors(modelId);
     setSelectedColorOption(null);
+    setPendingColorName('');
     
     setEditFormData(prev => ({
       ...prev,
@@ -677,18 +862,17 @@ const AdvantageTVSVehicles = () => {
     }
   };
 
-  // Handle color change in edit form
   const handleColorChange = (selectedOption) => {
     const colorName = selectedOption ? selectedOption.label : '';
     
     setSelectedColorOption(selectedOption);
+    setPendingColorName('');
     setEditFormData(prev => ({
       ...prev,
       colorName: colorName
     }));
   };
 
-  // Handle edit form submit
   const handleEditSubmit = async () => {
     if (!editVehicle) return;
     
@@ -697,7 +881,7 @@ const AdvantageTVSVehicles = () => {
       return;
     }
     
-    const chassisNumber = editVehicle.stockData?.chassisNumber || editVehicle.chassisNumber;
+    const chassisNumber = editVehicle.stockData?.chassisNumber || editVehicle.chassisNumber || editVehicle.stockDetails?.chassisNumber;
     if (!chassisNumber) {
       setEditError('Chassis number not found');
       return;
@@ -727,7 +911,7 @@ const AdvantageTVSVehicles = () => {
       showSuccess('Vehicle updated successfully!');
       setEditModalVisible(false);
       setEditVehicle(null);
-      fetchData(currentPage, limit, searchQuery);
+      fetchData(currentPage, limit, searchQuery, activeTab);
     } catch (error) {
       console.error('Error updating vehicle:', error);
       const errorMsg = error.response?.data?.message || 'Failed to update vehicle';
@@ -833,24 +1017,209 @@ const AdvantageTVSVehicles = () => {
     );
   }
 
+  // ========== RENDER: PENDING TAB TABLE ROW ==========
+  const renderPendingRow = (item, index, startRecord) => {
+    const vehicle = item.stockData || item;
+    const preview = item.approvalPreview || {};
+    const mapping = item.dmsToMisMapping || {};
+    const approvalStatus = item.approvalStatus || vehicle.approvalStatus || 'pending';
+    const chassisNumber = vehicle.chassisNumber || item.chassisNumber;
+
+    const dmsModel = mapping.model?.dms || 'N/A';
+    const dmsColor = mapping.color?.dms || 'N/A';
+    const misModel = mapping.model?.final || 'N/A';
+    const misColor = mapping.color?.final || 'N/A';
+
+    const willCreateModel = preview.model?.found === false;
+    const willCreateColor = preview.color?.found === false;
+    
+    return (
+      <CTableRow key={chassisNumber || index}>
+        <CTableDataCell>{startRecord + index}</CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          <CBadge color="primary">
+            {chassisNumber || 'N/A'}
+          </CBadge>
+        </CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          {vehicle.engineNo || vehicle.engineNumber || 'N/A'}
+        </CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>{dmsModel}</CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>{dmsColor}</CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          {misModel}
+          {willCreateModel && <CBadge color="warning" className="ms-1">new</CBadge>}
+        </CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          {misColor}
+          {willCreateColor && <CBadge color="warning" className="ms-1">new</CBadge>}
+        </CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>{vehicle.branch || 'N/A'}</CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>{vehicle.location || 'N/A'}</CTableDataCell>
+        <CTableDataCell>
+          <CBadge color={approvalStatus === 'pending' ? 'warning' : 'success'}>
+            {approvalStatus || 'PENDING'}
+          </CBadge>
+        </CTableDataCell>
+        <CTableDataCell>
+          <div className="d-flex gap-1 flex-wrap">
+            <CButton
+              color="info"
+              size="sm"
+              onClick={(e) => handleViewVehicle(item, e)}
+              disabled={!canViewAdvantageTVS}
+              className="px-2 py-1"
+              title="View Vehicle Details"
+            >
+              <CIcon icon={cilSearch} size="sm" />
+            </CButton>
+            <CButton
+              color="warning"
+              size="sm"
+              onClick={(e) => openEditModal(item, e)}
+              disabled={!canUpdateAdvantageTVS}
+              className="px-2 py-1"
+              title="Edit Vehicle"
+            >
+              <CIcon icon={cilPencil} size="sm" />
+            </CButton>
+            <CButton
+              color="success"
+              size="sm"
+              onClick={(e) => openActionModal(item, 'approve', e)}
+              disabled={!canUpdateAdvantageTVS || actionLoadingId === chassisNumber}
+              className="px-2 py-1"
+              title="Approve Vehicle"
+            >
+              <CIcon icon={cilThumbUp} size="sm" />
+            </CButton>
+            <CButton
+              color="danger"
+              size="sm"
+              onClick={(e) => openActionModal(item, 'reject', e)}
+              disabled={!canUpdateAdvantageTVS || actionLoadingId === chassisNumber}
+              className="px-2 py-1"
+              title="Reject Vehicle"
+            >
+              <CIcon icon={cilThumbDown} size="sm" />
+            </CButton>
+          </div>
+        </CTableDataCell>
+      </CTableRow>
+    );
+  };
+
+  // ========== RENDER: REJECTED TAB TABLE ROW (UPDATED for new API response) ==========
+  const renderRejectedRow = (item, index, startRecord) => {
+    // New response structure has approval data directly on item and stock under stockDetails
+    const stockDetails = item.stockDetails || {};
+    const chassisNumber = item.chassisNumber || stockDetails.chassisNumber;
+    const category = stockDetails.vehicleCategory || 'N/A';
+    const model = item.vehicleModel || stockDetails.vehicleModel || 'N/A';
+
+    return (
+      <CTableRow key={item._id || chassisNumber || index}>
+        <CTableDataCell>{startRecord + index}</CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          <CBadge color="primary">{chassisNumber || 'N/A'}</CBadge>
+        </CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>{category}</CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>{model}</CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          <CBadge color="danger">{item.status || 'rejected'}</CBadge>
+        </CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          {item.rejectionReason || 'N/A'}
+        </CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          {item.notes || 'N/A'}
+        </CTableDataCell>
+        <CTableDataCell style={{ fontSize: '12px' }}>
+          {item.rejectedAt ? formatDateTime(item.rejectedAt) : 'N/A'}
+        </CTableDataCell>
+        <CTableDataCell>
+          <div className="d-flex gap-1 flex-wrap">
+            <CButton
+              color="info"
+              size="sm"
+              onClick={(e) => handleViewVehicle(item, e)}
+              disabled={!canViewAdvantageTVS}
+              className="px-2 py-1"
+              title="View Vehicle Details"
+            >
+              <CIcon icon={cilSearch} size="sm" />
+            </CButton>
+          </div>
+        </CTableDataCell>
+      </CTableRow>
+    );
+  };
+
   return (
     <div>
-      <div className='title'>Advantage TVS Vehicles - Pending Approval</div>
+      <div className='title'>Advantage TVS Vehicles</div>
       
       <CCard className='table-container mt-4'>
-        <CCardHeader className='card-header d-flex justify-content-between align-items-center'>
-          <div>
-            <CBadge color="info" className="me-2">
-              Total: {total || 0}
-            </CBadge>
-            {searchQuery && (
-              <CBadge color="secondary" className="me-2">
-                Filtered: {filteredCount}
+        <CCardHeader className='card-header'>
+          {/* ========== TABS ========== */}
+          <CNav variant="tabs" className="card-header-tabs mb-2">
+            <CNavItem>
+              <CNavLink
+                active={activeTab === TAB_PENDING}
+                onClick={() => handleTabChange(TAB_PENDING)}
+                style={{ cursor: 'pointer' }}
+              >
+                
+                Pending
+                {activeTab === TAB_PENDING && total > 0 && (
+                  <CBadge color="warning" className="ms-2">{total}</CBadge>
+                )}
+              </CNavLink>
+            </CNavItem>
+            <CNavItem>
+              <CNavLink
+                active={activeTab === TAB_REJECTED}
+                onClick={() => handleTabChange(TAB_REJECTED)}
+                style={{ cursor: 'pointer' }}
+              >
+                
+                Rejected
+                {activeTab === TAB_REJECTED && total > 0 && (
+                  <CBadge color="danger" className="ms-2">{total}</CBadge>
+                )}
+              </CNavLink>
+            </CNavItem>
+          </CNav>
+
+          {/* ========== HEADER INFO + EXPORT ========== */}
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-2">
+            <div>
+              <CBadge color={activeTab === TAB_PENDING ? 'info' : 'secondary'} className="me-2">
+                Total: {total || 0}
               </CBadge>
-            )}
-            <CBadge color="warning" className="me-2">
-              Status: Pending
-            </CBadge>
+              {searchQuery && (
+                <CBadge color="secondary" className="me-2">
+                  Filtered: {filteredCount}
+                </CBadge>
+              )}
+              <CBadge color={activeTab === TAB_PENDING ? 'warning' : 'danger'} className="me-2">
+                Status: {activeTab === TAB_PENDING ? 'Pending' : 'Rejected'}
+              </CBadge>
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              {/* Export button only shown on Pending tab */}
+              {activeTab === TAB_PENDING && (
+                <CButton
+                  color="success"
+                  size="sm"
+                  onClick={handleExport}
+                  disabled={exportLoading || loading}
+                >
+                  {exportLoading ? <CSpinner size="sm" /> : <CIcon icon={cilCloudDownload} className="me-1" />}
+                  Export
+                </CButton>
+              )}
+            </div>
           </div>
         </CCardHeader>
         
@@ -864,7 +1233,11 @@ const AdvantageTVSVehicles = () => {
                 className="d-inline-block square-search"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search by chassis, model, branch..."
+                placeholder={
+                  activeTab === TAB_PENDING
+                    ? "Search by chassis, model, branch..."
+                    : "Search by chassis, make, model..."
+                }
               />
             </div>
           </div>
@@ -875,129 +1248,91 @@ const AdvantageTVSVehicles = () => {
             </div>
           )}
           
-          <div className="responsive-table-wrapper" style={{ opacity: loading && vehicleData.length > 0 ? 0.6 : 1, transition: 'opacity 0.2s' }}>
-            <CTable striped bordered hover className='responsive-table'>
-              <CTableHead>
-                <CTableRow>
-                  <CTableHeaderCell>Sr.no</CTableHeaderCell>
-                  <CTableHeaderCell>Chassis #</CTableHeaderCell>
-                  <CTableHeaderCell>Engine #</CTableHeaderCell>
-                  <CTableHeaderCell>DMS Model</CTableHeaderCell>
-                  <CTableHeaderCell>DMS Color</CTableHeaderCell>
-                  <CTableHeaderCell>MIS Model</CTableHeaderCell>
-                  <CTableHeaderCell>MIS Color</CTableHeaderCell>
-                  <CTableHeaderCell>Branch</CTableHeaderCell>
-                  <CTableHeaderCell>Location</CTableHeaderCell>
-                  <CTableHeaderCell>Approval Status</CTableHeaderCell>
-                  <CTableHeaderCell>Actions</CTableHeaderCell>
-                </CTableRow>
-              </CTableHead>
-              <CTableBody>
-                {vehicleData.length === 0 && !loading ? (
+          <div
+            className="responsive-table-wrapper"
+            style={{
+              opacity: loading && vehicleData.length > 0 ? 0.6 : 1,
+              transition: 'opacity 0.2s'
+            }}
+          >
+            {/* ========== PENDING TABLE ========== */}
+            {activeTab === TAB_PENDING && (
+              <CTable striped bordered hover className='responsive-table'>
+                <CTableHead>
                   <CTableRow>
-                    <CTableDataCell colSpan="11" className="text-center">
-                      {searchQuery ? `No results found for "${searchQuery}"` : 'No pending vehicles available'}
-                    </CTableDataCell>
+                    <CTableHeaderCell>Sr.no</CTableHeaderCell>
+                    <CTableHeaderCell>Chassis #</CTableHeaderCell>
+                    <CTableHeaderCell>Engine #</CTableHeaderCell>
+                    <CTableHeaderCell>DMS Model</CTableHeaderCell>
+                    <CTableHeaderCell>DMS Color</CTableHeaderCell>
+                    <CTableHeaderCell>MIS Model</CTableHeaderCell>
+                    <CTableHeaderCell>MIS Color</CTableHeaderCell>
+                    <CTableHeaderCell>Branch</CTableHeaderCell>
+                    <CTableHeaderCell>Location</CTableHeaderCell>
+                    <CTableHeaderCell>Approval Status</CTableHeaderCell>
+                    <CTableHeaderCell>Actions</CTableHeaderCell>
                   </CTableRow>
-                ) : (
-                  vehicleData.map((item, index) => {
-                    const startRecord = (currentPage - 1) * limit + 1;
-                    const vehicle = item.stockData || item;
-                    const preview = item.approvalPreview || {};
-                    const approvalStatus = item.approvalStatus || vehicle.approvalStatus || 'pending';
-                    const chassisNumber = vehicle.chassisNumber || item.chassisNumber;
-                    
-                    return (
-                      <CTableRow key={vehicle.chassisNumber || index}>
-                        <CTableDataCell>{startRecord + index}</CTableDataCell>
-                        <CTableDataCell style={{ fontSize: '12px' }}>
-                          <CBadge color="primary">
-                            {chassisNumber || 'N/A'}
-                          </CBadge>
-                        </CTableDataCell>
-                        <CTableDataCell style={{ fontSize: '12px' }}>
-                          {vehicle.engineNo || vehicle.engineNumber || 'N/A'}
-                        </CTableDataCell>
-                        <CTableDataCell style={{ fontSize: '12px' }}>
-                          {vehicle.vehicleModel || 'N/A'}
-                        </CTableDataCell>
-                        <CTableDataCell style={{ fontSize: '12px' }}>
-                          {vehicle.vehicleColor || 'N/A'}
-                        </CTableDataCell>
-                        <CTableDataCell style={{ fontSize: '12px' }}>
-                          {preview.model?.name || preview.model?.suggestedName || 'N/A'}
-                        </CTableDataCell>
-                        <CTableDataCell style={{ fontSize: '12px' }}>
-                          {preview.color?.name || preview.color?.suggestedName || 'N/A'}
-                        </CTableDataCell>
-                        <CTableDataCell style={{ fontSize: '12px' }}>
-                          {vehicle.branch || 'N/A'}
-                        </CTableDataCell>
-                        <CTableDataCell style={{ fontSize: '12px' }}>
-                          {vehicle.location || 'N/A'}
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <CBadge color={approvalStatus === 'pending' ? 'warning' : 'success'}>
-                            {approvalStatus || 'PENDING'}
-                          </CBadge>
-                        </CTableDataCell>
-                        <CTableDataCell>
-                          <div className="d-flex gap-1 flex-wrap">
-                            <CButton
-                              color="info"
-                              size="sm"
-                              onClick={(e) => handleViewVehicle(item, e)}
-                              disabled={!canViewAdvantageTVS}
-                              className="px-2 py-1"
-                              title="View Vehicle Details"
-                            >
-                              <CIcon icon={cilSearch} size="sm" />
-                            </CButton>
-                            <CButton
-                              color="warning"
-                              size="sm"
-                              onClick={(e) => openEditModal(item, e)}
-                              disabled={!canUpdateAdvantageTVS}
-                              className="px-2 py-1"
-                              title="Edit Vehicle"
-                            >
-                              <CIcon icon={cilPencil} size="sm" />
-                            </CButton>
-                            <CButton
-                              color="success"
-                              size="sm"
-                              onClick={(e) => openActionModal(item, 'approve', e)}
-                              disabled={!canUpdateAdvantageTVS || actionLoadingId === chassisNumber}
-                              className="px-2 py-1"
-                              title="Approve Vehicle"
-                            >
-                              <CIcon icon={cilThumbUp} size="sm" />
-                            </CButton>
-                            <CButton
-                              color="danger"
-                              size="sm"
-                              onClick={(e) => openActionModal(item, 'reject', e)}
-                              disabled={!canUpdateAdvantageTVS || actionLoadingId === chassisNumber}
-                              className="px-2 py-1"
-                              title="Reject Vehicle"
-                            >
-                              <CIcon icon={cilThumbDown} size="sm" />
-                            </CButton>
-                          </div>
-                        </CTableDataCell>
-                      </CTableRow>
-                    );
-                  })
-                )}
-              </CTableBody>
-            </CTable>
+                </CTableHead>
+                <CTableBody>
+                  {vehicleData.length === 0 && !loading ? (
+                    <CTableRow>
+                      <CTableDataCell colSpan="11" className="text-center">
+                        {searchQuery
+                          ? `No results found for "${searchQuery}"`
+                          : 'No pending vehicles available'}
+                      </CTableDataCell>
+                    </CTableRow>
+                  ) : (
+                    vehicleData.map((item, index) => {
+                      const startRecord = (currentPage - 1) * limit + 1;
+                      return renderPendingRow(item, index, startRecord);
+                    })
+                  )}
+                </CTableBody>
+              </CTable>
+            )}
+
+            {/* ========== REJECTED TABLE ========== */}
+            {activeTab === TAB_REJECTED && (
+              <CTable striped bordered hover className='responsive-table'>
+                <CTableHead>
+                  <CTableRow>
+                    <CTableHeaderCell>Sr.no</CTableHeaderCell>
+                    <CTableHeaderCell>Chassis #</CTableHeaderCell>
+                    <CTableHeaderCell>Category</CTableHeaderCell>
+                    <CTableHeaderCell>Model</CTableHeaderCell>
+                    <CTableHeaderCell>Status</CTableHeaderCell>
+                    <CTableHeaderCell>Rejection Reason</CTableHeaderCell>
+                    <CTableHeaderCell>Notes</CTableHeaderCell>
+                    <CTableHeaderCell>Rejected At</CTableHeaderCell>
+                    <CTableHeaderCell>Actions</CTableHeaderCell>
+                  </CTableRow>
+                </CTableHead>
+                <CTableBody>
+                  {vehicleData.length === 0 && !loading ? (
+                    <CTableRow>
+                      <CTableDataCell colSpan="9" className="text-center">
+                        {searchQuery
+                          ? `No results found for "${searchQuery}"`
+                          : 'No rejected vehicles available'}
+                      </CTableDataCell>
+                    </CTableRow>
+                  ) : (
+                    vehicleData.map((item, index) => {
+                      const startRecord = (currentPage - 1) * limit + 1;
+                      return renderRejectedRow(item, index, startRecord);
+                    })
+                  )}
+                </CTableBody>
+              </CTable>
+            )}
           </div>
           
           {renderPagination()}
         </CCardBody>
       </CCard>
 
-      {/* Action Modal - Approve/Reject with Error Handling */}
+      {/* ========== ACTION MODAL (Approve/Reject) ========== */}
       <CModal 
         visible={actionModalVisible} 
         onClose={() => {
@@ -1022,7 +1357,6 @@ const AdvantageTVSVehicles = () => {
         <CModalBody>
           {actionVehicle && (
             <div>
-              {/* Error Alert */}
               {actionError && (
                 <CAlert color="danger" className="mb-3">
                   <div className="d-flex align-items-start">
@@ -1041,22 +1375,32 @@ const AdvantageTVSVehicles = () => {
                     <div className="col-6">
                       <label className="text-muted small fw-bold">Chassis Number</label>
                       <p className="mb-1 fw-bold">
-                        {actionVehicle.stockData?.chassisNumber || actionVehicle.chassisNumber || 'N/A'}
+                        {actionVehicle.stockData?.chassisNumber || actionVehicle.chassisNumber || actionVehicle.stockDetails?.chassisNumber || 'N/A'}
                       </p>
                     </div>
                     <div className="col-6">
-                      <label className="text-muted small fw-bold">Vehicle Model</label>
-                      <p className="mb-1">{actionVehicle.stockData?.vehicleModel || 'N/A'}</p>
+                      <label className="text-muted small fw-bold">DMS Model</label>
+                      <p className="mb-1">{actionVehicle.dmsToMisMapping?.model?.dms || actionVehicle.stockDetails?.vehicleModel || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="row">
                     <div className="col-6">
-                      <label className="text-muted small fw-bold">Vehicle Color</label>
-                      <p className="mb-1">{actionVehicle.stockData?.vehicleColor || 'N/A'}</p>
+                      <label className="text-muted small fw-bold">MIS Model</label>
+                      <p className="mb-1">{actionVehicle.dmsToMisMapping?.model?.final || actionVehicle.vehicleModel || 'N/A'}</p>
                     </div>
                     <div className="col-6">
+                      <label className="text-muted small fw-bold">MIS Color</label>
+                      <p className="mb-1">{actionVehicle.dmsToMisMapping?.color?.final || actionVehicle.stockDetails?.vehicleColor || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="row">
+                    <div className="col-6">
                       <label className="text-muted small fw-bold">Branch</label>
-                      <p className="mb-1">{actionVehicle.stockData?.branch || 'N/A'}</p>
+                      <p className="mb-1">{actionVehicle.stockData?.branch || actionVehicle.stockDetails?.branch || 'N/A'}</p>
+                    </div>
+                    <div className="col-6">
+                      <label className="text-muted small fw-bold">Location</label>
+                      <p className="mb-1">{actionVehicle.stockData?.location || actionVehicle.stockDetails?.location || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
@@ -1158,7 +1502,7 @@ const AdvantageTVSVehicles = () => {
         </CModalFooter>
       </CModal>
 
-      {/* ========== EDIT MODAL WITH MODEL AND COLOR DROPDOWNS ========== */}
+      {/* ========== EDIT MODAL ========== */}
       <CModal 
         visible={editModalVisible} 
         onClose={() => {
@@ -1170,6 +1514,8 @@ const AdvantageTVSVehicles = () => {
           setSelectedModelForColors(null);
           setSelectedModelOption(null);
           setSelectedColorOption(null);
+          setPendingColorName('');
+          setPendingBranchName('');
         }}
         size="lg"
         scrollable
@@ -1186,9 +1532,38 @@ const AdvantageTVSVehicles = () => {
               <div className="alert alert-info d-flex align-items-center mb-4">
                 <CIcon icon={cilInfo} className="me-2" />
                 <span>
-                  <strong>Editing:</strong> Chassis #{editVehicle.stockData?.chassisNumber || editVehicle.chassisNumber || 'N/A'}
+                  <strong>Editing:</strong> Chassis #{editVehicle.stockData?.chassisNumber || editVehicle.chassisNumber || editVehicle.stockDetails?.chassisNumber || 'N/A'}
                 </span>
               </div>
+
+              {editVehicle.dmsToMisMapping && (
+                <div className="card border-0 bg-light mb-4">
+                  <div className="card-body">
+                    <h6 className="card-title mb-3">
+                      <CIcon icon={cilInfo} className="me-2 text-primary" />
+                      DMS vs MIS Mapping
+                    </h6>
+                    <div className="row">
+                      <div className="col-md-6">
+                        <label className="text-muted small fw-bold">DMS Model</label>
+                        <p className="mb-2">{editVehicle.dmsToMisMapping.model?.dms || 'N/A'}</p>
+                        <label className="text-muted small fw-bold">DMS Color</label>
+                        <p className="mb-2">{editVehicle.dmsToMisMapping.color?.dms || 'N/A'}</p>
+                      </div>
+                      <div className="col-md-6">
+                        <label className="text-muted small fw-bold">MIS Model (Final)</label>
+                        <p className="mb-2 fw-bold text-success">
+                          {editVehicle.dmsToMisMapping.model?.final || 'N/A'}
+                        </p>
+                        <label className="text-muted small fw-bold">MIS Color (Final)</label>
+                        <p className="mb-2 fw-bold text-success">
+                          {editVehicle.dmsToMisMapping.color?.final || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {editError && (
                 <CAlert color="danger" className="mb-3">
@@ -1264,7 +1639,10 @@ const AdvantageTVSVehicles = () => {
                     <CFormLabel className="fw-bold">Unload Location / Branch</CFormLabel>
                     <CFormSelect
                       value={editFormData.unloadLocation}
-                      onChange={(e) => handleEditInputChange('unloadLocation', e.target.value)}
+                      onChange={(e) => {
+                        setPendingBranchName('');
+                        handleEditInputChange('unloadLocation', e.target.value);
+                      }}
                       disabled={branchesLoading || editLoading}
                     >
                       <option value="">Select a branch...</option>
@@ -1375,6 +1753,8 @@ const AdvantageTVSVehicles = () => {
               setSelectedModelForColors(null);
               setSelectedModelOption(null);
               setSelectedColorOption(null);
+              setPendingColorName('');
+              setPendingBranchName('');
             }}
             disabled={editLoading}
           >
@@ -1394,7 +1774,7 @@ const AdvantageTVSVehicles = () => {
         </CModalFooter>
       </CModal>
 
-      {/* View Vehicle Modal */}
+      {/* ========== VIEW VEHICLE MODAL ========== */}
       <CModal 
         visible={viewModalVisible} 
         onClose={() => {
@@ -1407,307 +1787,467 @@ const AdvantageTVSVehicles = () => {
         <CModalHeader className="border-bottom-0">
           <CModalTitle className="d-flex align-items-center">
             <CIcon icon={cilInfo} className="me-2 text-primary" />
-            Vehicle Preview After Approval
+            Vehicle {activeTab === TAB_REJECTED ? 'Rejection Details' : 'Preview After Approval'}
           </CModalTitle>
         </CModalHeader>
         <CModalBody className="pt-0">
           {selectedVehicle && (
             <div className="vehicle-details">
-              {(() => {
-                const preview = selectedVehicle.approvalPreview || {};
-                const stockData = selectedVehicle.stockData || {};
-                const approvalInfo = selectedVehicle.summary || {};
+              {/* If on Rejected tab, show rejection details view */}
+              {activeTab === TAB_REJECTED ? (
+                <>
+                  <div className="alert alert-danger d-flex align-items-center mb-4">
+                    <CIcon icon={cilXCircle} className="me-2" />
+                    <span>
+                      <strong>Rejected:</strong> This vehicle was rejected and is not part of active inventory.
+                    </span>
+                  </div>
 
-                const vehiclePreviewData = preview.vehicleData || {};
-                const modelInfo = preview.model || {};
-                const colorInfo = preview.color || {};
-                const branchInfo = preview.branch || {};
-
-                return (
-                  <>
-                    <div className="alert alert-info d-flex align-items-center mb-4">
-                      <CIcon icon={cilCheck} className="me-2" />
-                      <span>
-                        <strong>Preview:</strong> This is how the vehicle will appear in the system after approval.
-                        {modelInfo.found && colorInfo.found && ' All matches found!'}
-                      </span>
+                  <div className="card border-0 shadow-sm mb-4">
+                    <div className="card-header bg-danger text-white">
+                      <h6 className="mb-0">
+                        <CIcon icon={cilXCircle} className="me-2" />
+                        Rejection Details
+                      </h6>
                     </div>
+                    <div className="card-body">
+                      <div className="row">
+                        <div className="col-md-6">
+                          <label className="text-muted small fw-bold">Chassis Number</label>
+                          <p className="mb-3 fw-bold">
+                            {selectedVehicle.chassisNumber || selectedVehicle.stockData?.chassisNumber || selectedVehicle.stockDetails?.chassisNumber || 'N/A'}
+                          </p>
+                          <label className="text-muted small fw-bold">Category</label>
+                          <p className="mb-3">{selectedVehicle.vehicleCategory || selectedVehicle.stockDetails?.vehicleCategory || 'N/A'}</p>
+                          <label className="text-muted small fw-bold">Model</label>
+                          <p className="mb-0">{selectedVehicle.vehicleModel || selectedVehicle.stockDetails?.vehicleModel || 'N/A'}</p>
+                        </div>
+                        <div className="col-md-6">
+                          <label className="text-muted small fw-bold">Status</label>
+                          <p className="mb-3">
+                            <CBadge color="danger">
+                              {selectedVehicle.status || 'rejected'}
+                            </CBadge>
+                          </p>
+                          <label className="text-muted small fw-bold">Rejected At</label>
+                          <p className="mb-3">
+                            {selectedVehicle.rejectedAt 
+                              ? formatDateTime(selectedVehicle.rejectedAt) 
+                              : 'N/A'}
+                          </p>
+                          <label className="text-muted small fw-bold">Rejection Reason</label>
+                          <p className="mb-0 text-danger fw-bold">
+                            {selectedVehicle.rejectionReason || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      {selectedVehicle.notes && (
+                        <>
+                          <hr />
+                          <label className="text-muted small fw-bold">Notes</label>
+                          <p className="mb-0">{selectedVehicle.notes}</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
 
+                  {/* Additional Stock Details */}
+                  {selectedVehicle.stockDetails && (
                     <div className="card border-0 shadow-sm mb-4">
-                      <div className="card-header bg-primary text-white">
-                        <h5 className="mb-0">
-                          <CIcon icon={cilCheckCircle} className="me-2" />
-                          Vehicle Preview
-                        </h5>
+                      <div className="card-header bg-light">
+                        <h6 className="mb-0">
+                          <CIcon icon={cilCloudDownload} className="me-2 text-secondary" />
+                          Source Stock Data (From Excel)
+                        </h6>
                       </div>
                       <div className="card-body">
                         <div className="row">
                           <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="text-muted small fw-bold">Chassis Number</label>
-                              <p className="fw-bold mb-0">{vehiclePreviewData.chassisNumber || stockData.chassisNumber || 'N/A'}</p>
-                            </div>
-                            <div className="mb-3">
-                              <label className="text-muted small fw-bold">Engine Number</label>
-                              <p className="mb-0">{vehiclePreviewData.engineNumber || stockData.engineNo || 'N/A'}</p>
-                            </div>
-                            <div className="mb-3">
-                              <label className="text-muted small fw-bold">Model Name</label>
-                              <p className="mb-0">{vehiclePreviewData.modelName || stockData.vehicleModel || 'N/A'}</p>
-                            </div>
-                            <div className="mb-3">
-                              <label className="text-muted small fw-bold">Type</label>
-                              <p className="mb-0">
-                                <CBadge color={vehiclePreviewData.type === 'EV' ? 'success' : 'primary'}>
-                                  {vehiclePreviewData.type || 'N/A'}
-                                </CBadge>
-                              </p>
-                            </div>
+                            <label className="text-muted small fw-bold">Branch</label>
+                            <p className="mb-2">{selectedVehicle.stockDetails.branch || 'N/A'}</p>
                           </div>
                           <div className="col-md-6">
-                            <div className="mb-3">
-                              <label className="text-muted small fw-bold">Color</label>
-                              <p className="mb-0">{vehiclePreviewData.colorName || stockData.vehicleColor || 'N/A'}</p>
-                            </div>
-                            <div className="mb-3">
-                              <label className="text-muted small fw-bold">Location Type</label>
-                              <p className="mb-0">
-                                <CBadge color="secondary">
-                                  {vehiclePreviewData.locationType || 'N/A'}
-                                </CBadge>
-                              </p>
-                            </div>
-                            <div className="mb-3">
-                              <label className="text-muted small fw-bold">Status</label>
-                              <p className="mb-0">
-                                <CBadge color={vehiclePreviewData.status === 'in_stock' ? 'success' : 'warning'}>
-                                  {vehiclePreviewData.status || 'N/A'}
-                                </CBadge>
-                              </p>
-                            </div>
+                            <label className="text-muted small fw-bold">Location</label>
+                            <p className="mb-2">{selectedVehicle.stockDetails.location || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="row">
+                          <div className="col-md-6">
+                            <label className="text-muted small fw-bold">Engine No</label>
+                            <p className="mb-2">{selectedVehicle.stockDetails.engineNo || 'N/A'}</p>
+                          </div>
+                          <div className="col-md-6">
+                            <label className="text-muted small fw-bold">Vehicle Color</label>
+                            <p className="mb-2">{selectedVehicle.stockDetails.vehicleColor || 'N/A'}</p>
+                          </div>
+                        </div>
+                        <div className="row">
+                          <div className="col-md-6">
+                            <label className="text-muted small fw-bold">Days in Stock DLR</label>
+                            <p className="mb-2">{selectedVehicle.stockDetails.daysInStockDLR || 'N/A'}</p>
+                          </div>
+                          <div className="col-md-6">
+                            <label className="text-muted small fw-bold">Series</label>
+                            <p className="mb-2">{selectedVehicle.stockDetails.series || 'N/A'}</p>
                           </div>
                         </div>
                       </div>
                     </div>
+                  )}
+                </>
+              ) : (
+                /* Pending tab: existing preview view */
+                (() => {
+                  const preview = selectedVehicle.approvalPreview || {};
+                  const stockData = selectedVehicle.stockData || selectedVehicle.stockDetails || {};
+                  const approvalInfo = selectedVehicle.summary || {};
+                  const mapping = selectedVehicle.dmsToMisMapping || {};
 
-                    <div className="row g-3 mb-4">
-                      <div className="col-md-4">
-                        <div className={`card border-0 shadow-sm h-100 ${modelInfo.found ? 'border-success border-2' : 'border-danger border-2'}`}>
-                          <div className="card-body text-center">
-                            <CIcon icon={modelInfo.found ? cilCheckCircle : cilXCircle} 
-                              size="2xl" 
-                              className={`mb-2 ${modelInfo.found ? 'text-success' : 'text-danger'}`} 
-                            />
-                            <h6 className="fw-bold">Model Match</h6>
-                            <CBadge color={modelInfo.found ? 'success' : 'danger'}>
-                              {modelInfo.found ? 'Found ✓' : 'Will Be Created ✗'}
-                            </CBadge>
-                            {(modelInfo.name || modelInfo.suggestedName) && (
-                              <p className="small text-muted mt-2 mb-0">{modelInfo.name || modelInfo.suggestedName}</p>
-                            )}
-                            {!modelInfo.found && modelInfo.action && (
-                              <p className="small text-danger mt-1 mb-0">{modelInfo.action}</p>
-                            )}
+                  const vehiclePreviewData = preview.vehicleData || {};
+                  const modelInfo = preview.model || {};
+                  const colorInfo = preview.color || {};
+                  const branchInfo = preview.branch || {};
+
+                  return (
+                    <>
+                      <div className="alert alert-info d-flex align-items-center mb-4">
+                        <CIcon icon={cilCheck} className="me-2" />
+                        <span>
+                          <strong>Preview:</strong> This is how the vehicle will appear in the system after approval.
+                          {modelInfo.found && colorInfo.found && ' All matches found!'}
+                        </span>
+                      </div>
+
+                      <div className="card border-0 shadow-sm mb-4">
+                        <div className="card-header bg-primary text-white">
+                          <h6 className="mb-0">
+                            <CIcon icon={cilInfo} className="me-2" />
+                            DMS → MIS Mapping
+                          </h6>
+                        </div>
+                        <div className="card-body">
+                          <div className="row">
+                            <div className="col-md-6">
+                              <label className="text-muted small fw-bold">DMS Model</label>
+                              <p className="mb-3">{mapping.model?.dms || 'N/A'}</p>
+                              <label className="text-muted small fw-bold">DMS Color</label>
+                              <p className="mb-0">{mapping.color?.dms || 'N/A'}</p>
+                            </div>
+                            <div className="col-md-6">
+                              <label className="text-muted small fw-bold">MIS Model (Final)</label>
+                              <p className="mb-3 fw-bold text-success">
+                                {mapping.model?.final || 'N/A'}
+                                {mapping.model?.willCreate && (
+                                  <CBadge color="warning" className="ms-2">will be created</CBadge>
+                                )}
+                              </p>
+                              <label className="text-muted small fw-bold">MIS Color (Final)</label>
+                              <p className="mb-0 fw-bold text-success">
+                                {mapping.color?.final || 'N/A'}
+                                {mapping.color?.willCreate && (
+                                  <CBadge color="warning" className="ms-2">will be created</CBadge>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <hr />
+                          <div className="row small text-muted">
+                            <div className="col-md-6">
+                              <p className="mb-1">
+                                <strong>Model Edited:</strong> {mapping.model?.isEdited ? 'Yes' : 'No'}
+                              </p>
+                              <p className="mb-1">
+                                <strong>Model Mapped:</strong> {mapping.model?.isMapped ? 'Yes' : 'No'}
+                              </p>
+                            </div>
+                            <div className="col-md-6">
+                              <p className="mb-1">
+                                <strong>Color Edited:</strong> {mapping.color?.isEdited ? 'Yes' : 'No'}
+                              </p>
+                              <p className="mb-1">
+                                <strong>Color Mapped:</strong> {mapping.color?.isMapped ? 'Yes' : 'No'}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="col-md-4">
-                        <div className={`card border-0 shadow-sm h-100 ${colorInfo.found ? 'border-success border-2' : 'border-danger border-2'}`}>
-                          <div className="card-body text-center">
-                            <CIcon icon={colorInfo.found ? cilCheckCircle : cilXCircle} 
-                              size="2xl" 
-                              className={`mb-2 ${colorInfo.found ? 'text-success' : 'text-danger'}`} 
-                            />
-                            <h6 className="fw-bold">Color Match</h6>
-                            <CBadge color={colorInfo.found ? 'success' : 'danger'}>
-                              {colorInfo.found ? 'Found ✓' : 'Will Be Created ✗'}
-                            </CBadge>
-                            {(colorInfo.name || colorInfo.suggestedName) && (
-                              <p className="small text-muted mt-2 mb-0">{colorInfo.name || colorInfo.suggestedName}</p>
-                            )}
-                            {!colorInfo.found && colorInfo.action && (
-                              <p className="small text-danger mt-1 mb-0">{colorInfo.action}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="col-md-4">
-                        <div className={`card border-0 shadow-sm h-100 ${branchInfo.found ? 'border-success border-2' : 'border-warning border-2'}`}>
-                          <div className="card-body text-center">
-                            <CIcon icon={branchInfo.found ? cilCheckCircle : cilWarning} 
-                              size="2xl" 
-                              className={`mb-2 ${branchInfo.found ? 'text-success' : 'text-warning'}`} 
-                            />
-                            <h6 className="fw-bold">Branch Match</h6>
-                            <CBadge color={branchInfo.found ? 'success' : 'warning'}>
-                              {branchInfo.found ? 'Found ✓' : 'Will Need Create'}
-                            </CBadge>
-                            {(branchInfo.name || branchInfo.suggestedName) && (
-                              <p className="small text-muted mt-2 mb-0">{branchInfo.name || branchInfo.suggestedName}</p>
-                            )}
-                            {!branchInfo.found && (
-                              <p className="small text-warning mt-1 mb-0">{branchInfo.action || 'New branch will be created'}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {approvalInfo && Object.keys(approvalInfo).length > 0 && (
                       <div className="card border-0 shadow-sm mb-4">
                         <div className="card-header bg-light">
-                          <h6 className="mb-0">
-                            <CIcon icon={cilInfo} className="me-2 text-primary" />
-                            Approval Summary
-                          </h6>
+                          <h5 className="mb-0">
+                            <CIcon icon={cilCheckCircle} className="me-2 text-success" />
+                            Vehicle Preview
+                          </h5>
                         </div>
                         <div className="card-body">
                           <div className="row">
                             <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Model Action</label>
-                              <p className="mb-2">{approvalInfo.modelAction || 'N/A'}</p>
+                              <div className="mb-3">
+                                <label className="text-muted small fw-bold">Chassis Number</label>
+                                <p className="fw-bold mb-0">{vehiclePreviewData.chassisNumber || stockData.chassisNumber || 'N/A'}</p>
+                              </div>
+                              <div className="mb-3">
+                                <label className="text-muted small fw-bold">Engine Number</label>
+                                <p className="mb-0">{vehiclePreviewData.engineNumber || stockData.engineNo || 'N/A'}</p>
+                              </div>
+                              <div className="mb-3">
+                                <label className="text-muted small fw-bold">Model Name (MIS)</label>
+                                <p className="mb-0">{mapping.model?.final || vehiclePreviewData.modelName || stockData.vehicleModel || 'N/A'}</p>
+                              </div>
+                              <div className="mb-3">
+                                <label className="text-muted small fw-bold">Type</label>
+                                <p className="mb-0">
+                                  <CBadge color={vehiclePreviewData.type === 'EV' ? 'success' : 'primary'}>
+                                    {vehiclePreviewData.type || 'N/A'}
+                                  </CBadge>
+                                </p>
+                              </div>
                             </div>
                             <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Color Action</label>
-                              <p className="mb-2">{approvalInfo.colorAction || 'N/A'}</p>
+                              <div className="mb-3">
+                                <label className="text-muted small fw-bold">Color (MIS)</label>
+                                <p className="mb-0">{mapping.color?.final || vehiclePreviewData.colorName || stockData.vehicleColor || 'N/A'}</p>
+                              </div>
+                              <div className="mb-3">
+                                <label className="text-muted small fw-bold">Location Type</label>
+                                <p className="mb-0">
+                                  <CBadge color="secondary">
+                                    {vehiclePreviewData.locationType || 'N/A'}
+                                  </CBadge>
+                                </p>
+                              </div>
+                              <div className="mb-3">
+                                <label className="text-muted small fw-bold">Status</label>
+                                <p className="mb-0">
+                                  <CBadge color={vehiclePreviewData.status === 'in_stock' ? 'success' : 'warning'}>
+                                    {vehiclePreviewData.status || 'N/A'}
+                                  </CBadge>
+                                </p>
+                              </div>
                             </div>
                           </div>
-                          <div className="row">
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Branch Action</label>
-                              <p className="mb-2">{approvalInfo.branchAction || 'N/A'}</p>
-                            </div>
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Overall Status</label>
-                              <p className="mb-2">
-                                <CBadge color={approvalInfo.overallStatus === 'Ready for approval' ? 'success' : 'secondary'}>
-                                  {approvalInfo.overallStatus || 'N/A'}
-                                </CBadge>
-                              </p>
-                            </div>
-                          </div>
-
-                          {(approvalInfo.willCreateModel || approvalInfo.willCreateColor || approvalInfo.needsBranchAssignment) && (
-                            <div className="alert alert-warning mt-3 mb-0">
-                              <h6 className="alert-heading">
-                                <CIcon icon={cilWarning} className="me-2" />
-                                Actions Required On Approval
-                              </h6>
-                              <ul className="mb-0 ps-3">
-                                {approvalInfo.willCreateModel && <li>A new model will be created</li>}
-                                {approvalInfo.willCreateColor && <li>A new color will be created</li>}
-                                {approvalInfo.needsBranchAssignment && <li>This vehicle needs branch assignment</li>}
-                              </ul>
-                            </div>
-                          )}
                         </div>
                       </div>
-                    )}
 
-                    {stockData && Object.keys(stockData).length > 0 && (
-                      <div className="card border-0 shadow-sm">
-                        <div className="card-header bg-light">
-                          <h6 className="mb-0">
-                            <CIcon icon={cilCloudDownload} className="me-2 text-secondary" />
-                            Source Stock Data (From Excel)
-                          </h6>
+                      <div className="row g-3 mb-4">
+                        <div className="col-md-4">
+                          <div className={`card border-0 shadow-sm h-100 ${modelInfo.found ? 'border-success border-2' : 'border-danger border-2'}`}>
+                            <div className="card-body text-center">
+                              <CIcon icon={modelInfo.found ? cilCheckCircle : cilXCircle} 
+                                size="2xl" 
+                                className={`mb-2 ${modelInfo.found ? 'text-success' : 'text-danger'}`} 
+                              />
+                              <h6 className="fw-bold">Model Match</h6>
+                              <CBadge color={modelInfo.found ? 'success' : 'danger'}>
+                                {modelInfo.found ? 'Found ✓' : 'Will Be Created ✗'}
+                              </CBadge>
+                              {(modelInfo.name || modelInfo.suggestedName) && (
+                                <p className="small text-muted mt-2 mb-0">{modelInfo.name || modelInfo.suggestedName}</p>
+                              )}
+                              {!modelInfo.found && modelInfo.action && (
+                                <p className="small text-danger mt-1 mb-0">{modelInfo.action}</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="card-body">
-                          <div className="row">
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Chassis</label>
-                              <p className="mb-2">{stockData.chassisNumber || 'N/A'}</p>
-                            </div>
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Engine</label>
-                              <p className="mb-2">{stockData.engineNo || 'N/A'}</p>
-                            </div>
-                          </div>
-                          <div className="row">
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Vehicle Model</label>
-                              <p className="mb-2">{stockData.vehicleModel || 'N/A'}</p>
-                            </div>
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Vehicle Color</label>
-                              <p className="mb-2">{stockData.vehicleColor || 'N/A'}</p>
-                            </div>
-                          </div>
-                          <div className="row">
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Branch</label>
-                              <p className="mb-2">{stockData.branch || 'N/A'}</p>
-                            </div>
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Location</label>
-                              <p className="mb-2">{stockData.location || 'N/A'}</p>
+
+                        <div className="col-md-4">
+                          <div className={`card border-0 shadow-sm h-100 ${colorInfo.found ? 'border-success border-2' : 'border-danger border-2'}`}>
+                            <div className="card-body text-center">
+                              <CIcon icon={colorInfo.found ? cilCheckCircle : cilXCircle} 
+                                size="2xl" 
+                                className={`mb-2 ${colorInfo.found ? 'text-success' : 'text-danger'}`} 
+                              />
+                              <h6 className="fw-bold">Color Match</h6>
+                              <CBadge color={colorInfo.found ? 'success' : 'danger'}>
+                                {colorInfo.found ? 'Found ✓' : 'Will Be Created ✗'}
+                              </CBadge>
+                              {(colorInfo.name || colorInfo.suggestedName) && (
+                                <p className="small text-muted mt-2 mb-0">{colorInfo.name || colorInfo.suggestedName}</p>
+                              )}
+                              {!colorInfo.found && colorInfo.action && (
+                                <p className="small text-danger mt-1 mb-0">{colorInfo.action}</p>
+                              )}
                             </div>
                           </div>
-                          <div className="row">
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">TVS Invoice No</label>
-                              <p className="mb-2">{stockData.tvsInvoiceNo || 'N/A'}</p>
+                        </div>
+
+                        <div className="col-md-4">
+                          <div className={`card border-0 shadow-sm h-100 ${branchInfo.found ? 'border-success border-2' : 'border-warning border-2'}`}>
+                            <div className="card-body text-center">
+                              <CIcon icon={branchInfo.found ? cilCheckCircle : cilWarning} 
+                                size="2xl" 
+                                className={`mb-2 ${branchInfo.found ? 'text-success' : 'text-warning'}`} 
+                              />
+                              <h6 className="fw-bold">Branch Match</h6>
+                              <CBadge color={branchInfo.found ? 'success' : 'warning'}>
+                                {branchInfo.found ? 'Found ✓' : 'Will Need Create'}
+                              </CBadge>
+                              {(branchInfo.name || branchInfo.suggestedName) && (
+                                <p className="small text-muted mt-2 mb-0">{branchInfo.name || branchInfo.suggestedName}</p>
+                              )}
+                              {!branchInfo.found && (
+                                <p className="small text-warning mt-1 mb-0">{branchInfo.action || 'New branch will be created'}</p>
+                              )}
                             </div>
                           </div>
-                          <div className="row">
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">TVS Invoice Date</label>
-                              <p className="mb-2">{formatDate(stockData.tvsInvoiceDate)}</p>
-                            </div>
-                            <div className="col-md-6">
-                              <label className="text-muted small fw-bold">Series</label>
-                              <p className="mb-2">{stockData.series || 'N/A'}</p>
-                            </div>
+                        </div>
+                      </div>
+
+                      {approvalInfo && Object.keys(approvalInfo).length > 0 && (
+                        <div className="card border-0 shadow-sm mb-4">
+                          <div className="card-header bg-light">
+                            <h6 className="mb-0">
+                              <CIcon icon={cilInfo} className="me-2 text-primary" />
+                              Approval Summary
+                            </h6>
                           </div>
-                          {stockData.stockTransferNo && (
+                          <div className="card-body">
                             <div className="row">
                               <div className="col-md-6">
-                                <label className="text-muted small fw-bold">Stock Transfer No</label>
-                                <p className="mb-2">{stockData.stockTransferNo}</p>
+                                <label className="text-muted small fw-bold">Model Action</label>
+                                <p className="mb-2">{approvalInfo.modelAction || 'N/A'}</p>
                               </div>
                               <div className="col-md-6">
-                                <label className="text-muted small fw-bold">Stock Transfer Date</label>
-                                <p className="mb-2">{formatDate(stockData.stockTransferDate)}</p>
+                                <label className="text-muted small fw-bold">Color Action</label>
+                                <p className="mb-2">{approvalInfo.colorAction || 'N/A'}</p>
                               </div>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                            <div className="row">
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">Branch Action</label>
+                                <p className="mb-2">{approvalInfo.branchAction || 'N/A'}</p>
+                              </div>
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">Overall Status</label>
+                                <p className="mb-2">
+                                  <CBadge color={approvalInfo.overallStatus === 'Ready for approval' ? 'success' : 'secondary'}>
+                                    {approvalInfo.overallStatus || 'N/A'}
+                                  </CBadge>
+                                </p>
+                              </div>
+                            </div>
 
-                    {canUpdateAdvantageTVS && (
-                      <div className="mt-4 d-flex gap-2 justify-content-end border-top pt-3">
-                        <CButton 
-                          color="success" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setViewModalVisible(false);
-                            openActionModal(selectedVehicle, 'approve', e);
-                          }}
-                          disabled={actionLoadingId === (selectedVehicle._id || selectedVehicle.id)}
-                          className="px-4"
-                        >
-                          <CIcon icon={cilCheck} className="me-1" /> Approve
-                        </CButton>
-                        <CButton 
-                          color="danger" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setViewModalVisible(false);
-                            openActionModal(selectedVehicle, 'reject', e);
-                          }}
-                          disabled={actionLoadingId === (selectedVehicle._id || selectedVehicle.id)}
-                          className="px-4"
-                        >
-                          <CIcon icon={cilX} className="me-1" /> Reject
-                        </CButton>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+                            {(approvalInfo.willCreateModel || approvalInfo.willCreateColor || approvalInfo.needsBranchAssignment) && (
+                              <div className="alert alert-warning mt-3 mb-0">
+                                <h6 className="alert-heading">
+                                  <CIcon icon={cilWarning} className="me-2" />
+                                  Actions Required On Approval
+                                </h6>
+                                <ul className="mb-0 ps-3">
+                                  {approvalInfo.willCreateModel && <li>A new model will be created</li>}
+                                  {approvalInfo.willCreateColor && <li>A new color will be created</li>}
+                                  {approvalInfo.needsBranchAssignment && <li>This vehicle needs branch assignment</li>}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {stockData && Object.keys(stockData).length > 0 && (
+                        <div className="card border-0 shadow-sm">
+                          <div className="card-header bg-light">
+                            <h6 className="mb-0">
+                              <CIcon icon={cilCloudDownload} className="me-2 text-secondary" />
+                              Source Stock Data (From Excel)
+                            </h6>
+                          </div>
+                          <div className="card-body">
+                            <div className="row">
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">Chassis</label>
+                                <p className="mb-2">{stockData.chassisNumber || 'N/A'}</p>
+                              </div>
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">Engine</label>
+                                <p className="mb-2">{stockData.engineNo || 'N/A'}</p>
+                              </div>
+                            </div>
+                            <div className="row">
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">DMS Vehicle Model</label>
+                                <p className="mb-2">{stockData.vehicleModel || 'N/A'}</p>
+                              </div>
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">DMS Vehicle Color</label>
+                                <p className="mb-2">{stockData.vehicleColor || 'N/A'}</p>
+                              </div>
+                            </div>
+                            <div className="row">
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">Branch</label>
+                                <p className="mb-2">{stockData.branch || 'N/A'}</p>
+                              </div>
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">Location</label>
+                                <p className="mb-2">{stockData.location || 'N/A'}</p>
+                              </div>
+                            </div>
+                            <div className="row">
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">TVS Invoice No</label>
+                                <p className="mb-2">{stockData.tvsInvoiceNo || 'N/A'}</p>
+                              </div>
+                            </div>
+                            <div className="row">
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">TVS Invoice Date</label>
+                                <p className="mb-2">{formatDate(stockData.tvsInvoiceDate)}</p>
+                              </div>
+                              <div className="col-md-6">
+                                <label className="text-muted small fw-bold">Series</label>
+                                <p className="mb-2">{stockData.series || 'N/A'}</p>
+                              </div>
+                            </div>
+                            {stockData.stockTransferNo && (
+                              <div className="row">
+                                <div className="col-md-6">
+                                  <label className="text-muted small fw-bold">Stock Transfer No</label>
+                                  <p className="mb-2">{stockData.stockTransferNo}</p>
+                                </div>
+                                <div className="col-md-6">
+                                  <label className="text-muted small fw-bold">Stock Transfer Date</label>
+                                  <p className="mb-2">{formatDate(stockData.stockTransferDate)}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {canUpdateAdvantageTVS && (
+                        <div className="mt-4 d-flex gap-2 justify-content-end border-top pt-3">
+                          <CButton 
+                            color="success" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewModalVisible(false);
+                              openActionModal(selectedVehicle, 'approve', e);
+                            }}
+                            disabled={actionLoadingId === (selectedVehicle._id || selectedVehicle.id)}
+                            className="px-4"
+                          >
+                            <CIcon icon={cilCheck} className="me-1" /> Approve
+                          </CButton>
+                          <CButton 
+                            color="danger" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewModalVisible(false);
+                              openActionModal(selectedVehicle, 'reject', e);
+                            }}
+                            disabled={actionLoadingId === (selectedVehicle._id || selectedVehicle.id)}
+                            className="px-4"
+                          >
+                            <CIcon icon={cilX} className="me-1" /> Reject
+                          </CButton>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()
+              )}
             </div>
           )}
         </CModalBody>

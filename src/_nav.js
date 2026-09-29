@@ -4377,6 +4377,14 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
       to: '/insurance-details',
     });
   }
+
+   if (canViewPage(userPermissions, MODULES.INSURANCE, PAGES.INSURANCE.INSURANCE_DETAILS)) {
+    insuranceItems.push({
+      component: CNavItem,
+      name: 'AI Insurance Dashboard',
+      to: '/ai-insurance-dashboard',
+    });
+  }
   
 
   if (canViewPage(userPermissions, MODULES.INSURANCE, PAGES.INSURANCE.INSURANCE_DETAILS)) {
@@ -4707,6 +4715,22 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
       to: '/offers/offer-list',
     });
   }
+
+   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.OFFER)) {
+    mastersItems.push({
+      component: CNavItem,
+      name: 'Scheme List',
+      to: '/schemes/scheme-list',
+    });
+  }
+
+  // if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.OFFER)) {
+  //   mastersItems.push({
+  //     component: CNavItem,
+  //     name: 'Harita Models List',
+  //     to: '/harita-models',
+  //   });
+  // }
   
   if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.ATTACHMENTS)) {
     mastersItems.push({
@@ -4968,6 +4992,14 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
         component: CNavItem,
         name: 'All Booking',
         to: '/subdealer-all-bookings',
+      });
+    }
+
+    if (canViewPage(userPermissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.ALL_BOOKING)) {
+      subdealerBookingItems.push({
+        component: CNavItem,
+        name: 'Tax Invoice',
+        to: '/subdealer-tax-invoice',
       });
     }
 

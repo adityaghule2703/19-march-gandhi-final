@@ -737,7 +737,13 @@ import {
   CFormInput,
   CSpinner,
   CBadge,
-  CTooltip
+  CTooltip,
+  CModal,
+  CModalHeader,
+  CModalTitle,
+  CModalBody,
+  CModalFooter,
+  CFormLabel
 } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { 
@@ -749,7 +755,6 @@ import {
   cilCheckCircle
 } from '@coreui/icons';
 import { Link } from 'react-router-dom';
-import { CFormLabel } from '@coreui/react';
 import {
   React as ReactHook,
   useState as useStateHook,
@@ -781,9 +786,16 @@ const UsersList = () => {
   const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingStatus, setLoadingStatus] = useState({}); // Track loading state for status updates
+  const [loadingGcPermission, setLoadingGcPermission] = useState({}); // Track loading state for GC permission updates
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const { permissions } = useAuth();
+
+  // GC Permission modal state
+  const [gcModalVisible, setGcModalVisible] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [gcAmount, setGcAmount] = useState('');
+  const [gcAmountError, setGcAmountError] = useState('');
 
   // Page-level permission checks for User List page under User Management module
   const hasUserListView = hasSafePagePermission(
@@ -860,7 +872,9 @@ const UsersList = () => {
         primaryRole: user.roles?.[0]?.name || 'No Role',
         branchName: user.branchDetails?.name || user.branch || '',
         subdealerName: user.subdealerDetails?.name || user.subdealer || '',
-        status: user.status ? user.status.toLowerCase() : 'inactive' // Normalize status
+        status: user.status ? user.status.toLowerCase() : 'inactive', // Normalize status
+        gcPermission: user.gcPermission || false, // Normalize gcPermission
+        gcAmount: user.gcAmount || 0 // Normalize gcAmount
       }));
       setData(users);
       setFilteredData(users);
@@ -934,6 +948,90 @@ const UsersList = () => {
       showError(message);
     } finally {
       setLoadingStatus(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
+  // Open GC permission modal
+  const openGcPermissionModal = (user) => {
+    setSelectedUser(user);
+    setGcAmount(user.gcAmount ? String(user.gcAmount) : '');
+    setGcAmountError('');
+    setGcModalVisible(true);
+    handleClose();
+  };
+
+  const closeGcPermissionModal = () => {
+    setGcModalVisible(false);
+    setSelectedUser(null);
+    setGcAmount('');
+    setGcAmountError('');
+  };
+
+  const handleGcPermissionUpdate = async () => {
+    if (!selectedUser) return;
+
+    const userId = selectedUser.id;
+    const newGcPermission = !selectedUser.gcPermission;
+
+    let parsedAmount = 0;
+
+    // Only validate amount when ENABLING
+    if (newGcPermission) {
+      parsedAmount = Number(gcAmount);
+      if (gcAmount === '' || isNaN(parsedAmount) || parsedAmount < 0) {
+        setGcAmountError('Please enter a valid amount (0 or greater).');
+        return;
+      }
+    }
+
+    // Set loading state for this specific user
+    setLoadingGcPermission(prev => ({ ...prev, [userId]: true }));
+
+    try {
+      await axiosInstance.put(`/users/${userId}/gc-permission`, {
+        gcPermission: newGcPermission,
+        gcAmount: newGcPermission ? parsedAmount : 0
+      });
+
+      // Update local state
+      setData(prevData =>
+        prevData.map(user =>
+          user.id === userId
+            ? { ...user, gcPermission: newGcPermission, gcAmount: newGcPermission ? parsedAmount : 0 }
+            : user
+        )
+      );
+
+      setFilteredData(prevData =>
+        prevData.map(user =>
+          user.id === userId
+            ? { ...user, gcPermission: newGcPermission, gcAmount: newGcPermission ? parsedAmount : 0 }
+            : user
+        )
+      );
+
+      showSuccess(
+        newGcPermission
+          ? `GC Permission enabled successfully with amount ₹${parsedAmount}!`
+          : `GC Permission disabled successfully!`
+      );
+      closeGcPermissionModal();
+    } catch (error) {
+      console.log(error);
+      let message = 'Failed to update GC permission. Please try again.';
+
+      if (error.response) {
+        const res = error.response.data;
+        message = res.message || res.error || message;
+      } else if (error.request) {
+        message = 'No response from server. Please check your network.';
+      } else if (error.message) {
+        message = error.message;
+      }
+
+      showError(message);
+    } finally {
+      setLoadingGcPermission(prev => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -1147,6 +1245,21 @@ const UsersList = () => {
                                 </MenuItem>
                               </Link>
                             )}
+                            
+                            {canUpdateUserList && (
+                              <MenuItem 
+                                onClick={() => openGcPermissionModal(user)}
+                                disabled={loadingGcPermission[user.id]}
+                              >
+                                {loadingGcPermission[user.id] ? (
+                                  <CSpinner size="sm" className="me-2" />
+                                ) : (
+                                  <CIcon icon={cilCheckCircle} className="me-2" />
+                                )}
+                                {user.gcPermission ? 'Disable GC Permission' : 'Enable GC Permission'}
+                              </MenuItem>
+                            )}
+                            
                             {canDeleteUserList && (
                               <MenuItem onClick={() => handleDelete(user.id)}>
                                 <CIcon icon={cilTrash} className="me-2" />Delete
@@ -1169,6 +1282,91 @@ const UsersList = () => {
           </div>
         </CCardBody>
       </CCard>
+
+      {/* GC Permission Modal */}
+      <CModal 
+        visible={gcModalVisible} 
+        onClose={closeGcPermissionModal}
+        alignment="center"
+      >
+        <CModalHeader onClose={closeGcPermissionModal}>
+          <CModalTitle>
+            {selectedUser?.gcPermission ? 'Disable' : 'Enable'} GC Permission
+          </CModalTitle>
+        </CModalHeader>
+        <CModalBody>
+          {selectedUser && (
+            <>
+              <p className="mb-3">
+                <strong>User:</strong> {selectedUser.name} ({selectedUser.email})
+              </p>
+              <p className="mb-3">
+                <strong>Current GC Permission:</strong>{' '}
+                <CBadge color={selectedUser.gcPermission ? 'success' : 'secondary'}>
+                  {selectedUser.gcPermission ? 'Enabled' : 'Disabled'}
+                </CBadge>
+              </p>
+
+              {/* Show amount field ONLY when enabling */}
+              {!selectedUser.gcPermission && (
+                <div className="mb-3">
+                  <CFormLabel htmlFor="gcAmount">
+                    GC Amount <span className="text-danger">*</span>
+                  </CFormLabel>
+                  <CFormInput
+                    id="gcAmount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter GC amount (e.g. 50000)"
+                    value={gcAmount}
+                    onChange={(e) => {
+                      setGcAmount(e.target.value);
+                      if (gcAmountError) setGcAmountError('');
+                    }}
+                    invalid={!!gcAmountError}
+                  />
+                  {gcAmountError && (
+                    <div className="text-danger mt-1" style={{ fontSize: '0.875rem' }}>
+                      {gcAmountError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <p className="text-muted mb-0" style={{ fontSize: '0.875rem' }}>
+                {selectedUser.gcPermission
+                  ? 'This will disable GC permission for this user.'
+                  : <>This will enable GC permission with amount <strong>₹{gcAmount || '0'}</strong>.</>
+                }
+              </p>
+            </>
+          )}
+        </CModalBody>
+        <CModalFooter>
+          <CButton 
+            color="secondary" 
+            onClick={closeGcPermissionModal}
+            disabled={selectedUser && loadingGcPermission[selectedUser.id]}
+          >
+            Cancel
+          </CButton>
+          <CButton 
+            color={selectedUser?.gcPermission ? 'warning' : 'success'}
+            onClick={handleGcPermissionUpdate}
+            disabled={selectedUser && loadingGcPermission[selectedUser.id]}
+          >
+            {selectedUser && loadingGcPermission[selectedUser.id] ? (
+              <>
+                <CSpinner size="sm" className="me-2" />
+                Updating...
+              </>
+            ) : (
+              `Confirm ${selectedUser?.gcPermission ? 'Disable' : 'Enable'}`
+            )}
+          </CButton>
+        </CModalFooter>
+      </CModal>
     </div>
   );
 };

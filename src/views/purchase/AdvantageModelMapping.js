@@ -5981,33 +5981,22 @@ import { useRef } from 'react';
 import Select from 'react-select';
 
 // ============================================================
-// ERROR HANDLING UTILITY - FIXED
+// ERROR HANDLING UTILITY
 // ============================================================
 const handleApiError = (error) => {
-  // Default error message
   let errorMessage = 'An unexpected error occurred. Please try again.';
-  
+
   if (error.response) {
-    // The request was made and the server responded with a status code
-    // that falls out of the range of 2xx
     const { status, data } = error.response;
-    
-    // Extract error message from different response formats
+
     if (data) {
-      // PRIORITY 1: Check for the error field first
       if (data.error) {
         errorMessage = data.error;
-      }
-      // PRIORITY 2: Check for the message field
-      else if (data.message) {
+      } else if (data.message) {
         errorMessage = data.message;
-      }
-      // PRIORITY 3: Check for detail field
-      else if (data.detail) {
+      } else if (data.detail) {
         errorMessage = data.detail;
-      }
-      // PRIORITY 4: Handle validation errors
-      else if (data.errors) {
+      } else if (data.errors) {
         if (Array.isArray(data.errors)) {
           errorMessage = data.errors.join(', ');
         } else if (typeof data.errors === 'object') {
@@ -6016,17 +6005,15 @@ const handleApiError = (error) => {
         } else {
           errorMessage = data.errors;
         }
-      }
-      // PRIORITY 5: If data is a string
-      else if (typeof data === 'string') {
+      } else if (typeof data === 'string') {
         errorMessage = data;
       }
     }
-    
-    // Only override with status code messages if we don't have a specific error message
-    // or if the error message is still the default
-    if (errorMessage === 'An unexpected error occurred. Please try again.' || 
-        errorMessage === 'Server Error') {
+
+    if (
+      errorMessage === 'An unexpected error occurred. Please try again.' ||
+      errorMessage === 'Server Error'
+    ) {
       switch (status) {
         case 400:
           errorMessage = 'Validation error. Please check your input.';
@@ -6041,7 +6028,8 @@ const handleApiError = (error) => {
           errorMessage = 'Resource not found.';
           break;
         case 409:
-          errorMessage = 'Conflict: The resource already exists or there is a data conflict.';
+          errorMessage =
+            'Conflict: The resource already exists or there is a data conflict.';
           break;
         case 500:
           errorMessage = 'Server error. Please try again later.';
@@ -6051,17 +6039,14 @@ const handleApiError = (error) => {
       }
     }
   } else if (error.request) {
-    // The request was made but no response was received
     errorMessage = 'No response from server. Please check your network connection.';
   } else {
-    // Something happened in setting up the request that triggered an Error
     errorMessage = error.message || errorMessage;
   }
-  
+
   return errorMessage;
 };
 
-// Helper function to show error with proper handling
 const showErrorMessage = (error) => {
   const message = handleApiError(error);
   showError(message);
@@ -6097,6 +6082,7 @@ const AdvantageModelMapping = () => {
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [formMode, setFormMode] = useState('add');
   const [formType, setFormType] = useState('color');
+  // NOTE: vehicle_type is no longer user-editable; kept internally to send to backend
   const [formVehicleType, setFormVehicleType] = useState('EV');
   const [formDmsName, setFormDmsName] = useState('');
   const [formMisName, setFormMisName] = useState('');
@@ -6105,7 +6091,7 @@ const AdvantageModelMapping = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // ---- MIS Models (from /models API) ----
+  // ---- MIS Models (from /models/all/status API) ----
   const [misModels, setMisModels] = useState([]);
   const [misModelsLoading, setMisModelsLoading] = useState(false);
 
@@ -6119,7 +6105,7 @@ const AdvantageModelMapping = () => {
   const [colorOptionsLoading, setColorOptionsLoading] = useState(false);
   const [selectedMisModelForColor, setSelectedMisModelForColor] = useState(null);
 
-  // ---- MIS name suggestions, sourced from previously saved mis_name values ----
+  // ---- MIS name suggestions (from previously saved mis_name values) ----
   const [misNamesCache, setMisNamesCache] = useState({});
   const [misNamesLoadingType, setMisNamesLoadingType] = useState(null);
   const misNamesLoadPromise = useRef({});
@@ -6155,9 +6141,9 @@ const AdvantageModelMapping = () => {
   const canDelete = true;
 
   // ============================================================
-  // COMPUTED VALUES - Moved up before useEffect and other functions
+  // COMPUTED VALUES
   // ============================================================
-  
+
   // MIS Model options
   const misModelOptions = misModels.map((item) => ({
     value: item._id || item.id,
@@ -6170,12 +6156,10 @@ const AdvantageModelMapping = () => {
     label: item.dms_name || item.name || item.model_name || ''
   }));
 
-  // Selected MIS option
   const selectedMisOption = selectedMisModelId
     ? misModelOptions.find((opt) => opt.value === selectedMisModelId) || null
     : null;
 
-  // Selected DMS option
   const selectedDmsOption = selectedDmsModelId
     ? dmsModelOptions.find((opt) => opt.value === selectedDmsModelId) || null
     : null;
@@ -6198,27 +6182,96 @@ const AdvantageModelMapping = () => {
     };
   }, [searchTerm]);
 
-  // Load models when form modal opens or vehicle type changes
+  // Load models when form modal opens (and re-run if formType changes)
   useEffect(() => {
-    if (formModalOpen && formVehicleType) {
-      if (formType === 'model') {
-        fetchMisModels(formVehicleType);
-        fetchDmsModels(formVehicleType);
-      } else if (formType === 'color') {
-        fetchMisModels(formVehicleType);
-        fetchDmsModels(formVehicleType);
-        // Reset color options when form type is color
-        setColorOptions([]);
-        setSelectedMisModelForColor(null);
-      }
+    if (!formModalOpen) return;
+
+    if (formType === 'model') {
+      fetchMisModels();
+      fetchDmsModels(formVehicleType);
+    } else if (formType === 'color') {
+      fetchMisModels();
+      fetchDmsModels(formVehicleType);
+      setColorOptions([]);
+      setSelectedMisModelForColor(null);
     }
   }, [formModalOpen, formType, formVehicleType]);
 
   // ============================================================
-  // DATA FETCHING FUNCTIONS
+  // AUTO-SELECT helpers (edit mode)
   // ============================================================
-  
-  // Generic helper to dig an array out of an API response
+
+  // When MIS models finish loading in edit mode, auto-select by matching mis_name
+  useEffect(() => {
+    if (!formModalOpen || formMode !== 'edit' || !formMisName || misModels.length === 0) {
+      return;
+    }
+    // Skip if already selected
+    if (selectedMisModelId) return;
+
+    const target = formMisName.trim().toLowerCase();
+    const match = misModels.find((m) => {
+      const name = (m.model_name || m.name || '').trim().toLowerCase();
+      return name === target;
+    });
+
+    if (match) {
+      const id = match._id || match.id;
+      setSelectedMisModelId(id);
+
+      if (formType === 'color') {
+        setSelectedMisModelForColor(id);
+        fetchColorsForModel(id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [misModels, formModalOpen, formMode, formMisName]);
+
+  // When DMS models finish loading in edit mode, auto-select by matching dms_name
+  useEffect(() => {
+    if (!formModalOpen || formMode !== 'edit' || !formDmsName || dmsModels.length === 0) {
+      return;
+    }
+    if (selectedDmsModelId) return;
+
+    const target = formDmsName.trim().toLowerCase();
+    const match = dmsModels.find((m) => {
+      const name = (m.dms_name || m.name || m.model_name || '').trim().toLowerCase();
+      return name === target;
+    });
+
+    if (match) {
+      setSelectedDmsModelId(match._id || match.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dmsModels, formModalOpen, formMode, formDmsName]);
+
+  // When color options finish loading in edit mode, auto-select by matching mis_name
+  useEffect(() => {
+    if (
+      !formModalOpen ||
+      formMode !== 'edit' ||
+      formType !== 'color' ||
+      !formMisName ||
+      colorOptions.length === 0
+    ) {
+      return;
+    }
+
+    const target = formMisName.trim().toLowerCase();
+    const match = colorOptions.find(
+      (c) => (c.label || '').trim().toLowerCase() === target
+    );
+
+    // Nothing extra to do — value binding uses formMisName match already
+    // (react-select `value` is derived from formMisName in the JSX below)
+    // eslint-disable-next-line no-unused-vars
+    const _ = match;
+  }, [colorOptions, formModalOpen, formMode, formType, formMisName]);
+
+  // ============================================================
+  // DATA FETCHING
+  // ============================================================
   const extractArrayFromResponse = (body) => {
     if (!body) return [];
     if (Array.isArray(body)) return body;
@@ -6239,7 +6292,6 @@ const AdvantageModelMapping = () => {
     for (const candidate of candidates) {
       if (Array.isArray(candidate)) return candidate;
     }
-
     return [];
   };
 
@@ -6252,7 +6304,6 @@ const AdvantageModelMapping = () => {
     return [];
   };
 
-  // Fetch main data
   const fetchData = async (page = pagination.page, limit = pagination.limit, search = searchTerm) => {
     try {
       setLoading(true);
@@ -6283,7 +6334,6 @@ const AdvantageModelMapping = () => {
     }
   };
 
-  // Fetch Colors for a specific MIS model
   const fetchColorsForModel = async (modelId) => {
     if (!modelId) {
       setColorOptions([]);
@@ -6293,8 +6343,7 @@ const AdvantageModelMapping = () => {
     setColorOptionsLoading(true);
     try {
       const response = await axiosInstance.get(`/colors/model/${modelId}`);
-      
-      // Extract colors from response
+
       let colors = [];
       if (response.data?.data?.colors) {
         colors = response.data.data.colors;
@@ -6303,44 +6352,31 @@ const AdvantageModelMapping = () => {
       } else if (Array.isArray(response.data)) {
         colors = response.data;
       }
-      
-      // Format colors for dropdown
-      const formattedColors = colors.map(color => ({
+
+      const formattedColors = colors.map((color) => ({
         value: color.id || color._id || color,
         label: color.name || color.color_name || color
       }));
-      
+
       setColorOptions(formattedColors);
-      
-      // Clear MIS name when model changes
-      setFormMisName('');
-      
     } catch (error) {
       console.error('Error fetching colors for model:', error);
       const message = handleApiError(error);
       showError(message);
+      setColorOptions([]);
     } finally {
       setColorOptionsLoading(false);
     }
   };
 
-  // Fetch MIS Models
-  const fetchMisModels = async (vehicleType) => {
-    if (!vehicleType) return [];
-
+  // Fetch MIS Models — no vehicle-type filtering
+  const fetchMisModels = async () => {
     setMisModelsLoading(true);
     try {
-      const response = await axiosInstance.get('/models');
+      const response = await axiosInstance.get('/models/all/status');
       const list = extractList(response.data, 'models');
-
-      const filtered = list.filter((item) => {
-        if (vehicleType === 'EV') return item.type === 'EV';
-        if (vehicleType === 'ICE') return item.type === 'ICE';
-        return false;
-      });
-
-      setMisModels(filtered);
-      return filtered;
+      setMisModels(list);
+      return list;
     } catch (error) {
       console.error('Error loading MIS models:', error);
       const message = handleApiError(error);
@@ -6352,7 +6388,7 @@ const AdvantageModelMapping = () => {
     }
   };
 
-  // Fetch DMS Models
+  // Fetch DMS Models — still filtered by vehicle type (from record/legacy)
   const fetchDmsModels = async (vehicleType) => {
     if (!vehicleType) return [];
 
@@ -6360,10 +6396,7 @@ const AdvantageModelMapping = () => {
     setDmsModelsError('');
     try {
       const response = await axiosInstance.get('/advantage-approval/pending', {
-        params: {
-          page: 1,
-          limit: 100
-        }
+        params: { page: 1, limit: 100 }
       });
 
       const list = extractArrayFromResponse(response.data);
@@ -6401,7 +6434,11 @@ const AdvantageModelMapping = () => {
 
         withIds.push({
           ...item,
-          _id: item.stockData?.chassisNumber || item.id || item._id || `dms-${idx}-${dmsName}`,
+          _id:
+            item.stockData?.chassisNumber ||
+            item.id ||
+            item._id ||
+            `dms-${idx}-${dmsName}`,
           name: dmsName,
           dms_name: dmsName
         });
@@ -6443,7 +6480,7 @@ const AdvantageModelMapping = () => {
   };
 
   // ============================================================
-  // MIS NAME AUTOCOMPLETE FUNCTIONS
+  // MIS NAME AUTOCOMPLETE (still used for the manual autocomplete if needed)
   // ============================================================
   const loadMisNames = async (type) => {
     if (misNamesCache[type]) return misNamesCache[type];
@@ -6503,35 +6540,32 @@ const AdvantageModelMapping = () => {
     setShowMisSuggestions(false);
     setColorOptions([]);
     setSelectedMisModelForColor(null);
-    setFormMisName('');
   };
 
   // ============================================================
   // FORM HANDLERS
   // ============================================================
-  
-  // Handle MIS model selection
   const handleMisModelSelect = (selectedOption) => {
     const id = selectedOption ? selectedOption.value : null;
     setSelectedMisModelId(id);
-    
+
     const selectedItem = misModels.find((item) => (item._id || item.id) === id);
-    
+
     if (selectedOption && selectedItem) {
       const modelName = selectedItem.model_name || selectedItem.name || '';
-      
-      // If form type is 'color', fetch colors for this model
+
       if (formType === 'color') {
         const modelId = selectedItem._id || selectedItem.id;
         if (modelId) {
           setSelectedMisModelForColor(modelId);
           fetchColorsForModel(modelId);
+          // Reset mis name since colors are tied to this model
+          setFormMisName('');
         } else {
           setColorOptions([]);
           setSelectedMisModelForColor(null);
         }
       } else {
-        // For 'model' type, just set the name
         setFormMisName(modelName);
       }
     } else {
@@ -6545,21 +6579,20 @@ const AdvantageModelMapping = () => {
     }
   };
 
-  // Handle DMS model selection
   const handleDmsModelSelect = (selectedOption) => {
     const id = selectedOption ? selectedOption.value : null;
     setSelectedDmsModelId(id);
 
     const selectedItem = dmsModels.find((item) => (item._id || item.id) === id);
     if (selectedOption && selectedItem) {
-      const dmsName = selectedItem.dms_name || selectedItem.name || selectedItem.model_name || '';
+      const dmsName =
+        selectedItem.dms_name || selectedItem.name || selectedItem.model_name || '';
       setFormDmsName(dmsName);
     } else {
       setFormDmsName('');
     }
   };
 
-  // Open Add Modal
   const openAddModal = () => {
     if (!canCreate) {
       showError('You do not have permission to add mappings');
@@ -6567,7 +6600,8 @@ const AdvantageModelMapping = () => {
     }
     setFormMode('add');
     setFormType(filterType || 'color');
-    setFormVehicleType(filterVehicleType || 'EV');
+    // vehicle_type still sent to backend; default to EV
+    setFormVehicleType('EV');
     setFormDmsName('');
     setFormMisName('');
     setFormRemarks('');
@@ -6577,7 +6611,6 @@ const AdvantageModelMapping = () => {
     setFormModalOpen(true);
   };
 
-  // Open Edit Modal
   const openEditModal = (mapping) => {
     if (!canUpdate) {
       showError('You do not have permission to edit mappings');
@@ -6585,8 +6618,9 @@ const AdvantageModelMapping = () => {
     }
     setFormMode('edit');
     setFormType(mapping.type);
+    // Preserve record's vehicle_type so the update payload keeps the same value
     setFormVehicleType(mapping.vehicle_type || 'EV');
-    setFormDmsName(mapping.dms_name);
+    setFormDmsName(mapping.dms_name || '');
     setFormMisName(mapping.mis_name || '');
     setFormRemarks(mapping.remarks || '');
     setEditingId(mapping._id);
@@ -6618,22 +6652,7 @@ const AdvantageModelMapping = () => {
     resetLookupState();
   };
 
-  const handleFormVehicleTypeChange = (newVehicleType) => {
-    setFormVehicleType(newVehicleType);
-    setSelectedMisModelId(null);
-    setSelectedDmsModelId(null);
-    setFormDmsName('');
-    setFormMisName('');
-    setColorOptions([]);
-    setSelectedMisModelForColor(null);
-  };
-
-  // Form Submit
   const handleFormSubmit = async () => {
-    if (!formVehicleType) {
-      setFormError('Vehicle type is required');
-      return;
-    }
     if (!formDmsName.trim()) {
       setFormError('DMS name is required');
       return;
@@ -7068,7 +7087,7 @@ const AdvantageModelMapping = () => {
               <CTableBody>
                 {mappings.length === 0 && !loading ? (
                   <CTableRow>
-                    <CTableDataCell colSpan={(canUpdate || canDelete) ? '8' : '7'} className="text-center">
+                    <CTableDataCell colSpan={canUpdate || canDelete ? '8' : '7'} className="text-center">
                       {searchTerm ? `No results found for "${searchTerm}"` : 'No mappings available'}
                     </CTableDataCell>
                   </CTableRow>
@@ -7147,7 +7166,9 @@ const AdvantageModelMapping = () => {
             <div className="mt-4">
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <span className="text-muted" style={{ fontSize: '13px' }}>
-                  {loading ? 'Loading…' : `Showing ${startRecord}–${endRecord} of ${pagination.total} records`}
+                  {loading
+                    ? 'Loading…'
+                    : `Showing ${startRecord}–${endRecord} of ${pagination.total} records`}
                 </span>
               </div>
 
@@ -7197,7 +7218,9 @@ const AdvantageModelMapping = () => {
           {formError && <CAlert color="danger">{formError}</CAlert>}
 
           <div className="mb-3">
-            <CFormLabel>Type<span className="required">*</span></CFormLabel>
+            <CFormLabel>
+              Type<span className="required">*</span>
+            </CFormLabel>
             <CFormSelect
               value={formType}
               onChange={(e) => handleFormTypeChange(e.target.value)}
@@ -7208,51 +7231,42 @@ const AdvantageModelMapping = () => {
             </CFormSelect>
           </div>
 
-          <div className="mb-3">
-            <CFormLabel>Vehicle Type<span className="required">*</span></CFormLabel>
-            <CFormSelect
-              value={formVehicleType}
-              onChange={(e) => handleFormVehicleTypeChange(e.target.value)}
-            >
-              <option value="EV">EV</option>
-              <option value="ICE">ICE</option>
-            </CFormSelect>
-          </div>
+          {/* NOTE: Vehicle Type field has been removed from the form */}
 
           {/* Show model dropdowns only when type is "model" */}
           {formType === 'model' && (
             <>
-              {/* MIS Model Dropdown */}
               <div className="mb-3">
                 <CFormLabel>MIS Vehicle Model</CFormLabel>
                 <Select
                   classNamePrefix="react-select"
-                  placeholder={misModelsLoading ? 'Loading MIS models...' : '- Select MIS Model -'}
+                  placeholder={
+                    misModelsLoading ? 'Loading MIS models...' : '- Select MIS Model -'
+                  }
                   isLoading={misModelsLoading}
                   isClearable
                   options={misModelOptions}
                   value={selectedMisOption}
                   onChange={handleMisModelSelect}
                 />
-                <small className="text-muted">
-                  MIS Models filtered by {formVehicleType} vehicle type
-                </small>
+                <small className="text-muted">All MIS models (not filtered by vehicle type)</small>
               </div>
 
-              {/* DMS Model Dropdown */}
               <div className="mb-3">
-                <CFormLabel>DMS Vehicle Model<span className="required">*</span></CFormLabel>
+                <CFormLabel>
+                  DMS Vehicle Model<span className="required">*</span>
+                </CFormLabel>
                 <Select
                   classNamePrefix="react-select"
-                  placeholder={dmsModelsLoading ? 'Loading DMS models...' : '- Select DMS Model -'}
+                  placeholder={
+                    dmsModelsLoading ? 'Loading DMS models...' : '- Select DMS Model -'
+                  }
                   isLoading={dmsModelsLoading}
                   isClearable
                   options={dmsModelOptions}
                   value={selectedDmsOption}
                   onChange={handleDmsModelSelect}
-                  noOptionsMessage={() =>
-                    dmsModelsError || 'No options'
-                  }
+                  noOptionsMessage={() => dmsModelsError || 'No options'}
                 />
                 <small className={dmsModelsError ? 'text-danger' : 'text-muted'}>
                   {dmsModelsError || 'DMS Models fetched from advantage-approval API'}
@@ -7261,42 +7275,44 @@ const AdvantageModelMapping = () => {
             </>
           )}
 
-          {/* For Color type - show MIS Model dropdown and MIS Color dropdown */}
+          {/* For Color type - show MIS Model + MIS Color + DMS Color */}
           {formType === 'color' && (
             <>
-              {/* MIS Model Dropdown - Select model first to load colors */}
               <div className="mb-3">
-                <CFormLabel>MIS Vehicle Model<span className="required">*</span></CFormLabel>
+                <CFormLabel>
+                  MIS Vehicle Model<span className="required">*</span>
+                </CFormLabel>
                 <Select
                   classNamePrefix="react-select"
-                  placeholder={misModelsLoading ? 'Loading MIS models...' : '- Select MIS Model -'}
+                  placeholder={
+                    misModelsLoading ? 'Loading MIS models...' : '- Select MIS Model -'
+                  }
                   isLoading={misModelsLoading}
                   isClearable
                   options={misModelOptions}
                   value={selectedMisOption}
                   onChange={handleMisModelSelect}
                 />
-                <small className="text-muted">
-                  Select a model to load its colors
-                </small>
+                <small className="text-muted">Select a model to load its colors</small>
               </div>
 
-              {/* MIS Color Dropdown - Filtered by selected MIS model */}
               <div className="mb-3">
-                <CFormLabel>MIS Vehicle Colour<span className="required">*</span></CFormLabel>
+                <CFormLabel>
+                  MIS Vehicle Colour<span className="required">*</span>
+                </CFormLabel>
                 <Select
                   classNamePrefix="react-select"
                   placeholder={
-                    colorOptionsLoading 
-                      ? 'Loading colors...' 
-                      : (selectedMisModelForColor 
-                        ? '- Select MIS Color -' 
-                        : 'Select MIS model first')
+                    colorOptionsLoading
+                      ? 'Loading colors...'
+                      : selectedMisModelForColor
+                      ? '- Select MIS Color -'
+                      : 'Select MIS model first'
                   }
                   isLoading={colorOptionsLoading}
                   isClearable
                   options={colorOptions}
-                  value={colorOptions.find(opt => opt.label === formMisName) || null}
+                  value={colorOptions.find((opt) => opt.label === formMisName) || null}
                   onChange={(selectedOption) => {
                     setFormMisName(selectedOption ? selectedOption.label : '');
                   }}
@@ -7308,15 +7324,16 @@ const AdvantageModelMapping = () => {
                   isDisabled={!selectedMisModelForColor}
                 />
                 <small className="text-muted">
-                  {selectedMisModelForColor 
-                    ? `Colors fetched from /colors/model/${selectedMisModelForColor}` 
+                  {selectedMisModelForColor
+                    ? `Colors fetched from /colors/model/${selectedMisModelForColor}`
                     : 'Select a MIS model to load colors'}
                 </small>
               </div>
 
-              {/* DMS Color - manual text input */}
               <div className="mb-3">
-                <CFormLabel>DMS Vehicle Colour<span className="required">*</span></CFormLabel>
+                <CFormLabel>
+                  DMS Vehicle Colour<span className="required">*</span>
+                </CFormLabel>
                 <CFormInput
                   value={formDmsName}
                   onChange={(e) => setFormDmsName(e.target.value)}
@@ -7370,7 +7387,9 @@ const AdvantageModelMapping = () => {
           </div>
 
           <div className="mb-3">
-            <CFormLabel>Vehicle Type<span className="required">*</span></CFormLabel>
+            <CFormLabel>
+              Vehicle Type<span className="required">*</span>
+            </CFormLabel>
             <CFormSelect
               value={exportVehicleType}
               onChange={(e) => setExportVehicleType(e.target.value)}

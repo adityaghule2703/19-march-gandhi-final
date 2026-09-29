@@ -104,8 +104,13 @@
 
 import React from 'react';
 
+  
 
 
+const HaritaModels = React.lazy(() => import('../views/masters/haritamodels/HaritaModels'))
+const AddHaritaModel = React.lazy(() => import('../views/masters/haritamodels/AddHaritaModel'))
+const SchemeList = React.lazy(() => import('../views/masters/schemes/SchemeList'))
+const AddScheme = React.lazy(() => import('../views/masters/schemes/AddScheme'))
 const DownloadInsurance = React.lazy(() => import('../views/masters/downloadinsurance/DownloadInsurance'))
 const AddBranch = React.lazy(() => import('../views/masters/branch/AddBranch'))
 const BranchList = React.lazy(() => import('../views/masters/branch/BranchList'))
@@ -167,6 +172,14 @@ export const masterRoutes = [
     { path:'/branch/add-branch',name: 'Add Branch', element: AddBranch},
     { path:'/branch/update-branch/:id',name: 'Add Branch', element: AddBranch},
 
+   
+
+
+
+   { path:'/schemes/scheme-list',name: 'Scheme List', element: SchemeList},
+    { path:'/schemes/add-scheme',name: 'Add Scheme', element: AddScheme},
+     { path:'/schemes/update-scheme/:id',name: 'Update List', element: AddScheme},
+
      { path:'/branchauditlist/branch-audit-list',name: 'Branch Audit List', element: BranchAuditList},
   
     { path:'/headers/headers-list', name:'Headers List', element:HeadersList},
@@ -201,6 +214,13 @@ export const masterRoutes = [
 
 
     { path:'/downloadinsurance/downloadinsurance',name:"Download Insurance", element:DownloadInsurance},
+
+  
+
+    
+    { path:'/harita-models', name:'Harita Models List', element:HaritaModels},
+    { path:'/add-harita-model', name:'Add Harita Models', element:AddHaritaModel},
+    { path:'/update-harita-model/:id', name:'Update Harita Models', element:AddHaritaModel},
    
   
     { path:'/offers/offer-list', name:'Offers List', element:OffersList},

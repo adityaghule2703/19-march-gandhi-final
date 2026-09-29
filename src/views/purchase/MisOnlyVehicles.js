@@ -103,6 +103,7 @@ const MisOnlyVehicles = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredCount, setFilteredCount] = useState(0);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Statistics
   const [statistics, setStatistics] = useState({
@@ -199,6 +200,54 @@ const MisOnlyVehicles = () => {
       setPages(1);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle export
+  const handleExport = async () => {
+    if (!canViewMisOnly) {
+      showError('You do not have permission to export MIS Only vehicles');
+      return;
+    }
+
+    try {
+      setExportLoading(true);
+      
+      const params = {};
+      if (searchQuery) params.search = searchQuery;
+
+      const response = await axiosInstance.get('/advantage-approval/mis-only/export', {
+        params,
+        responseType: 'blob'
+      });
+
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from content-disposition header or use default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'MIS_Only_Vehicles.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      showSuccess('Export completed successfully');
+    } catch (err) {
+      console.error('Error exporting MIS Only vehicles:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to export MIS Only vehicles';
+      showError(errorMsg);
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -386,13 +435,13 @@ const MisOnlyVehicles = () => {
           </div>
           <div className="d-flex align-items-center gap-2">
             <CButton
-              color="outline-primary"
+              color="success"
               size="sm"
-              onClick={() => fetchData(currentPage, limit, searchQuery)}
-              disabled={loading}
+              onClick={handleExport}
+              disabled={exportLoading || loading}
             >
-              {loading ? <CSpinner size="sm" /> : <CIcon icon={cilSearch} className="me-1" />}
-              Refresh
+              {exportLoading ? <CSpinner size="sm" /> : <CIcon icon={cilCloudDownload} className="me-1" />}
+              Export
             </CButton>
           </div>
         </CCardHeader>
@@ -523,7 +572,7 @@ const MisOnlyVehicles = () => {
             </CTable>
           </div>
 
-          {/* Pagination - same as AdvantageTVSVehicles */}
+          {/* Pagination */}
           <div className="mt-3 border-top pt-3">
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
               <div className="d-flex align-items-center gap-2">

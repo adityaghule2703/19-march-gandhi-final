@@ -5371,7 +5371,7 @@ function Invoice() {
     setError('');
 
     try {
-      const response = await axiosInstance.get(`bookings/chassis/${chassisNumber}`);
+      const response = await axiosInstance.get(`bookings/chassis/${chassisNumber}?bookingType=BRANCH`);
       if (response.data.success) {
         setInvoiceData(response.data.data);
       } else {

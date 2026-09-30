@@ -7803,14 +7803,16 @@ export const PAGES = {
     CALCULATE_COMMISSION: 'Calculate Commission'
   },
   
-  // Subdealer Booking module pages
+   // Subdealer Booking module pages
   SUBDEALER_BOOKING: {
     NEW_BOOKING: 'New Booking',
     ALL_BOOKING: 'All Booking',
     DELIVERY_CHALLAN: 'Delivery Challan',
     // Added page
     SUBDEALER_INSURANCE_DOWNLOAD: 'Subdealer Insurance Download',
-    SUBDEALER_GST_INVOICE: 'Subdealer GST Invoice',
+    // NEW: Subdealer Tax Invoice page
+    TAX_INVOICE: 'Subdealer Tax Invoice'
+    
   },
   
   // Subdealer Management module pages
@@ -8179,6 +8181,7 @@ export const getPageFromRoute = (routePath) => {
     '/subdealer/delivery-challan': PAGES.SUBDEALER_BOOKING.DELIVERY_CHALLAN,
     // Added Subdealer Booking route
     '/subdealer-insurance-download': PAGES.SUBDEALER_BOOKING.SUBDEALER_INSURANCE_DOWNLOAD,
+    '/subdealer-tax-invoice': PAGES.SUBDEALER_BOOKING.TAX_INVOICE,
     
     // Subdealer Management
     '/subdealer-management': PAGES.SUBDEALER_MANAGEMENT.SUBDEALER_MANAGEMENT,
@@ -8385,6 +8388,7 @@ export const getModuleFromRoute = (routePath) => {
     '/subdealer/delivery-challan': MODULES.SUBDEALER_BOOKING,
     // Added Subdealer Booking route
     '/subdealer-insurance-download': MODULES.SUBDEALER_BOOKING,
+    '/subdealer-tax-invoice': MODULES.SUBDEALER_BOOKING,
     
     // Subdealer Management
     '/subdealer-management': MODULES.SUBDEALER_MANAGEMENT,

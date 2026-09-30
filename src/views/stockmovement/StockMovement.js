@@ -5809,9 +5809,9 @@ const StockMovement = () => {
   useEffect(() => {
     if (databases.length > 0) {
       // Find "14589" (db2) for source
-      const sourceDb = databases.find(db => db === 'db2');
+      const sourceDb = databases.find(db => db === 'db1');
       // Find "14588" (db1) for target
-      const targetDb = databases.find(db => db === 'db1');
+      const targetDb = databases.find(db => db === 'db2');
       
       if (sourceDb) {
         setFormData(prevData => ({

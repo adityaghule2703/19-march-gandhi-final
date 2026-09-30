@@ -4071,6 +4071,37 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
     });
   }
 
+
+    // KYC Buffer Group
+const kycBufferItems = []
+
+
+  kycBufferItems.push({
+    component: CNavItem,
+    name: 'KYC Settings',
+    to: '/kyc-buffer-master/kyc-settings',
+  })
+
+
+
+  kycBufferItems.push({
+    component: CNavItem,
+    name: 'Grant Buffer',
+    to: '/kyc-buffer-master/grant-buffer',
+  })
+
+
+if (kycBufferItems.length > 0) {
+  _nav.push({
+    component: CNavGroup,
+    name: 'KYC Buffer',   // 👈 unique name (was "Purchase")
+    icon: <CIcon icon={cilShieldAlt} customClassName="nav-icon" />,
+    items: kycBufferItems,
+  })
+}
+
+
+
   // Sales Group
   const salesItems = []
   
@@ -4995,13 +5026,13 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
       });
     }
 
-    if (canViewPage(userPermissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.ALL_BOOKING)) {
-      subdealerBookingItems.push({
-        component: CNavItem,
-        name: 'Tax Invoice',
-        to: '/subdealer-tax-invoice',
-      });
-    }
+    if (canViewPage(userPermissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.TAX_INVOICE)) {
+  subdealerBookingItems.push({
+    component: CNavItem,
+    name: 'Tax Invoice',
+    to: '/subdealer-tax-invoice',
+  });
+}
 
      if (canViewPage(userPermissions, MODULES.SUBDEALER_BOOKING, PAGES.SUBDEALER_BOOKING.ALL_BOOKING)) {
       subdealerBookingItems.push({

@@ -15,6 +15,7 @@ import { stockMovementRoutes } from './routes/stockMovementRoutes'
 import { serviceManagementRoutes } from './routes/serviceManagementRoutes'
 import { hrManagementRoutes } from './routes/hrManagementRoutes'
 import { aiMasterRoutes } from './routes/aiMasterRoutes'
+import { kycBufferMaster } from './routes/kycBufferRoutes'
 
 const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
 
@@ -56,6 +57,8 @@ const routes = [
 
   //insurance
   ...insuranceRoutes,
+
+  ...kycBufferMaster,
 
   // Subdealer
   ...subdealerRoutes,

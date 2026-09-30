@@ -23243,7 +23243,7 @@ const permissionDescriptions = {
       "DELETE": "Delete"
     }
   },
-  "Subdealer Booking": {
+    "Subdealer Booking": {
     "New Booking": {
       "CREATE": "New Booking",
       "VIEW": "View",
@@ -23261,6 +23261,13 @@ const permissionDescriptions = {
       "VIEW": "View subdealer challan history",
       "UPDATE": "Edit challan details",
       "DELETE": "Delete challan records"
+    },
+    // 👇 ADD THIS NEW ENTRY
+    "Subdealer Tax Invoice": {
+      "CREATE": "Generate and print Subdealer Vehicle / Add-on Services Tax Invoice",
+      "VIEW": "View Subdealer Tax Invoice page and search by chassis number",
+      "UPDATE": "Edit Subdealer Tax Invoice details (if applicable)",
+      "DELETE": "Delete Subdealer Tax Invoice records (if applicable)"
     }
   },
   "Subdealer Management": {
@@ -23639,14 +23646,16 @@ const sidebarStructure = {
     ],
     availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
   },
-  "Subdealer Booking": {
+    "Subdealer Booking": {
     pages: [
       { name: "New Booking", tabs: null },
       { 
         name: "All Booking", 
         tabs: ["PENDING APPROVALS", "APPROVED", "PENDING ALLOCATED", "ALLOCATED"]
       },
-      { name: "Delivery Challan", tabs: null }
+      { name: "Delivery Challan", tabs: null },
+      // 👇 ADD THIS NEW PAGE
+      { name: "Subdealer Tax Invoice", tabs: null }
     ],
     availablePermissions: ["CREATE", "UPDATE", "DELETE", "VIEW"]
   },

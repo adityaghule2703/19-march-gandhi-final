@@ -90,7 +90,7 @@ const DownloadInsurance = () => {
   const hasInsuranceView = hasSafePagePermission(
     permissions, 
     MODULES.INSURANCE, 
-    PAGES.INSURANCE.INSURANCE_DETAILS, 
+    PAGES.INSURANCE.INSURANCE_DETAILS,    
     ACTIONS.VIEW
   );
   
@@ -111,55 +111,54 @@ const DownloadInsurance = () => {
     fetchData(1, limit, '');
   }, [hasInsuranceView, canViewCompleteInsuranceTab]);
 
-  // Fetch data with server-side pagination and search - Filter by BRANCH bookingType
-  const fetchData = async (page = 1, pageLimit = DEFAULT_LIMIT, search = '') => {
-    try {
-      setLoading(true);
-      const params = { 
-        page, 
-        limit: pageLimit,
-        bookingType: 'BRANCH'
-      };
-      if (search) params.search = search;
+  // Fetch data with server-side pagination and search
+const fetchData = async (page = 1, pageLimit = DEFAULT_LIMIT, search = '') => {
+  try {
+    setLoading(true);
+    const params = { 
+      page, 
+      limit: pageLimit
+    };
+    if (search) params.search = search;
+    
+    const response = await axiosInstance.get('/insurance-panel/completed', { params });
+    
+    let docs = [];
+    let totalCount = 0;
+    let totalPages = 1;
+    
+    if (response.data) {
+      docs = response.data.data || [];
+      totalCount = response.data.total || response.data.totalCount || docs.length;
+      totalPages = response.data.pages || response.data.totalPages || Math.ceil(totalCount / pageLimit);
       
-      const response = await axiosInstance.get('/insurance-panel/completed', { params });
-      
-      let docs = [];
-      let totalCount = 0;
-      let totalPages = 1;
-      
-      if (response.data) {
-        docs = response.data.data || [];
-        totalCount = response.data.total || response.data.totalCount || docs.length;
-        totalPages = response.data.pages || response.data.totalPages || Math.ceil(totalCount / pageLimit);
-        
-        // Handle different response structures
-        if (response.data.pagination) {
-          totalCount = response.data.pagination.total || docs.length;
-          totalPages = response.data.pagination.totalPages || 1;
-        }
+      // Handle different response structures
+      if (response.data.pagination) {
+        totalCount = response.data.pagination.total || docs.length;
+        totalPages = response.data.pagination.totalPages || 1;
       }
-      
-      setInsuranceData(docs);
-      setTotal(totalCount);
-      setPages(totalPages);
-      setCurrentPage(page);
-      setLimit(pageLimit);
-      setSearchQuery(search);
-      setFilteredCount(totalCount);
-      
-    } catch (error) {
-      const message = showError(error);
-      if (message) {
-        setError(message);
-      }
-      setInsuranceData([]);
-      setTotal(0);
-      setPages(1);
-    } finally {
-      setLoading(false);
     }
-  };
+    
+    setInsuranceData(docs);
+    setTotal(totalCount);
+    setPages(totalPages);
+    setCurrentPage(page);
+    setLimit(pageLimit);
+    setSearchQuery(search);
+    setFilteredCount(totalCount);
+    
+  } catch (error) {
+    const message = showError(error);
+    if (message) {
+      setError(message);
+    }
+    setInsuranceData([]);
+    setTotal(0);
+    setPages(1);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Handle search with debounce
   const handleSearch = (value) => {

@@ -259,7 +259,7 @@
 @media (min-width: 1200px) {
   .stats-grid { grid-template-columns: repeat(5, 1fr); }
 }
-
+    
 .stat-card {
   position: relative;
   background-color: var(--surface);

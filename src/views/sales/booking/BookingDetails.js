@@ -6358,55 +6358,69 @@ const ViewBooking = ({ open, onClose, booking, refreshData }) => {
 
               <div className="booking-details-grid">
                 <div className="details-column">
-                  <CCard className="booking-section">
-                    <CCardHeader>
-                      <h5>
-                        <FaCar /> Vehicle Information
-                      </h5>
-                    </CCardHeader>
-                    <CCardBody>
-                      <div className="detail-row">
-                        <span className="detail-label">Model:</span>
-                        <span className="detail-value">{booking.model.model_name}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Type:</span>
-                        <span className="detail-value">{booking.model.type}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Color:</span>
-                        <span className="detail-value">{booking.color?.name || ''}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Customer Type:</span>
-                        <span className="detail-value">{booking.customerType}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">RTO:</span>
-                        <span className="detail-value">{booking.rto}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">RTO Code:</span>
-                        <span className="detail-value">{booking.rtoCode || 'N/A'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">RTO Amount:</span>
-                        <span className="detail-value">
-                          ₹{parseFloat(booking.rtoAmount).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">HPA:</span>
-                        <span className="detail-value">{booking.hpa ? 'Yes' : 'No'}</span>
-                      </div>
-                      <div className="detail-row">
-                        <span className="detail-label">Subsidy Amount:</span>
-                        <span className="detail-value">
-                          ₹{parseFloat(booking.subsidyAmount || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    </CCardBody>
-                  </CCard>
+                 <CCard className="booking-section">
+  <CCardHeader>
+    <h5>
+      <FaCar /> Vehicle Information
+    </h5>
+  </CCardHeader>
+  <CCardBody>
+    <div className="detail-row">
+      <span className="detail-label">Model:</span>
+      <span className="detail-value">{booking.model.model_name}</span>
+    </div>
+    <div className="detail-row">
+      <span className="detail-label">Type:</span>
+      <span className="detail-value">{booking.model.type}</span>
+    </div>
+    <div className="detail-row">
+      <span className="detail-label">Color:</span>
+      <span className="detail-value">{booking.color?.name || ''}</span>
+    </div>
+    <div className="detail-row">
+      <span className="detail-label">Customer Type:</span>
+      <span className="detail-value">{booking.customerType}</span>
+    </div>
+    <div className="detail-row">
+      <span className="detail-label">RTO:</span>
+      <span className="detail-value">{booking.rto}</span>
+    </div>
+    <div className="detail-row">
+      <span className="detail-label">RTO Code:</span>
+      <span className="detail-value">{booking.rtoCode || 'N/A'}</span>
+    </div>
+    <div className="detail-row">
+      <span className="detail-label">RTO Amount:</span>
+      <span className="detail-value">
+        ₹{parseFloat(booking.rtoAmount).toFixed(2)}
+      </span>
+    </div>
+    <div className="detail-row">
+      <span className="detail-label">HPA:</span>
+      <span className="detail-value">{booking.hpa ? 'Yes' : 'No'}</span>
+    </div>
+    <div className="detail-row">
+      <span className="detail-label">Subsidy Amount:</span>
+      <span className="detail-value">
+        ₹{parseFloat(booking.subsidyAmount || 0).toFixed(2)}
+      </span>
+    </div>
+
+    {/* ===== NEW: Expected Delivery Date ===== */}
+    <div className="detail-row">
+      <span className="detail-label">Expected Delivery Date:</span>
+      <span className="detail-value">
+        {booking.deliveredAt
+          ? new Date(booking.deliveredAt).toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+            })
+          : 'N/A'}
+      </span>
+    </div>
+  </CCardBody>
+</CCard>
 
                   <CCard className="booking-section">
                     <CCardHeader>

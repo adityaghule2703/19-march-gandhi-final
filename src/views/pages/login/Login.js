@@ -1137,9 +1137,9 @@ const Login = () => {
       const response = await axios.get(`${baseURL}/wallpapers/active`, {
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
       })
-      
+
       if (response.data.success && response.data.data.image_url) {
         setBackgroundImage(response.data.data.image_url)
       } else {
@@ -1211,12 +1211,14 @@ const Login = () => {
     try {
       const response = await axios.post(`${baseURL}/auth/request-otp`, {
         login: mobile,
-        otpMethod: 'SMS'
+        otpMethod: 'SMS',
       })
 
       if (response.data.success) {
         localStorage.setItem('login', mobile)
         localStorage.setItem('otpMethod', 'SMS')
+        // ✅ Flag so AppHeader auto-opens notifications after login
+        localStorage.setItem('openNotificationsAfterLogin', 'true')
         setSuccess('OTP sent successfully to your mobile number!')
         setTimeout(() => {
           navigate('/verify-otp')
@@ -1244,12 +1246,14 @@ const Login = () => {
     try {
       const response = await axios.post(`${baseURL}/auth/request-otp`, {
         login: email,
-        otpMethod: 'EMAIL'
+        otpMethod: 'EMAIL',
       })
 
       if (response.data.success) {
         localStorage.setItem('login', email)
         localStorage.setItem('otpMethod', 'EMAIL')
+        // ✅ Flag so AppHeader auto-opens notifications after login
+        localStorage.setItem('openNotificationsAfterLogin', 'true')
         setSuccess('OTP sent successfully to your email!')
         setTimeout(() => {
           navigate('/verify-otp')
@@ -1297,16 +1301,18 @@ const Login = () => {
       }}
     >
       {/* Add a semi-transparent overlay for better text readability */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        zIndex: 0
-      }} />
-      
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 0,
+        }}
+      />
+
       <CContainer fluid style={{ position: 'relative', zIndex: 1 }}>
         <CRow className="justify-content-center align-items-center min-vh-100">
           <CCol md={6} className="d-flex justify-content-center align-items-center">
@@ -1323,10 +1329,13 @@ const Login = () => {
 
           <CCol md={4} className="me-5">
             <CCardGroup>
-              <CCard className="p-4 shadow login-card" style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>
+              <CCard
+                className="p-4 shadow login-card"
+                style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
+              >
                 <CCardBody>
                   <p className="text-center">Sign in to start your session Login</p>
-                
+
                   <CNav variant="tabs" className="mb-3">
                     <CNavItem className="login-tab-item">
                       <CNavLink
@@ -1380,7 +1389,7 @@ const Login = () => {
                         {mobileError && (
                           <div className="text-danger small mb-3">{mobileError}</div>
                         )}
-                        
+
                         <CRow className="text-end mt-3">
                           <CCol>
                             <CButton
@@ -1426,7 +1435,7 @@ const Login = () => {
                         {emailError && (
                           <div className="text-danger small mb-3">{emailError}</div>
                         )}
-                        
+
                         <CRow className="text-end mt-3">
                           <CCol>
                             <CButton

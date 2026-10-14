@@ -4388,14 +4388,17 @@ function StockTransfer() {
     fromType: 'branch',
     fromBranch: '',
     fromSubdealer: '',
+    fromGodown: '',
     toType: 'branch',
     toBranch: '',
     toSubdealer: '',
+    toGodown: '',
     notes: ''
   });
   const [errors, setErrors] = useState({});
   const [error, setError] = useState(null);
   const [branches, setBranches] = useState([]);
+  const [godowns, setGodowns] = useState([]);
   const [subdealers, setSubdealers] = useState([]);
   const [fromSubdealers, setFromSubdealers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -4493,6 +4496,7 @@ function StockTransfer() {
     }
     
     fetchBranches();
+    fetchGodowns();
     fetchAllSubdealers();
   }, []);
 
@@ -4510,7 +4514,7 @@ function StockTransfer() {
     if (formData.toType === 'subdealer') {
       fetchToSubdealers();
     }
-  }, [formData.toType, formData.fromBranch, formData.fromSubdealer]);
+  }, [formData.toType, formData.fromBranch, formData.fromSubdealer, formData.fromGodown]);
 
   useEffect(() => {
     if (!canViewStockTransfer) return;
@@ -4519,6 +4523,8 @@ function StockTransfer() {
       fetchOtpUsersForBranch(formData.fromBranch);
     } else if (formData.fromType === 'subdealer' && formData.fromSubdealer) {
       fetchOtpUsersForSubdealer(formData.fromSubdealer);
+    } else if (formData.fromType === 'godown' && formData.fromGodown) {
+      fetchOtpUsersForGodown(formData.fromGodown);
     } else {
       setOtpUsers([]);
       setShowOtpSection(false);
@@ -4528,7 +4534,7 @@ function StockTransfer() {
       setOtpError('');
       setOtpData({ otp: '', otpMethod: 'SMS' });
     }
-  }, [formData.fromBranch, formData.fromSubdealer, formData.fromType]);
+  }, [formData.fromBranch, formData.fromSubdealer, formData.fromGodown, formData.fromType]);
 
   const fetchBranches = async () => {
     if (!canViewStockTransfer) return;
@@ -4536,6 +4542,20 @@ function StockTransfer() {
     try {
       const response = await axiosInstance.get('/branches');
       setBranches(response.data.data || []);
+    } catch (error) {
+      const message = showError(error);
+      if (message) {
+        setError(message);
+      }
+    }
+  };
+
+  const fetchGodowns = async () => {
+    if (!canViewStockTransfer) return;
+    
+    try {
+      const response = await axiosInstance.get('/godowns');
+      setGodowns(response.data.data || response.data || []);
     } catch (error) {
       const message = showError(error);
       if (message) {
@@ -4641,6 +4661,33 @@ function StockTransfer() {
     }
   };
 
+  const fetchOtpUsersForGodown = async (godownId) => {
+    if (!canViewStockTransfer) return;
+    
+    try {
+      const response = await axiosInstance.get('/users');
+      const allUsers = response.data.data || [];
+      
+      const filteredUsers = allUsers.filter(user => 
+        user.godown === godownId && 
+        user.isStockTransferOTP === true
+      );
+      
+      setOtpUsers(filteredUsers);
+      
+      if (filteredUsers.length === 0) {
+        setShowOtpSection(false);
+        setOtpVerified(true);
+      } else {
+        setShowOtpSection(true);
+      }
+    } catch (error) {
+      const message = showError(error);
+      if (message) setError(message);
+      setOtpUsers([]);
+    }
+  };
+
   const fetchVehiclesForSource = async () => {
     if (!canViewStockTransfer) return;
     
@@ -4650,6 +4697,8 @@ function StockTransfer() {
         url = `/vehicles/branch/${formData.fromBranch}?locationType=branch`;
       } else if (formData.fromType === 'subdealer' && formData.fromSubdealer) {
         url = `/vehicles/subdealer/${formData.fromSubdealer}?locationType=subdealer`;
+      } else if (formData.fromType === 'godown' && formData.fromGodown) {
+        url = `/vehicles/godown/${formData.fromGodown}?locationType=godown`;
       } else {
         return;
       }
@@ -4669,7 +4718,7 @@ function StockTransfer() {
     if (!canViewStockTransfer) return;
     
     fetchVehiclesForSource();
-  }, [formData.fromBranch, formData.fromSubdealer, formData.fromType]);
+  }, [formData.fromBranch, formData.fromSubdealer, formData.fromGodown, formData.fromType]);
 
   useEffect(() => {
     if (!canViewStockTransfer) return;
@@ -4686,7 +4735,8 @@ function StockTransfer() {
           (vehicle.batteryNumber && vehicle.batteryNumber.toLowerCase().includes(searchLower)) ||
           (vehicle.keyNumber && vehicle.keyNumber.toLowerCase().includes(searchLower)) ||
           (vehicle.chargerNumber && vehicle.chargerNumber.toLowerCase().includes(searchLower)) ||
-          (vehicle.unloadLocation?.name && vehicle.unloadLocation.name.toLowerCase().includes(searchLower))
+          (vehicle.unloadLocation?.name && vehicle.unloadLocation.name.toLowerCase().includes(searchLower)) ||
+          (vehicle.godownLocation?.name && vehicle.godownLocation.name.toLowerCase().includes(searchLower))
         );
       });
       setFilteredVehicles(filtered);
@@ -4706,19 +4756,22 @@ function StockTransfer() {
         [name]: value,
         fromBranch: '',
         fromSubdealer: '',
+        fromGodown: '',
         toType: 'branch',
         toBranch: '',
-        toSubdealer: ''
+        toSubdealer: '',
+        toGodown: ''
       }));
       setVehicles([]);
       setFilteredVehicles([]);
       setSelectedVehicles([]);
-    } else if (name === 'fromBranch' || name === 'fromSubdealer') {
+    } else if (name === 'fromBranch' || name === 'fromSubdealer' || name === 'fromGodown') {
       setFormData(prevData => ({ 
         ...prevData, 
         [name]: value,
         toBranch: '',
-        toSubdealer: ''
+        toSubdealer: '',
+        toGodown: ''
       }));
       setSelectedVehicles([]);
     } else if (name === 'toType') {
@@ -4726,7 +4779,8 @@ function StockTransfer() {
         ...prevData, 
         [name]: value,
         toBranch: '',
-        toSubdealer: ''
+        toSubdealer: '',
+        toGodown: ''
       }));
     } else {
       setFormData((prevData) => ({ ...prevData, [name]: value }));
@@ -5019,6 +5073,8 @@ function StockTransfer() {
       newErrors.fromBranch = 'From branch is required';
     } else if (formData.fromType === 'subdealer' && !formData.fromSubdealer) {
       newErrors.fromSubdealer = 'From subdealer is required';
+    } else if (formData.fromType === 'godown' && !formData.fromGodown) {
+      newErrors.fromGodown = 'From godown is required';
     }
     
     if (!formData.toType) newErrors.toType = 'To type is required';
@@ -5027,6 +5083,8 @@ function StockTransfer() {
       newErrors.toBranch = 'To branch is required';
     } else if (formData.toType === 'subdealer' && !formData.toSubdealer) {
       newErrors.toSubdealer = 'To subdealer is required';
+    } else if (formData.toType === 'godown' && !formData.toGodown) {
+      newErrors.toGodown = 'To godown is required';
     }
     
     if (selectedVehicles.length === 0) newErrors.vehicles = 'Please select at least one vehicle';
@@ -5046,14 +5104,18 @@ function StockTransfer() {
 
       if (formData.fromType === 'branch') {
         payload.fromBranch = formData.fromBranch;
-      } else {
+      } else if (formData.fromType === 'subdealer') {
         payload.fromSubdealer = formData.fromSubdealer;
+      } else if (formData.fromType === 'godown') {
+        payload.fromGodown = formData.fromGodown;
       }
 
       if (formData.toType === 'branch') {
         payload.toBranch = formData.toBranch;
-      } else {
+      } else if (formData.toType === 'subdealer') {
         payload.toSubdealer = formData.toSubdealer;
+      } else if (formData.toType === 'godown') {
+        payload.toGodown = formData.toGodown;
       }
 
       if (formData.notes) {
@@ -5078,16 +5140,24 @@ function StockTransfer() {
         ? fromSubdealers.find((s) => s._id === formData.fromSubdealer)
         : null;
       
+      const fromGodownData = formData.fromType === 'godown'
+        ? godowns.find((g) => (g._id || g.id) === formData.fromGodown)
+        : null;
+      
       let toBranchData = null;
       let toSubdealerData = null;
+      let toGodownData = null;
       let destinationName = '';
       
       if (formData.toType === 'branch') {
         toBranchData = branches.find((b) => b._id === formData.toBranch);
         destinationName = toBranchData?.name || '';
-      } else {
+      } else if (formData.toType === 'subdealer') {
         toSubdealerData = subdealers.find((s) => s._id === formData.toSubdealer);
         destinationName = toSubdealerData?.name || '';
+      } else if (formData.toType === 'godown') {
+        toGodownData = godowns.find((g) => (g._id || g.id) === formData.toGodown);
+        destinationName = toGodownData?.name || '';
       }
       
       const selectedVehicleData = vehicles.filter((v) => selectedVehicles.includes(v._id));
@@ -5097,8 +5167,10 @@ function StockTransfer() {
         fromType: formData.fromType,
         fromBranch: fromBranchData,
         fromSubdealer: fromSubdealerData,
+        fromGodown: fromGodownData,
         toBranch: toBranchData,
         toSubdealer: toSubdealerData,
+        toGodown: toGodownData,
         toType: formData.toType,
         vehicles: selectedVehicleData,
         destinationName: destinationName,
@@ -5112,9 +5184,11 @@ function StockTransfer() {
         fromType: formData.fromType,
         fromBranch: formData.fromType === 'branch' ? formData.fromBranch : '',
         fromSubdealer: formData.fromType === 'subdealer' ? formData.fromSubdealer : '',
+        fromGodown: formData.fromType === 'godown' ? formData.fromGodown : '',
         toType: 'branch',
         toBranch: '', 
         toSubdealer: '',
+        toGodown: '',
         notes: ''
       });
       
@@ -5151,7 +5225,8 @@ function StockTransfer() {
   }
 
   const isSourceSelected = (formData.fromType === 'branch' && formData.fromBranch) || 
-                          (formData.fromType === 'subdealer' && formData.fromSubdealer);
+                          (formData.fromType === 'subdealer' && formData.fromSubdealer) ||
+                          (formData.fromType === 'godown' && formData.fromGodown);
 
   return (
     <div>
@@ -5218,6 +5293,7 @@ function StockTransfer() {
                         >
                           <option value="branch">Branch</option>
                           <option value="subdealer">Subdealer</option>
+                          <option value="godown">Godown</option>
                         </CFormSelect>
                       </CInputGroup>
                       {errors.fromType && <div className="invalid-feedback">{errors.fromType}</div>}
@@ -5283,6 +5359,36 @@ function StockTransfer() {
                       </div>
                     )}
 
+                    {/* From Godown Selection */}
+                    {formData.fromType === 'godown' && (
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">From Godown</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon">
+                            <CIcon icon={cilUser} />
+                          </CInputGroupText>
+                          <CFormSelect 
+                            name="fromGodown" 
+                            value={formData.fromGodown} 
+                            onChange={handleChange} 
+                            invalid={!!errors.fromGodown}
+                            disabled={isSubmitting || !canCreateStockTransfer}
+                          >
+                            <option value="">-Select-</option>
+                            {godowns.map((godown) => (
+                              <option key={godown._id || godown.id} value={godown._id || godown.id}>
+                                {godown.name}
+                              </option>
+                            ))}
+                          </CFormSelect>
+                        </CInputGroup>
+                        {errors.fromGodown && <div className="invalid-feedback">{errors.fromGodown}</div>}
+                      </div>
+                    )}
+
                     {/* OTP User Selection Field - appears when source is selected and OTP users exist */}
                     {showOtpSection && otpUsers.length > 0 && (
                       <div className="input-box">
@@ -5341,23 +5447,31 @@ function StockTransfer() {
                           <CIcon icon={cilUser} />
                         </CInputGroupText>
                         <CFormSelect 
-                          name="toType" 
-                          value={formData.toType} 
-                          onChange={handleChange} 
-                          invalid={!!errors.toType}
-                          disabled={!isSourceSelected || isSubmitting || !canCreateStockTransfer}
-                        >
-                          {formData.fromType === 'branch' ? (
-                            <>
-                              <option value="branch">Branch</option>
-                              <option value="subdealer">Subdealer</option>
-                            </>
-                          ) : (
-                            <>
-                              <option value="branch">Branch</option>
-                            </>
-                          )}
-                        </CFormSelect>
+  name="toType" 
+  value={formData.toType} 
+  onChange={handleChange} 
+  invalid={!!errors.toType}
+  disabled={!isSourceSelected || isSubmitting || !canCreateStockTransfer}
+>
+  {formData.fromType === 'branch' ? (
+    <>
+      <option value="branch">Branch</option>
+      <option value="subdealer">Subdealer</option>
+      <option value="godown">Godown</option>
+    </>
+  ) : formData.fromType === 'godown' ? (
+    <>
+      <option value="branch">Branch</option>
+      <option value="subdealer">Subdealer</option>
+    </>
+  ) : (
+    // fromType === 'subdealer' — allow Branch and Godown
+    <>
+      <option value="branch">Branch</option>
+      <option value="godown">Godown</option>
+    </>
+  )}
+</CFormSelect>
                       </CInputGroup>
                       {errors.toType && <div className="invalid-feedback">{errors.toType}</div>}
                     </div>
@@ -5433,6 +5547,43 @@ function StockTransfer() {
                           </CFormSelect>
                         </CInputGroup>
                         {errors.toSubdealer && <div className="invalid-feedback">{errors.toSubdealer}</div>}
+                      </div>
+                    )}
+
+                    {/* To Godown Selection */}
+                    {formData.toType === 'godown' && (
+                      <div className="input-box">
+                        <div className="details-container">
+                          <span className="details">To Godown</span>
+                          <span className="required">*</span>
+                        </div>
+                        <CInputGroup>
+                          <CInputGroupText className="input-icon">
+                            <CIcon icon={cilUser} />
+                          </CInputGroupText>
+                          <CFormSelect 
+                            name="toGodown" 
+                            value={formData.toGodown} 
+                            onChange={handleChange} 
+                            invalid={!!errors.toGodown}
+                            disabled={!isSourceSelected || isSubmitting || !canCreateStockTransfer}
+                          >
+                            <option value="">-Select-</option>
+                            {godowns
+                              .filter(godown => {
+                                if (formData.fromType === 'godown') {
+                                  return (godown._id || godown.id) !== formData.fromGodown;
+                                }
+                                return true;
+                              })
+                              .map((godown) => (
+                                <option key={godown._id || godown.id} value={godown._id || godown.id}>
+                                  {godown.name}
+                                </option>
+                              ))}
+                          </CFormSelect>
+                        </CInputGroup>
+                        {errors.toGodown && <div className="invalid-feedback">{errors.toGodown}</div>}
                       </div>
                     )}
 
@@ -5625,6 +5776,8 @@ function StockTransfer() {
                               <CTableDataCell>
                                 {vehicle.locationType === 'subdealer' && vehicle.subdealerLocation?.name 
                                   ? vehicle.subdealerLocation.name 
+                                  : vehicle.locationType === 'godown' && vehicle.godownLocation?.name
+                                  ? vehicle.godownLocation.name
                                   : vehicle.unloadLocation?.name || ''}
                               </CTableDataCell>
                               <CTableDataCell>{formatDate(vehicle.createdAt)}</CTableDataCell>

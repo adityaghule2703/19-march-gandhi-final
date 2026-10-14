@@ -3,8 +3,7 @@ import React from 'react';
 
 
 
-
-
+const StockAvailabilityDashboard = React.lazy(() => import('../views/purchase/StockAvailabilityDashboard'))
 const MisOnlyVehicles = React.lazy(() => import('../views/purchase/MisOnlyVehicles'))
 const AdvantageTVSVehicles = React.lazy(() => import('../views/purchase/AdvantageTVSVehicles'))
 const AdvantageModelMapping = React.lazy(() => import('../views/purchase/AdvantageModelMapping'))
@@ -20,6 +19,7 @@ const StockVerification = React.lazy(() => import('../views/purchase/StockVerifi
 const StockTransfer = React.lazy(() => import('../views/purchase/StockTransfer'))
 const UploadChallan = React.lazy(() => import('../views/purchase/UploadChallan'))
 export const purchaseRoutes = [
+  { path: '/stock-availability-dashboard', name: 'Stock Availability Dashboard', element: StockAvailabilityDashboard},
   { path: '/mis-only-vehicles', name: 'MIS Only Vehicles', element: MisOnlyVehicles},
   { path: '/advantage-tvs-vehicles', name: 'Advantage TVS Vehicles', element: AdvantageTVSVehicles},
   { path: '/advantage-model-mapping', name: 'Advantage Model Mapping', element: AdvantageModelMapping},

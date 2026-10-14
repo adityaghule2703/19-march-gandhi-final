@@ -104,9 +104,11 @@
 
 import React from 'react';
 
+
+
   
-
-
+const Godowns = React.lazy(() => import('../views/masters/godowns/Godowns'))
+const DeliveryMaster = React.lazy(() => import('../views/masters/deliverymaster/DeliveryMaster'))
 const HaritaModels = React.lazy(() => import('../views/masters/haritamodels/HaritaModels'))
 const AddHaritaModel = React.lazy(() => import('../views/masters/haritamodels/AddHaritaModel'))
 const SchemeList = React.lazy(() => import('../views/masters/schemes/SchemeList'))
@@ -173,7 +175,7 @@ export const masterRoutes = [
     { path:'/branch/update-branch/:id',name: 'Add Branch', element: AddBranch},
 
    
-
+    { path:'/godowns/godowns-list', name:'Godowns List', element:Godowns},
 
 
    { path:'/schemes/scheme-list',name: 'Scheme List', element: SchemeList},
@@ -238,6 +240,8 @@ export const masterRoutes = [
     { path:'/rto/rto-list', name:'Rto List', element:RtoList},
     { path:'/rto/add-rto', name:'Add RTO', element:AddRto},
     { path:'/rto/update-rto/:id', name:'Edit RTO', element:AddRto},
+
+    { path:'/delivery-master/delivery-master-list', name:'Delivery Master List', element:DeliveryMaster},
   
     { path:'/financer/financer-list', name:'Financer List', element:FinancerList},
     { path:'/financer/add-financer', name:'Add Financer', element:AddFinancer},

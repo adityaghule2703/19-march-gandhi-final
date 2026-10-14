@@ -6238,6 +6238,12 @@ const StockList = () => {
   const [isFilterApplied, setIsFilterApplied] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
 
+  // Filter location type states
+  const [filterLocationType, setFilterLocationType] = useState(''); // 'branch' or 'godown'
+  const [filterGodownId, setFilterGodownId] = useState('');
+  const [filterGodowns, setFilterGodowns] = useState([]);
+  const [loadingFilterGodowns, setLoadingFilterGodowns] = useState(false);
+
   const [unblockModalOpen, setUnblockModalOpen] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [unblockReason, setUnblockReason] = useState('');
@@ -6256,10 +6262,22 @@ const StockList = () => {
   const [csvDialogOpen, setCsvDialogOpen] = useState(false);
   const [selectedBranchId, setSelectedBranchId] = useState('');
 
+  // NEW: Export Excel location type states
+  const [exportLocationType, setExportLocationType] = useState(''); // 'branch' or 'godown'
+  const [exportGodownId, setExportGodownId] = useState('');
+  const [exportGodowns, setExportGodowns] = useState([]);
+  const [loadingExportGodowns, setLoadingExportGodowns] = useState(false);
+
   // New state for import response modal
   const [importResponseModalOpen, setImportResponseModalOpen] = useState(false);
   const [importResponse, setImportResponse] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
+
+  // NEW: Import location type states
+  const [importLocationType, setImportLocationType] = useState(''); // 'branch' or 'godown'
+  const [importGodownId, setImportGodownId] = useState('');
+  const [importGodowns, setImportGodowns] = useState([]);
+  const [loadingImportGodowns, setLoadingImportGodowns] = useState(false);
 
   // States for Export Report functionality
   const [exportReportModalOpen, setExportReportModalOpen] = useState(false);
@@ -6271,10 +6289,15 @@ const StockList = () => {
   const [exportReportLoading, setExportReportLoading] = useState(false);
   
   // New states for Subdealer functionality in Export Report
-  const [selectedLocationType, setSelectedLocationType] = useState(''); // 'branch', 'subdealer', or 'both'
+  const [selectedLocationType, setSelectedLocationType] = useState(''); // 'branch', 'subdealer', 'godown', or 'both'
   const [selectedSubdealerId, setSelectedSubdealerId] = useState('');
   const [subdealers, setSubdealers] = useState([]);
   const [loadingSubdealers, setLoadingSubdealers] = useState(false);
+
+  // New states for Godown functionality in Export Report
+  const [selectedGodownId, setSelectedGodownId] = useState('');
+  const [godowns, setGodowns] = useState([]);
+  const [loadingGodowns, setLoadingGodowns] = useState(false);
 
   const { permissions = [], user } = useAuth();
   const hasAllBranchAccess = user?.branchAccess === "ALL";
@@ -6372,7 +6395,7 @@ const StockList = () => {
     if (canViewInwardStock) {
       fetchData();
     }
-  }, [pagination.page, pagination.limit, filterType, filterBranchId]);
+  }, [pagination.page, pagination.limit, filterType, filterBranchId, filterLocationType, filterGodownId]);
 
   // Debounced search
   useEffect(() => {
@@ -6405,6 +6428,34 @@ const StockList = () => {
     }
   }, [selectedLocationType]);
 
+  // Fetch godowns when location type changes to godown (Export Report)
+  useEffect(() => {
+    if (selectedLocationType === 'godown') {
+      fetchGodowns();
+    }
+  }, [selectedLocationType]);
+
+  // Fetch godowns for filter when filter location type changes to godown
+  useEffect(() => {
+    if (filterLocationType === 'godown') {
+      fetchFilterGodowns();
+    }
+  }, [filterLocationType]);
+
+  // NEW: Fetch godowns for export excel when export location type changes to godown
+  useEffect(() => {
+    if (exportLocationType === 'godown') {
+      fetchExportGodowns();
+    }
+  }, [exportLocationType]);
+
+  // NEW: Fetch godowns for import excel when import location type changes to godown
+  useEffect(() => {
+    if (importLocationType === 'godown') {
+      fetchImportGodowns();
+    }
+  }, [importLocationType]);
+
   const fetchData = async (page = pagination.page, limit = pagination.limit, search = searchTerm) => {
     try {
       setLoading(true);
@@ -6424,9 +6475,13 @@ const StockList = () => {
         params.append('type', filterType);
       }
       
-      // Apply branch filter if provided
-      if (filterBranchId) {
+      // Apply location filters based on location type
+      if (filterLocationType === 'branch' && filterBranchId) {
+        params.append('locationType', 'branch');
         params.append('location', filterBranchId);
+      } else if (filterLocationType === 'godown' && filterGodownId) {
+        params.append('locationType', 'godown');
+        params.append('godownLocation', filterGodownId);
       }
       
       const url = `/vehicles?${params.toString()}`;
@@ -6484,6 +6539,70 @@ const StockList = () => {
     }
   };
 
+  const fetchGodowns = async () => {
+    setLoadingGodowns(true);
+    try {
+      const response = await axiosInstance.get('/godowns');
+      // Extract godowns from response - the API returns data directly in response.data.data
+      let godownsList = response.data?.data || [];
+      setGodowns(godownsList);
+    } catch (error) {
+      console.error('Error fetching godowns:', error);
+      showError('Failed to fetch godowns');
+      setGodowns([]);
+    } finally {
+      setLoadingGodowns(false);
+    }
+  };
+
+  // Fetch godowns for filter modal
+  const fetchFilterGodowns = async () => {
+    setLoadingFilterGodowns(true);
+    try {
+      const response = await axiosInstance.get('/godowns');
+      let godownsList = response.data?.data || [];
+      setFilterGodowns(godownsList);
+    } catch (error) {
+      console.error('Error fetching godowns for filter:', error);
+      showError('Failed to fetch godowns');
+      setFilterGodowns([]);
+    } finally {
+      setLoadingFilterGodowns(false);
+    }
+  };
+
+  // NEW: Fetch godowns for export excel modal
+  const fetchExportGodowns = async () => {
+    setLoadingExportGodowns(true);
+    try {
+      const response = await axiosInstance.get('/godowns');
+      let godownsList = response.data?.data || [];
+      setExportGodowns(godownsList);
+    } catch (error) {
+      console.error('Error fetching godowns for export:', error);
+      showError('Failed to fetch godowns');
+      setExportGodowns([]);
+    } finally {
+      setLoadingExportGodowns(false);
+    }
+  };
+
+  // NEW: Fetch godowns for import excel modal
+  const fetchImportGodowns = async () => {
+    setLoadingImportGodowns(true);
+    try {
+      const response = await axiosInstance.get('/godowns');
+      let godownsList = response.data?.data || [];
+      setImportGodowns(godownsList);
+    } catch (error) {
+      console.error('Error fetching godowns for import:', error);
+      showError('Failed to fetch godowns');
+      setImportGodowns([]);
+    } finally {
+      setLoadingImportGodowns(false);
+    }
+  };
+
   // Handle page change
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > pagination.totalPages) return;
@@ -6528,12 +6647,16 @@ const StockList = () => {
   const resetExportModal = () => {
     setSelectedType('');
     setSelectedBranchId('');
+    setExportLocationType(''); // NEW
+    setExportGodownId(''); // NEW
     setCsvDialogOpen(false);
   };
 
   const resetFilterModal = () => {
     setFilterType('');
     setFilterBranchId('');
+    setFilterLocationType('');
+    setFilterGodownId('');
     setFilterModalOpen(false);
   };
 
@@ -6560,12 +6683,16 @@ const StockList = () => {
   const resetImportResponseModal = () => {
     setImportResponse(null);
     setImportResponseModalOpen(false);
+    // NEW: Reset import location type states
+    setImportLocationType('');
+    setImportGodownId('');
   };
 
   // Reset Export Report modal
   const resetExportReportModal = () => {
     setSelectedReportBranchId('');
     setSelectedSubdealerId('');
+    setSelectedGodownId('');
     setSelectedLocationType('');
     setSelectedType('');
     setExportReportError('');
@@ -6584,7 +6711,7 @@ const StockList = () => {
     
     // Validate based on location type
     if (!selectedLocationType) {
-      setExportReportError('Please select a location type (Branch, Subdealer, or All Territory)');
+      setExportReportError('Please select a location type (Branch, Subdealer, Godown, or All Territory)');
       return;
     }
     
@@ -6597,6 +6724,12 @@ const StockList = () => {
     // For Subdealer selection - require subdealer selection (unless All Subdealers is selected)
     if (selectedLocationType === 'subdealer' && !selectedSubdealerId) {
       setExportReportError('Please select a subdealer');
+      return;
+    }
+    
+    // For Godown selection - require godown selection (unless All Godowns is selected)
+    if (selectedLocationType === 'godown' && !selectedGodownId) {
+      setExportReportError('Please select a godown');
       return;
     }
     
@@ -6617,7 +6750,7 @@ const StockList = () => {
       const params = new URLSearchParams({
         modelType: selectedType,
         format: 'excel',
-        locationType: selectedLocationType // This will be 'branch', 'subdealer', or 'both'
+        locationType: selectedLocationType // This will be 'branch', 'subdealer', 'godown', or 'both'
       });
       
       // Add appropriate parameters based on location type
@@ -6628,9 +6761,14 @@ const StockList = () => {
         if (selectedSubdealerId !== 'all') {
           params.append('subdealerId', selectedSubdealerId);
         }
+      } else if (selectedLocationType === 'godown') {
+        // Only add godownId if not "all" (all godowns)
+        if (selectedGodownId !== 'all') {
+          params.append('godownId', selectedGodownId);
+        }
       } else if (selectedLocationType === 'both') {
-        // For All Territory, we don't add branchId or subdealerId
-        // The API will fetch data from all branches and subdealers
+        // For All Territory, we don't add branchId, subdealerId or godownId
+        // The API will fetch data from all branches, subdealers, and godowns
       }
       
       const response = await axiosInstance.get(
@@ -6680,6 +6818,13 @@ const StockList = () => {
         } else {
           const selectedSubdealer = subdealers.find(s => s._id === selectedSubdealerId);
           locationName = selectedSubdealer?.name || 'Subdealer';
+        }
+      } else if (selectedLocationType === 'godown') {
+        if (selectedGodownId === 'all') {
+          locationName = 'All_Godowns';
+        } else {
+          const selectedGodown = godowns.find(g => g._id === selectedGodownId);
+          locationName = selectedGodown?.name || 'Godown';
         }
       } else if (selectedLocationType === 'both') {
         locationName = 'All_Territory';
@@ -6750,14 +6895,26 @@ const StockList = () => {
       setSelectedFile(e.target.files[0]);
     };
 
+    // UPDATED: Handle import with location type support
     const handleImport = async () => {
       if (!selectedFile) {
         showError('Please select a file');
         return;
       }
 
-      if (!importBranchId) {
+      // Validate based on import location type
+      if (!importLocationType) {
+        showError('Please select a location type');
+        return;
+      }
+
+      if (importLocationType === 'branch' && !importBranchId) {
         showError('Please select a branch');
+        return;
+      }
+
+      if (importLocationType === 'godown' && !importGodownId) {
+        showError('Please select a godown');
         return;
       }
 
@@ -6766,8 +6923,17 @@ const StockList = () => {
 
       setImportLoading(true);
       try {
+        // UPDATED: Build URL with location type params
+        let url = `/vehicles/import-excel?type=${importType}`;
+        
+        if (importLocationType === 'branch' && importBranchId) {
+          url += `&branch_id=${importBranchId}`;
+        } else if (importLocationType === 'godown' && importGodownId) {
+          url += `&godownLocation=${importGodownId}`;
+        }
+
         const response = await axiosInstance.post(
-          `/vehicles/import-excel?type=${importType}&branch_id=${importBranchId}`,
+          url,
           formData,
           {
             headers: {
@@ -6786,6 +6952,8 @@ const StockList = () => {
         // Reset import form
         setImportType('ICE');
         setImportBranchId('');
+        setImportLocationType('');
+        setImportGodownId('');
       } catch (error) {
         console.error('Import failed:', error);
         showError(error.response?.data?.message || 'Failed to import Excel file');
@@ -6816,7 +6984,7 @@ const StockList = () => {
           <CIcon icon={cilCloudDownload} className='icon' /> Import Excel
         </CButton>
 
-        {/* Import Modal */}
+        {/* Import Modal - UPDATED with Location Type */}
         <CModal visible={importResponseModalOpen} onClose={resetImportResponseModal}>
           <CModalHeader>
             <CModalTitle>Import Excel File</CModalTitle>
@@ -6833,20 +7001,66 @@ const StockList = () => {
               </CFormSelect>
             </div>
 
+            {/* NEW: Location Type Selection */}
             <div className="mb-3">
-              <label className="form-label">Branch:</label>
+              <label className="form-label">Location Type:<span className='required'>*</span></label>
               <CFormSelect
-                value={importBranchId}
-                onChange={(e) => setImportBranchId(e.target.value)}
+                value={importLocationType}
+                onChange={(e) => {
+                  setImportLocationType(e.target.value);
+                  setImportBranchId('');
+                  setImportGodownId('');
+                }}
               >
-                <option value="">-- Select Branch --</option>
-                {branches.map((branch) => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.name}
-                  </option>
-                ))}
+                <option value="">-- Select Location Type --</option>
+                <option value="branch">Branch</option>
+                <option value="godown">Godown</option>
               </CFormSelect>
             </div>
+
+            {/* Branch Selection - shown when Branch is selected */}
+            {importLocationType === 'branch' && (
+              <div className="mb-3">
+                <label className="form-label">Branch:<span className='required'>*</span></label>
+                <CFormSelect
+                  value={importBranchId}
+                  onChange={(e) => setImportBranchId(e.target.value)}
+                >
+                  <option value="">-- Select Branch --</option>
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </CFormSelect>
+              </div>
+            )}
+
+            {/* Godown Selection - shown when Godown is selected */}
+            {importLocationType === 'godown' && (
+              <div className="mb-3">
+                <label className="form-label">Godown:<span className='required'>*</span></label>
+                <CFormSelect
+                  value={importGodownId}
+                  onChange={(e) => setImportGodownId(e.target.value)}
+                  disabled={loadingImportGodowns}
+                >
+                  <option value="">-- Select Godown --</option>
+                  {importGodowns.map((godown) => (
+                    <option key={godown._id} value={godown._id}>
+                      {godown.name}
+                      {godown.branchDetails?.name ? ` (${godown.branchDetails.name})` : ''}
+                    </option>
+                  ))}
+                </CFormSelect>
+                {loadingImportGodowns && (
+                  <div className="mt-2">
+                    <CSpinner size="sm" className="me-1" />
+                    <small>Loading godowns...</small>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mb-3">
               <label className="form-label">Select Excel File:</label>
@@ -6878,7 +7092,13 @@ const StockList = () => {
             <CButton 
               className='submit-button' 
               onClick={handleImport}
-              disabled={!selectedFile || !importBranchId || importLoading}
+              disabled={
+                !selectedFile || 
+                !importLocationType ||
+                (importLocationType === 'branch' && !importBranchId) ||
+                (importLocationType === 'godown' && !importGodownId) ||
+                importLoading
+              }
             >
               {importLoading ? (
                 <>
@@ -7372,21 +7592,35 @@ const StockList = () => {
     }
   };
 
+  // Apply filter with location type support
   const applyFilter = () => {
-    if (filterType || filterBranchId) {
+    // Validate based on location type
+    if (filterLocationType === 'branch' && !filterBranchId) {
+      showError('Please select a branch');
+      return;
+    }
+    if (filterLocationType === 'godown' && !filterGodownId) {
+      showError('Please select a godown');
+      return;
+    }
+    
+    if (filterType || (filterLocationType && (filterBranchId || filterGodownId))) {
       setIsFilterApplied(true);
       setFilterModalOpen(false);
       // Reset to page 1 when applying filters
       setPagination(prev => ({ ...prev, page: 1 }));
-      // fetchData will be triggered by useEffect dependency on filterType/filterBranchId
+      // fetchData will be triggered by useEffect dependency on filter states
     } else {
-      showError('Please select type or branch to apply filter');
+      showError('Please select type or location to apply filter');
     }
   };
 
+  // Clear filter including location type
   const clearFilter = () => {
     setFilterType('');
     setFilterBranchId('');
+    setFilterLocationType('');
+    setFilterGodownId('');
     setIsFilterApplied(false);
     setPagination(prev => ({ ...prev, page: 1 }));
   };
@@ -7399,6 +7633,7 @@ const StockList = () => {
     navigate('/inward-stock');
   };
 
+  // UPDATED: Handle Export Excel with location type support
   const handleExportExcel = async () => {
     if (!canExportInwardStock) {
       showError('You do not have permission to export data');
@@ -7409,22 +7644,43 @@ const StockList = () => {
       showError('Please select a type.');
       return;
     }
-    if (!selectedBranchId) {
+
+    // Validate based on export location type
+    if (!exportLocationType) {
+      showError('Please select a location type.');
+      return;
+    }
+
+    if (exportLocationType === 'branch' && !selectedBranchId) {
       showError('Please select a branch.');
+      return;
+    }
+
+    if (exportLocationType === 'godown' && !exportGodownId) {
+      showError('Please select a godown.');
       return;
     }
 
     setExportLoading(true);
     try {
+      // UPDATED: Build URL with location type params
+      let url = `/vehicles/export-excel?type=${selectedType}`;
+      
+      if (exportLocationType === 'branch' && selectedBranchId) {
+        url += `&branch_id=${selectedBranchId}`;
+      } else if (exportLocationType === 'godown' && exportGodownId) {
+        url += `&godownLocation=${exportGodownId}`;
+      }
+
       const response = await axiosInstance.get(
-        `/vehicles/export-excel?&type=${selectedType}&branch_id=${selectedBranchId}`,
+        url,
         {
           responseType: 'blob'
         }
       );
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url2 = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
-      link.href = url;
+      link.href = url2;
       link.setAttribute('download', `exported_data_${selectedType}.xlsx`);
       document.body.appendChild(link);
       link.click();
@@ -7432,6 +7688,8 @@ const StockList = () => {
       setCsvDialogOpen(false);
       setSelectedType('');
       setSelectedBranchId('');
+      setExportLocationType('');
+      setExportGodownId('');
       showSuccess('Excel exported successfully!');
     } catch (error) {
       console.error('Excel export failed:', error);
@@ -7896,7 +8154,7 @@ const StockList = () => {
         </CModalFooter>
       </CModal>
 
-      {/* Filter Modal */}
+      {/* Filter Modal - with Location Type */}
       <CModal visible={filterModalOpen} onClose={resetFilterModal}>
         <CModalHeader>
           <CModalTitle>Filter Vehicles</CModalTitle>
@@ -7914,20 +8172,66 @@ const StockList = () => {
             </CFormSelect>
           </div>
 
+          {/* Location Type Selection */}
           <div className="mb-3">
-            <label className="form-label">Branch:</label>
+            <label className="form-label">Location Type:</label>
             <CFormSelect
-              value={filterBranchId}
-              onChange={(e) => setFilterBranchId(e.target.value)}
+              value={filterLocationType}
+              onChange={(e) => {
+                setFilterLocationType(e.target.value);
+                setFilterBranchId('');
+                setFilterGodownId('');
+              }}
             >
-              <option value="">-- All Branches --</option>
-              {branches.map((branch) => (
-                <option key={branch._id} value={branch._id}>
-                  {branch.name}
-                </option>
-              ))}
+              <option value="">-- All Locations --</option>
+              <option value="branch">Branch</option>
+              <option value="godown">Godown</option>
             </CFormSelect>
           </div>
+
+          {/* Branch Selection - shown when Branch is selected */}
+          {filterLocationType === 'branch' && (
+            <div className="mb-3">
+              <label className="form-label">Branch:</label>
+              <CFormSelect
+                value={filterBranchId}
+                onChange={(e) => setFilterBranchId(e.target.value)}
+              >
+                <option value="">-- All Branches --</option>
+                {branches.map((branch) => (
+                  <option key={branch._id} value={branch._id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </CFormSelect>
+            </div>
+          )}
+
+          {/* Godown Selection - shown when Godown is selected */}
+          {filterLocationType === 'godown' && (
+            <div className="mb-3">
+              <label className="form-label">Godown:</label>
+              <CFormSelect
+                value={filterGodownId}
+                onChange={(e) => setFilterGodownId(e.target.value)}
+                disabled={loadingFilterGodowns}
+              >
+                <option value="">-- All Godowns --</option>
+                {filterGodowns.map((godown) => (
+                  <option key={godown._id} value={godown._id}>
+                    {godown.name}
+                    {godown.branchDetails?.name ? ` (${godown.branchDetails.name})` : ''}
+                  </option>
+                ))}
+              </CFormSelect>
+              {loadingFilterGodowns && (
+                <div className="mt-2">
+                  <CSpinner size="sm" className="me-1" />
+                  <small>Loading godowns...</small>
+                </div>
+              )}
+            </div>
+          )}
         </CModalBody>
         <CModalFooter>
           <CButton color="secondary" onClick={resetFilterModal}>Cancel</CButton>
@@ -7937,7 +8241,7 @@ const StockList = () => {
         </CModalFooter>
       </CModal>
 
-      {/* Export Excel Modal */}
+      {/* Export Excel Modal - UPDATED with Location Type */}
       <CModal visible={csvDialogOpen} onClose={resetExportModal}>
         <CModalHeader>
           <CModalTitle>Export Excel</CModalTitle>
@@ -7955,33 +8259,85 @@ const StockList = () => {
             </CFormSelect>
           </div>
 
+          {/* NEW: Location Type Selection */}
           <div className="mb-3">
-            <label className="form-label">Branch:</label>
+            <label className="form-label">Location Type:<span className='required'>*</span></label>
             <CFormSelect
-              value={selectedBranchId}
-              onChange={(e) => setSelectedBranchId(e.target.value)}
+              value={exportLocationType}
+              onChange={(e) => {
+                setExportLocationType(e.target.value);
+                setSelectedBranchId('');
+                setExportGodownId('');
+              }}
             >
-              <option value="">-- Select Branch --</option>
-              {branches.map((branch) => (
-                <option key={branch._id} value={branch._id}>
-                  {branch.name}
-                </option>
-              ))}
+              <option value="">-- Select Location Type --</option>
+              <option value="branch">Branch</option>
+              <option value="godown">Godown</option>
             </CFormSelect>
           </div>
+
+          {/* Branch Selection - shown when Branch is selected */}
+          {exportLocationType === 'branch' && (
+            <div className="mb-3">
+              <label className="form-label">Branch:<span className='required'>*</span></label>
+              <CFormSelect
+                value={selectedBranchId}
+                onChange={(e) => setSelectedBranchId(e.target.value)}
+              >
+                <option value="">-- Select Branch --</option>
+                {branches.map((branch) => (
+                  <option key={branch._id} value={branch._id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </CFormSelect>
+            </div>
+          )}
+
+          {/* Godown Selection - shown when Godown is selected */}
+          {exportLocationType === 'godown' && (
+            <div className="mb-3">
+              <label className="form-label">Godown:<span className='required'>*</span></label>
+              <CFormSelect
+                value={exportGodownId}
+                onChange={(e) => setExportGodownId(e.target.value)}
+                disabled={loadingExportGodowns}
+              >
+                <option value="">-- Select Godown --</option>
+                {exportGodowns.map((godown) => (
+                  <option key={godown._id} value={godown._id}>
+                    {godown.name}
+                    {godown.branchDetails?.name ? ` (${godown.branchDetails.name})` : ''}
+                  </option>
+                ))}
+              </CFormSelect>
+              {loadingExportGodowns && (
+                <div className="mt-2">
+                  <CSpinner size="sm" className="me-1" />
+                  <small>Loading godowns...</small>
+                </div>
+              )}
+            </div>
+          )}
         </CModalBody>
         <CModalFooter>
           <CButton 
             className='submit-button' 
             onClick={handleExportExcel}
-            disabled={exportLoading}
+            disabled={
+              !selectedType || 
+              !exportLocationType ||
+              (exportLocationType === 'branch' && !selectedBranchId) ||
+              (exportLocationType === 'godown' && !exportGodownId) ||
+              exportLoading
+            }
           >
             {exportLoading ? 'Exporting...' : 'Export'}
           </CButton>
         </CModalFooter>
       </CModal>
 
-      {/* Export Report Modal - Updated with Subdealer and All Territory options */}
+      {/* Export Report Modal - Updated with Subdealer, Godown and All Territory options */}
       <CModal alignment="center" visible={exportReportModalOpen} onClose={resetExportReportModal} size="lg">
         <CModalHeader>
           <CModalTitle>
@@ -8018,7 +8374,7 @@ const StockList = () => {
             </CFormSelect>
           </div>
 
-          {/* Location Type Selection - Branch, Subdealer, or All Territory */}
+          {/* Location Type Selection - Branch, Subdealer, Godown, or All Territory */}
           <div className="mb-3">
             <label className="form-label">Location Type:<span className='required'>*</span></label>
             <CFormSelect
@@ -8027,6 +8383,7 @@ const StockList = () => {
                 setSelectedLocationType(e.target.value);
                 setSelectedReportBranchId('');
                 setSelectedSubdealerId('');
+                setSelectedGodownId('');
                 setExportReportError('');
               }}
               disabled={!canExportReport}
@@ -8034,6 +8391,7 @@ const StockList = () => {
               <option value="">-- Select Location Type --</option>
               <option value="branch">Branch</option>
               <option value="subdealer">Subdealer</option>
+              <option value="godown">Godown</option>
               <option value="both">All Territory</option>
             </CFormSelect>
           </div>
@@ -8092,11 +8450,41 @@ const StockList = () => {
             </div>
           )}
 
+          {/* Godown Selection - shown when Godown is selected */}
+          {selectedLocationType === 'godown' && (
+            <div className="mb-3">
+              <label className="form-label">Godown:<span className='required'>*</span></label>
+              <CFormSelect
+                value={selectedGodownId}
+                onChange={(e) => {
+                  setSelectedGodownId(e.target.value);
+                  setExportReportError('');
+                }}
+                disabled={!canExportReport || loadingGodowns}
+              >
+                <option value="">-- Select Godown --</option>
+                <option value="all">All Godowns</option>
+                {godowns.map((godown) => (
+                  <option key={godown._id} value={godown._id}>
+                    {godown.name}
+                    {godown.branchDetails?.name ? ` (${godown.branchDetails.name})` : ''}
+                  </option>
+                ))}
+              </CFormSelect>
+              {loadingGodowns && (
+                <div className="mt-2">
+                  <CSpinner size="sm" className="me-1" />
+                  <small>Loading godowns...</small>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Helpful message when All Territory is selected */}
           {selectedLocationType === 'both' && (
             <div className="alert alert-info mb-3">
               <CIcon icon={cilInfo} className="me-2" />
-              Exporting stock report for all territories (Branches + Subdealers combined)
+              Exporting stock report for all territories (Branches + Subdealers + Godowns combined)
             </div>
           )}
         </CModalBody>
@@ -8116,6 +8504,7 @@ const StockList = () => {
               !selectedLocationType ||
               (selectedLocationType === 'branch' && !selectedReportBranchId) ||
               (selectedLocationType === 'subdealer' && !selectedSubdealerId) ||
+              (selectedLocationType === 'godown' && !selectedGodownId) ||
               !canExportReport || 
               exportReportLoading
             }

@@ -5294,7 +5294,7 @@ function SubdealerCustomerManagement() {
                                 <CTableDataCell>₹{(booking.totalAmount || 0).toLocaleString()}</CTableDataCell>
                                 <CTableDataCell>₹{(booking.receivedAmount || 0).toLocaleString()}</CTableDataCell>
                                 <CTableDataCell>₹{(booking.balanceAmount || 0).toLocaleString()}</CTableDataCell>
-                                <CTableDataCell>{formatDate(booking.createdAt)}</CTableDataCell>
+                                <CTableDataCell>{formatDate(booking.allocationDate)}</CTableDataCell>
                                 <CTableDataCell>
                                   <CButton
                                     color="primary"

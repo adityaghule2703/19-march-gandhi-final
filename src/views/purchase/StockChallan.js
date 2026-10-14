@@ -1307,8 +1307,10 @@ const TransferChallan = ({
   transferDetails, 
   fromBranch, 
   fromSubdealer,
+  fromGodown,
   toBranch, 
   toSubdealer, 
+  toGodown,
   toType, 
   vehicles 
 }) => {
@@ -1323,6 +1325,7 @@ const TransferChallan = ({
   const getLoadLocation = () => {
     if (fromBranch) return fromBranch.name;
     if (fromSubdealer) return fromSubdealer.name;
+    if (fromGodown) return fromGodown.name;
     return 'N/A';
   };
 
@@ -1347,6 +1350,11 @@ const TransferChallan = ({
       return {
         label: 'Unload Location',
         name: toBranch?.name || 'N/A'
+      };
+    } else if (toType === 'godown') {
+      return {
+        label: 'Unload Location',
+        name: toGodown?.name || 'N/A'
       };
     } else {
       return {

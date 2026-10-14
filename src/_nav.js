@@ -3967,6 +3967,14 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
     purchaseItems.push({
       component: CNavItem,
+      name: 'Stock Availability Dashboard',
+      to: '/stock-availability-dashboard',
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
       name: 'Purchase Order Dashboard',
       to: '/purchase-order-dashboard',
     });
@@ -4784,6 +4792,22 @@ if (kycBufferItems.length > 0) {
       component: CNavItem,
       name: 'RTO',
       to: '/rto/rto-list',
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.RTO_MASTER)) {
+    mastersItems.push({
+      component: CNavItem,
+      name: 'Delivery Master',
+      to: '/delivery-master/delivery-master-list',
+    });
+  }
+
+  if (canViewPage(userPermissions, MODULES.MASTERS, PAGES.MASTERS.RTO_MASTER)) {
+    mastersItems.push({
+      component: CNavItem,
+      name: 'Gowdowns Master',
+      to: '/godowns/godowns-list',
     });
   }
   

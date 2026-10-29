@@ -22767,6 +22767,7 @@ function BookingForm() {
   });
 
   const [globalDiscount, setGlobalDiscount] = useState('');
+  const [dealAmount, setDealAmount] = useState('');
   const [discountDistribution, setDiscountDistribution] = useState({});
 
   const [specialHeaderValues, setSpecialHeaderValues] = useState({
@@ -23044,6 +23045,32 @@ function BookingForm() {
           totalUsed: 0
         });
       }
+    }
+  };
+
+  const handleDealAmountChange = (value) => {
+    console.log('💰 [handleDealAmountChange] called with value:', value);
+    setDealAmount(value);
+
+    const dealAmountNum = parseFloat(value) || 0;
+
+    if (dealAmountNum > 0) {
+      const totals = calculateTotalDealAmountWithoutDiscount();
+      const totalBeforeDiscount = parseFloat(totals.totalBeforeDiscount);
+      const subsidyAmount = parseFloat(totals.subsidyAmount) || 0;
+
+      // ✅ FIX: Deal Amount is the FINAL amount after subsidy.
+      // So Discount = Total - Subsidy - Deal Amount
+      const calculatedDiscount = Math.max(0, totalBeforeDiscount - subsidyAmount - dealAmountNum);
+
+      console.log('💰 [handleDealAmountChange] totalBeforeDiscount:', totalBeforeDiscount);
+      console.log('💰 [handleDealAmountChange] subsidyAmount:', subsidyAmount);
+      console.log('💰 [handleDealAmountChange] dealAmountNum:', dealAmountNum);
+      console.log('💰 [handleDealAmountChange] calculatedDiscount:', calculatedDiscount);
+
+      handleGlobalDiscountChange(calculatedDiscount.toString());
+    } else {
+      handleGlobalDiscountChange('');
     }
   };
 
@@ -23675,102 +23702,110 @@ function BookingForm() {
     return regex.test(email);
   };
 
-  const validateTab1 = () => {
-    const requiredFields = ['customer_type', 'verticle_id', 'model_id', 'branch'];
-    const newErrors = {};
-    requiredFields.forEach((field) => {
-      if (!formData[field]) newErrors[field] = 'This field is required';
-    });
-    if (formData.customer_type === 'B2B') {
-      if (!formData.gstin) {
-        newErrors.gstin = 'GSTIN is required for B2B customers';
-      } else if (!validateGSTIN(formData.gstin)) {
-        newErrors.gstin = 'Invalid GSTIN format. Please enter a valid 15-digit GST number';
-      }
-    }
-    if ((formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && !formData.rto_amount) {
-      newErrors.rto_amount = 'RTO amount is required';
-    }
-    if (formData.rto_type === 'MH' && !formData.rto_code) {
-      newErrors.rto_code = 'RTO Code is required when RTO type is MH';
-    }
-    if (formData.selfInsurance === true && formData.insuranceFivePlusFive === true) {
-      newErrors.insurance = 'Self Insurance and Insurance 5+5 cannot both be true';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateTab2 = () => {
-    const requiredFields = ['model_color', 'sales_executive'];
-    const newErrors = {};
-    requiredFields.forEach((field) => {
-      if (!formData[field]) newErrors[field] = 'This field is required';
-    });
-    if (salesExecutives.length === 0 && formData.branch) {
-      newErrors.sales_executive = 'No sales executives available for this branch';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateTab4 = () => {
-    const newErrors = {};
-    if (!formData.type) newErrors.type = 'Payment type is required';
-    if (formData.is_exchange === 'true') {
-      const exchangeFields = ['broker_id', 'exchange_price', 'vehicle_number', 'chassis_number'];
-      exchangeFields.forEach((field) => {
-        if (!formData[field]) newErrors[field] = 'This field is required for exchange';
-      });
-      if (selectedBroker?.otp_required && !otpVerified) {
-        newErrors.otpVerification = 'OTP verification is required for this broker';
-      }
-      if (brokers.length === 0) {
-        newErrors.broker_id = 'No brokers available for this branch';
-      }
-    }
-    if (formData.type === 'finance') {
-      if (!formData.financer_id) newErrors.financer_id = 'This field is required for finance';
-
-      if (formData.gc_applicable && formData.gc_amount !== '' && formData.gc_amount !== null) {
-        const gcValue = parseFloat(formData.gc_amount) || 0;
-        const { min, max } = getGCMinMax();
-        if (hasGCPermission && min !== null && max !== null) {
-          if (gcValue < min || gcValue > max) {
-            newErrors.gc_amount = `GC Amount must be between ₹${min.toLocaleString('en-IN')} and ₹${max.toLocaleString('en-IN')}`;
-          }
-        }
-      }
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateTab6 = () => {
-    const newErrors = {};
-    if (globalDiscount && parseFloat(globalDiscount) < 0) {
-      newErrors.globalDiscount = 'Discount must be a positive number';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const validateMobileNumber = (mobile) => /^[6-9]\d{9}$/.test(mobile);
   const validatePAN = (pan) => /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
   const validateAadhar = (aadhar) => /^\d{12}$/.test(aadhar);
   const validatePincode = (pincode) => /^\d{6}$/.test(pincode);
 
+  const fieldToTab = {
+    // Tab 1
+    customer_type: 1,
+    branch: 1,
+    verticle_id: 1,
+    model_id: 1,
+    gstin: 1,
+    rto_code: 1,
+    rto_amount: 1,
+    insurance: 1,
+    // Tab 2
+    model_color: 2,
+    sales_executive: 2,
+    // Tab 3
+    salutation: 3,
+    name: 3,
+    email: 3,
+    address: 3,
+    taluka: 3,
+    district: 3,
+    pincode: 3,
+    mobile1: 3,
+    mobile2: 3,
+    aadhar_number: 3,
+    pan_no: 3,
+    dob: 3,
+    occupation: 3,
+    nominiSalutation: 3,
+    nomineeName: 3,
+    nomineeRelation: 3,
+    nomineeAge: 3,
+    // Tab 4
+    type: 4,
+    financer_id: 4,
+    gc_amount: 4,
+    // Tab 6
+    globalDiscount: 6
+  };
+
+  const goToFirstError = (newErrors) => {
+    const firstErrorField = Object.keys(newErrors)[0];
+    if (!firstErrorField) return;
+
+    const targetTab = fieldToTab[firstErrorField] || 1;
+    if (targetTab !== activeTab) {
+      setActiveTab(targetTab);
+    }
+
+    setTimeout(() => {
+      const el = document.querySelector(`[name="${firstErrorField}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (typeof el.focus === 'function') el.focus();
+      }
+    }, 200);
+  };
+
   const handleNextTab = () => {
     if (activeTab === 1) {
-      if (!validateTab1()) {
-        const firstErrorField = Object.keys(errors)[0];
-        if (firstErrorField) {
-          document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const requiredFields = ['customer_type', 'verticle_id', 'model_id', 'branch'];
+      const newErrors = {};
+      requiredFields.forEach((field) => {
+        if (!formData[field]) newErrors[field] = 'This field is required';
+      });
+      if (formData.customer_type === 'B2B') {
+        if (!formData.gstin) {
+          newErrors.gstin = 'GSTIN is required for B2B customers';
+        } else if (!validateGSTIN(formData.gstin)) {
+          newErrors.gstin = 'Invalid GSTIN format. Please enter a valid 15-digit GST number';
         }
+      }
+      if ((formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && !formData.rto_amount) {
+        newErrors.rto_amount = 'RTO amount is required';
+      }
+      if (formData.rto_type === 'MH' && !formData.rto_code) {
+        newErrors.rto_code = 'RTO Code is required when RTO type is MH';
+      }
+      if (formData.selfInsurance === true && formData.insuranceFivePlusFive === true) {
+        newErrors.insurance = 'Self Insurance and Insurance 5+5 cannot both be true';
+      }
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) {
+        goToFirstError(newErrors);
         return;
       }
     } else if (activeTab === 2) {
-      if (!validateTab2()) return;
+      const requiredFields = ['model_color', 'sales_executive'];
+      const newErrors = {};
+      requiredFields.forEach((field) => {
+        if (!formData[field]) newErrors[field] = 'This field is required';
+      });
+      if (salesExecutives.length === 0 && formData.branch) {
+        newErrors.sales_executive = 'No sales executives available for this branch';
+      }
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) {
+        goToFirstError(newErrors);
+        return;
+      }
     } else if (activeTab === 3) {
       const newErrors = {};
       const requiredFields = ['salutation','name','address','mobile1','email','aadhar_number','pan_no','dob','occupation','taluka','district','pincode','nominiSalutation','nomineeName','nomineeRelation','nomineeAge'];
@@ -23790,20 +23825,49 @@ function BookingForm() {
       if (formData.pincode && !validatePincode(formData.pincode)) newErrors.pincode = 'Pincode must be exactly 6 digits';
       setErrors(newErrors);
       if (Object.keys(newErrors).length > 0) {
-        const firstErrorField = Object.keys(newErrors)[0];
-        document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        goToFirstError(newErrors);
         return;
       }
     } else if (activeTab === 4) {
-      if (!validateTab4()) {
-        const firstErrorField = Object.keys(errors)[0];
-        if (firstErrorField) {
-          document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const newErrors = {};
+      if (!formData.type) newErrors.type = 'Payment type is required';
+      if (formData.is_exchange === 'true') {
+        const exchangeFields = ['broker_id', 'exchange_price', 'vehicle_number', 'chassis_number'];
+        exchangeFields.forEach((field) => {
+          if (!formData[field]) newErrors[field] = 'This field is required for exchange';
+        });
+        if (selectedBroker?.otp_required && !otpVerified) {
+          newErrors.otpVerification = 'OTP verification is required for this broker';
         }
+        if (brokers.length === 0) {
+          newErrors.broker_id = 'No brokers available for this branch';
+        }
+      }
+      if (formData.type === 'finance') {
+        if (!formData.financer_id) newErrors.financer_id = 'This field is required for finance';
+
+        if (formData.gc_applicable && formData.gc_amount !== '' && formData.gc_amount !== null) {
+          const gcValue = parseFloat(formData.gc_amount) || 0;
+          const { min, max } = getGCMinMax();
+          if (hasGCPermission && min !== null && max !== null) {
+            if (gcValue < min || gcValue > max) {
+              newErrors.gc_amount = `GC Amount must be between ₹${min.toLocaleString('en-IN')} and ₹${max.toLocaleString('en-IN')}`;
+            }
+          }
+        }
+      }
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) {
+        goToFirstError(newErrors);
         return;
       }
     } else if (activeTab === 6) {
-      if (!validateTab6()) {
+      const newErrors = {};
+      if (globalDiscount && parseFloat(globalDiscount) < 0) {
+        newErrors.globalDiscount = 'Discount must be a positive number';
+      }
+      setErrors(newErrors);
+      if (Object.keys(newErrors).length > 0) {
         return;
       }
     }
@@ -24127,6 +24191,7 @@ function BookingForm() {
         fetchAccessories(value);
         fetchModelColors(value);
         setGlobalDiscount('');
+        setDealAmount('');
         setDiscountDistribution({});
 
         if (isEditMode) {
@@ -24217,6 +24282,58 @@ function BookingForm() {
 
   const calculateLineTotal = (taxable, cgstAmount, sgstAmount) => taxable + cgstAmount + sgstAmount;
 
+  const calculateTotalDealAmountWithoutDiscount = () => {
+    const selectedHeaders = getSelectedHeadersForTab6()
+      .filter((price) => price.header_id)
+      .filter((price) => {
+        const excludedHeaders = [
+          'ON ROAD PRICE (A)', 'TOTAL ONROAD + ADDON SERVICES', 'TOTAL ONROAD+ADDON SERVICES',
+          'ADDON SERVICES TOTAL (B)', 'ACCESSORIES TOTAL', 'ON ROAD PRICE', 'ADDON SERVICES TOTAL',
+          'ADD ON SERVICES TOTAL', 'TOTAL AMOUNT', 'GRAND TOTAL', 'FINAL AMOUNT', 'TOTAL',
+          'ON-ROAD PRICE', 'FINAL PRICE', 'LESS:- CENTER SUBSIDY(FAME-II)', 'COMPLETE PRICE',
+          'LESS:- CENTER SUBSIDY'
+        ];
+        return !excludedHeaders.includes(price.header_key || '');
+      });
+
+    let totalUnitCost = 0;
+    const subsidyAmount = parseFloat(formData.subsidy_amount) || 0;
+
+    selectedHeaders.forEach((price) => {
+      const headerKey = price.header_key;
+      const isRTOHeader = headerKey === 'RTO TAX & REGISTRATION CHARGES' ||
+                          headerKey.includes('RTO TAX') || headerKey.includes('REGISTRATION CHARGES');
+
+      const selectedMatchingAccessories = accessories.filter(accessory =>
+        accessory.categoryDetails?.header_key === headerKey &&
+        (isEditMode ?
+          formData.selected_accessories.includes(accessory._id) :
+          !formData.uncheckedAccessories?.includes(accessory._id))
+      );
+      const accessoryPrice = selectedMatchingAccessories.reduce((sum, acc) => sum + (acc.price || 0), 0);
+      let unitPrice = Math.max(price.value || 0, accessoryPrice);
+
+      if (isRTOHeader && (formData.rto_type === 'BH' || formData.rto_type === 'CRTM') && formData.rto_amount) {
+        unitPrice = parseFloat(formData.rto_amount) || 0;
+      }
+
+      totalUnitCost += unitPrice;
+    });
+
+    // Total after subsidy = what customer actually pays before discount
+    const totalAfterSubsidy = totalUnitCost - subsidyAmount;
+
+    return {
+      totalBeforeDiscount: totalUnitCost.toFixed(2),       // raw sum of all selected headers
+      totalAfterSubsidy: totalAfterSubsidy.toFixed(2),     // total - subsidy (customer-visible base)
+      totalAfterDiscount: totalAfterSubsidy.toFixed(2),    // same as after subsidy when no discount
+      totalDiscount: '0.00',
+      subsidyAmount: subsidyAmount.toFixed(2),
+      hasDiscount: false,
+      hasSubsidy: subsidyAmount > 0
+    };
+  };
+
   const calculateTotalDealAmount = () => {
     const selectedHeaders = getSelectedHeadersForTab6()
       .filter((price) => price.header_id)
@@ -24306,8 +24423,29 @@ function BookingForm() {
 
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
+
       const firstErrorField = Object.keys(formErrors)[0];
-      document.querySelector(`[name="${firstErrorField}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const targetTab = fieldToTab[firstErrorField] || 1;
+
+      if (targetTab !== activeTab) {
+        setActiveTab(targetTab);
+      }
+
+      const errorMessages = Object.values(formErrors);
+      const errorSummary = errorMessages.length === 1
+        ? errorMessages[0]
+        : `Please fix ${errorMessages.length} errors before submitting`;
+
+      showFormSubmitError(errorSummary);
+
+      setTimeout(() => {
+        const el = document.querySelector(`[name="${firstErrorField}"]`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          if (typeof el.focus === 'function') el.focus();
+        }
+      }, 200);
+
       return;
     }
 
@@ -24317,8 +24455,6 @@ function BookingForm() {
 
   // ===== Final submit — triggered from within the modal =====
   const handleFinalSubmit = async () => {
-    // If isExpected is true, the date is REQUIRED.
-    // If isExpected is false, the date is OPTIONAL.
     if (isDeliveryExpected && !modalDeliveredAt) {
       setModalDeliveryError('Expected delivery date is required');
       return;
@@ -24477,7 +24613,7 @@ function BookingForm() {
       {error && <CAlert color="danger">{error}</CAlert>}
       <div className="form-card">
         <div className="form-body">
-          <form onSubmit={handleSubmit} id="bookingForm">
+          <form onSubmit={handleSubmit} id="bookingForm" noValidate>
 
             {/* ===== TAB 1 ===== */}
             {activeTab === 1 && (
@@ -25355,11 +25491,22 @@ function BookingForm() {
                 <div className="user-details">
                   <div className="input-box" style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
                     <div style={{ flex: '1', minWidth: '250px' }}>
-                      <span className="details">Note</span>
+                      <div className="details-container">
+                        <span className="details">Deal Amount (₹)</span>
+                        <small className="text-muted ms-2">(Enter final deal amount - discount will auto-calculate)</small>
+                      </div>
                       <CInputGroup>
-                        <CInputGroupText className="input-icon"><CIcon icon={cilList} /></CInputGroupText>
-                        <CFormInput name="note" value={formData.note} onChange={handleChange} />
+                        <CInputGroupText className="input-icon"><CIcon icon={cilMoney} /></CInputGroupText>
+                        <CFormInput
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={dealAmount}
+                          onChange={(e) => handleDealAmountChange(e.target.value)}
+                          placeholder="Enter final deal amount"
+                        />
                       </CInputGroup>
+                      <small className="text-muted">Discount = Total Amount - Subsidy - Deal Amount</small>
                     </div>
 
                     <div style={{ flex: '1', minWidth: '250px' }}>

@@ -4029,6 +4029,15 @@ if (canViewPage(userPermissions, MODULES.HR_MANAGEMENT, PAGES.HR_MANAGEMENT.INCE
     });
   }
 
+
+  if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
+    purchaseItems.push({
+      component: CNavItem,
+      name: 'Harita Model Mapping',
+      to: '/harita-model-mapping',
+    });
+  }
+
   if (canViewPage(userPermissions, MODULES.PURCHASE, PAGES.PURCHASE.INWARD_STOCK)) {
     purchaseItems.push({
       component: CNavItem,
@@ -4105,6 +4114,47 @@ if (kycBufferItems.length > 0) {
     name: 'KYC Buffer',   // 👈 unique name (was "Purchase")
     icon: <CIcon icon={cilShieldAlt} customClassName="nav-icon" />,
     items: kycBufferItems,
+  })
+}
+
+
+const kycBulkDownloadItems = []
+
+
+  kycBulkDownloadItems.push({
+    component: CNavItem,
+    name: 'KYC Bulk Download',
+    to: '/kyc-bulk-download/kyc-bulk-download',
+  })
+
+
+if (kycBulkDownloadItems.length > 0) {
+  _nav.push({
+    component: CNavGroup,
+    name: 'KYC Bulk Download',   // 👈 unique name (was "Purchase")
+    icon: <CIcon icon={cilShieldAlt} customClassName="nav-icon" />,
+    items: kycBulkDownloadItems,
+  })
+}
+
+
+
+const dmsPunchingSystemItems = []
+
+
+  dmsPunchingSystemItems.push({
+    component: CNavItem,
+    name: 'Interested Vehicles Mapping',
+    to: '/dms-punching-system/interested-vehicles-mapping',
+  })
+
+
+if (dmsPunchingSystemItems.length > 0) {
+  _nav.push({
+    component: CNavGroup,
+    name: 'DMS Punching System',   // 👈 unique name (was "Purchase")
+    icon: <CIcon icon={cilShieldAlt} customClassName="nav-icon" />,
+    items: dmsPunchingSystemItems,
   })
 }
 

@@ -878,7 +878,7 @@
 //     const canUploadKyc = () => [canUploadKycInPendingApprovals, canUploadKycInApprovedTab, false, canUploadKycInAllocatedTab, canUploadKycInRejectedDiscount][tabIndex] ?? false;
 //     const canUploadFin = () => [canUploadFinanceInPendingApprovals, canUploadFinanceInApprovedTab, false, canUploadFinanceInAllocatedTab, canUploadFinanceInRejectedDiscount][tabIndex] ?? false;
 //     const canEditThis  = () => tabIndex === 0 ? canEditInPendingApprovalsTab : tabIndex === 4 ? canEditInRejectedDiscountTab : false;
-//     const getDocumentUrl = path => `https://sgm.gmplmis.com/api-dealership/api/v1/uploads${path}`;
+//     const getDocumentUrl = path => `https://gmplmis.com/dealership-api/api/v1/uploads${path}`;
 
 //     // ── Cancellation tabs ────────────────────────────────────────────────────
 //     if (tabIndex === TAB.CANCELLED || tabIndex === TAB.REJECTED_CANCELLED) {
@@ -2443,7 +2443,7 @@
 //     if (!path) return '';
 //     const idx = path.indexOf('/uploads');
 //     const rel = idx !== -1 ? path.slice(idx) : path;
-//     return `https://sgm.gmplmis.com/api-dealership/api/v1${rel}`;
+//     return `https://gmplmis.com/dealership-api/api/v1${rel}`;
 //   };
 
 //   // ═══════════════════════════════════════════════════════════════════════════
@@ -2655,7 +2655,7 @@
 //     const canUploadKyc = () => [canUploadKycInPendingApprovals, canUploadKycInApprovedTab, false, canUploadKycInAllocatedTab, canUploadKycInRejectedDiscount][tabIndex] ?? false;
 //     const canUploadFin = () => [canUploadFinanceInPendingApprovals, canUploadFinanceInApprovedTab, false, canUploadFinanceInAllocatedTab, canUploadFinanceInRejectedDiscount][tabIndex] ?? false;
 //     const canEditThis  = () => tabIndex === 0 ? canEditInPendingApprovalsTab : tabIndex === 4 ? canEditInRejectedDiscountTab : false;
-//     const getDocumentUrl = path => `https://sgm.gmplmis.com/api-dealership/api/v1/uploads${path}`;
+//     const getDocumentUrl = path => `https://gmplmis.com/dealership-api/api/v1/uploads${path}`;
 
 //     // ── Cancellation tabs ────────────────────────────────────────────────────
 //     if (tabIndex === TAB.CANCELLED || tabIndex === TAB.REJECTED_CANCELLED) {
@@ -3558,6 +3558,11 @@ const TAB_STATUSES = {
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 const DEFAULT_LIMIT     = 50;
 
+const TAB_LABELS = [
+  'Pending Approvals', 'Approved', 'Pending Allocated',
+  'Allocated', 'Rejected Discount', 'Cancelled Booking', 'Rejected Cancelled',
+];
+
 // ── Roles allowed to upload scratch cards (always visible for these roles) ──
 const SCRATCH_CARD_ALLOWED_ROLES = ['MANAGER', 'GENERAL_MANAGER', 'ADMIN', 'SUPERADMIN'];
 
@@ -3592,11 +3597,13 @@ const BookingList = () => {
   const [cancelledLoading,      setCancelledLoading]      = useState(false);
   const [cancelledSearch,       setCancelledSearch]       = useState('');
 
-  // Debounce timer ref
-  const searchTimer = useRef(null);
+  // Debounce timer refs
+  const searchTimer        = useRef(null);
+  const globalSearchTimer  = useRef(null);
 
-  // ── Stable ref for search input so it NEVER loses focus on re-render ──
-  const searchInputRef = useRef(null);
+  // ── Stable refs so inputs never lose focus on re-render ──
+  const searchInputRef       = useRef(null);
+  const globalSearchInputRef = useRef(null);
 
   // Export modal
   const [exportLoading,   setExportLoading]   = useState(false);
@@ -3740,17 +3747,9 @@ const BookingList = () => {
   const canUploadFinanceInAllocatedTab     = canCreateInAllocatedTab;
   const canUploadFinanceInRejectedDiscount = canCreateInRejectedDiscountTab;
 
-  // ── Swap Vehicle permission (Pending Approvals + Approved tabs) ───────────
   const canSwapVehicleInPendingApprovals = canUpdateInPendingApprovalsTab;
   const canSwapVehicleInApprovedTab      = canUpdateInApprovedTab;
 
-  // ── ROLE-BASED PERMISSION FOR SCRATCH CARD UPLOAD ─────────────────────────
-  // Upload Scratch Card is always visible in the Allocated tab for these roles.
-  //
-  // /me returns user.roles as an array of objects:
-  //   [{ _id, name: 'MANAGER', isSuperAdmin: false, permissionsCount: 0 }]
-  //
-  // We also honour the boolean role flags returned by /me as a fallback.
   const userRoleNames = (Array.isArray(user?.roles) ? user.roles : [])
     .map(r => {
       if (typeof r === 'string') return r.toUpperCase();
@@ -3759,7 +3758,6 @@ const BookingList = () => {
     })
     .filter(Boolean);
 
-  // Fallback: boolean flags on user
   const hasRoleFlag =
     user?.is_superadmin === true ||
     user?.is_admin === true ||
@@ -3768,7 +3766,6 @@ const BookingList = () => {
 
   const canUploadScratchCard =
     hasRoleFlag || userRoleNames.some(r => SCRATCH_CARD_ALLOWED_ROLES.includes(r));
-  // ──────────────────────────────────────────────────────────────────────────
 
   const canPrintInTab = {
     0: canCreateInPendingApprovalsTab, 1: canCreateInApprovedTab,
@@ -3950,9 +3947,11 @@ const BookingList = () => {
   // ═══════════════════════════════════════════════════════════════════════════
   const handleTabChange = useCallback((tab) => {
     clearTimeout(searchTimer.current);
+    clearTimeout(globalSearchTimer.current);
     setActiveTab(tab);
     setLocalSearch('');
     if (searchInputRef.current) searchInputRef.current.value = '';
+    if (globalSearchInputRef.current) globalSearchInputRef.current.value = '';
 
     if (tab < TAB.CANCELLED) {
       setTabData(prev => {
@@ -4004,7 +4003,7 @@ const BookingList = () => {
   }, [fetchTab]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SEARCH
+  // PER-TAB SEARCH
   // ═══════════════════════════════════════════════════════════════════════════
   const activeTabRef = useRef(activeTab);
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
@@ -4029,6 +4028,101 @@ const BookingList = () => {
       });
     }, 500);
   }, [fetchTab]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GLOBAL SEARCH
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Map a booking status to the tab it belongs in
+  const getTabFromStatus = (status) => {
+    if (!status) return null;
+    if (TAB_STATUSES[TAB.PENDING].includes(status))           return TAB.PENDING;
+    if (TAB_STATUSES[TAB.APPROVED].includes(status))          return TAB.APPROVED;
+    if (TAB_STATUSES[TAB.PENDING_ALLOCATED].includes(status)) return TAB.PENDING_ALLOCATED;
+    if (TAB_STATUSES[TAB.ALLOCATED].includes(status))         return TAB.ALLOCATED;
+    if (TAB_STATUSES[TAB.REJECTED].includes(status))          return TAB.REJECTED;
+    return null; // cancelled tabs use a different API
+  };
+
+  const runGlobalSearch = useCallback(async (query) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    try {
+      const res = await axiosInstance.get('/bookings', {
+        params: {
+          search: trimmed,
+          bookingType: 'BRANCH',
+          page: 1,
+          limit: 10,
+          searchFields: 'bookingNumber,customerDetails.name',
+        },
+      });
+
+      const bookings = res.data?.data?.bookings || [];
+      if (bookings.length === 0) {
+        showError(`No booking found for "${trimmed}"`);
+        return;
+      }
+
+      // Prefer exact bookingNumber match
+      const q = trimmed.toLowerCase();
+      const exact = bookings.find(b => (b.bookingNumber || '').toLowerCase() === q);
+      const match = exact || bookings[0];
+
+      const targetTab = getTabFromStatus(match.status);
+      if (targetTab === null) {
+        showError(
+          `Booking "${match.bookingNumber}" is in a status ("${match.status}") not shown in any tab.`
+        );
+        return;
+      }
+
+      if (!canViewBookingInTab[targetTab]) {
+        showError(`You don't have permission to view the tab containing this booking.`);
+        return;
+      }
+
+      // Clear per-tab debounce & switch tab
+      clearTimeout(searchTimer.current);
+      setActiveTab(targetTab);
+
+      // Fill the per-tab search box too, so the user sees the filter
+      setLocalSearch(match.bookingNumber || trimmed);
+      if (searchInputRef.current) searchInputRef.current.value = match.bookingNumber || trimmed;
+
+      const limit = tabData[targetTab]?.limit || DEFAULT_LIMIT;
+      fetchTab(targetTab, 1, limit, match.bookingNumber || trimmed);
+
+      // No success popup — silent, as requested
+    } catch (err) {
+      showError(err.response?.data?.message || 'Global search failed');
+    }
+  }, [canViewBookingInTab, fetchTab, tabData]);
+
+  const handleGlobalSearchChange = useCallback((value) => {
+    clearTimeout(globalSearchTimer.current);
+
+    // ── If cleared → revert back to normal tab data (unfiltered) ──
+    if (!value.trim()) {
+      const tab = activeTabRef.current;
+      if (tab < TAB.CANCELLED) {
+        // Clear per-tab search so the visible list matches the reset
+        setLocalSearch('');
+        if (searchInputRef.current) searchInputRef.current.value = '';
+
+        const limit = tabData[tab]?.limit || DEFAULT_LIMIT;
+        setTab(tab, { ...emptyTab(), limit });
+        fetchTab(tab, 1, limit, '');
+      }
+      return;
+    }
+
+    // Otherwise debounce and run the global search
+    globalSearchTimer.current = setTimeout(() => {
+      runGlobalSearch(value);
+    }, 500);
+  }, [runGlobalSearch, setTab, fetchTab, tabData]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CANCELLATION CLIENT-SIDE FILTER
@@ -4342,10 +4436,9 @@ const BookingList = () => {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SWAP VEHICLE HANDLERS (Pending Approvals + Approved tabs)
+  // SWAP VEHICLE HANDLERS
   // ═══════════════════════════════════════════════════════════════════════════
   const handleOpenSwapVehicle = (id) => {
-    // Only allowed on tabs 0 (Pending Approvals) and 1 (Approved)
     const allowed =
       (activeTab === TAB.PENDING  && canSwapVehicleInPendingApprovals) ||
       (activeTab === TAB.APPROVED && canSwapVehicleInApprovedTab);
@@ -4384,7 +4477,6 @@ const BookingList = () => {
       setSelectedBookingForSwap(null);
       refreshCurrentTab();
     } catch (err) {
-      // ── Prefer the detailed `error` field, then `message`, then axios fallbacks ──
       const data = err.response?.data || {};
       const msg =
         data.error ||
@@ -4463,7 +4555,6 @@ const BookingList = () => {
   // SCRATCH CARD HANDLERS (UPLOAD)
   // ═══════════════════════════════════════════════════════════════════════════
   const handleOpenScratchCardModal = async (booking) => {
-    // Role-based permission check
     if (!canUploadScratchCard) {
       showError('You do not have permission to upload scratch cards');
       return;
@@ -4582,10 +4673,8 @@ const BookingList = () => {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // DOWNLOAD SCHEME FORM (as PDF via html2pdf.js — no print header/footer)
+  // DOWNLOAD SCHEME FORM (PDF)
   // ═══════════════════════════════════════════════════════════════════════════
-
-  // Lazily loads html2pdf.js from CDN once, caches on window.html2pdf
   const loadHtml2Pdf = () => {
     return new Promise((resolve, reject) => {
       if (window.html2pdf) {
@@ -4618,48 +4707,21 @@ const BookingList = () => {
     const financierName = booking?.payment?.financer?.name || '';
     const today = new Date().toLocaleDateString('en-GB');
 
-    // Two explicit A4 pages. min-height 290mm (< A4's 297mm) prevents a
-    // phantom third page from being emitted when html2canvas rounds up.
     const innerHtml = `
       <div id="scheme-form-page">
-        <!-- ================= PAGE 1 ================= -->
         <div class="pdf-page" style="width:210mm;min-height:290mm;padding:12mm 14mm 18mm 14mm;margin:0 auto 0 auto;background:#fff;font-family:'Times New Roman',serif;font-size:12.5px;line-height:1.55;color:#000;box-sizing:border-box;">
-
           <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:14px;">
             <p style="font-size:20px;font-weight:bold;letter-spacing:0.5px;margin:0;">GANDHI MOTORS PVT. LTD.</p>
             <p style="font-size:16px;font-weight:bold;margin:6px 0 2px;text-decoration:underline;">"SCRATCH &amp; WIN" OFFER</p>
             <p style="font-size:13px;font-style:italic;margin:0 0 4px;">Customer Acknowledgment &amp; Consent Form</p>
           </div>
-
-          <div style="display:flex;align-items:flex-end;margin-bottom:12px;">
-            <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Customer Name:</span>
-            <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${customerName}</span>
-          </div>
-          <div style="display:flex;align-items:flex-end;margin-bottom:12px;">
-            <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Address:</span>
-            <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${address}</span>
-          </div>
-          <div style="display:flex;align-items:flex-end;margin-bottom:12px;">
-            <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Contact Number:</span>
-            <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${contactNumber}</span>
-          </div>
-          <div style="display:flex;align-items:flex-end;margin-bottom:12px;">
-            <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Vehicle Model / Variant:</span>
-            <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${vehicleModel}</span>
-          </div>
-          <div style="display:flex;align-items:flex-end;margin-bottom:12px;">
-            <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Booking / Invoice No.:</span>
-            <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${bookingNumber}</span>
-          </div>
-          <div style="display:flex;align-items:flex-end;margin-bottom:12px;">
-            <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Financier (Bank / NBFC) Name:</span>
-            <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${financierName}</span>
-          </div>
-          <div style="display:flex;align-items:flex-end;margin-bottom:12px;">
-            <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Date:</span>
-            <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${today}</span>
-          </div>
-
+          <div style="display:flex;align-items:flex-end;margin-bottom:12px;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Customer Name:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${customerName}</span></div>
+          <div style="display:flex;align-items:flex-end;margin-bottom:12px;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Address:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${address}</span></div>
+          <div style="display:flex;align-items:flex-end;margin-bottom:12px;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Contact Number:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${contactNumber}</span></div>
+          <div style="display:flex;align-items:flex-end;margin-bottom:12px;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Vehicle Model / Variant:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${vehicleModel}</span></div>
+          <div style="display:flex;align-items:flex-end;margin-bottom:12px;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Booking / Invoice No.:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${bookingNumber}</span></div>
+          <div style="display:flex;align-items:flex-end;margin-bottom:12px;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Financier (Bank / NBFC) Name:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${financierName}</span></div>
+          <div style="display:flex;align-items:flex-end;margin-bottom:12px;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Date:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${today}</span></div>
           <div style="font-weight:bold;font-size:14px;margin:18px 0 8px;text-align:center;text-decoration:underline;">Terms &amp; Conditions of the Offer</div>
           <ol style="padding-left:20px;margin:0 0 10px;">
             <li style="margin-bottom:6px;text-align:justify;">This "Scratch &amp; Win" offer ("the Offer") is available only to customers who purchase a vehicle through select bank/NBFC finance (loan) from GANDHI MOTORS PVT. LTD. ("the Dealership").</li>
@@ -4674,16 +4736,12 @@ const BookingList = () => {
             <li style="margin-bottom:6px;text-align:justify;">This is a promotional discount scheme offered voluntarily by the Dealership, funded entirely from its own margin, to make vehicle finance more attractive to customers. As no payment, fee, or other consideration is charged to the customer for the chance to receive a discount, the Offer does not constitute a lottery, prize competition, or game of chance for consideration.</li>
           </ol>
         </div>
-
-        <!-- ================= PAGE 2 ================= -->
         <div class="pdf-page" style="width:210mm;min-height:290mm;padding:12mm 14mm 18mm 14mm;margin:0 auto;background:#fff;font-family:'Times New Roman',serif;font-size:12.5px;line-height:1.55;color:#000;box-sizing:border-box;page-break-before:always;break-before:page;">
-
           <ol start="11" style="padding-left:20px;margin:0 0 10px;">
             <li style="margin-bottom:6px;text-align:justify;">For any queries or grievances relating to the Offer, customers may write to us contact us at gandhitvsnashik@gmail.com.</li>
             <li style="margin-bottom:6px;text-align:justify;">The Dealership may amend these terms at any time. Any such change will apply prospectively only and will not affect a discount already confirmed to a customer.</li>
             <li style="margin-bottom:6px;text-align:justify;">Nothing in these terms, or in the acknowledgment below, limits or affects any right available to the customer under the Consumer Protection Act, 2019, or any other applicable law.</li>
           </ol>
-
           <div style="font-weight:bold;font-size:13px;margin:18px 0 8px;text-align:center;text-decoration:underline;">Customer Acknowledgment &amp; Declaration</div>
           <p style="margin-bottom:8px;">I, the undersigned, confirm and declare that:</p>
           <ul style="list-style:none;padding-left:0;margin:0 0 12px;">
@@ -4694,40 +4752,23 @@ const BookingList = () => {
             <li style="margin-bottom:6px;text-align:justify;"><b>(e)</b> The discount amount revealed on my card is ₹_______________________, which I accept as final and understand will be deducted from the deal amount / price in my vehicle's tax invoice.</li>
             <li style="margin-bottom:6px;text-align:justify;"><b>(f)</b> I understand and acknowledge that, as no fee or other consideration was charged to me for the Offer, it is a promotional discount and not a lottery, prize competition, or game of chance requiring payment.</li>
           </ul>
-
           <div style="margin-top:26px;page-break-inside:avoid;break-inside:avoid;">
             <div style="border-bottom:1px dotted #000;height:32px;margin-bottom:4px;"></div>
             <div style="font-size:11.5px;font-weight:bold;">Signature of Customer</div>
-            <div style="display:flex;align-items:flex-end;margin-top:10px;">
-              <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:130px;">Full Name (Block Letters):</span>
-              <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${customerName}</span>
-            </div>
-            <div style="display:flex;align-items:flex-end;">
-              <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:130px;">Date:</span>
-              <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${today}</span>
-              <span style="font-weight:bold;white-space:nowrap;margin:0 6px 0 10px;min-width:60px;">Place:</span>
-              <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">Sangamner</span>
-            </div>
+            <div style="display:flex;align-items:flex-end;margin-top:10px;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:130px;">Full Name (Block Letters):</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${customerName}</span></div>
+            <div style="display:flex;align-items:flex-end;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:130px;">Date:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${today}</span><span style="font-weight:bold;white-space:nowrap;margin:0 6px 0 10px;min-width:60px;">Place:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">Sangamner</span></div>
           </div>
-
           <div style="margin-top:26px;page-break-inside:avoid;break-inside:avoid;">
             <p style="font-weight:bold;margin-bottom:8px;">For GANDHI MOTORS PVT. LTD.</p>
             <div style="border-bottom:1px dotted #000;height:32px;margin-bottom:4px;width:60%;"></div>
             <div style="font-size:11.5px;font-weight:bold;">Signature of Dealership Manager / Representative</div>
-            <div style="display:flex;align-items:flex-end;margin-top:10px;width:60%;">
-              <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Name &amp; Designation:</span>
-              <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;"></span>
-            </div>
-            <div style="display:flex;align-items:flex-end;width:60%;">
-              <span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Date:</span>
-              <span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${today}</span>
-            </div>
+            <div style="display:flex;align-items:flex-end;margin-top:10px;width:60%;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Name &amp; Designation:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;"></span></div>
+            <div style="display:flex;align-items:flex-end;width:60%;"><span style="font-weight:bold;white-space:nowrap;margin-right:6px;min-width:170px;">Date:</span><span style="flex:1;border-bottom:1px dotted #000;min-height:18px;padding:0 4px;">${today}</span></div>
           </div>
         </div>
       </div>
     `;
 
-    // Isolated iframe, off-screen horizontally only
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.left = '-10000px';
@@ -4755,13 +4796,7 @@ const BookingList = () => {
           margin: 0,
           filename: `Scratch_Win_Customer_Acknowledgment_${bookingNumber || 'form'}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            scrollX: 0,
-            scrollY: 0,
-          },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
           pagebreak: { mode: ['css', 'legacy'], before: '.pdf-page + .pdf-page', avoid: '.pdf-page' },
         })
@@ -4792,7 +4827,6 @@ const BookingList = () => {
     const canEditThis  = () => tabIndex === 0 ? canEditInPendingApprovalsTab : tabIndex === 4 ? canEditInRejectedDiscountTab : false;
     const getDocumentUrl = path => `https://gmplmis.com/dealership-api/api/v1/uploads${path}`;
 
-    // ── Cancellation tabs ────────────────────────────────────────────────────
     if (tabIndex === TAB.CANCELLED || tabIndex === TAB.REJECTED_CANCELLED) {
       const raw      = tabIndex === TAB.CANCELLED ? cancelledPendingData : cancelledRejectedData;
       const filtered = getFilteredCancelled(raw);
@@ -4859,7 +4893,6 @@ const BookingList = () => {
       );
     }
 
-    // ── Booking tabs 0–4 ─────────────────────────────────────────────────────
     const td      = tabData[tabIndex];
     const records = td.docs;
 
@@ -5026,7 +5059,6 @@ const BookingList = () => {
                       </CTableDataCell>
                     )}
 
-                    {/* ── Scheme column (Allocated tab only) ── */}
                     {tabIndex === 3 && (
                       <CTableDataCell>
                         {booking.scheme === 'yes' ? (
@@ -5035,7 +5067,6 @@ const BookingList = () => {
                               Scheme
                             </CDropdownToggle>
                             <CDropdownMenu>
-                              {/* Upload Scratch Card — always shown for MANAGER / GENERAL_MANAGER / ADMIN / SUPERADMIN */}
                               {canUploadScratchCard && booking.status === 'ALLOCATED' && (
                                 <CDropdownItem
                                   onClick={() => handleOpenScratchCardModal(booking)}
@@ -5045,7 +5076,6 @@ const BookingList = () => {
                                 </CDropdownItem>
                               )}
 
-                              {/* View Scratch Docs */}
                               {canViewBookingInTab[3] && booking.status === 'ALLOCATED' && (
                                 <CDropdownItem
                                   onClick={() => handleViewScratchDocs(booking)}
@@ -5055,7 +5085,6 @@ const BookingList = () => {
                                 </CDropdownItem>
                               )}
 
-                              {/* Download Scheme Form */}
                               <CDropdownItem
                                 onClick={() => handleDownloadSchemeForm(booking)}
                                 disabled={isGeneratingSchemeForm}
@@ -5130,7 +5159,6 @@ const BookingList = () => {
                           <MenuItem onClick={() => handleDelete(bid)} style={{ color: 'black' }}><CIcon icon={cilTrash} className="me-2" /> Delete</MenuItem>
                         )}
 
-                        {/* ── Swap Vehicle (Pending Approvals + Approved tabs) ── */}
                         {tabIndex === 0 && canSwapVehicleInPendingApprovals && (
                           <MenuItem onClick={() => handleOpenSwapVehicle(bid)} style={{ color: 'black' }}>
                             <CIcon icon={cilSwapHorizontal} className="me-2" /> Swap Vehicle
@@ -5209,9 +5237,36 @@ const BookingList = () => {
           <div>
             {canCreateAllBooking && (
               <Link to="/new-booking">
-                <CButton size="sm" className="action-btn me-1"><CIcon icon={cilPlus} className="icon" /> New Booking</CButton>
+                <CButton size="sm" className="action-btn me-1">
+                  <CIcon icon={cilPlus} className="icon" /> New Booking
+                </CButton>
               </Link>
             )}
+          </div>
+
+          {/* ── Global Search (inline) ── */}
+          <div className="d-flex align-items-center gap-2">
+            <CFormLabel className="mb-0 text-nowrap" style={{ fontSize: '14px' }}>
+              Global Search:
+            </CFormLabel>
+            <input
+              ref={globalSearchInputRef}
+              type="text"
+              defaultValue=""
+              style={{
+                maxWidth: '320px',
+                height: '30px',
+                borderRadius: '0',
+                border: '1px solid #ced4da',
+                padding: '0 8px',
+                outline: 'none',
+                fontSize: '14px',
+              }}
+              className="d-inline-block square-search"
+              onChange={e => handleGlobalSearchChange(e.target.value)}
+              placeholder="Search Booking ID / Customer in all tabs…"
+              autoComplete="off"
+            />
           </div>
         </CCardHeader>
 
@@ -5239,7 +5294,7 @@ const BookingList = () => {
             ))}
           </CNav>
 
-          {/* ── Search bar ── */}
+          {/* ── Per-tab search bar ── */}
           <div className="d-flex justify-content-end mb-3">
             <CFormLabel className="mt-1 m-1">Search:</CFormLabel>
             <input
@@ -5524,7 +5579,6 @@ const BookingList = () => {
             <CAlert color="warning">No scratch card data available.</CAlert>
           ) : (
             <>
-              {/* Booking summary */}
               <div className="mb-3 p-3 border rounded bg-light">
                 <div className="row">
                   <div className="col-md-6 mb-2">
@@ -5546,7 +5600,6 @@ const BookingList = () => {
                 </div>
               </div>
 
-              {/* Scratch cards list */}
               {(!scratchDocsData.scratchCards || scratchDocsData.scratchCards.length === 0) ? (
                 <CAlert color="info">No scratch cards found for this booking.</CAlert>
               ) : (
@@ -5634,7 +5687,6 @@ const BookingList = () => {
       <FinanceView open={financeModalVisible} onClose={() => { setFinanceModalVisible(false); setFinanceBookingId(null); }} financeData={financeData} refreshData={refreshCurrentTab} bookingId={financeBookingId} />
       <ChassisNumberModal show={showChassisModal} onClose={() => { setShowChassisModal(false); setIsUpdateChassis(false); setSelectedBookingForChassis(null); setChassisError(''); }} onSave={handleSaveChassisNumber} isLoading={chassisLoading} booking={tabData[activeTab]?.docs?.find(b => b._id === selectedBookingForChassis || b.id === selectedBookingForChassis)} isUpdate={isUpdateChassis} errorMessage={chassisError} onClearError={() => setChassisError('')} />
 
-      {/* ── Swap Vehicle Modal ── */}
       <SwapVehicleModal
         show={swapVehicleModal}
         onClose={() => { setSwapVehicleModal(false); setSelectedBookingForSwap(null); setSwapVehicleError(''); }}
@@ -5652,7 +5704,6 @@ const BookingList = () => {
 };
 
 export default BookingList;
-
 
 
 
@@ -6587,7 +6638,7 @@ export default BookingList;
 //     const canUploadKyc = () => [canUploadKycInPendingApprovals, canUploadKycInApprovedTab, false, canUploadKycInAllocatedTab, canUploadKycInRejectedDiscount][tabIndex] ?? false;
 //     const canUploadFin = () => [canUploadFinanceInPendingApprovals, canUploadFinanceInApprovedTab, false, canUploadFinanceInAllocatedTab, canUploadFinanceInRejectedDiscount][tabIndex] ?? false;
 //     const canEditThis  = () => tabIndex === 0 ? canEditInPendingApprovalsTab : tabIndex === 4 ? canEditInRejectedDiscountTab : false;
-//     const getDocumentUrl = path => `https://sgm.gmplmis.com/api-dealership/api/v1/uploads${path}`;
+//     const getDocumentUrl = path => `https://gmplmis.com/dealership-api/api/v1/uploads${path}`;
 
 //     // ── Cancellation tabs ────────────────────────────────────────────────────
 //     if (tabIndex === TAB.CANCELLED || tabIndex === TAB.REJECTED_CANCELLED) {
@@ -8043,7 +8094,7 @@ export default BookingList;
 //     const canUploadKyc = () => [canUploadKycInPendingApprovals, canUploadKycInApprovedTab, false, canUploadKycInAllocatedTab, canUploadKycInRejectedDiscount][tabIndex] ?? false;
 //     const canUploadFin = () => [canUploadFinanceInPendingApprovals, canUploadFinanceInApprovedTab, false, canUploadFinanceInAllocatedTab, canUploadFinanceInRejectedDiscount][tabIndex] ?? false;
 //     const canEditThis  = () => tabIndex === 0 ? canEditInPendingApprovalsTab : tabIndex === 4 ? canEditInRejectedDiscountTab : false;
-//     const getDocumentUrl = path => `https://sgm.gmplmis.com/api-dealership/api/v1/uploads${path}`;
+//     const getDocumentUrl = path => `https://gmplmis.com/dealership-api/api/v1/uploads${path}`;
 
 //     // ── Cancellation tabs ────────────────────────────────────────────────────
 //     if (tabIndex === TAB.CANCELLED || tabIndex === TAB.REJECTED_CANCELLED) {

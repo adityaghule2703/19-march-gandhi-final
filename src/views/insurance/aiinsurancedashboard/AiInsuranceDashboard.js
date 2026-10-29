@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { CButton, CSpinner } from '@coreui/react';
 import CIcon from '@coreui/icons-react';
 import { cilReload } from '@coreui/icons';
 import {
   Cpu, CheckCircle, AlertCircle,
-  Car, User, Hash, Activity, Clock, Inbox,
+  Car, User, Hash, Activity, Clock, Inbox, Phone, Terminal,
 } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileExcel } from '@fortawesome/free-solid-svg-icons';
@@ -17,7 +17,7 @@ import './AiInsuranceDashboard.css';
 /* CONFIG                                                              */
 /* ------------------------------------------------------------------ */
 const API_BASE = '/insurancepaneldashboard';
-const CURRENT_BOOKING_API = '/current/current-booking';
+const MONITOR_STATUS_API = '/monitor/status';
 const BOOKING_TYPE = 'BRANCH';
 const POLL_INTERVAL = 5000;
 
@@ -83,16 +83,23 @@ const SUMMARY_MAP = {
   FAILED:          'failed',
 };
 
-/* Map backend current-booking status -> visual treatment */
-const STATUS_MAP = {
-  processing: {
-    label: 'Processing',
+/* Map monitor status + staleness -> visual treatment */
+const MONITOR_STATUS_MAP = {
+  running: {
+    label: 'Running',
     color: '#1976D2',
     bg: '#E3F2FD',
     icon: Clock,
     pulse: true,
   },
-  success: {
+  idle: {
+    label: 'Idle',
+    color: '#8a6f63',
+    bg: '#f1efe9',
+    icon: Inbox,
+    pulse: false,
+  },
+  completed: {
     label: 'Completed',
     color: '#2E7D32',
     bg: '#E8F5E9',
@@ -106,11 +113,11 @@ const STATUS_MAP = {
     icon: AlertCircle,
     pulse: false,
   },
-  idle: {
-    label: 'Idle',
-    color: '#8a6f63',
-    bg: '#f1efe9',
-    icon: Inbox,
+  stale: {
+    label: 'Stale',
+    color: '#F57C00',
+    bg: '#FFF3E0',
+    icon: AlertCircle,
     pulse: false,
   },
 };
@@ -125,17 +132,98 @@ const fmtDate = (d) =>
 
 const todayISO = () => new Date().toISOString().split('T')[0];
 
-const resolveStatus = (status) =>
-  STATUS_MAP[status?.toLowerCase()] || STATUS_MAP.idle;
+const resolveMonitorStatus = (monitor) => {
+  if (!monitor) return MONITOR_STATUS_MAP.idle;
+  const stale =
+    monitor.isStale === true ||
+    (monitor.isAlive === false && monitor.status?.toLowerCase() === 'running');
+  if (stale) return MONITOR_STATUS_MAP.stale;
+  return MONITOR_STATUS_MAP[monitor.status?.toLowerCase()] || MONITOR_STATUS_MAP.idle;
+};
 
 const isUnknown = (val) =>
   !val || ['unknown', 'n/a', 'na', '-', ''].includes(String(val).trim().toLowerCase());
 
+const fmtDuration = (seconds) => {
+  const s = Number(seconds) || 0;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h) return `${h}h ${m}m`;
+  if (m) return `${m}m ${sec}s`;
+  return `${sec}s`;
+};
+
+const fmtTime = (ms) =>
+  ms ? new Date(ms).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+
+/* Log level -> css class + optional icon */
+const LOG_LEVEL_CLASS = {
+  info:    'log-info',
+  warn:    'log-warn',
+  warning: 'log-warn',
+  error:   'log-error',
+  success: 'log-success',
+  debug:   'log-debug',
+};
+
 /* ------------------------------------------------------------------ */
-/* CURRENT BOOKING CARD                                                */
+/* TERMINAL LOGS PANEL                                                 */
+/* ------------------------------------------------------------------ */
+const TerminalLogs = ({ logs }) => {
+  const bodyRef = useRef(null);
+
+  /* auto-scroll only if user is near bottom (don't hijack manual scroll) */
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (nearBottom) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [logs]);
+
+  const lines = Array.isArray(logs) ? logs : [];
+
+  return (
+    <div className="cb-terminal">
+      <div className="cb-terminal-head">
+        <span className="cb-terminal-title">
+          <Terminal size={13} /> Live logs
+        </span>
+        <span className="cb-terminal-count">{lines.length} lines</span>
+      </div>
+      <div
+        className="cb-terminal-body"
+        ref={bodyRef}
+        role="log"
+        aria-live="polite"
+        aria-label="Automation logs"
+      >
+        {lines.length === 0 ? (
+          <div className="cb-terminal-empty">No log output yet…</div>
+        ) : (
+          lines.map((entry, i) => {
+            const level = String(entry?.level || 'info').toLowerCase();
+            const cls = LOG_LEVEL_CLASS[level] || 'log-info';
+            return (
+              <div className={`cb-log-line ${cls}`} key={`${entry?.time || ''}-${i}`}>
+                <span className="cb-log-time">{entry?.time || '--:--:--'}</span>
+                <span className="cb-log-msg">{entry?.message ?? ''}</span>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------------------ */
+/* CURRENT BOOKING CARD — /monitor/status                              */
 /* ------------------------------------------------------------------ */
 const CurrentBookingCard = () => {
-  const [booking, setBooking] = useState(null);
+  const [monitor, setMonitor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
@@ -143,16 +231,16 @@ const CurrentBookingCard = () => {
     if (!silent) setLoading(true);
     setError(null);
     try {
-      const { data } = await axiosInstance.get(CURRENT_BOOKING_API);
-      if (data.success && data.booking) {
-        setBooking(data.booking);
+      const { data } = await axiosInstance.get(MONITOR_STATUS_API);
+      if (data.success && data.data) {
+        setMonitor(data.data);
         setError(null);
       } else {
-        setBooking(null);
-        setError(data.message || 'No active booking');
+        setMonitor(null);
+        setError(data.message || 'No monitor data');
       }
     } catch (e) {
-      setBooking(null);
+      setMonitor(null);
       setError(e.response?.data?.message || e.message);
     } finally {
       if (!silent) setLoading(false);
@@ -161,30 +249,36 @@ const CurrentBookingCard = () => {
 
   useEffect(() => { fetchCurrent(); }, [fetchCurrent]);
 
-  /* auto-poll while processing */
+  /* auto-poll while running and alive */
   useEffect(() => {
-    if (!booking || booking.status?.toLowerCase() !== 'processing') return undefined;
+    const isRunning =
+      monitor?.status?.toLowerCase() === 'running' &&
+      monitor?.isAlive !== false &&
+      monitor?.isStale !== true;
+    if (!isRunning) return undefined;
     const id = setInterval(() => fetchCurrent({ silent: true }), POLL_INTERVAL);
     return () => clearInterval(id);
-  }, [booking, fetchCurrent]);
+  }, [monitor?.status, monitor?.isAlive, monitor?.isStale, fetchCurrent]);
 
   /* ----- derived (all null-safe) ----- */
-  const status      = resolveStatus(booking?.status);
+  const status      = resolveMonitorStatus(monitor);
   const StatusIcon  = status.icon;
-  const currentStep = booking?.currentStep || '';
+  const currentStep = monitor?.currentStep || '';
+  const booking     = monitor?.currentBooking;
 
   const rows = booking
     ? [
-        { icon: Hash,     label: 'Booking No.', value: booking.number },
-        { icon: Car,      label: 'Service',     value: booking.service },
-        { icon: User,     label: 'Customer',    value: booking.customer },
+        { icon: Hash,     label: 'Booking No.', value: booking.bookingId },
+        { icon: User,     label: 'Customer',    value: booking.customerName },
+        { icon: Phone,    label: 'Mobile',      value: booking.mobile },
         { icon: Cpu,      label: 'Model',       value: booking.model },
-        { icon: Activity, label: 'Chassis',     value: booking.chassis },
+        { icon: Activity, label: 'Chassis',     value: booking.chassisNumber },
       ]
     : [];
 
-  /* Explicit empty state — booking missing AND no error */
-  const isEmpty = !loading && !error && !booking;
+  /* Explicit empty state — loaded, no error, no currentBooking AND idle */
+  const isEmpty =
+    !loading && !error && !booking && monitor?.status?.toLowerCase() !== 'running';
 
   return (
     <div className="current-booking-card">
@@ -195,7 +289,10 @@ const CurrentBookingCard = () => {
               className={`cb-live-dot ${status.pulse ? 'pulse' : ''}`}
               style={{ background: status.color }}
             />
-            Live
+            {status.label}
+            {monitor?.startedAt && (
+              <span className="cb-eyebrow-meta">• started {fmtTime(new Date(monitor.startedAt).getTime())}</span>
+            )}
           </span>
           <h3 className="cb-title">Current Booking</h3>
         </div>
@@ -235,25 +332,63 @@ const CurrentBookingCard = () => {
             {currentStep && (
               <span className="cb-status-step">• {currentStep}</span>
             )}
+            {(monitor?.isStale || monitor?.isAlive === false) && (
+              <span className="cb-status-step">
+                • last heartbeat {fmtTime(monitor.lastHeartbeat)}
+              </span>
+            )}
           </div>
 
           <div className="cb-grid">
-            {rows.map(({ icon: Icon, label, value }) => {
-              const empty = isUnknown(value);
-              return (
-                <div className="cb-row" key={label}>
-                  <div className="cb-row-icon">
-                    <Icon size={15} />
-                  </div>
-                  <div className="cb-row-content">
-                    <span className="cb-row-label">{label}</span>
-                    <span className={`cb-row-value ${empty ? 'is-empty' : ''}`}>
-                      {empty ? '—' : value}
-                    </span>
-                  </div>
+            {rows.length === 0 ? (
+              <div className="cb-row">
+                <div className="cb-row-content">
+                  <span className="cb-row-label">Automation</span>
+                  <span className="cb-row-value is-empty">—</span>
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              rows.map(({ icon: Icon, label, value }) => {
+                const empty = isUnknown(value);
+                return (
+                  <div className="cb-row" key={label}>
+                    <div className="cb-row-icon">
+                      <Icon size={15} />
+                    </div>
+                    <div className="cb-row-content">
+                      <span className="cb-row-label">{label}</span>
+                      <span className={`cb-row-value ${empty ? 'is-empty' : ''}`}>
+                        {empty ? '—' : value}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* ---------- TERMINAL LOGS ---------- */}
+          <TerminalLogs logs={monitor?.logs} />
+
+          {/* Small footer with heartbeat / totals */}
+          <div className="cb-footer">
+            <span>
+              <Activity size={12} />
+              {monitor?.secondsSinceHeartbeat != null
+                ? ` ${fmtDuration(monitor.secondsSinceHeartbeat)} since heartbeat`
+                : ` last heartbeat ${fmtTime(monitor?.lastHeartbeat) || '—'}`}
+            </span>
+            {monitor?.totals && (
+              <span>
+                <CheckCircle size={12} />
+                {` found ${monitor.totals.found ?? 0} • eligible ${monitor.totals.eligible ?? 0} • done ${monitor.totals.processed ?? 0} • ok ${monitor.totals.success ?? 0} • fail ${monitor.totals.failed ?? 0}`}
+              </span>
+            )}
+            {monitor?.logs?.length > 0 && (
+              <span>
+                <Terminal size={12} /> {monitor.logs.length} log entries
+              </span>
+            )}
           </div>
         </>
       )}

@@ -2,7 +2,7 @@ import React from 'react';
 
 
 
-
+const HaritaModelMapping = React.lazy(() => import('../views/purchase/HaritaModelMapping'))
 const StockAvailabilityDashboard = React.lazy(() => import('../views/purchase/StockAvailabilityDashboard'))
 const MisOnlyVehicles = React.lazy(() => import('../views/purchase/MisOnlyVehicles'))
 const AdvantageTVSVehicles = React.lazy(() => import('../views/purchase/AdvantageTVSVehicles'))
@@ -23,6 +23,7 @@ export const purchaseRoutes = [
   { path: '/mis-only-vehicles', name: 'MIS Only Vehicles', element: MisOnlyVehicles},
   { path: '/advantage-tvs-vehicles', name: 'Advantage TVS Vehicles', element: AdvantageTVSVehicles},
   { path: '/advantage-model-mapping', name: 'Advantage Model Mapping', element: AdvantageModelMapping},
+  { path: '/harita-model-mapping', name: 'Harita Model Mapping', element: HaritaModelMapping},
   { path: '/inward-stock', name: 'Inward Stock', element: InwardStock},
   { path: '/stock-dashboard', name: 'Stock Dashboard', element: StockDashboard},
    { path: '/purchase-order-dashboard', name: 'Purchase Order Dashboard', element: PurchaseOrderDashboard},

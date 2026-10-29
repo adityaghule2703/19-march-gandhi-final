@@ -12,7 +12,7 @@ const config = {
             // baseURL : 'https://gmplmis.com/dealership-api/api/v1'
 
               // baseURL : 'https://gmplmis.com/dealership-api/api/v1'
-
+ 
               baseURL : "https://gmplmis.com/dealership-api/api/v1"
 
             // baseURL : "http://192.168.241.113:3009/api/v1"

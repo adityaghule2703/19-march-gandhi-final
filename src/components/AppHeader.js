@@ -1325,6 +1325,15 @@ const AppHeader = () => {
   const [otpSuccess, setOtpSuccess] = useState(null)
   const [isCreatingOtp, setIsCreatingOtp] = useState(false)
 
+  /* Accelerator OTP states */
+  const [accOtpModal, setAccOtpModal] = useState(false)
+  const [accOtpData, setAccOtpData] = useState(null)
+  const [accOtpLoading, setAccOtpLoading] = useState(false)
+  const [accOtpError, setAccOtpError] = useState(null)
+  const [accOtpCode, setAccOtpCode] = useState('')
+  const [accOtpSuccess, setAccOtpSuccess] = useState(null)
+  const [isSavingAccOtp, setIsSavingAccOtp] = useState(false)
+
   const activeCache = tabCache[activeTab] || {
     items: [],
     page: 1,
@@ -1583,6 +1592,61 @@ const AppHeader = () => {
       console.error('Error creating OTP:', err)
     } finally {
       setIsCreatingOtp(false)
+    }
+  }
+
+  /* ─── Accelerator OTP handlers ─────────────────────────────── */
+  const handleAccOtpClick = () => {
+    setAccOtpModal(true)
+    fetchAccOtps()
+  }
+
+  const fetchAccOtps = async () => {
+    setAccOtpLoading(true)
+    setAccOtpError(null)
+    try {
+      const response = await axiosInstance.get('/accecolatorOtp')
+      if (response.data.success) {
+        setAccOtpData(response.data.data)
+        setAccOtpSuccess(null)
+      } else {
+        setAccOtpError('Failed to fetch Accelerator OTP')
+      }
+    } catch (err) {
+      setAccOtpError('Error fetching Accelerator OTP')
+      console.error('Error fetching Accelerator OTP:', err)
+    } finally {
+      setAccOtpLoading(false)
+    }
+  }
+
+  const saveAccOtp = async () => {
+    if (!accOtpCode.trim()) {
+      setAccOtpError('Please enter an Accelerator OTP code')
+      return
+    }
+
+    setIsSavingAccOtp(true)
+    setAccOtpError(null)
+    setAccOtpSuccess(null)
+
+    try {
+      const response = await axiosInstance.post('/accecolatorOtp', {
+        otp: accOtpCode.trim(),
+      })
+      if (response.data.success) {
+        setAccOtpSuccess('Accelerator OTP saved successfully!')
+        setAccOtpCode('')
+        await fetchAccOtps()
+        setTimeout(() => setAccOtpSuccess(null), 3000)
+      } else {
+        setAccOtpError('Failed to save Accelerator OTP')
+      }
+    } catch (err) {
+      setAccOtpError('Error saving Accelerator OTP')
+      console.error('Error saving Accelerator OTP:', err)
+    } finally {
+      setIsSavingAccOtp(false)
     }
   }
 
@@ -1969,6 +2033,35 @@ const AppHeader = () => {
           </CHeaderToggler>
 
           <CHeaderNav className="align-items-center">
+            {/* Accelerator OTP Button */}
+            <div
+              className="d-flex align-items-center justify-content-center"
+              style={{
+                cursor: 'pointer',
+                padding: '4px 12px',
+                borderRadius: 6,
+                border: '1px solid #dee2e6',
+                background: '#f8f9fa',
+                marginRight: 12,
+                transition: 'all 0.2s',
+                gap: 6,
+              }}
+              onClick={handleAccOtpClick}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#e9ecef'
+                e.currentTarget.style.borderColor = '#ced4da'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#f8f9fa'
+                e.currentTarget.style.borderColor = '#dee2e6'
+              }}
+            >
+              <CIcon icon={cilShieldAlt} size="sm" style={{ color: '#0d6efd' }} />
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#212529' }}>
+                Accelerator OTP
+              </span>
+            </div>
+
             {/* Today's OTP Button */}
             <div
               className="d-flex align-items-center justify-content-center"
@@ -2349,6 +2442,153 @@ const AppHeader = () => {
           style={{ ...s.footer, display: 'flex', justifyContent: 'flex-end', gap: 8 }}
         >
           <button style={s.btnClose} onClick={() => setOtpModal(false)}>
+            Close
+          </button>
+        </CModalFooter>
+      </CModal>
+
+      {/* ── Accelerator OTP Modal ──────────────────────────────── */}
+      <CModal
+        visible={accOtpModal}
+        onClose={() => setAccOtpModal(false)}
+        size="md"
+        scrollable
+        alignment="center"
+      >
+        <CModalHeader
+          style={{ borderBottom: '1px solid #e9ecef', paddingBottom: 12 }}
+          closeButton={false}
+        >
+          <div className="d-flex align-items-center justify-content-between w-100">
+            <div className="d-flex align-items-center gap-2">
+              <div style={s.iconCircle}>
+                <CIcon icon={cilShieldAlt} size="sm" style={{ color: '#0d6efd' }} />
+              </div>
+              <div>
+                <CModalTitle style={{ fontSize: 15, fontWeight: 600, marginBottom: 0 }}>
+                  Accelerator OTP
+                </CModalTitle>
+                <p style={s.headerSub}>Manage Accelerator OTP code</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setAccOtpModal(false)}
+              style={{
+                background: '#f1f3f5',
+                border: '1px solid #dee2e6',
+                borderRadius: '50%',
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              <CIcon icon={cilX} size="sm" style={{ color: '#6c757d' }} />
+            </button>
+          </div>
+        </CModalHeader>
+
+        <CModalBody>
+          <div style={s.otpContainer}>
+            {/* Save OTP Section */}
+            <div style={s.createOtpSection}>
+              <CForm
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  saveAccOtp()
+                }}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <CInputGroup>
+                    <CInputGroupText>
+                      <CIcon icon={cilPlus} size="sm" />
+                    </CInputGroupText>
+                    <CFormInput
+                      placeholder="Enter Accelerator OTP (e.g., 3333)"
+                      value={accOtpCode}
+                      onChange={(e) => setAccOtpCode(e.target.value)}
+                      disabled={isSavingAccOtp}
+                      style={{ fontSize: 14 }}
+                    />
+                  </CInputGroup>
+                  <CButton
+                    color="primary"
+                    onClick={saveAccOtp}
+                    disabled={isSavingAccOtp || !accOtpCode.trim()}
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    {isSavingAccOtp ? (
+                      <>
+                        <CSpinner size="sm" className="me-1" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save OTP'
+                    )}
+                  </CButton>
+                </div>
+                {accOtpError && (
+                  <CAlert color="danger" className="mt-2 mb-0" style={{ fontSize: 13 }}>
+                    {accOtpError}
+                  </CAlert>
+                )}
+                {accOtpSuccess && (
+                  <CAlert color="success" className="mt-2 mb-0" style={{ fontSize: 13 }}>
+                    {accOtpSuccess}
+                  </CAlert>
+                )}
+              </CForm>
+            </div>
+
+            {/* OTP Display */}
+            {accOtpLoading ? (
+              <div className="text-center py-4">
+                <CSpinner color="primary" />
+                <p className="mt-2 mb-0 text-muted" style={{ fontSize: 13 }}>
+                  Loading Accelerator OTP...
+                </p>
+              </div>
+            ) : accOtpData?.otp ? (
+              <div>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <span style={{ fontSize: 13, color: '#6c757d' }}>
+                    Current Accelerator OTP
+                  </span>
+                </div>
+                <div style={s.otpItem}>
+                  <div>
+                    <div style={s.otpLabel}>OTP Code</div>
+                    <div style={s.otpCode}>{accOtpData.otp}</div>
+                    {accOtpData.updatedAt && (
+                      <div style={s.otpId}>
+                        Updated: {formatFullDate(accOtpData.updatedAt)}
+                      </div>
+                    )}
+                  </div>
+                  <CBadge color="success" style={{ fontSize: 12, padding: '6px 14px' }}>
+                    Active
+                  </CBadge>
+                </div>
+              </div>
+            ) : (
+              <div style={s.otpEmpty}>
+                <CIcon icon={cilList} size="xl" style={{ color: '#dee2e6', marginBottom: 12 }} />
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>No Accelerator OTP found</p>
+                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6c757d' }}>
+                  Save an OTP code using the form above
+                </p>
+              </div>
+            )}
+          </div>
+        </CModalBody>
+
+        <CModalFooter
+          style={{ ...s.footer, display: 'flex', justifyContent: 'flex-end', gap: 8 }}
+        >
+          <button style={s.btnClose} onClick={() => setAccOtpModal(false)}>
             Close
           </button>
         </CModalFooter>

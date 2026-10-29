@@ -651,6 +651,15 @@
   color: var(--muted);
 }
 
+.cb-eyebrow-meta {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  margin-left: 2px;
+}
+
 .cb-live-dot {
   width: 7px;
   height: 7px;
@@ -808,6 +817,136 @@
 }
 
 /* ------------------------------------------------------------------
+   Current Booking — terminal logs panel
+   ------------------------------------------------------------------ */
+.cb-terminal {
+  margin-top: 14px;
+  border: 1px solid #1f2a24;
+  border-radius: var(--radius-md);
+  background: #0f1512;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.cb-terminal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #131b17;
+  border-bottom: 1px solid #1f2a24;
+  color: #a8c7b6;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.cb-terminal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.cb-terminal-count {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #6e8a7b;
+  background: rgba(168, 199, 182, 0.08);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.cb-terminal-body {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #c8d8cf;
+  padding: 10px 12px;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3a32 transparent;
+}
+
+.cb-terminal-body::-webkit-scrollbar {
+  width: 8px;
+}
+.cb-terminal-body::-webkit-scrollbar-thumb {
+  background: #2a3a32;
+  border-radius: 4px;
+}
+.cb-terminal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cb-terminal-empty {
+  color: #6e8a7b;
+  font-style: italic;
+  padding: 6px 0;
+}
+
+.cb-log-line {
+  display: flex;
+  gap: 10px;
+  padding: 1px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cb-log-time {
+  flex-shrink: 0;
+  color: #5f7a6c;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.cb-log-msg {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Log level coloring */
+.cb-log-line.log-info    .cb-log-msg { color: #c8d8cf; }
+.cb-log-line.log-success .cb-log-msg { color: #7ee2a8; }
+.cb-log-line.log-warn    .cb-log-msg { color: #ffc66d; }
+.cb-log-line.log-error   .cb-log-msg { color: #ff8a80; }
+.cb-log-line.log-debug   .cb-log-msg { color: #7f9a8b; font-style: italic; }
+
+/* Give warn/error rows a subtle left accent */
+.cb-log-line.log-warn,
+.cb-log-line.log-error {
+  border-left: 2px solid transparent;
+  padding-left: 8px;
+  margin-left: -2px;
+}
+.cb-log-line.log-warn  { border-left-color: #ffc66d; }
+.cb-log-line.log-error { border-left-color: #ff8a80; }
+
+/* ------------------------------------------------------------------
+   Current Booking footer (heartbeat / uptime / totals)
+   ------------------------------------------------------------------ */
+.cb-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px 12px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted-2);
+  border-top: 1px solid var(--border);
+}
+.cb-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cb-footer svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* ------------------------------------------------------------------
    Responsive adjustments
    ------------------------------------------------------------------ */
 @media (max-width: 768px) {
@@ -856,5 +995,18 @@
   }
   .cb-title {
     font-size: 14.5px;
+  }
+  .cb-footer {
+    font-size: 11px;
+    gap: 8px;
+    padding: 10px 0 0;
+  }
+  .cb-terminal-body {
+    font-size: 11px;
+    max-height: 240px;
+    padding: 8px 10px;
+  }
+  .cb-log-line {
+    gap: 6px;
   }
 }

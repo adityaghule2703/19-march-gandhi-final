@@ -83,18 +83,18 @@ $ yarn install
 ### Basic usage
 
 ``` bash
-# dev server with hot reload at http://localhost:3000
+# dev server with hot reload at https://gmplmis.com/dealership-api
 $ npm start 
 ```
 
 or 
 
 ``` bash
-# dev server with hot reload at http://localhost:3000
+# dev server with hot reload at https://gmplmis.com/dealership-api
 $ yarn start
 ```
 
-Navigate to [http://localhost:3000](http://localhost:3000). The app will automatically reload if you change any of the source files.
+Navigate to [https://gmplmis.com/dealership-api](https://gmplmis.com/dealership-api). The app will automatically reload if you change any of the source files.
 
 #### Build
 

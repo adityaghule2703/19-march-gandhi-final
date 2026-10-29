@@ -62,7 +62,7 @@ const SwapVehicleModal = ({
     }
   }, [newChassisNumber, availableChassisData]);
 
-  // ── Fetch chassis numbers (SAME logic as ChassisNumberModal) ──────────────
+  // ── Fetch chassis numbers (same inclusion rules as ChassisNumberModal) ────
   const fetchAvailableChassisNumbers = async () => {
     if (!booking || !booking.model || !booking.color) return;
 
@@ -75,14 +75,37 @@ const SwapVehicleModal = ({
 
       console.log('API Response:', availableData);
 
-      const bookingBranchId = booking.branch?._id;
+      // Get the booking's branch ID (handle branch being object or plain string id)
+      const bookingBranchId =
+        booking.branch && typeof booking.branch === 'object'
+          ? booking.branch?._id
+          : booking.branch;
       console.log('Booking Branch ID:', bookingBranchId);
 
-      // Filter: same branch only
+      // Filter chassis numbers.
+      //
+      // Inclusion rules:
+      //   branch    → include IFF location.id === booking branch id
+      //   godown    → include IFF location.branch._id === booking branch id
+      //   subdealer → ALWAYS EXCLUDE
+      //
       const filteredData = availableData.filter((chassis) => {
-        const chassisBranchId = chassis.location?.id;
+        const loc = chassis.location;
+        if (!loc) return false;
+
+        // Never include subdealer stock
+        if (loc.type === 'subdealer') {
+          console.log(`Chassis ${chassis.chassisNumber}: skipped (subdealer)`);
+          return false;
+        }
+
+        const chassisBranchId =
+          loc.type === 'branch' ? loc.id : loc.branch?._id; // godown
+
         const isSameBranch = chassisBranchId === bookingBranchId;
+
         console.log(`Chassis ${chassis.chassisNumber}:`, {
+          locationType: loc.type,
           chassisBranchId,
           bookingBranchId,
           isSameBranch,
@@ -90,7 +113,7 @@ const SwapVehicleModal = ({
         return isSameBranch;
       });
 
-      console.log('Filtered Chassis Numbers (Same Branch):', filteredData);
+      console.log('Filtered Chassis Numbers (branch + godown only, same branch):', filteredData);
 
       // Sort oldest first (FIFO)
       const sortedData = [...filteredData].sort((a, b) => b.ageInDays - a.ageInDays);
@@ -104,7 +127,7 @@ const SwapVehicleModal = ({
       }
 
       if (filteredData.length === 0) {
-        console.warn('No chassis numbers available in the same branch');
+        console.warn('No chassis numbers available in the same branch (branch + godown)');
       }
     } catch (error) {
       console.error('Error fetching chassis numbers:', error);
@@ -124,8 +147,10 @@ const SwapVehicleModal = ({
       let ageText = '';
       let displayText;
 
+      // Godown gets a tag; subdealer never appears
       if (chassis.location?.name) {
-        locationText = ` - ${chassis.location.name}`;
+        const typeTag = chassis.location.type === 'godown' ? ' [Godown]' : '';
+        locationText = ` - ${chassis.location.name}${typeTag}`;
       }
 
       if (chassis.ageInDays !== undefined && chassis.ageInDays >= 0) {
@@ -299,6 +324,7 @@ const SwapVehicleModal = ({
                   {selectedChassisDetails.location?.name && (
                     <div className="mt-1 small text-muted">
                       Location: {selectedChassisDetails.location.name}
+                      {selectedChassisDetails.location?.type === 'godown' ? ' (Godown)' : ''}
                     </div>
                   )}
                 </div>
